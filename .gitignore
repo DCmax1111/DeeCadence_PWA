@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Database - personal data stays local
+data/*.db
+
+# Kivy
+*.pyc
+.kivy/
+
+# VS Code
+.vscode/
+
+# Buildozer (Android)
+.buildozer/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Audio/temp
+*.wav
+*.mp3
