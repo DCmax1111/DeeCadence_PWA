@@ -213,20 +213,33 @@ def freq_to_midi(freq):
     midi = 69 + 12 * math.log2(freq / 440.0)
     return round(midi)
 
-def detect_pitch_aubio(audio_buffer, sample_rate=22050):
-    """Returns (midi, freq) or (None, None)."""
+def detect_pitch_librosa(audio_buffer, sample_rate=22050):
+    """Returns (midi, freq) or (None, None) using librosa."""
     try:
-        import aubio
-        buf_size = len(audio_buffer)
-        pitch_o = aubio.pitch("yin", buf_size, buf_size, sample_rate)
-        pitch_o.set_unit("Hz")
-        pitch_o.set_silence(-40)
         import numpy as np
+        import librosa
         samples = np.array(audio_buffer, dtype="float32")
-        freq = pitch_o(samples)[0]
-        conf = pitch_o.get_confidence()
-        if freq > 50 and conf > 0.7:
-            return freq_to_midi(freq), freq
+        if len(samples) < 512:
+            return None, None
+        fmin = librosa.note_to_hz('C2')
+        fmax = librosa.note_to_hz('C7')
+        f0, voiced_flag, voiced_prob = librosa.pyin(
+            samples,
+            fmin=fmin,
+            fmax=fmax,
+            sr=sample_rate
+        )
+        if f0 is None or len(f0) == 0:
+            return None, None
+        # Get most confident detection
+        valid = [(f, p) for f, p, v in
+                 zip(f0, voiced_prob, voiced_flag)
+                 if v and f and not np.isnan(f)]
+        if not valid:
+            return None, None
+        freq = max(valid, key=lambda x: x[1])[0]
+        if freq > 50:
+            return freq_to_midi(freq), float(freq)
     except Exception:
         pass
     return None, None
@@ -1322,11 +1335,10 @@ class VoxScopeScreen(MDScreen):
                 if not self._recording:
                     return
                 audio = indata[:, 0].tolist()
-                midi, freq = detect_pitch_aubio(audio, sample_rate)
+                midi, freq = detect_pitch_librosa(audio, sample_rate)
                 Clock.schedule_once(
                     lambda dt: self._on_pitch(midi, freq), 0)
 
-                # Warmup accuracy tracking
                 if (self._current_view == "warmup_session" and
                         self._warmup_exercise):
                     self._warmup_step_hits += (1 if midi else 0)

@@ -155,6 +155,15 @@ class NavigationScreen(MDScreen):
                 "desc":    "Drawing · Design · Craft",
                 "icon_bg": "#0d0618",
             },
+            {
+                "label":   "⚡  DEECADENCE",
+                "screen":  "deecadence",
+                "color":   "#4a9eff",
+                "hover":   "#001020",
+                "stat":    "Mind",
+                "desc":    "Focus · Debt · Sessions",
+                "icon_bg": "#00091a",
+            },
         ]
 
         # ── 2-column grid, odd last card centered ─────────────────

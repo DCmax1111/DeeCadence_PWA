@@ -128,11 +128,12 @@ class DashboardScreen(MDScreen):
         body.add_widget(self._section("// MODULES //"))
         modules = [
             ("◈ FINANCIAL",  "financial", ORANGE,    "#2a1500"),
-            ("⚡ ENERGY",     "navigation", GREEN,    "#001a0d"),
+            ("⚡ ENERGY",     "energy", GREEN,    "#001a0d"),
             ("✦ SPIRIT",     "spirit",    GOLD,      "#1a1500"),
             ("🧠 MIND",       "navigation", ACCENT,   "#001020"),
-            ("📖 KNOWLEDGE",  "navigation", "#00ff88","#001a0d"),
-            ("⚔ DEXTERITY",  "navigation", "#8b5cf6","#120a2a"),
+            ("📖 KNOWLEDGE",  "knowledge", "#00ff88","#001a0d"),
+            ("⚔ DEXTERITY",  "dexterity", "#8b5cf6","#120a2a"),
+            ("⏱ DEECADENCE",   "deecadence", "#4a9eff","#001020"),
         ]
 
         for i in range(0, len(modules), 4):

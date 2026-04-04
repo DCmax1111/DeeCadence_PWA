@@ -15,6 +15,7 @@ from modules.mind.view import MindScreen
 from modules.knowledge.view import KnowledgeScreen
 from modules.dexterity.view import DexterityScreen
 from modules.dexterity.voxscope_screen import VoxScopeScreen
+from modules.deecadence.view import DeeCadenceScreen
 
 Window.softinput_mode = "below_target" 
 
@@ -43,6 +44,7 @@ class TheSystemApp(MDApp):
         sm.add_widget(KnowledgeScreen(name="knowledge"))
         sm.add_widget(DexterityScreen(name="dexterity"))
         sm.add_widget(VoxScopeScreen(name="voxscope"))
+        sm.add_widget(DeeCadenceScreen(name="deecadence"))
         return sm
 
     def on_stop(self):
