@@ -2,38 +2,34 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton, MDFlatButton
-from kivymd.uix.textfield import MDTextField
-from kivymd.uix.card import MDCard
+from kivymd.uix.button import MDRaisedButton
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.clock import Clock
 from modules.mind.controller import MindController, FOCUS_TYPES
-from shared.theme import (
-    ACCENT, GREEN, RED, PANEL,
-    TEXT, TEXT_DIM, hex_color
+from shared.theme import c, t, hex_color, R
+from shared.components import (
+    top_nav, section_label, log_row,
+    empty_state, spacer, input_field
 )
-from shared.components import top_nav
-
-PURPLE = "#8b5cf6"
 
 
 def _c(h): return hex_color(h)
+
+PURPLE = t("mind")
 
 
 class MindScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.md_bg_color = _c("#050810")
+        self.md_bg_color = c("bg")
         self._built = False
         self._refresh_event = None
         self._selected_focus_type = "Deep Work"
         self._focus_menu = None
-
         self._focus_list = None
         self._mood_list = None
         self._journal_list = None
-
         self._focus_duration = None
         self._focus_type_btn = None
         self._focus_note = None
@@ -43,6 +39,7 @@ class MindScreen(MDScreen):
         self._journal_content = None
 
     def on_enter(self):
+        self.md_bg_color = c("bg")
         if not self._built:
             app = App.get_running_app()
             self.ctrl = MindController(app.db)
@@ -67,31 +64,34 @@ class MindScreen(MDScreen):
         from kivymd.uix.menu import MDDropdownMenu
 
         root = MDBoxLayout(orientation="vertical")
-        root.add_widget(top_nav(self, "🧠  MIND", ACCENT))
+        root.add_widget(top_nav(self, "Mind", "mind"))
 
         scroll = MDScrollView()
         body = MDBoxLayout(
             orientation="vertical",
-            spacing=dp(12),
-            padding=dp(16),
+            spacing=dp(8),
+            padding=[dp(16), dp(14), dp(16), dp(24)],
             size_hint_y=None
         )
         body.bind(minimum_height=body.setter("height"))
 
-        # ── Focus ─────────────────────────────────────────────────
-        body.add_widget(self._section("🎯  FOCUS SESSIONS"))
+        # Focus sessions
+        body.add_widget(
+            section_label("FOCUS SESSIONS",
+                         top_space=False))
         self._focus_type_btn = MDRaisedButton(
             text=f"Type: {self._selected_focus_type}",
-            md_bg_color=_c(PANEL),
-            size_hint_y=None, height=dp(44)
+            md_bg_color=c("card"),
+            size_hint_y=None, height=dp(52)
         )
         menu_items = [
             {
-                "text": t,
+                "text": ft,
                 "viewclass": "OneLineListItem",
-                "on_release": lambda x=t: self._set_focus_type(x)
+                "on_release": lambda x=ft:
+                    self._set_focus_type(x)
             }
-            for t in FOCUS_TYPES
+            for ft in FOCUS_TYPES
         ]
         self._focus_menu = MDDropdownMenu(
             caller=self._focus_type_btn,
@@ -99,98 +99,91 @@ class MindScreen(MDScreen):
             width_mult=4
         )
         self._focus_type_btn.bind(
-            on_release=lambda x: self._focus_menu.open())
+            on_release=lambda x:
+                self._focus_menu.open())
         body.add_widget(self._focus_type_btn)
 
-        self._focus_duration = MDTextField(
-            hint_text="Duration (minutes)",
-            input_filter="int",
-            mode="rectangle",
-            size_hint_y=None, height=dp(44)
-        )
-        self._focus_note = MDTextField(
-            hint_text="Note (optional)",
-            mode="rectangle",
-            size_hint_y=None, height=dp(44)
-        )
+        self._focus_duration = input_field(
+            "Duration (minutes)",
+            input_filter="int")
+        self._focus_note = input_field(
+            "Note (optional)")
         focus_btn = MDRaisedButton(
             text="LOG FOCUS SESSION",
-            md_bg_color=_c(ACCENT),
-            size_hint_y=None, height=dp(40)
+            md_bg_color=_c(t("mind")),
+            size_hint_y=None, height=dp(52)
         )
-        focus_btn.bind(on_release=lambda x: self._log_focus())
+        focus_btn.bind(
+            on_release=lambda x: self._log_focus())
         body.add_widget(self._focus_duration)
         body.add_widget(self._focus_note)
         body.add_widget(focus_btn)
+        body.add_widget(spacer(6))
 
         self._focus_list = MDBoxLayout(
-            orientation="vertical", spacing=dp(6),
-            size_hint_y=None)
+            orientation="vertical",
+            spacing=dp(6), size_hint_y=None)
         self._focus_list.bind(
-            minimum_height=self._focus_list.setter("height"))
+            minimum_height=self._focus_list
+            .setter("height"))
         self._fill_focus_list()
         body.add_widget(self._focus_list)
 
-        # ── Mood ──────────────────────────────────────────────────
-        body.add_widget(self._section("🌡  MOOD CHECK-IN"))
-        self._mood_score = MDTextField(
-            hint_text="Mood score 1-5",
-            input_filter="int",
-            mode="rectangle",
-            size_hint_y=None, height=dp(44)
-        )
-        self._mood_energy = MDTextField(
-            hint_text="Energy score 1-5",
-            input_filter="int",
-            mode="rectangle",
-            size_hint_y=None, height=dp(44)
-        )
-        self._mood_note = MDTextField(
-            hint_text="Note (optional)",
-            mode="rectangle",
-            size_hint_y=None, height=dp(44)
-        )
+        # Mood
+        body.add_widget(section_label("MOOD CHECK-IN"))
+        self._mood_score = input_field(
+            "Mood score 1-5",
+            input_filter="int")
+        self._mood_energy = input_field(
+            "Energy score 1-5",
+            input_filter="int")
+        self._mood_note = input_field(
+            "Note (optional)")
         mood_btn = MDRaisedButton(
             text="LOG MOOD",
-            md_bg_color=_c(PURPLE),
-            size_hint_y=None, height=dp(40)
+            md_bg_color=_c(t("mind")),
+            size_hint_y=None, height=dp(52)
         )
-        mood_btn.bind(on_release=lambda x: self._log_mood())
+        mood_btn.bind(
+            on_release=lambda x: self._log_mood())
         body.add_widget(self._mood_score)
         body.add_widget(self._mood_energy)
         body.add_widget(self._mood_note)
         body.add_widget(mood_btn)
+        body.add_widget(spacer(6))
 
         self._mood_list = MDBoxLayout(
-            orientation="vertical", spacing=dp(6),
-            size_hint_y=None)
+            orientation="vertical",
+            spacing=dp(6), size_hint_y=None)
         self._mood_list.bind(
-            minimum_height=self._mood_list.setter("height"))
+            minimum_height=self._mood_list
+            .setter("height"))
         self._fill_mood_list()
         body.add_widget(self._mood_list)
 
-        # ── Journal ───────────────────────────────────────────────
-        body.add_widget(self._section("📓  JOURNAL"))
-        self._journal_content = MDTextField(
-            hint_text="Write your thoughts...",
-            mode="rectangle",
+        # Journal
+        body.add_widget(section_label("JOURNAL"))
+        self._journal_content = input_field(
+            "Write your thoughts...",
             multiline=True,
-            size_hint_y=None, height=dp(100)
-        )
+            height=dp(100))
         journal_btn = MDRaisedButton(
             text="SAVE ENTRY",
-            md_bg_color=_c(GREEN),
-            size_hint_y=None, height=dp(40)
+            md_bg_color=_c(t("financial")),
+            size_hint_y=None, height=dp(52)
         )
-        journal_btn.bind(on_release=lambda x: self._log_journal())
+        journal_btn.bind(
+            on_release=lambda x: self._log_journal())
         body.add_widget(self._journal_content)
         body.add_widget(journal_btn)
+        body.add_widget(spacer(6))
 
         self._journal_list = MDBoxLayout(
-            orientation="vertical", spacing=dp(6),
-            size_hint_y=None)
+            orientation="vertical",
+            spacing=dp(6), size_hint_y=None)
         self._journal_list.bind(
-            minimum_height=self._journal_list.setter("height"))
+            minimum_height=self._journal_list
+            .setter("height"))
         self._fill_journal_list()
         body.add_widget(self._journal_list)
 
@@ -200,28 +193,46 @@ class MindScreen(MDScreen):
 
     def _fill_focus_list(self):
         self._focus_list.clear_widgets()
-        for f in self.ctrl.get_recent_focus(5):
-            self._focus_list.add_widget(self._log_row(
-                f"{f['type']} · {f['duration']}mins",
-                f["note"] or "—", f["date"], ACCENT,
-                lambda x, id=f["id"]: self._delete_focus(id)))
+        items = self.ctrl.get_recent_focus(5)
+        if not items:
+            self._focus_list.add_widget(
+                empty_state("No focus sessions yet"))
+            return
+        for f in items:
+            self._focus_list.add_widget(log_row(
+                f"{f['type']}  ·  {f['duration']}mins",
+                f"{f['note'] or '—'}  ·  {f['date']}",
+                "mind"
+            ))
 
     def _fill_mood_list(self):
         self._mood_list.clear_widgets()
-        for m in self.ctrl.get_recent_mood(5):
-            self._mood_list.add_widget(self._log_row(
-                f"Mood {m['score']}/5 · Energy {m['energy']}/5",
-                m["note"] or "—", m["date"], PURPLE,
-                lambda x, id=m["id"]: self._delete_mood(id)))
+        items = self.ctrl.get_recent_mood(5)
+        if not items:
+            self._mood_list.add_widget(
+                empty_state("No mood entries yet"))
+            return
+        for m in items:
+            self._mood_list.add_widget(log_row(
+                f"Mood {m['score']}/5  ·  "
+                f"Energy {m['energy']}/5",
+                f"{m['note'] or '—'}  ·  {m['date']}",
+                "mind"
+            ))
 
     def _fill_journal_list(self):
         self._journal_list.clear_widgets()
-        for j in self.ctrl.get_recent_journal(5):
+        items = self.ctrl.get_recent_journal(5)
+        if not items:
+            self._journal_list.add_widget(
+                empty_state("No journal entries yet"))
+            return
+        for j in items:
             preview = j["content"][:60] + (
                 "..." if len(j["content"]) > 60 else "")
-            self._journal_list.add_widget(self._log_row(
-                preview, j["date"], j["date"], GREEN,
-                lambda x, id=j["id"]: self._delete_journal(id)))
+            self._journal_list.add_widget(log_row(
+                preview, j["date"], "financial"
+            ))
 
     def _log_focus(self):
         ok, _ = self.ctrl.log_focus(
@@ -245,7 +256,8 @@ class MindScreen(MDScreen):
             self._update_data()
 
     def _log_journal(self):
-        ok, _ = self.ctrl.log_journal(self._journal_content.text)
+        ok, _ = self.ctrl.log_journal(
+            self._journal_content.text)
         if ok:
             self._journal_content.text = ""
             self._update_data()
@@ -267,36 +279,3 @@ class MindScreen(MDScreen):
         self.ctrl.delete_journal(id_)
         self._update_data()
 
-    def _log_row(self, title, subtitle, date, color, on_delete):
-        row = MDCard(
-            orientation="horizontal",
-            radius=[6], elevation=0,
-            padding=[dp(12), dp(8)],
-            size_hint_y=None, height=dp(56),
-            md_bg_color=_c(PANEL), spacing=dp(8)
-        )
-        info = MDBoxLayout(
-            orientation="vertical", size_hint_x=0.75)
-        info.add_widget(MDLabel(
-            text=title, font_style="Body2",
-            theme_text_color="Custom",
-            text_color=_c(color), size_hint_y=0.55))
-        info.add_widget(MDLabel(
-            text=f"{subtitle}  ·  {date}",
-            font_style="Caption",
-            theme_text_color="Custom",
-            text_color=_c(TEXT_DIM), size_hint_y=0.45))
-        row.add_widget(info)
-        del_btn = MDFlatButton(
-            text="✕", theme_text_color="Custom",
-            text_color=_c(RED), size_hint_x=0.25)
-        del_btn.bind(on_release=on_delete)
-        row.add_widget(del_btn)
-        return row
-
-    def _section(self, text):
-        return MDLabel(
-            text=text, font_style="Overline",
-            theme_text_color="Custom",
-            text_color=_c(TEXT_DIM),
-            size_hint_y=None, height=dp(32))

@@ -1,9 +1,10 @@
+# ── Dee_Cistem Design System ──────────────────────────────────────
+# Clean, premium, purposeful. Not gamer. Not corporate.
+# Readable at a glance. Every element earns its place.
+
 from kivy.utils import get_color_from_hex
 
-
-# ── Dynamic theme system ──────────────────────────────────────────
-
-_current_mode = "dark"  # "dark" | "light"
+_current_mode = "dark"
 
 
 def set_mode(mode):
@@ -19,89 +20,108 @@ def is_dark():
     return _current_mode == "dark"
 
 
-# ── Color tokens — dark mode ──────────────────────────────────────
-
+# ── Dark palette ──────────────────────────────────────────────────
 DARK = {
-    "bg":           "#08090F",
-    "bg2":          "#0D0F1A",
-    "surface":      "#13151F",
-    "card":         "#1A1D2E",
-    "card2":        "#1F2235",
-    "border":       "#252840",
-    "border2":      "#2E3150",
+    # Backgrounds — layered depth
+    "bg":        "#0C0D14",
+    "bg2":       "#11121C",
+    "surface":   "#161720",
+    "card":      "#1C1E2C",
+    "card2":     "#222538",
+    "overlay":   "#0C0D1499",
 
-    "accent":       "#5B7FFF",
-    "accent2":      "#7B9FFF",
-    "accent_glow":  "#5B7FFF40",
+    # Borders
+    "border":    "#2A2D42",
+    "border2":   "#363A54",
 
-    "gold":         "#F5C542",
-    "gold_dim":     "#F5C54280",
-    "purple":       "#8B5CF6",
-    "teal":         "#14B8A6",
-    "green":        "#22C55E",
-    "red":          "#F43F5E",
-    "orange":       "#F97316",
-    "rose":         "#FB7185",
+    # Brand accent — electric blue, not purple
+    "accent":    "#4F8EF7",
+    "accent_hi": "#7AABFF",
+    "accent_lo": "#4F8EF720",
 
-    "text":         "#F1F5F9",
-    "text2":        "#94A3B8",
-    "text3":        "#475569",
-    "dim":          "#334155",
+    # Module colors — distinct, readable
+    "financial": "#34D399",   # emerald
+    "energy":    "#60A5FA",   # sky blue
+    "spirit":    "#FBBF24",   # amber
+    "mind":      "#A78BFA",   # violet
+    "knowledge": "#34D399",   # emerald (shared with financial)
+    "dexterity": "#F472B6",   # pink
+    "deecadence":"#38BDF8",   # light blue
 
-    "rank_e":       "#64748B",
-    "rank_d":       "#22C55E",
-    "rank_c":       "#3B82F6",
-    "rank_b":       "#8B5CF6",
-    "rank_a":       "#F5C542",
-    "rank_s":       "#F43F5E",
-    "rank_ss":      "#F5C542",
+    # Semantic
+    "success":   "#22C55E",
+    "warning":   "#F59E0B",
+    "error":     "#F87171",
+    "info":      "#60A5FA",
+
+    # Text hierarchy — 4 levels
+    "text":      "#F0F2FF",   # primary
+    "text2":     "#9BA3C4",   # secondary
+    "text3":     "#565E82",   # tertiary
+    "text4":     "#2E3352",   # disabled
+
+    # Rank colors
+    "rank_e":    "#565E82",
+    "rank_d":    "#34D399",
+    "rank_c":    "#60A5FA",
+    "rank_b":    "#A78BFA",
+    "rank_a":    "#FBBF24",
+    "rank_s":    "#F87171",
+    "rank_ss":   "#FBBF24",
 }
 
+# ── Light palette ─────────────────────────────────────────────────
 LIGHT = {
-    "bg":           "#F8FAFC",
-    "bg2":          "#F1F5F9",
-    "surface":      "#FFFFFF",
-    "card":         "#FFFFFF",
-    "card2":        "#F8FAFC",
-    "border":       "#E2E8F0",
-    "border2":      "#CBD5E1",
+    "bg":        "#F5F6FA",
+    "bg2":       "#ECEEF6",
+    "surface":   "#FFFFFF",
+    "card":      "#FFFFFF",
+    "card2":     "#F5F6FA",
+    "overlay":   "#F5F6FA99",
 
-    "accent":       "#4361EE",
-    "accent2":      "#3A0CA3",
-    "accent_glow":  "#4361EE30",
+    "border":    "#DDE1F0",
+    "border2":   "#C8CEEA",
 
-    "gold":         "#D97706",
-    "gold_dim":     "#D9770660",
-    "purple":       "#7C3AED",
-    "teal":         "#0D9488",
-    "green":        "#16A34A",
-    "red":          "#DC2626",
-    "orange":       "#EA580C",
-    "rose":         "#E11D48",
+    "accent":    "#3B6FD4",
+    "accent_hi": "#2952A3",
+    "accent_lo": "#3B6FD415",
 
-    "text":         "#0F172A",
-    "text2":        "#475569",
-    "text3":        "#94A3B8",
-    "dim":          "#CBD5E1",
+    "financial": "#059669",
+    "energy":    "#2563EB",
+    "spirit":    "#D97706",
+    "mind":      "#7C3AED",
+    "knowledge": "#059669",
+    "dexterity": "#DB2777",
+    "deecadence":"#0284C7",
 
-    "rank_e":       "#64748B",
-    "rank_d":       "#16A34A",
-    "rank_c":       "#2563EB",
-    "rank_b":       "#7C3AED",
-    "rank_a":       "#D97706",
-    "rank_s":       "#DC2626",
-    "rank_ss":      "#D97706",
+    "success":   "#16A34A",
+    "warning":   "#D97706",
+    "error":     "#DC2626",
+    "info":      "#2563EB",
+
+    "text":      "#0F1124",
+    "text2":     "#4B5280",
+    "text3":     "#8890B0",
+    "text4":     "#C0C5DC",
+
+    "rank_e":    "#8890B0",
+    "rank_d":    "#059669",
+    "rank_c":    "#2563EB",
+    "rank_b":    "#7C3AED",
+    "rank_a":    "#D97706",
+    "rank_s":    "#DC2626",
+    "rank_ss":   "#D97706",
 }
 
 
 def t(key):
-    """Get current theme color by key."""
+    """Get hex color string for current theme."""
     palette = DARK if is_dark() else LIGHT
     return palette.get(key, "#FF00FF")
 
 
 def c(key):
-    """Get current theme color as Kivy RGBA list."""
+    """Get Kivy RGBA list for current theme."""
     return hex_color(t(key))
 
 
@@ -113,41 +133,21 @@ def hex_color(h):
     return [int(h[i:i+2], 16)/255 for i in (0, 2, 4)] + [1]
 
 
-# ── Stat colors ───────────────────────────────────────────────────
-
-STAT_COLORS = {
-    "Body":       "accent",
-    "Mind":       "teal",
-    "Spirit":     "gold",
-    "Knowledge":  "green",
-    "Financial":  "orange",
-    "Dexterity":  "purple",
-}
-
-
-def stat_color(stat_name):
-    return t(STAT_COLORS.get(stat_name, "accent"))
+def module_color(module_key):
+    """Get hex color for a module by key."""
+    return t(module_key)
 
 
 # ── Rank system ───────────────────────────────────────────────────
 
 RANK_THRESHOLDS = [
-    (95, "SS"),
-    (80, "S"),
-    (65, "A"),
-    (50, "B"),
-    (35, "C"),
-    (20, "D"),
-    (0,  "E"),
+    (95, "SS"), (80, "S"), (65, "A"),
+    (50, "B"),  (35, "C"), (20, "D"), (0, "E"),
 ]
 
 RANK_COLOR_KEYS = {
-    "E":  "rank_e",
-    "D":  "rank_d",
-    "C":  "rank_c",
-    "B":  "rank_b",
-    "A":  "rank_a",
-    "S":  "rank_s",
+    "E": "rank_e", "D": "rank_d", "C": "rank_c",
+    "B": "rank_b", "A": "rank_a", "S": "rank_s",
     "SS": "rank_ss",
 }
 
@@ -163,45 +163,75 @@ def rank_color(rank):
     return t(RANK_COLOR_KEYS.get(rank, "rank_e"))
 
 
-# ── Typography scale ──────────────────────────────────────────────
+def stat_color(stat_name):
+    key_map = {
+        "Body":      "energy",
+        "Mind":      "mind",
+        "Spirit":    "spirit",
+        "Knowledge": "knowledge",
+        "Financial": "financial",
+        "Dexterity": "dexterity",
+    }
+    return t(key_map.get(stat_name, "accent"))
 
-FONT_DISPLAY = "H4"
-FONT_TITLE   = "H6"
-FONT_BODY    = "Body1"
-FONT_BODY2   = "Body2"
-FONT_CAPTION = "Caption"
-FONT_LABEL   = "Overline"
-FONT_BUTTON  = "Button"
+
+def app_font(bold=False):
+    """Get the registered app font name."""
+    try:
+        from kivy.app import App
+        app = App.get_running_app()
+        return getattr(app, 'font_name', 'Roboto')
+    except Exception:
+        return 'Roboto'
 
 # ── Spacing ───────────────────────────────────────────────────────
+SP = {
+    "xs": 4, "sm": 8, "md": 12,
+    "lg": 16, "xl": 24, "2xl": 32
+}
 
-SPACE_XS  = 4
-SPACE_SM  = 8
-SPACE_MD  = 12
-SPACE_LG  = 16
-SPACE_XL  = 24
-SPACE_2XL = 32
+# ── Radius ────────────────────────────────────────────────────────
+R = {
+    "sm": [6], "md": [10],
+    "lg": [14], "xl": [20]
+}
 
-# ── Border radius ─────────────────────────────────────────────────
+# ── Backward compatibility ────────────────────────────────────────
+ACCENT       = DARK["accent"]
+ACCENT2      = DARK["accent_hi"]
+GOLD         = DARK["spirit"]
+PURPLE       = DARK["mind"]
+TEAL         = DARK["deecadence"]
+GREEN        = DARK["success"]
+RED          = DARK["error"]
+ORANGE       = DARK["financial"]
+ROSE         = DARK["error"]
+BG           = DARK["bg"]
+BG2          = DARK["bg2"]
+PANEL        = DARK["card"]
+BORDER       = DARK["border"]
+TEXT         = DARK["text"]
+TEXT_DIM     = DARK["text2"]
+WHITE        = "#FFFFFF"
 
-RADIUS_SM = [6]
-RADIUS_MD = [10]
-RADIUS_LG = [16]
-RADIUS_XL = [24]
-
-# ── Currency ──────────────────────────────────────────────────────
-
-CURRENCY_SYMBOL = "N/$"
+STAT_COLORS = {
+    "Body":      DARK["energy"],
+    "Mind":      DARK["mind"],
+    "Spirit":    DARK["spirit"],
+    "Knowledge": DARK["knowledge"],
+    "Financial": DARK["financial"],
+    "Dexterity": DARK["dexterity"],
+}
 
 INCOME_CATEGORIES = [
     "Salary", "Freelance", "Business",
     "Gift", "Investment", "Other"
 ]
-
 EXPENSE_CATEGORIES = [
     "Food", "Transport", "Education",
     "Health", "Entertainment", "Tithe",
     "Savings", "Utilities", "Clothing", "Other"
 ]
-
+CURRENCY_SYMBOL = "N/$"
+RANK_THRESHOLDS_OLD = RANK_THRESHOLDS
 

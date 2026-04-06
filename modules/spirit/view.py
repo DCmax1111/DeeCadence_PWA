@@ -3,23 +3,29 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton
-from kivymd.uix.textfield import MDTextField
 from kivymd.uix.card import MDCard
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.clock import Clock
 from modules.spirit.controller import SpiritController
-from shared.components import top_nav
-from shared.theme import (
-    GOLD, PANEL, TEXT, TEXT_DIM,
-    ACCENT, GREEN, RED, hex_color
+from shared.theme import c, t, hex_color, R
+from shared.components import (
+    top_nav, section_label, log_row,
+    empty_state, spacer, summary_card,
+    input_field, primary_btn
 )
 
 PURPLE = "#8b5cf6"
+GOLD = t("spirit")
+GREEN = t("financial")
+ACCENT = t("accent")
+RED = t("error")
+TEXT = t("text")
+TEXT_DIM = t("text2")
+PANEL = t("card")
 
 
-def _c(h): return hex_color(h)
-
+def _c(h): return hex_color(h)  # kept for legacy hex calls
 
 class SpiritScreen(MDScreen):
     def __init__(self, **kwargs):
@@ -76,7 +82,7 @@ class SpiritScreen(MDScreen):
 
     def _build(self):
         root = MDBoxLayout(orientation="vertical")
-        root.add_widget(top_nav(self, "✦  SPIRIT", GOLD))
+        root.add_widget(top_nav(self, "✦ SPIRIT", "spirit"))
 
         scroll = MDScrollView()
         body = MDBoxLayout(

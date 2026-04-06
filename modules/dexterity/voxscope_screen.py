@@ -349,29 +349,92 @@ class VoxScopeScreen(MDScreen):
 
     def _build_shell(self):
         self._root = MDBoxLayout(orientation="vertical")
-        self._nav_bar = top_nav(
-            self, "⚔  VOXSCOPE", ACCENT,
-            back_screen="dexterity")
-        self._root.add_widget(self._nav_bar)
+        # Dynamic nav — updated per view
+        self._nav_container = MDBoxLayout(
+            orientation="vertical",
+            size_hint_y=None, height=dp(56)
+        )
+        self._root.add_widget(self._nav_container)
         self._content = MDBoxLayout(orientation="vertical")
         self._root.add_widget(self._content)
         self.add_widget(self._root)
 
+    def _update_nav(self, title, back_fn):
+        """Update nav bar for current internal view."""
+        self._nav_container.clear_widgets()
+        from shared.components import top_nav
+        nav = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None, height=dp(56),
+            padding=[dp(4), 0, dp(16), 0],
+            md_bg_color=c("bg2")
+        )
+        from kivymd.uix.button import MDFlatButton
+        from kivymd.uix.label import MDLabel
+        back = MDFlatButton(
+            text="<",
+            font_size="20sp",
+            theme_text_color="Custom",
+            text_color=c("text2"),
+            size_hint_x=None, width=dp(48)
+        )
+        back.bind(on_release=lambda x: back_fn())
+        nav.add_widget(back)
+        nav.add_widget(MDLabel(
+            text=title,
+            font_style="H6",
+            theme_text_color="Custom",
+            text_color=_c(t("dexterity")),
+            bold=True
+        ))
+        self._nav_container.add_widget(nav)
+
     def _show_view(self, view_name, **kwargs):
         self._current_view = view_name
         self._content.clear_widgets()
+
+        # Update nav dynamically
+        nav_configs = {
+            "home": (
+                "VoxScope",
+                lambda: setattr(self.manager, "current", "dexterity")
+            ),
+            "warmup_menu": (
+                "Warmup",
+                lambda: self._show_view("home")
+            ),
+            "warmup_session": (
+                "Session",
+                lambda: self._end_warmup_session()
+            ),
+            "performance": (
+                "Performance",
+                lambda: self._abort_performance()
+            ),
+            "results": (
+                "Results",
+                lambda: self._show_view("home")
+            ),
+        }
+        title, back_fn = nav_configs.get(
+            view_name, ("VoxScope", lambda: None))
+        self._update_nav(title, back_fn)
+
         if view_name == "home":
             self._content.add_widget(self._build_home())
         elif view_name == "warmup_menu":
             self._content.add_widget(self._build_warmup_menu())
         elif view_name == "warmup_session":
             self._content.add_widget(
-                self._build_warmup_session(kwargs.get("exercise")))
+                self._build_warmup_session(
+                    kwargs.get("exercise")))
         elif view_name == "performance":
-            self._content.add_widget(self._build_performance())
+            self._content.add_widget(
+                self._build_performance())
         elif view_name == "results":
             self._content.add_widget(
-                self._build_results(kwargs.get("data", {})))
+                self._build_results(
+                    kwargs.get("data", {})))
 
     # ── HOME VIEW ─────────────────────────────────────────────────
 
@@ -584,16 +647,6 @@ class VoxScopeScreen(MDScreen):
         )
         body.bind(minimum_height=body.setter("height"))
 
-        back_btn = MDFlatButton(
-            text="← Back",
-            theme_text_color="Custom",
-            text_color=_c(DIM),
-            size_hint_y=None, height=dp(36)
-        )
-        back_btn.bind(
-            on_release=lambda x: self._show_view("home"))
-        body.add_widget(back_btn)
-
         body.add_widget(MDLabel(
             text="🔥  WARMUP EXERCISES",
             font_style="H6",
@@ -671,16 +724,6 @@ class VoxScopeScreen(MDScreen):
 
         root = MDBoxLayout(orientation="vertical",
                            padding=dp(16), spacing=dp(14))
-
-        back_btn = MDFlatButton(
-            text="← Back",
-            theme_text_color="Custom",
-            text_color=_c(DIM),
-            size_hint_y=None, height=dp(36)
-        )
-        back_btn.bind(
-            on_release=lambda x: self._end_warmup_session())
-        root.add_widget(back_btn)
 
         root.add_widget(MDLabel(
             text=exercise["name"],

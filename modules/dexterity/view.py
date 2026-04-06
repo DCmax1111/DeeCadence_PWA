@@ -3,22 +3,29 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton
-from kivymd.uix.textfield import MDTextField
 from kivymd.uix.card import MDCard
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.clock import Clock
-from modules.dexterity.controller import (
-    DexterityController, DEXTERITY_TYPES)
-from shared.theme import (
-    RED, PANEL, TEXT_DIM, TEXT, hex_color)
-from shared.components import top_nav
+from modules.spirit.controller import SpiritController
+from shared.theme import c, t, hex_color, R
+from shared.components import (
+    top_nav, section_label, log_row,
+    empty_state, spacer, summary_card,
+    input_field, primary_btn
+)
 
-PURPLE = "#7C3AED"
-GOLD   = "#F59E0B"
+PURPLE = "#8b5cf6"
+GOLD = t("spirit")
+GREEN = t("financial")
+ACCENT = t("accent")
+RED = t("error")
+TEXT = t("text")
+TEXT_DIM = t("text2")
+PANEL = t("card")
 
-def _c(h): return hex_color(h)
 
+def _c(h): return hex_color(h)  # kept for legacy hex calls
 
 RANK_COLORS = {
     "E":  "#6B7280",
@@ -69,7 +76,7 @@ class DexterityScreen(MDScreen):
         from kivymd.uix.menu import MDDropdownMenu
 
         root = MDBoxLayout(orientation="vertical")
-        root.add_widget(top_nav(self, "⚔  DEXTERITY", PURPLE))
+        root.add_widget(top_nav(self, "⚔ DEXTERITY", "dexterity"))
 
         scroll = MDScrollView()
         body = MDBoxLayout(
