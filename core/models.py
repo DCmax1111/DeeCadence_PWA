@@ -1,4 +1,12 @@
 CREATE_TABLES = [
+    # App settings — key/value store
+    """
+    CREATE TABLE IF NOT EXISTS app_settings (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now'))
+    )
+    """,
     # Financial
     """
     CREATE TABLE IF NOT EXISTS transactions (
@@ -21,16 +29,16 @@ CREATE_TABLES = [
         created_at  TEXT DEFAULT (datetime('now'))
     )
     """,
-    # Stats — one row per stat, upserted on change
+    # Stats
     """
     CREATE TABLE IF NOT EXISTS stats (
         id      INTEGER PRIMARY KEY AUTOINCREMENT,
         name    TEXT UNIQUE NOT NULL,
-        value   REAL DEFAULT 50,
+        value   REAL DEFAULT 1,
         rank    TEXT DEFAULT 'E'
     )
     """,
-    # Seed default stats if not present
+    # Seed stats at 1
     """
     INSERT OR IGNORE INTO stats (name, value) VALUES
         ('Body',      1),

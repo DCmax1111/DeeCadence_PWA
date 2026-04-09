@@ -3,11 +3,13 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton
+from kivymd.uix.textfield import MDTextField
 from kivymd.uix.card import MDCard
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.clock import Clock
 from modules.spirit.controller import SpiritController
+from modules.dexterity.controller import DexterityController, DEXTERITY_TYPES
 from shared.theme import c, t, hex_color, R
 from shared.components import (
     top_nav, section_label, log_row,

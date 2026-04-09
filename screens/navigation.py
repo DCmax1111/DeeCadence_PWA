@@ -7,13 +7,14 @@ from kivy.uix.widget import Widget
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.graphics import Color, RoundedRectangle, Line
+from kivy.clock import Clock
 from shared.theme import (
     c, t, hex_color, get_rank,
     stat_color, rank_color, R
 )
 from shared.components import (
-    ModuleCard, section_label, ThemeToggle,
-    rank_badge, spacer, get_greeting
+    ModuleCard, section_label,
+    ThemeToggle, spacer, get_greeting
 )
 import datetime
 
@@ -42,7 +43,7 @@ MODULES = [
         "label":     "Mind",
         "screen":    "mind",
         "color_key": "mind",
-        "desc":      "Focus · Clarity · Journal",
+        "desc":      "Focus · Clarity · DeeCadence",
         "stat":      "Mind",
         "hover":     "#1A0D2E",
     },
@@ -58,7 +59,7 @@ MODULES = [
         "label":     "Dexterity",
         "screen":    "dexterity",
         "color_key": "dexterity",
-        "desc":      "Drawing · Design · Craft",
+        "desc":      "Drawing · Design · VoxScope",
         "stat":      "Dexterity",
         "hover":     "#2B0D1E",
     },
@@ -79,7 +80,10 @@ class NavigationScreen(MDScreen):
         self._built = False
         self._module_cards = {}
         self._greeting_label = None
+        self._date_label = None
         self._overall_label = None
+        self._key_stats_labels = {}
+        self._refresh_event = None
 
     def on_enter(self):
         self.md_bg_color = c("bg")
@@ -88,41 +92,73 @@ class NavigationScreen(MDScreen):
             self._built = True
         else:
             self._refresh()
+        # Refresh every 10s on home
+        self._refresh_event = Clock.schedule_interval(
+            lambda dt: self._refresh(), 10)
+
+    def on_leave(self):
+        if self._refresh_event:
+            self._refresh_event.cancel()
+            self._refresh_event = None
 
     def _refresh(self):
         app = App.get_running_app()
-        stats = {s["name"]: dict(s)
-                 for s in app.db.fetchall("SELECT * FROM stats")}
+        try:
+            stats = {s["name"]: dict(s) for s in
+                     app.db.fetchall("SELECT * FROM stats")}
+        except Exception:
+            return
 
-        # Update greeting
+        # Greeting
         if self._greeting_label:
             name = getattr(app, 'user_name', 'DC')
             self._greeting_label.text = get_greeting(name)
 
-        # Update module cards
+        # Date
+        if self._date_label:
+            self._date_label.text = (
+                datetime.datetime.now()
+                .strftime("%A, %d %B %Y"))
+
+        # Overall rank
+        if self._overall_label and stats:
+            avg = (sum(s["value"]
+                       for s in stats.values()) /
+                   len(stats))
+            overall = get_rank(avg)
+            self._overall_label.text = (
+                f"Rank {overall}  ·  "
+                f"Score {int(avg)}")
+            self._overall_label.color = (
+                _c(rank_color(overall)))
+
+        # Key stat labels
+        for sname, lbl in self._key_stats_labels.items():
+            sd = stats.get(sname, {})
+            val = int(sd.get("value", 1))
+            lbl.text = f"{sname}  {val}"
+            lbl.color = _c(stat_color(sname))
+
+        # Module cards
         for m in MODULES:
-            stat_data = stats.get(m["stat"], {})
-            val = int(stat_data.get("value", 1))
-            rank = stat_data.get("rank", "E")
+            sd = stats.get(m["stat"], {})
+            val = int(sd.get("value", 1))
+            rank = get_rank(sd.get("value", 1))
             key = m["screen"]
             if key in self._module_cards:
                 self._module_cards[key].update_stat(
                     f"{val} · Rank {rank}")
 
-        # Update overall rank
-        if self._overall_label and stats:
-            avg = sum(s["value"]
-                      for s in stats.values()) / len(stats)
-            overall = get_rank(avg)
-            self._overall_label.text = (
-                f"Rank {overall}  ·  Score {int(avg)}")
-            self._overall_label.color = _c(rank_color(overall))
-
     def _build(self):
         app = App.get_running_app()
-        stats = {s["name"]: dict(s)
-                 for s in app.db.fetchall("SELECT * FROM stats")}
-        avg = (sum(s["value"] for s in stats.values()) /
+        try:
+            stats = {s["name"]: dict(s) for s in
+                     app.db.fetchall("SELECT * FROM stats")}
+        except Exception:
+            stats = {}
+
+        avg = (sum(s["value"]
+                   for s in stats.values()) /
                max(1, len(stats)))
         overall = get_rank(avg)
         name = getattr(app, 'user_name', 'DC')
@@ -136,26 +172,26 @@ class NavigationScreen(MDScreen):
             padding=[dp(20), 0, dp(16), 0],
             md_bg_color=c("bg2")
         )
-        title = MDLabel(
+        header.add_widget(MDLabel(
             text="DEE_CISTEM",
             font_style="H6",
             theme_text_color="Custom",
             text_color=_c(t("accent")),
             bold=True,
             size_hint_x=0.75
-        )
-        header.add_widget(title)
+        ))
         toggle = ThemeToggle(
             on_toggle=self._on_theme_change)
         header.add_widget(toggle)
         root.add_widget(header)
 
-        # ── Scrollable body ───────────────────────────────────────
+        # ── Scroll body ───────────────────────────────────────────
         scroll = MDScrollView()
         body = MDBoxLayout(
             orientation="vertical",
+            padding=[dp(20), dp(20),
+                     dp(20), dp(32)],
             spacing=dp(0),
-            padding=[dp(16), dp(20), dp(16), dp(24)],
             size_hint_y=None
         )
         body.bind(minimum_height=body.setter("height"))
@@ -168,22 +204,21 @@ class NavigationScreen(MDScreen):
             text_color=c("text"),
             bold=True,
             size_hint_y=None,
-            height=dp(40)
+            height=dp(44)
         )
         body.add_widget(self._greeting_label)
 
-        date_str = datetime.datetime.now().strftime(
-            "%A, %d %B %Y")
-        body.add_widget(MDLabel(
-            text=date_str,
+        self._date_label = MDLabel(
+            text=datetime.datetime.now()
+            .strftime("%A, %d %B %Y"),
             font_style="Caption",
             theme_text_color="Custom",
             text_color=c("text3"),
             size_hint_y=None,
             height=dp(20)
-        ))
-
-        body.add_widget(spacer(20))
+        )
+        body.add_widget(self._date_label)
+        body.add_widget(spacer(24))
 
         # ── Stat dashboard card ───────────────────────────────────
         dash_card = MDCard(
@@ -192,13 +227,14 @@ class NavigationScreen(MDScreen):
             elevation=0,
             padding=[dp(18), dp(16)],
             size_hint_y=None,
-            height=dp(100),
+            height=dp(112),
             md_bg_color=c("card")
         )
 
+        # Top row — label + arrow
         dash_top = MDBoxLayout(
             orientation="horizontal",
-            size_hint_y=None, height=dp(32)
+            size_hint_y=None, height=dp(22)
         )
         dash_top.add_widget(MDLabel(
             text="STAT DASHBOARD",
@@ -209,52 +245,59 @@ class NavigationScreen(MDScreen):
         ))
         dash_top.add_widget(MDLabel(
             text=">",
-            font_size="20sp",
+            font_size="18sp",
             theme_text_color="Custom",
             text_color=c("text3"),
             halign="right"
         ))
         dash_card.add_widget(dash_top)
+        dash_card.add_widget(spacer(4))
 
+        # Overall rank
         self._overall_label = MDLabel(
-            text=f"Rank {overall}  ·  Score {int(avg)}",
+            text=f"Rank {overall}  ·  "
+                 f"Score {int(avg)}",
             font_style="H6",
             theme_text_color="Custom",
             text_color=_c(rank_color(overall)),
             bold=True,
             size_hint_y=None,
-            height=dp(36)
+            height=dp(32)
         )
         dash_card.add_widget(self._overall_label)
+        dash_card.add_widget(spacer(8))
 
-        # 3 key stats inline
+        # 3 key stats row
         key_stats = ["Body", "Mind", "Spirit"]
         stats_row = MDBoxLayout(
             orientation="horizontal",
             size_hint_y=None, height=dp(20),
-            spacing=dp(16)
+            spacing=dp(20)
         )
+        self._key_stats_labels = {}
         for sname in key_stats:
             sd = stats.get(sname, {})
             val = int(sd.get("value", 1))
             col = stat_color(sname)
-            stats_row.add_widget(MDLabel(
-                text=f"{sname} {val}",
+            lbl = MDLabel(
+                text=f"{sname}  {val}",
                 font_style="Caption",
                 theme_text_color="Custom",
                 text_color=_c(col)
-            ))
+            )
+            self._key_stats_labels[sname] = lbl
+            stats_row.add_widget(lbl)
         dash_card.add_widget(stats_row)
+
         dash_card.bind(on_release=lambda x: setattr(
             self.manager, "current", "dashboard"))
         body.add_widget(dash_card)
-
-        body.add_widget(spacer(20))
+        body.add_widget(spacer(28))
 
         # ── Modules ───────────────────────────────────────────────
-        body.add_widget(section_label(
-            "MODULES", top_space=False))
-        body.add_widget(spacer(8))
+        body.add_widget(
+            section_label("MODULES", top_space=False))
+        body.add_widget(spacer(10))
 
         for i in range(0, len(MODULES), 2):
             pair = MODULES[i:i+2]
@@ -264,16 +307,17 @@ class NavigationScreen(MDScreen):
                 orientation="horizontal",
                 spacing=dp(10),
                 size_hint_y=None,
-                height=dp(96)
+                height=dp(100)
             )
 
             if is_odd:
-                row.add_widget(Widget(size_hint_x=0.5))
+                row.add_widget(
+                    Widget(size_hint_x=0.5))
 
             for m in pair:
                 sd = stats.get(m["stat"], {})
                 val = int(sd.get("value", 1))
-                rank = sd.get("rank", "E")
+                rank = get_rank(sd.get("value", 1))
 
                 card = ModuleCard(
                     label=m["label"],
@@ -284,13 +328,15 @@ class NavigationScreen(MDScreen):
                     size_hint_x=0.5
                 )
                 sc = m["screen"]
-                card.bind(on_release=lambda x, s=sc: setattr(
-                    self.manager, "current", s))
+                card.bind(
+                    on_release=lambda x, s=sc: setattr(
+                        self.manager, "current", s))
                 self._module_cards[m["screen"]] = card
                 row.add_widget(card)
 
             if is_odd:
-                row.add_widget(Widget(size_hint_x=0.5))
+                row.add_widget(
+                    Widget(size_hint_x=0.5))
 
             body.add_widget(row)
             body.add_widget(spacer(10))

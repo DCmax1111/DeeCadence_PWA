@@ -7,6 +7,7 @@ from kivymd.uix.card import MDCard
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.clock import Clock
+from kivymd.uix.textfield import MDTextField
 from modules.spirit.controller import SpiritController
 from shared.theme import c, t, hex_color, R
 from shared.components import (
@@ -14,6 +15,7 @@ from shared.components import (
     empty_state, spacer, summary_card,
     input_field, primary_btn
 )
+
 
 PURPLE = "#8b5cf6"
 GOLD = t("spirit")

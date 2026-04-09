@@ -232,6 +232,6 @@ EXPENSE_CATEGORIES = [
     "Health", "Entertainment", "Tithe",
     "Savings", "Utilities", "Clothing", "Other"
 ]
-CURRENCY_SYMBOL = "N/$"
+CURRENCY_SYMBOL = "N/$ "
 RANK_THRESHOLDS_OLD = RANK_THRESHOLDS
 

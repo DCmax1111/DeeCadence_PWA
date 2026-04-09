@@ -3,16 +3,29 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton
+from kivymd.uix.textfield import MDTextField
 from kivymd.uix.card import MDCard
 from kivy.app import App
 from kivy.metrics import dp
 from kivy.clock import Clock
 from modules.spirit.controller import SpiritController
-from shared.theme import c, t, hex_color, R
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.slider import MDSlider
+from kivymd.uix.progressbar import MDProgressBar
+from kivy.uix.widget import Widget
+from kivy.graphics import Color, RoundedRectangle, Line
+from modules.deecadence.controller import (
+    DeeCadenceController, DISTRACTION_TYPES,
+    DIFFICULTY_LABELS, calculate_blocks
+)
 from shared.components import (
     top_nav, section_label, log_row,
     empty_state, spacer, summary_card,
     input_field, primary_btn
+)
+from shared.theme import (
+    ACCENT, GREEN, RED, GOLD, PANEL, R,
+    TEXT, TEXT_DIM, hex_color, c, t, get_rank
 )
 
 PURPLE = "#8b5cf6"
@@ -24,6 +37,15 @@ TEXT = t("text")
 TEXT_DIM = t("text2")
 PANEL = t("card")
 
+# DeeCadence palette
+DC_BG      = "#050810"
+DC_CARD    = "#0a1020"
+DC_ACCENT  = "#4a9eff"
+DC_RED     = "#ff4466"
+DC_GREEN   = "#00ff88"
+DC_GOLD    = "#ffd700"
+DC_PURPLE  = "#8b5cf6"
+DC_DIM     = "#4a6080"
 
 def _c(h): return hex_color(h)  # kept for legacy hex calls
 
@@ -205,8 +227,7 @@ class DeeCadenceScreen(MDScreen):
 
     def _build_shell(self):
         root = MDBoxLayout(orientation="vertical")
-        root.add_widget(
-            top_nav(self, "DeeCadence", "mind"))
+        root.add_widget(top_nav(self, "⚡  DEECADENCE", ACCENT))
         self._content = MDBoxLayout(orientation="vertical")
         root.add_widget(self._content)
         self.add_widget(root)
@@ -1119,4 +1140,5 @@ class DeeCadenceScreen(MDScreen):
         row.add_widget(info)
         return row
     
+
 

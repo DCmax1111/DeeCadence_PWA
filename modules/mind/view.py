@@ -2,6 +2,7 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.label import MDLabel
+from kivymd.uix.textfield import MDTextField
 from kivymd.uix.button import MDRaisedButton
 from kivy.app import App
 from kivy.metrics import dp
@@ -60,11 +61,60 @@ class MindScreen(MDScreen):
         self._fill_mood_list()
         self._fill_journal_list()
 
+    def _build_deecadence_card(self):
+        """Shortcut card to DeeCadence — lives under Mind."""
+        from shared.theme import t, hex_color, R, c
+        from kivymd.uix.card import MDCard
+        from kivymd.uix.label import MDLabel
+        from kivymd.uix.boxlayout import MDBoxLayout
+        from kivy.metrics import dp
+
+        def _c(h): return hex_color(h)
+
+        card = MDCard(
+            orientation="horizontal",
+            radius=R["lg"],
+            elevation=0,
+            padding=[dp(16), dp(14)],
+            size_hint_y=None, height=dp(72),
+            md_bg_color=_c(t("mind") + "18"),
+            spacing=dp(12)
+        )
+        info = MDBoxLayout(orientation="vertical")
+        info.add_widget(MDLabel(
+            text="DeeCadence",
+            font_style="Body1",
+            theme_text_color="Custom",
+            text_color=_c(t("mind")),
+            bold=True,
+            size_hint_y=0.55
+        ))
+        info.add_widget(MDLabel(
+            text="Focus debt · Session tracker · Attention score",
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=c("text2"),
+            size_hint_y=0.45
+        ))
+        card.add_widget(info)
+        card.add_widget(MDLabel(
+            text=">",
+            font_size="20sp",
+            theme_text_color="Custom",
+            text_color=c("text3"),
+            halign="right",
+            size_hint_x=0.1
+        ))
+        card.bind(on_release=lambda x: setattr(
+            self.manager, "current", "deecadence"))
+        return card
+
     def _build(self):
         from kivymd.uix.menu import MDDropdownMenu
 
         root = MDBoxLayout(orientation="vertical")
         root.add_widget(top_nav(self, "Mind", "mind"))
+        root.add_widget(self._build_deecadence_card())
 
         scroll = MDScrollView()
         body = MDBoxLayout(
