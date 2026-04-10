@@ -23,12 +23,33 @@ from core.subscription import PRICING, SubscriptionGate
 
 def _c(h): return hex_color(h)
 
-# ── Replace with your actual Cleva payment links ──────────────────
+# ── Replace with your actual Cleva payment links gate ──────────────────
 # When subscriptions_active = False these are never shown
-CLEVA_LINKS = {
-    "pioneer":    "https://pay.usecleva.com/YOUR_PIONEER_LINK",
-    "pro_monthly":"https://pay.usecleva.com/YOUR_PRO_MONTHLY_LINK",
-    "pro_annual": "https://pay.usecleva.com/YOUR_PRO_ANNUAL_LINK",
+# CLEVA_LINKS = {
+#     "pioneer":    "https://pay.usecleva.com/YOUR_PIONEER_LINK",
+#     "pro_monthly":"https://pay.usecleva.com/YOUR_PRO_MONTHLY_LINK",
+#     "pro_annual": "https://pay.usecleva.com/YOUR_PRO_ANNUAL_LINK",
+# }
+
+# Replace your phone number — international format, no +
+YOUR_WHATSAPP = "2348085318908"
+
+PAYMENT_LINKS = {
+    "pioneer": (
+        f"https://wa.me/{YOUR_WHATSAPP}"
+        f"?text=Hi%2C%20I%20want%20Pioneer%20access%20"
+        f"to%20Dee_Cistem%20%28NGN5%2C000%20lifetime%29"
+    ),
+    "pro_monthly": (
+        f"https://wa.me/{YOUR_WHATSAPP}"
+        f"?text=Hi%2C%20I%20want%20Pro%20Monthly%20"
+        f"access%20to%20Dee_Cistem%20%28NGN1%2C500%2Fmonth%29"
+    ),
+    "pro_annual": (
+        f"https://wa.me/{YOUR_WHATSAPP}"
+        f"?text=Hi%2C%20I%20want%20Pro%20Annual%20"
+        f"access%20to%20Dee_Cistem%20%28NGN15%2C000%2Fyear%29"
+    ),
 }
 
 TIER_FEATURES = {
@@ -300,27 +321,20 @@ class UpgradeScreen(MDScreen):
         return row
 
     def _open_payment(self, plan_key):
-        """Open Cleva payment link in browser."""
-        link = CLEVA_LINKS.get(plan_key)
-        if not link or "YOUR_" in link:
-            # Subscriptions not configured yet
-            self._show_coming_soon()
+        link = PAYMENT_LINKS.get(plan_key)
+        if not link:
             return
         try:
             if platform == "android":
-                from android.permissions import (
-                    request_permissions, Permission)
                 from jnius import autoclass
-                Intent = autoclass(
-                    'android.content.Intent')
+                Intent = autoclass('android.content.Intent')
                 Uri = autoclass('android.net.Uri')
                 PythonActivity = autoclass(
                     'org.kivy.android.PythonActivity')
                 intent = Intent(
                     Intent.ACTION_VIEW,
                     Uri.parse(link))
-                PythonActivity.mActivity\
-                    .startActivity(intent)
+                PythonActivity.mActivity.startActivity(intent)
             else:
                 import webbrowser
                 webbrowser.open(link)
