@@ -328,9 +328,17 @@ class NavigationScreen(MDScreen):
                     size_hint_x=0.5
                 )
                 sc = m["screen"]
-                card.bind(
-                    on_release=lambda x, s=sc: setattr(
-                        self.manager, "current", s))
+                def _go(screen_key):
+                    app = App.get_running_app()
+                    if app.gate.can_access_module(screen_key):
+                        self.manager.current = screen_key
+                    else:
+                        locked = self.manager.get_screen(
+                            "locked_module")
+                        locked.set_module(screen_key)
+                        self.manager.current = "locked_module"
+
+                card.bind(on_release=lambda x, s=sc: _go(s))
                 self._module_cards[m["screen"]] = card
                 row.add_widget(card)
 

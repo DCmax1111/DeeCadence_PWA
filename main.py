@@ -1,13 +1,14 @@
 from kivymd.app import MDApp
-from kivy.uix.screenmanager import (
-    ScreenManager, FadeTransition)
+from kivy.uix.screenmanager import ScreenManager, FadeTransition
 from kivy.core.window import Window
-from kivy.clock import Clock
 import os
 
 from core.database import Database
+from core.subscription import SubscriptionGate
 from screens.navigation import NavigationScreen
 from screens.dashboard import DashboardScreen
+from screens.upgrade import UpgradeScreen
+from screens.locked_module import LockedModuleScreen
 from modules.financial.view import (
     FinancialScreen,
     AddTransactionScreen,
@@ -26,7 +27,6 @@ Window.softinput_mode = "below_target"
 
 
 def _load_font():
-    """Try to register NotoSans. Fall back to Roboto silently."""
     try:
         from kivy.core.text import LabelBase
         font_dir = os.path.join(
@@ -53,6 +53,7 @@ class TheSystemApp(MDApp):
         self.onboarding_complete = False
         self.font_name = _load_font()
         self.pending_txn_type = "expense"
+        self.gate = None
 
     def build(self):
         self.theme_cls.theme_style = "Dark"
@@ -60,26 +61,42 @@ class TheSystemApp(MDApp):
         self.db.initialize()
         self._load_settings()
 
+        # Initialise subscription gate
+        self.gate = SubscriptionGate(self.db)
+
         sm = ScreenManager(
             transition=FadeTransition(duration=0.12))
 
-        sm.add_widget(OnboardingScreen(name="onboarding"))
-        sm.add_widget(NavigationScreen(name="navigation"))
-        sm.add_widget(DashboardScreen(name="dashboard"))
-        sm.add_widget(FinancialScreen(name="financial"))
-        sm.add_widget(AddTransactionScreen(
-            name="add_transaction"))
-        sm.add_widget(TransactionHistoryScreen(
-            name="transaction_history"))
+        sm.add_widget(
+            OnboardingScreen(name="onboarding"))
+        sm.add_widget(
+            NavigationScreen(name="navigation"))
+        sm.add_widget(
+            DashboardScreen(name="dashboard"))
+        sm.add_widget(
+            FinancialScreen(name="financial"))
+        sm.add_widget(
+            AddTransactionScreen(
+                name="add_transaction"))
+        sm.add_widget(
+            TransactionHistoryScreen(
+                name="transaction_history"))
         sm.add_widget(SpiritScreen(name="spirit"))
         sm.add_widget(EnergyScreen(name="energy"))
         sm.add_widget(MindScreen(name="mind"))
-        sm.add_widget(KnowledgeScreen(name="knowledge"))
-        sm.add_widget(DexterityScreen(name="dexterity"))
-        sm.add_widget(VoxScopeScreen(name="voxscope"))
-        sm.add_widget(DeeCadenceScreen(name="deecadence"))
+        sm.add_widget(
+            KnowledgeScreen(name="knowledge"))
+        sm.add_widget(
+            DexterityScreen(name="dexterity"))
+        sm.add_widget(
+            VoxScopeScreen(name="voxscope"))
+        sm.add_widget(
+            DeeCadenceScreen(name="deecadence"))
+        sm.add_widget(
+            UpgradeScreen(name="upgrade"))
+        sm.add_widget(
+            LockedModuleScreen(name="locked_module"))
 
-        # Route to onboarding or home
         if self.onboarding_complete:
             sm.current = "navigation"
         else:
@@ -87,8 +104,19 @@ class TheSystemApp(MDApp):
 
         return sm
 
+    def navigate_to_module(self, module_key, sm):
+        """
+        Central navigation method.
+        Checks subscription gate before routing.
+        """
+        if self.gate.can_access_module(module_key):
+            sm.current = module_key
+        else:
+            locked = sm.get_screen("locked_module")
+            locked.set_module(module_key)
+            sm.current = "locked_module"
+
     def _load_settings(self):
-        """Load persisted settings from db."""
         try:
             rows = self.db.fetchall(
                 "SELECT key, value FROM app_settings")
@@ -98,7 +126,8 @@ class TheSystemApp(MDApp):
                 "user_name", "DC")
             self.onboarding_complete = (
                 settings.get(
-                    "onboarding_complete", "0") == "1")
+                    "onboarding_complete",
+                    "0") == "1")
         except Exception:
             pass
 
@@ -108,3 +137,4 @@ class TheSystemApp(MDApp):
 
 if __name__ == "__main__":
     TheSystemApp().run()
+
