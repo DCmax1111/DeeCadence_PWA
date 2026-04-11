@@ -9,6 +9,8 @@ from screens.navigation import NavigationScreen
 from screens.dashboard import DashboardScreen
 from screens.upgrade import UpgradeScreen
 from screens.locked_module import LockedModuleScreen
+from screens.admin import AdminScreen
+from screens.settings import SettingsScreen
 from modules.financial.view import (
     FinancialScreen,
     AddTransactionScreen,
@@ -96,6 +98,10 @@ class TheSystemApp(MDApp):
             UpgradeScreen(name="upgrade"))
         sm.add_widget(
             LockedModuleScreen(name="locked_module"))
+        sm.add_widget(
+            AdminScreen(name="admin"))
+        sm.add_widget(
+            SettingsScreen(name="settings"))
 
         if self.onboarding_complete:
             sm.current = "navigation"

@@ -348,6 +348,31 @@ class NavigationScreen(MDScreen):
 
             body.add_widget(row)
             body.add_widget(spacer(10))
+        
+        # Settings link
+        settings_card = MDCard(
+            orientation="horizontal",
+            radius=R["lg"], elevation=0,
+            padding=[dp(18), dp(16)],
+            size_hint_y=None, height=dp(52),
+            md_bg_color=c("card")
+        )
+        settings_card.add_widget(MDLabel(
+            text="Settings",
+            font_style="Body1",
+            theme_text_color="Custom",
+            text_color=c("text2")
+        ))
+        settings_card.add_widget(MDLabel(
+            text=">",
+            font_size="18sp",
+            theme_text_color="Custom",
+            text_color=c("text3"),
+            halign="right"
+        ))
+        settings_card.bind(on_release=lambda x: setattr(
+            self.manager, "current", "settings"))
+        body.add_widget(settings_card)
 
         scroll.add_widget(body)
         root.add_widget(scroll)
