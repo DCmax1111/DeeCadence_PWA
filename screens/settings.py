@@ -179,6 +179,53 @@ class SettingsScreen(MDScreen):
         body.add_widget(id_card)
         body.add_widget(spacer(24))
 
+        # ── Account linking ───────────────────────────────────────────────
+        body.add_widget(section_label("ACCOUNT LINK"))
+        body.add_widget(spacer(8))
+        body.add_widget(MDLabel(
+            text="Link an account ID to access your "
+                "subscription across multiple devices.",
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=c("text3"),
+            size_hint_y=None, height=dp(36)
+        ))
+        body.add_widget(spacer(6))
+
+        current_account = get_account_id(app.db)
+        body.add_widget(MDLabel(
+            text=f"Current: {current_account[:20]}...",
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=c("text3"),
+            size_hint_y=None, height=dp(24)
+        ))
+        body.add_widget(spacer(6))
+
+        self._account_field = MDTextField(
+            hint_text="Enter account ID (e.g. your email)",
+            mode="rectangle",
+            size_hint_y=None, height=dp(52),
+            line_color_normal=_c(t("border")),
+            line_color_focus=_c(t("accent")),
+            hint_text_color_normal=_c(t("text3")),
+            text_color_normal=_c(t("text")),
+            fill_color_normal=_c(t("surface")),
+            radius=[dp(10)] * 4
+        )
+        body.add_widget(self._account_field)
+        body.add_widget(spacer(8))
+
+        link_btn = MDRaisedButton(
+            text="Link account",
+            md_bg_color=_c(t("accent")),
+            size_hint_y=None, height=dp(52)
+        )
+        link_btn.bind(
+            on_release=lambda x: self._link_account())
+        body.add_widget(link_btn)
+        body.add_widget(spacer(20))
+
         # ── Profile ───────────────────────────────────────────────
         body.add_widget(
             section_label("PROFILE"))
@@ -269,3 +316,24 @@ class SettingsScreen(MDScreen):
                     ADMIN_TAPS_REQUIRED):
                 self._version_taps = 0
                 self.manager.current = "admin"
+
+    def _link_account(self):
+        account_id = self._account_field.text.strip()
+        if not account_id:
+            return
+        app = App.get_running_app()
+        from core.device_id import set_account_id
+        set_account_id(app.db, account_id)
+        # Immediately check subscription for this account
+        from core.sync import check_subscription
+
+        def on_result(tier):
+            if tier:
+                from core.subscription import (
+                    SubscriptionGate)
+                gate = SubscriptionGate(app.db)
+                gate.apply_upgrade(tier)
+            self.on_enter()
+
+        check_subscription(app.db, on_result=on_result)
+
