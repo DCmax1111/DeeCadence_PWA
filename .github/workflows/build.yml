@@ -70,12 +70,26 @@ jobs:
         run: |
           buildozer -v android debug 2>&1 | tail -200
 
-      - name: Upload APK
+      - name: Find and upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Dee_Cistem_APK
-          path: bin/*.apk
+          path: |
+            bin/*.apk
+            .buildozer/android/platform/build-arm64-v8a/dists/**/*.apk
+            .buildozer/android/platform/build-arm64-v8a/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
           retention-days: 30
+
+      - name: List build output for debugging
+        if: always()
+        run: |
+          echo "=== bin/ contents ==="
+          ls -la bin/ 2>/dev/null || echo "bin/ not found"
+          echo "=== Searching for APK ==="
+          find . -name "*.apk" 2>/dev/null || echo "No APK found"
+          echo "=== Buildozer dist ==="
+          find .buildozer -name "*.apk" 2>/dev/null | head -20 || echo "Nothing"
 
       - name: Upload build log on failure
         if: failure()
