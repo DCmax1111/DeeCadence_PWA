@@ -9,14 +9,7 @@ from the upgrade screen.
 """
 import threading
 from kivy.clock import Clock
-
-# ── Configure these ───────────────────────────────────────────────
-SUPABASE_URL = "https://lnxvlpmvhjhvwzunkvts.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw"
-# ─────────────────────────────────────────────────────────────────
-
-SYNC_ENABLED = (
-    "YOUR_PROJECT" not in SUPABASE_URL)
+from core.config import SUPABASE_URL, SUPABASE_ANON_KEY, SYNC_ENABLED
 
 
 def check_subscription(device_id, db,

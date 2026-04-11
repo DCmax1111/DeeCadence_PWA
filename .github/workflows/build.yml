@@ -64,6 +64,9 @@ jobs:
             buildozer-${{ runner.os }}-
 
       - name: Build APK
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           buildozer -v android debug 2>&1 | tail -200
 
