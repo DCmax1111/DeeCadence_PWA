@@ -54,6 +54,35 @@ jobs:
           pip install --upgrade pip
           pip install buildozer==1.5.0 cython==0.29.36
 
+      - name: Accept Android SDK licenses
+        run: |
+          yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          # Install build-tools via pre-installed SDK
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "build-tools;34.0.0" \
+            "platforms;android-33" \
+            "platform-tools" || true
+
+      - name: Configure Buildozer to use existing SDK
+        run: |
+          # Point Buildozer at the runner's pre-installed SDK
+          mkdir -p ~/.buildozer/android/platform
+          ln -sf $ANDROID_HOME \
+            ~/.buildozer/android/platform/android-sdk
+          # Accept all licenses in that SDK too
+          mkdir -p $ANDROID_HOME/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" \
+            > $ANDROID_HOME/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" \
+            >> $ANDROID_HOME/licenses/android-sdk-license
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" \
+            >> $ANDROID_HOME/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" \
+            > $ANDROID_HOME/licenses/android-sdk-preview-license
+          echo "Symlink created:"
+          ls -la ~/.buildozer/android/platform/
+
       - name: Cache Buildozer
         uses: actions/cache@v4
         with:
@@ -64,58 +93,24 @@ jobs:
           restore-keys: |
             buildozer-${{ runner.os }}-
 
-      - name: Accept Android SDK licenses
-        run: |
-          # Pre-create SDK directory
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-
-          # Accept all standard licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" \
-            > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" \
-            >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" \
-            >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" \
-            > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
-
-          echo "601085b94cd77f0b54ff86406957099ebe79c4d6" \
-            > ~/.buildozer/android/platform/android-sdk/licenses/android-googletv-license
-
-          echo "33b6a2b64607f11b759f320ef9dff4ae5c47d97a" \
-            > ~/.buildozer/android/platform/android-sdk/licenses/google-gdk-license
-
-          echo "e9acab5b5fbb560a72cfaecce8946896ff6aab9d" \
-            > ~/.buildozer/android/platform/android-sdk/licenses/mips-android-sysimage-license
-
-          echo "504667f4c0de7af1a06de9f4b1727b84351f2910" \
-            > ~/.buildozer/android/platform/android-sdk/licenses/intel-android-extra-license
-
-          echo "d975f751698a77b662f1254ddbeed3901e976f5a" \
-            > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-arm-dbt-license
-
-          echo "Licenses written:"
-          ls -la ~/.buildozer/android/platform/android-sdk/licenses/
-
       - name: Build APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ANDROIDSDK: /usr/local/lib/android/sdk
+          ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           buildozer android debug 2>&1 | tee build_full.log
-          echo "Build exit code: $?"
+          echo "Build exit: $?"
 
-      - name: Show build result
+      - name: Show result
         if: always()
         run: |
-          echo "=== LAST 80 LINES OF BUILD LOG ==="
-          tail -80 build_full.log || echo "No log"
-          echo ""
+          echo "=== LAST 60 LINES ==="
+          tail -60 build_full.log || true
           echo "=== APK SEARCH ==="
-          find . -name "*.apk" 2>/dev/null || echo "No APK found"
-          echo ""
-          echo "=== bin/ contents ==="
+          find . -name "*.apk" 2>/dev/null || echo "No APK"
+          echo "=== bin/ ==="
           ls -la bin/ 2>/dev/null || echo "bin/ empty"
 
       - name: Upload APK
@@ -134,4 +129,4 @@ jobs:
           path: build_full.log
           retention-days: 7
 
-    
+  
