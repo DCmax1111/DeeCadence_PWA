@@ -19,6 +19,20 @@ from modules.dexterity.model import (
     midi_to_note, note_to_midi, MIDI_TO_NOTE
 )
 
+# Graceful audio degradation
+try:
+    import sounddevice as sd
+    import numpy as np
+    AUDIO_AVAILABLE = True
+except ImportError:
+    AUDIO_AVAILABLE = False
+
+# Replace _audio_loop with:
+def _audio_loop(self):
+    if not AUDIO_AVAILABLE:
+        return
+    # ... rest of audio loop unchanged
+
 # ── Palette ───────────────────────────────────────────────────────
 BG      = "#0A0E1A"
 SURFACE = "#111827"
