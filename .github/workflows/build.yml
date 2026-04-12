@@ -21,6 +21,12 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -30,7 +36,6 @@ jobs:
             git \
             zip \
             unzip \
-            openjdk-17-jdk \
             autoconf \
             libtool \
             pkg-config \
@@ -42,16 +47,12 @@ jobs:
             libffi-dev \
             libssl-dev \
             libltdl-dev \
-            ffmpeg \
-            libsdl2-dev \
-            libsdl2-image-dev \
-            libsdl2-mixer-dev \
-            libsdl2-ttf-dev
+            lld
 
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install buildozer cython==0.29.36
+          pip install buildozer==1.5.0 cython==0.29.36
 
       - name: Cache Buildozer
         uses: actions/cache@v4
@@ -63,41 +64,74 @@ jobs:
           restore-keys: |
             buildozer-${{ runner.os }}-
 
+      - name: Accept Android SDK licenses
+        run: |
+          # Pre-create SDK directory
+          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+
+          # Accept all standard licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" \
+            > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" \
+            >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" \
+            >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" \
+            > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
+
+          echo "601085b94cd77f0b54ff86406957099ebe79c4d6" \
+            > ~/.buildozer/android/platform/android-sdk/licenses/android-googletv-license
+
+          echo "33b6a2b64607f11b759f320ef9dff4ae5c47d97a" \
+            > ~/.buildozer/android/platform/android-sdk/licenses/google-gdk-license
+
+          echo "e9acab5b5fbb560a72cfaecce8946896ff6aab9d" \
+            > ~/.buildozer/android/platform/android-sdk/licenses/mips-android-sysimage-license
+
+          echo "504667f4c0de7af1a06de9f4b1727b84351f2910" \
+            > ~/.buildozer/android/platform/android-sdk/licenses/intel-android-extra-license
+
+          echo "d975f751698a77b662f1254ddbeed3901e976f5a" \
+            > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-arm-dbt-license
+
+          echo "Licenses written:"
+          ls -la ~/.buildozer/android/platform/android-sdk/licenses/
+
       - name: Build APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          buildozer -v android debug 2>&1 | tail -200
+          buildozer android debug 2>&1 | tee build_full.log
+          echo "Build exit code: $?"
 
-      - name: Find and upload APK
+      - name: Show build result
+        if: always()
+        run: |
+          echo "=== LAST 80 LINES OF BUILD LOG ==="
+          tail -80 build_full.log || echo "No log"
+          echo ""
+          echo "=== APK SEARCH ==="
+          find . -name "*.apk" 2>/dev/null || echo "No APK found"
+          echo ""
+          echo "=== bin/ contents ==="
+          ls -la bin/ 2>/dev/null || echo "bin/ empty"
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Dee_Cistem_APK
-          path: |
-            bin/*.apk
-            .buildozer/android/platform/build-arm64-v8a/dists/**/*.apk
-            .buildozer/android/platform/build-arm64-v8a/build/outputs/apk/**/*.apk
+          path: bin/*.apk
           if-no-files-found: warn
           retention-days: 30
 
-      - name: List build output for debugging
+      - name: Upload build log
         if: always()
-        run: |
-          echo "=== bin/ contents ==="
-          ls -la bin/ 2>/dev/null || echo "bin/ not found"
-          echo "=== Searching for APK ==="
-          find . -name "*.apk" 2>/dev/null || echo "No APK found"
-          echo "=== Buildozer dist ==="
-          find .buildozer -name "*.apk" 2>/dev/null | head -20 || echo "Nothing"
-
-      - name: Upload build log on failure
-        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build_log
-          path: |
-            .buildozer/logs/
-            *.log
+          path: build_full.log
           retention-days: 7
 
+    

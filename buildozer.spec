@@ -5,22 +5,27 @@ package.domain = com.dccreations
 
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,ttf,db
+source.exclude_dirs = tests,bin,.buildozer,.github,assets/fonts
 
 version = 0.1.0
 
-requirements = python3,kivy==2.3.0,kivymd==1.2.0,sqlite3,pillow,requests,numpy
+requirements = python3==3.10.14,kivy==2.3.0,kivymd==1.2.0,pillow
 
 orientation = portrait
 fullscreen = 0
 
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,RECORD_AUDIO
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 
 android.api = 33
 android.minapi = 26
 android.ndk = 25b
+android.ndk_api = 21
+android.sdk = 33
+android.build_tools_version = 33.0.2
 android.archs = arm64-v8a
-
 android.allow_backup = True
+android.skip_update = False
+android.accept_sdk_license = True
 
 [buildozer]
 log_level = 2
