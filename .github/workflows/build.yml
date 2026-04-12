@@ -13,120 +13,21 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Build with Kivy action
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
         with:
-          python-version: '3.10'
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3-pip \
-            build-essential \
-            git \
-            zip \
-            unzip \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            libtinfo5 \
-            cmake \
-            libffi-dev \
-            libssl-dev \
-            libltdl-dev \
-            lld
-
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip
-          pip install buildozer==1.5.0 cython==0.29.36
-
-      - name: Accept Android SDK licenses
-        run: |
-          yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          # Install build-tools via pre-installed SDK
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "build-tools;34.0.0" \
-            "platforms;android-33" \
-            "platform-tools" || true
-
-      - name: Configure Buildozer to use existing SDK
-        run: |
-          # Point Buildozer at the runner's pre-installed SDK
-          mkdir -p ~/.buildozer/android/platform
-          ln -sf $ANDROID_HOME \
-            ~/.buildozer/android/platform/android-sdk
-          # Accept all licenses in that SDK too
-          mkdir -p $ANDROID_HOME/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" \
-            > $ANDROID_HOME/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" \
-            >> $ANDROID_HOME/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" \
-            >> $ANDROID_HOME/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" \
-            > $ANDROID_HOME/licenses/android-sdk-preview-license
-          echo "Symlink created:"
-          ls -la ~/.buildozer/android/platform/
-
-      - name: Cache Buildozer
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-            ~/.gradle
-          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
-          restore-keys: |
-            buildozer-${{ runner.os }}-
-
-      - name: Build APK
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          ANDROIDSDK: /usr/local/lib/android/sdk
-          ANDROID_HOME: /usr/local/lib/android/sdk
-        run: |
-          buildozer android debug 2>&1 | tee build_full.log
-          echo "Build exit: $?"
-
-      - name: Show result
-        if: always()
-        run: |
-          echo "=== LAST 60 LINES ==="
-          tail -60 build_full.log || true
-          echo "=== APK SEARCH ==="
-          find . -name "*.apk" 2>/dev/null || echo "No APK"
-          echo "=== bin/ ==="
-          ls -la bin/ 2>/dev/null || echo "bin/ empty"
+          command: buildozer android debug
+          buildozer_version: stable
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Dee_Cistem_APK
-          path: bin/*.apk
-          if-no-files-found: warn
+          path: ${{ steps.buildozer.outputs.filename }}
           retention-days: 30
 
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build_log
-          path: build_full.log
-          retention-days: 7
-
-  
+          
