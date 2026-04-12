@@ -1,31 +1,25 @@
 [app]
-title = Dee_Cistem
+title = DeeCistem
 package.name = deecistem
 package.domain = com.dccreations
 
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,ttf,db
-source.exclude_dirs = tests,bin,.buildozer,.github,assets/fonts
+source.include_exts = py,png,jpg,kv,atlas,ttf
+source.exclude_dirs = tests,bin,.buildozer,.github,assets/fonts,modules,screens,core,data,shared,draft
 
 version = 0.1.0
 
-requirements = python3==3.10.14,kivy==2.3.0,kivymd==1.2.0,pillow
+requirements = python3,kivy==2.3.0
 
 orientation = portrait
 fullscreen = 0
 
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
-
+android.permissions = INTERNET
 android.api = 33
-android.minapi = 26
+android.minapi = 21
 android.ndk = 25b
-android.ndk_api = 21
-android.build_tools_version = 34.0.0
 android.archs = arm64-v8a
-android.allow_backup = True
 android.accept_sdk_license = True
-
-p4a.branch = develop
 
 [buildozer]
 log_level = 2
