@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Dee_Cistem — Beta</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0C0D14;color:#F0F2FF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;max-width:430px;margin:0 auto}
+.header{background:#11121C;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2A2D42}
+.header h1{font-size:18px;font-weight:700;color:#4F8EF7}
+.header .sub{font-size:11px;color:#565E82}
+.nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
+.module{background:#1C1E2C;border-radius:14px;padding:16px;cursor:pointer;transition:background 0.15s;border:1px solid #2A2D42}
+.module:active{background:#222538}
+.module .icon{font-size:20px;margin-bottom:8px}
+.module .name{font-size:14px;font-weight:700;margin-bottom:4px}
+.module .desc{font-size:11px;color:#9BA3C4}
+.module .stat{font-size:11px;margin-top:8px;font-weight:600}
+.screen{display:none;padding:0}
+.screen.active{display:block}
+.topnav{background:#11121C;padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #2A2D42;position:sticky;top:0;z-index:10}
+.back-btn{color:#9BA3C4;font-size:14px;cursor:pointer;padding:4px 8px;border-radius:6px;background:#1C1E2C;border:none}
+.back-btn:active{background:#2A2D42}
+.topnav h2{font-size:16px;font-weight:700}
+.content{padding:16px}
+.card{background:#1C1E2C;border-radius:12px;padding:16px;margin-bottom:12px}
+.card h3{font-size:12px;letter-spacing:1px;color:#565E82;margin-bottom:12px;text-transform:uppercase}
+.field{width:100%;background:#161720;border:1px solid #2A2D42;border-radius:10px;padding:14px;color:#F0F2FF;font-size:15px;margin-bottom:10px;outline:none}
+.field:focus{border-color:#4F8EF7}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px}
+.btn:active{opacity:0.85}
+.btn-primary{background:#4F8EF7;color:white}
+.btn-success{background:#34D399;color:#0C0D14}
+.btn-danger{background:#F87171;color:white}
+.btn-ghost{background:transparent;color:#9BA3C4;font-size:13px}
+.row{display:flex;gap:8px}
+.row .btn{flex:1}
+.log-item{background:#161720;border-radius:8px;padding:12px;margin-bottom:8px;border-left:3px solid}
+.log-item .li-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.log-item .li-sub{font-size:11px;color:#565E82}
+.empty{text-align:center;color:#565E82;font-size:13px;padding:32px 16px}
+.stat-bar{height:5px;background:#2A2D42;border-radius:3px;margin-top:8px;overflow:hidden}
+.stat-fill{height:100%;border-radius:3px;transition:width 0.5s}
+.greeting{padding:20px 20px 0;font-size:22px;font-weight:700}
+.date{padding:4px 20px 16px;font-size:12px;color:#565E82}
+.dash-card{background:#1C1E2C;border-radius:14px;padding:16px;margin:0 16px 16px;cursor:pointer}
+.dash-card .dc-label{font-size:11px;letter-spacing:1px;color:#565E82;margin-bottom:4px;text-transform:uppercase}
+.dash-card .dc-rank{font-size:20px;font-weight:700;color:#4F8EF7}
+.feedback-banner{background:#FBBF2415;border:1px solid #FBBF2430;border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:#FBBF24;line-height:1.5}
+select{width:100%;background:#161720;border:1px solid #2A2D42;border-radius:10px;padding:14px;color:#F0F2FF;font-size:15px;margin-bottom:10px;outline:none;-webkit-appearance:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="header">
+    <div>
+      <h1>DEE_CISTEM</h1>
+      <div class="sub">Discipline · Growth · Mastery</div>
+    </div>
+    <div style="font-size:11px;color:#565E82;text-align:right">
+      BETA<br><span style="color:#34D399">●</span> Live
+    </div>
+  </div>
+
+  <div class="greeting" id="greeting">Good morning</div>
+  <div class="date" id="dateStr"></div>
+
+  <!-- Dashboard card -->
+  <div class="dash-card" onclick="show('dashboard')">
+    <div class="dc-label">STAT DASHBOARD</div>
+    <div class="dc-rank" id="overallRank">Rank E · Score 1</div>
+    <div style="font-size:11px;color:#9BA3C4;margin-top:4px" id="keyStats">
+      Body 1 · Mind 1 · Spirit 1
+    </div>
+  </div>
+
+  <!-- Modules -->
+  <div class="nav" id="moduleGrid"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#4F8EF7">Stat Dashboard</h2>
+  </div>
+  <div class="content" id="dashContent"></div>
+</div>
+
+<!-- FINANCIAL -->
+<div id="financial" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#34D399">Financial</h2>
+  </div>
+  <div class="content" id="financialContent"></div>
+</div>
+
+<!-- SPIRIT -->
+<div id="spirit" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#FBBF24">Spirit</h2>
+  </div>
+  <div class="content" id="spiritContent"></div>
+</div>
+
+<!-- MIND -->
+<div id="mind" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#A78BFA">Mind</h2>
+  </div>
+  <div class="content" id="mindContent"></div>
+</div>
+
+<!-- ENERGY -->
+<div id="energy" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#60A5FA">Energy</h2>
+  </div>
+  <div class="content" id="energyContent"></div>
+</div>
+
+<!-- KNOWLEDGE -->
+<div id="knowledge" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#34D399">Knowledge</h2>
+  </div>
+  <div class="content" id="knowledgeContent"></div>
+</div>
+
+<!-- DEECADENCE -->
+<div id="deecadence" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('mind')">&#8249; Back</button>
+    <h2 style="color:#38BDF8">DeeCadence</h2>
+  </div>
+  <div class="content" id="deecadenceContent"></div>
+</div>
+
+<!-- FEEDBACK -->
+<div id="feedback" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#FBBF24">Beta Feedback</h2>
+  </div>
+  <div class="content">
+    <div class="feedback-banner">
+      You are testing Dee_Cistem Beta. Your feedback directly shapes the product. Thank you for being here first.
+    </div>
+    <div class="card">
+      <h3>Your Experience</h3>
+      <select id="fbRating">
+        <option value="">Overall rating...</option>
+        <option value="5">5 — Would use daily</option>
+        <option value="4">4 — Very useful</option>
+        <option value="3">3 — Somewhat useful</option>
+        <option value="2">2 — Needs work</option>
+        <option value="1">1 — Not for me</option>
+      </select>
+      <select id="fbModule">
+        <option value="">Which module did you try first?</option>
+        <option>Financial</option>
+        <option>Spirit</option>
+        <option>Mind / DeeCadence</option>
+        <option>Energy</option>
+        <option>Knowledge</option>
+        <option>Dashboard</option>
+      </select>
+      <textarea class="field" id="fbText" rows="4"
+        placeholder="What would make you use this daily? What confused you? What's missing?"></textarea>
+      <select id="fbPay">
+        <option value="">Would you pay for full access?</option>
+        <option value="yes5k">Yes — NGN 5,000 lifetime</option>
+        <option value="yes1500">Yes — NGN 1,500/month</option>
+        <option value="maybe">Maybe — needs more features</option>
+        <option value="no">No — not yet</option>
+      </select>
+      <button class="btn btn-primary" onclick="submitFeedback()">
+        Submit Feedback
+      </button>
+    </div>
+    <div id="fbStatus" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-top:8px"></div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────
+
+const STATE = {
+  stats: JSON.parse(localStorage.getItem('dc_stats') || JSON.stringify({
+    Body:1,Mind:1,Spirit:1,Knowledge:1,Financial:1,Dexterity:1
+  })),
+  financial: JSON.parse(localStorage.getItem('dc_financial') || '[]'),
+  spirit:    JSON.parse(localStorage.getItem('dc_spirit') || '[]'),
+  mind:      JSON.parse(localStorage.getItem('dc_mind') || '[]'),
+  energy:    JSON.parse(localStorage.getItem('dc_energy') || '[]'),
+  knowledge: JSON.parse(localStorage.getItem('dc_knowledge') || '[]'),
+  sessions:  JSON.parse(localStorage.getItem('dc_sessions') || '[]'),
+};
+
+function save(key) {
+  localStorage.setItem('dc_' + key, JSON.stringify(STATE[key]));
+}
+
+function updateStat(name, delta) {
+  STATE.stats[name] = Math.min(100, Math.max(1, (STATE.stats[name]||1) + delta));
+  save('stats');
+  renderHome();
+}
+
+function getRank(v) {
+  if(v>=95)return'SS';if(v>=80)return'S';if(v>=65)return'A';
+  if(v>=50)return'B';if(v>=35)return'C';if(v>=20)return'D';return'E';
+}
+
+// ── Navigation ────────────────────────────────────────────────────
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  const renders = {
+    home: renderHome,
+    dashboard: renderDashboard,
+    financial: renderFinancial,
+    spirit: renderSpirit,
+    mind: renderMind,
+    energy: renderEnergy,
+    knowledge: renderKnowledge,
+    deecadence: renderDeeCadence,
+  };
+  if(renders[id]) renders[id]();
+}
+
+// ── Home ──────────────────────────────────────────────────────────
+
+const MODULES = [
+  {id:'financial', name:'Financial', color:'#34D399',
+   desc:'Income · Expenses · Cashflow', stat:'Financial', hover:'#0D2B1E'},
+  {id:'spirit',    name:'Spirit',    color:'#FBBF24',
+   desc:'Prayer · Bible · Leadership', stat:'Spirit', hover:'#2B1E00'},
+  {id:'mind',      name:'Mind',      color:'#A78BFA',
+   desc:'Focus · DeeCadence', stat:'Mind', hover:'#1A0D2E'},
+  {id:'energy',    name:'Energy',    color:'#60A5FA',
+   desc:'Sleep · Water · Exercise', stat:'Body', hover:'#0A1A2E'},
+  {id:'knowledge', name:'Knowledge', color:'#34D399',
+   desc:'Study · Reading · Skills', stat:'Knowledge', hover:'#0D2B1E'},
+];
+
+function renderHome() {
+  // Greeting
+  const h = new Date().getHours();
+  const g = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  const name = localStorage.getItem('dc_name') || 'DC';
+  document.getElementById('greeting').textContent = `${g}, ${name}`;
+  document.getElementById('dateStr').textContent =
+    new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  // Overall rank
+  const vals = Object.values(STATE.stats);
+  const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+  document.getElementById('overallRank').textContent =
+    `Rank ${getRank(avg)} · Score ${Math.round(avg)}`;
+  document.getElementById('keyStats').textContent =
+    `Body ${STATE.stats.Body} · Mind ${STATE.stats.Mind} · Spirit ${STATE.stats.Spirit}`;
+
+  // Modules
+  const grid = document.getElementById('moduleGrid');
+  grid.innerHTML = MODULES.map(m => `
+    <div class="module" onclick="show('${m.id}')"
+         style="border-color:${m.color}22">
+      <div class="name" style="color:${m.color}">${m.name}</div>
+      <div class="desc">${m.desc}</div>
+      <div class="stat" style="color:${m.color}">
+        ${STATE.stats[m.stat]||1} · Rank ${getRank(STATE.stats[m.stat]||1)}
+      </div>
+      <div class="stat-bar">
+        <div class="stat-fill" style="width:${STATE.stats[m.stat]||1}%;background:${m.color}"></div>
+      </div>
+    </div>
+  `).join('') + `
+    <div class="module" onclick="show('feedback')"
+         style="border-color:#FBBF2422;grid-column:1/-1">
+      <div class="name" style="color:#FBBF24">Beta Feedback</div>
+      <div class="desc">Tell us what you think · Shape the product</div>
+    </div>`;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────
+
+function renderDashboard() {
+  const el = document.getElementById('dashContent');
+  const stats = ['Body','Mind','Spirit','Knowledge','Financial','Dexterity'];
+  const colors = {
+    Body:'#60A5FA',Mind:'#A78BFA',Spirit:'#FBBF24',
+    Knowledge:'#34D399',Financial:'#34D399',Dexterity:'#F472B6'
+  };
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <h3>Stat Sheet</h3>
+      ${stats.map(s=>`
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:600">${s}</span>
+            <span style="font-size:11px;color:${colors[s]}">
+              ${STATE.stats[s]} · Rank ${getRank(STATE.stats[s])}
+            </span>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-fill"
+              style="width:${STATE.stats[s]}%;background:${colors[s]}"></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ── Financial ─────────────────────────────────────────────────────
+
+function renderFinancial() {
+  const el = document.getElementById('financialContent');
+  const income = STATE.financial
+    .filter(t=>t.type==='income')
+    .reduce((a,t)=>a+t.amount,0);
+  const expense = STATE.financial
+    .filter(t=>t.type==='expense')
+    .reduce((a,t)=>a+t.amount,0);
+  const cf = income - expense;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">INCOME</div>
+        <div style="color:#34D399;font-weight:700">$${income.toLocaleString()}</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">EXPENSES</div>
+        <div style="color:#F87171;font-weight:700">$${expense.toLocaleString()}</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">CASHFLOW</div>
+        <div style="color:${cf>=0?'#34D399':'#F87171'};font-weight:700">$${cf.toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn btn-success" onclick="showAddTxn('income')">+ Income</button>
+      <button class="btn btn-danger" onclick="showAddTxn('expense')">+ Expense</button>
+    </div>
+    <div id="txnForm" style="display:none" class="card">
+      <h3 id="txnTitle">Add Transaction</h3>
+      <input class="field" id="txnAmount" type="number" placeholder="Amount ($)">
+      <select class="field" id="txnCat" style="background:#161720;border:1px solid #2A2D42;border-radius:10px;padding:14px;color:#F0F2FF"></select>
+      <input class="field" id="txnNote" placeholder="Note (optional)">
+      <button class="btn btn-primary" onclick="saveTxn()">Save</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('txnForm').style.display='none'">Cancel</button>
+    </div>
+    <div class="card">
+      <h3>Recent Transactions</h3>
+      ${STATE.financial.length===0
+        ? '<div class="empty">No transactions yet</div>'
+        : STATE.financial.slice(-8).reverse().map(t=>`
+          <div class="log-item" style="border-color:${t.type==='income'?'#34D399':'#F87171'}">
+            <div class="li-title" style="color:${t.type==='income'?'#34D399':'#F87171'}">
+              ${t.type==='income'?'+':'-'}$${t.amount} · ${t.category}
+            </div>
+            <div class="li-sub">${t.note||''} · ${t.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+let currentTxnType = 'income';
+const incCats = ['Salary','Freelance','Business','Gift','Investment','Other'];
+const expCats = ['Food','Transport','Education','Health','Entertainment','Tithe','Savings','Utilities','Other'];
+
+function showAddTxn(type) {
+  currentTxnType = type;
+  document.getElementById('txnTitle').textContent =
+    type==='income' ? 'Add Income' : 'Add Expense';
+  const cats = type==='income' ? incCats : expCats;
+  document.getElementById('txnCat').innerHTML =
+    cats.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('txnForm').style.display = 'block';
+  document.getElementById('txnAmount').value = '';
+  document.getElementById('txnNote').value = '';
+}
+
+function saveTxn() {
+  const amount = parseFloat(document.getElementById('txnAmount').value);
+  if(!amount||amount<=0) return;
+  STATE.financial.push({
+    type: currentTxnType,
+    amount,
+    category: document.getElementById('txnCat').value,
+    note: document.getElementById('txnNote').value,
+    date: new Date().toLocaleDateString()
+  });
+  save('financial');
+  updateStat('Financial', currentTxnType==='income'?2:-1);
+  document.getElementById('txnForm').style.display='none';
+  renderFinancial();
+}
+
+// ── Spirit ────────────────────────────────────────────────────────
+
+function renderSpirit() {
+  const el = document.getElementById('spiritContent');
+  const todayPrayers = STATE.spirit.filter(
+    e=>e.type==='prayer'&&e.date===today()).length;
+  const todayBible = STATE.spirit.filter(
+    e=>e.type==='bible'&&e.date===today()).length;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">PRAYERS TODAY</div>
+        <div style="color:#FBBF24;font-weight:700;font-size:24px">${todayPrayers}</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">BIBLE TODAY</div>
+        <div style="color:#34D399;font-weight:700;font-size:24px">${todayBible}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Prayer</h3>
+      <div class="row">
+        <button class="btn btn-primary" onclick="logSpirit('prayer','Morning')">Morning</button>
+        <button class="btn btn-primary" onclick="logSpirit('prayer','Night')">Night</button>
+        <button class="btn btn-primary" onclick="logSpirit('prayer','Other')">Other</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Bible Reading</h3>
+      <input class="field" id="biblePassage" placeholder="Passage (e.g. John 3:16)">
+      <button class="btn btn-success" onclick="logBible()">Log Reading</button>
+    </div>
+    <div class="card">
+      <h3>Recent</h3>
+      ${STATE.spirit.length===0
+        ? '<div class="empty">Nothing logged yet</div>'
+        : STATE.spirit.slice(-5).reverse().map(e=>`
+          <div class="log-item" style="border-color:#FBBF24">
+            <div class="li-title" style="color:#FBBF24">${e.label}</div>
+            <div class="li-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logSpirit(type, label) {
+  STATE.spirit.push({type, label, date:today()});
+  save('spirit');
+  updateStat('Spirit', 3);
+  renderSpirit();
+}
+
+function logBible() {
+  const p = document.getElementById('biblePassage').value.trim();
+  if(!p) return;
+  STATE.spirit.push({type:'bible', label:`Bible: ${p}`, date:today()});
+  save('spirit');
+  document.getElementById('biblePassage').value='';
+  updateStat('Spirit', 2);
+  renderSpirit();
+}
+
+// ── Mind ──────────────────────────────────────────────────────────
+
+function renderMind() {
+  const el = document.getElementById('mindContent');
+  el.innerHTML = `
+    <div class="card" onclick="show('deecadence')"
+         style="border:1px solid #38BDF830;cursor:pointer">
+      <div style="color:#38BDF8;font-weight:700;margin-bottom:4px">
+        DeeCadence
+      </div>
+      <div style="font-size:12px;color:#9BA3C4">
+        Focus debt · Session tracker · Attention score
+      </div>
+      <div style="font-size:11px;color:#38BDF8;margin-top:8px">
+        Tap to open >
+      </div>
+    </div>
+    <div class="card">
+      <h3>Quick Focus Log</h3>
+      <input class="field" id="focusDur" type="number" placeholder="Duration (minutes)">
+      <select class="field" id="focusType" style="background:#161720;border:1px solid #2A2D42;border-radius:10px;padding:14px;color:#F0F2FF">
+        <option>Deep Work</option><option>Study</option>
+        <option>Reading</option><option>Planning</option><option>Creative</option>
+      </select>
+      <button class="btn btn-primary" onclick="logFocus()">Log Session</button>
+    </div>
+    <div class="card">
+      <h3>Mood Check-in</h3>
+      <div class="row">
+        ${['Low','OK','Good','Great','Peak'].map((l,i)=>`
+          <button class="btn" style="background:#1C1E2C;color:#9BA3C4;font-size:11px;padding:10px 4px"
+            onclick="logMood(${i+1},'${l}')">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h3>Recent</h3>
+      ${STATE.mind.length===0
+        ? '<div class="empty">Nothing logged yet</div>'
+        : STATE.mind.slice(-4).reverse().map(e=>`
+          <div class="log-item" style="border-color:#A78BFA">
+            <div class="li-title" style="color:#A78BFA">${e.label}</div>
+            <div class="li-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logFocus() {
+  const dur = parseInt(document.getElementById('focusDur').value);
+  if(!dur||dur<=0) return;
+  const type = document.getElementById('focusType').value;
+  STATE.mind.push({label:`${type} · ${dur}mins`, date:today()});
+  save('mind');
+  document.getElementById('focusDur').value='';
+  updateStat('Mind', Math.min(5, Math.floor(dur/10)));
+  renderMind();
+}
+
+function logMood(score, label) {
+  STATE.mind.push({label:`Mood: ${label} (${score}/5)`, date:today()});
+  save('mind');
+  updateStat('Mind', 2);
+  renderMind();
+}
+
+// ── DeeCadence ────────────────────────────────────────────────────
+
+function renderDeeCadence() {
+  const el = document.getElementById('deecadenceContent');
+  const sessions = STATE.sessions;
+  const totalFocus = sessions.reduce((a,s)=>a+(s.mins||0),0);
+  const debt = parseInt(localStorage.getItem('dc_debt')||'0');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">ATTENTION</div>
+        <div style="color:#38BDF8;font-weight:700;font-size:24px">
+          ${Math.max(0,100-Math.min(100,debt))}
+        </div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">FOCUS DEBT</div>
+        <div style="color:#F87171;font-weight:700">
+          ${debt>=60?`${(debt/60).toFixed(1)}h`:`${debt}m`}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Distraction</h3>
+      <select class="field" id="distractType" style="background:#161720;border:1px solid #2A2D42;border-radius:10px;padding:14px;color:#F0F2FF">
+        <option>Social Media</option><option>YouTube</option>
+        <option>Gaming</option><option>Phone browsing</option>
+        <option>Daydreaming</option><option>Other</option>
+      </select>
+      <input class="field" id="distractHours" type="number" step="0.25" placeholder="Hours lost (e.g. 1.5)">
+      <button class="btn btn-danger" onclick="logDistraction()">Log Distraction</button>
+    </div>
+    <div class="card">
+      <h3>Start Focus Session</h3>
+      <input class="field" id="sessionTask" placeholder="What are you working on?">
+      <input class="field" id="sessionMins" type="number" placeholder="Duration (minutes, min 4)">
+      <button class="btn btn-primary" onclick="startSession()">Begin Session</button>
+    </div>
+    <div id="sessionActive" style="display:none" class="card">
+      <h3>Active Session</h3>
+      <div id="sessionInfo" style="text-align:center;padding:16px">
+        <div id="sessionTask2" style="font-size:16px;font-weight:700;color:#38BDF8;margin-bottom:8px"></div>
+        <div id="sessionTimer" style="font-size:48px;font-weight:700;color:#38BDF8">00:00</div>
+        <div id="sessionBlock" style="font-size:12px;color:#9BA3C4;margin-top:8px"></div>
+      </div>
+      <button class="btn btn-danger" style="margin-top:8px" onclick="endSession()">Stop Session</button>
+    </div>
+    <div class="card">
+      <h3>Recent Sessions</h3>
+      ${sessions.length===0
+        ? '<div class="empty">No sessions yet</div>'
+        : sessions.slice(-4).reverse().map(s=>`
+          <div class="log-item" style="border-color:#38BDF8">
+            <div class="li-title" style="color:#38BDF8">${s.task}</div>
+            <div class="li-sub">${s.mins}min · ${s.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+let sessionInterval = null;
+let sessionSeconds = 0;
+
+function logDistraction() {
+  const hrs = parseFloat(document.getElementById('distractHours').value||'0');
+  if(!hrs||hrs<=0) return;
+  const mins = Math.round(hrs*60);
+  const current = parseInt(localStorage.getItem('dc_debt')||'0');
+  localStorage.setItem('dc_debt', String(current+mins));
+  document.getElementById('distractHours').value='';
+  renderDeeCadence();
+}
+
+function startSession() {
+  const task = document.getElementById('sessionTask').value.trim();
+  const mins = parseInt(document.getElementById('sessionMins').value||'0');
+  if(!task||mins<4) return;
+  sessionSeconds = mins*60;
+  document.getElementById('sessionActive').style.display='block';
+  document.getElementById('sessionTask2').textContent = task;
+  document.getElementById('sessionBlock').textContent = `Block 1 of 4`;
+  if(sessionInterval) clearInterval(sessionInterval);
+  sessionInterval = setInterval(()=>{
+    sessionSeconds--;
+    const m = Math.floor(sessionSeconds/60);
+    const s = sessionSeconds%60;
+    document.getElementById('sessionTimer').textContent =
+      `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if(sessionSeconds<=0) endSession();
+  },1000);
+  STATE.sessions.push({task, mins, date:today()});
+  save('sessions');
+  // Pay debt
+  const debt = parseInt(localStorage.getItem('dc_debt')||'0');
+  localStorage.setItem('dc_debt', String(Math.max(0,debt-mins)));
+  updateStat('Mind',3);
+}
+
+function endSession() {
+  if(sessionInterval) clearInterval(sessionInterval);
+  document.getElementById('sessionActive').style.display='none';
+  renderDeeCadence();
+}
+
+// ── Energy ────────────────────────────────────────────────────────
+
+function renderEnergy() {
+  const el = document.getElementById('energyContent');
+  const todayWater = STATE.energy
+    .filter(e=>e.type==='water'&&e.date===today())
+    .reduce((a,e)=>a+e.glasses,0);
+  const todaySleep = STATE.energy.find(
+    e=>e.type==='sleep'&&e.date===today());
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">SLEEP</div>
+        <div style="color:#60A5FA;font-weight:700">${todaySleep?`${todaySleep.hours}h`:'—'}</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">WATER</div>
+        <div style="color:#60A5FA;font-weight:700">${todayWater}gl</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">BODY</div>
+        <div style="color:#60A5FA;font-weight:700">${STATE.stats.Body}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Sleep</h3>
+      <input class="field" id="sleepHrs" type="number" step="0.5" placeholder="Hours slept">
+      <input class="field" id="sleepQ" type="number" min="1" max="5" placeholder="Quality 1-5">
+      <button class="btn btn-primary" onclick="logSleep()">Log Sleep</button>
+    </div>
+    <div class="card">
+      <h3>Water</h3>
+      <div class="row">
+        <button class="btn btn-primary" onclick="logWater(1)">+1 Glass</button>
+        <button class="btn btn-primary" onclick="logWater(2)">+2 Glasses</button>
+        <button class="btn btn-primary" onclick="logWater(3)">+3 Glasses</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Exercise</h3>
+      <select class="field" id="exType" style="background:#161720;border:1px solid #2A2D42;border-radius:10px;padding:14px;color:#F0F2FF">
+        <option>Running</option><option>Walking</option><option>Gym</option>
+        <option>Cycling</option><option>HIIT</option><option>Other</option>
+      </select>
+      <input class="field" id="exMins" type="number" placeholder="Duration (minutes)">
+      <button class="btn btn-success" onclick="logExercise()">Log Exercise</button>
+    </div>`;
+}
+
+function logSleep() {
+  const hrs = parseFloat(document.getElementById('sleepHrs').value||'0');
+  const q = parseInt(document.getElementById('sleepQ').value||'3');
+  if(!hrs||hrs<=0) return;
+  STATE.energy.push({type:'sleep',hours:hrs,quality:q,date:today()});
+  save('energy');
+  document.getElementById('sleepHrs').value='';
+  document.getElementById('sleepQ').value='';
+  updateStat('Body',3);
+  renderEnergy();
+}
+
+function logWater(glasses) {
+  STATE.energy.push({type:'water',glasses,date:today()});
+  save('energy');
+  updateStat('Body',1);
+  renderEnergy();
+}
+
+function logExercise() {
+  const type = document.getElementById('exType').value;
+  const mins = parseInt(document.getElementById('exMins').value||'0');
+  if(!mins||mins<=0) return;
+  STATE.energy.push({type:'exercise',label:`${type} ${mins}min`,date:today()});
+  save('energy');
+  document.getElementById('exMins').value='';
+  updateStat('Body',4);
+  renderEnergy();
+}
+
+// ── Knowledge ─────────────────────────────────────────────────────
+
+function renderKnowledge() {
+  const el = document.getElementById('knowledgeContent');
+  el.innerHTML = `
+    <div class="card">
+      <h3>Log Reading</h3>
+      <input class="field" id="readTitle" placeholder="Book or article title">
+      <input class="field" id="readPages" type="number" placeholder="Pages read (optional)">
+      <button class="btn btn-success" onclick="logReading()">Log Reading</button>
+    </div>
+    <div class="card">
+      <h3>Add Vocabulary</h3>
+      <input class="field" id="vocabWord" placeholder="Word">
+      <input class="field" id="vocabMeaning" placeholder="Meaning / Definition">
+      <button class="btn btn-primary" onclick="logVocab()">Add Word</button>
+    </div>
+    <div class="card">
+      <h3>Recent</h3>
+      ${STATE.knowledge.length===0
+        ? '<div class="empty">Nothing logged yet</div>'
+        : STATE.knowledge.slice(-4).reverse().map(e=>`
+          <div class="log-item" style="border-color:#34D399">
+            <div class="li-title" style="color:#34D399">${e.label}</div>
+            <div class="li-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logReading() {
+  const title = document.getElementById('readTitle').value.trim();
+  if(!title) return;
+  const pages = document.getElementById('readPages').value;
+  STATE.knowledge.push({
+    label:`${title}${pages?` · ${pages}p`:''}`, date:today()});
+  save('knowledge');
+  document.getElementById('readTitle').value='';
+  document.getElementById('readPages').value='';
+  updateStat('Knowledge',3);
+  renderKnowledge();
+}
+
+function logVocab() {
+  const w = document.getElementById('vocabWord').value.trim();
+  const m = document.getElementById('vocabMeaning').value.trim();
+  if(!w||!m) return;
+  STATE.knowledge.push({label:`${w}: ${m}`, date:today()});
+  save('knowledge');
+  document.getElementById('vocabWord').value='';
+  document.getElementById('vocabMeaning').value='';
+  updateStat('Knowledge',2);
+  renderKnowledge();
+}
+
+// ── Feedback ──────────────────────────────────────────────────────
+
+async function submitFeedback() {
+  const rating = document.getElementById('fbRating').value;
+  const module = document.getElementById('fbModule').value;
+  const text   = document.getElementById('fbText').value.trim();
+  const pay    = document.getElementById('fbPay').value;
+
+  if(!rating||!text) {
+    const s = document.getElementById('fbStatus');
+    s.style.display='block';
+    s.style.background='#F8717120';
+    s.style.color='#F87171';
+    s.textContent='Please rate and add a comment';
+    return;
+  }
+
+  // Store locally
+  const fb = JSON.parse(localStorage.getItem('dc_feedback')||'[]');
+  fb.push({rating,module,text,pay,date:new Date().toISOString()});
+  localStorage.setItem('dc_feedback', JSON.stringify(fb));
+
+  const s = document.getElementById('fbStatus');
+  s.style.display='block';
+  s.style.background='#34D39920';
+  s.style.color='#34D399';
+  s.textContent='Thank you. Your feedback has been recorded.';
+  document.getElementById('fbText').value='';
+  document.getElementById('fbRating').value='';
+  document.getElementById('fbPay').value='';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+
+function today() {
+  return new Date().toLocaleDateString('en-GB');
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+
+renderHome();
+</script>
+</body>
+</html>
