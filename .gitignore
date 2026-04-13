@@ -24,7 +24,6 @@ data/*.db
 
 # Buildozer (Android)
 .buildozer/
-bin/
 
 # OS
 .DS_Store
