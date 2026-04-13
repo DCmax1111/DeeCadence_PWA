@@ -24,35 +24,71 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Dependencies
+      - name: System dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y \
             python3-pip build-essential git \
             zip unzip cmake libffi-dev \
-            libssl-dev
+            libssl-dev autoconf libtool \
+            pkg-config zlib1g-dev lld
+
+      - name: Python dependencies
+        run: |
+          pip install --upgrade pip
           pip install buildozer==1.5.0 cython==0.29.33
 
-      - name: SDK licenses
+      - name: Force SDK symlink + build-tools install
         run: |
-          mkdir -p $ANDROID_HOME/licenses
-          printf "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee" \
-            > $ANDROID_HOME/licenses/android-sdk-license
+          mkdir -p ~/.buildozer/android/platform
 
-      - name: Cache
+          # Point buildozer at runner's pre-installed SDK
+          ln -sf /usr/local/lib/android/sdk \
+            ~/.buildozer/android/platform/android-sdk
+
+          # Accept licenses
+          mkdir -p /usr/local/lib/android/sdk/licenses
+          printf "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee" \
+            > /usr/local/lib/android/sdk/licenses/android-sdk-license
+          printf "84831b9409646a918e30573bab4c9c91346d8abd" \
+            > /usr/local/lib/android/sdk/licenses/android-sdk-preview-license
+
+          # Install build-tools via cmdline-tools (correct path)
+          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager \
+            "build-tools;34.0.0" \
+            "platforms;android-33" 2>&1 | tail -5
+
+          # Confirm
+          echo "=== build-tools installed ==="
+          ls /usr/local/lib/android/sdk/build-tools/
+          echo "=== symlink works ==="
+          ls ~/.buildozer/android/platform/android-sdk/build-tools/
+
+      - name: Cache Buildozer
         uses: actions/cache@v4
         with:
           path: ~/.buildozer
           key: bz-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: bz-${{ runner.os }}-
 
-      - name: Build
-        run: buildozer android debug 2>&1 | tee build.log
+      - name: Build APK
+        env:
+          ANDROIDSDK: /home/runner/.buildozer/android/platform/android-sdk
+          ANDROIDAPI: "33"
+          ANDROIDMINAPI: "21"
+        run: |
+          buildozer android debug 2>&1 | tee build.log
+          echo "Exit: $?"
 
       - name: Result
         if: always()
         run: |
+          echo "=== Last 30 lines ==="
           tail -30 build.log || true
-          find . -name "*.apk" || echo "No APK"
+          echo "=== APK search ==="
+          find . -name "*.apk" 2>/dev/null || echo "No APK found"
+          echo "=== bin/ ==="
+          ls -la bin/ 2>/dev/null || echo "bin/ empty"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
