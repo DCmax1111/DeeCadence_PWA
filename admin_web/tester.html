@@ -8,50 +8,137 @@
 <title>Dee_Cistem — Beta</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:#0C0D14;color:#F0F2FF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;max-width:430px;margin:0 auto}
-.header{background:#11121C;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2A2D42}
-.header h1{font-size:18px;font-weight:700;color:#4F8EF7}
-.header .sub{font-size:11px;color:#565E82}
-.nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
-.module{background:#1C1E2C;border-radius:14px;padding:16px;cursor:pointer;transition:background 0.15s;border:1px solid #2A2D42}
-.module:active{background:#222538}
-.module .icon{font-size:20px;margin-bottom:8px}
-.module .name{font-size:14px;font-weight:700;margin-bottom:4px}
-.module .desc{font-size:11px;color:#9BA3C4}
-.module .stat{font-size:11px;margin-top:8px;font-weight:600}
-.screen{display:none;padding:0}
+body{
+  background:#0C0D14;color:#F0F2FF;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  min-height:100vh;max-width:430px;margin:0 auto;
+  padding-bottom:40px;
+}
+.header{
+  background:linear-gradient(180deg,#11121C 0%,#0C0D14 100%);
+  padding:20px 20px 16px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid #1C1E2C;
+  position:sticky;top:0;z-index:20;
+  backdrop-filter:blur(10px);
+}
+.header h1{
+  font-size:20px;font-weight:800;color:#4F8EF7;
+  letter-spacing:2px;
+}
+.header .sub{font-size:11px;color:#565E82;margin-top:2px}
+.topnav{
+  background:rgba(17,18,28,0.95);
+  padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid #1C1E2C;
+  position:sticky;top:0;z-index:10;
+  backdrop-filter:blur(10px);
+}
+.back-btn{
+  color:#9BA3C4;font-size:15px;cursor:pointer;
+  padding:6px 12px;border-radius:8px;
+  background:#1C1E2C;border:1px solid #2A2D42;
+  font-weight:600;transition:all 0.1s;
+}
+.back-btn:active{background:#2A2D42;transform:scale(0.97)}
+.topnav h2{font-size:17px;font-weight:700}
+.screen{display:none}
 .screen.active{display:block}
-.topnav{background:#11121C;padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #2A2D42;position:sticky;top:0;z-index:10}
-.back-btn{color:#9BA3C4;font-size:14px;cursor:pointer;padding:4px 8px;border-radius:6px;background:#1C1E2C;border:none}
-.back-btn:active{background:#2A2D42}
-.topnav h2{font-size:16px;font-weight:700}
+.greeting{
+  padding:24px 20px 4px;
+  font-size:26px;font-weight:800;
+  background:linear-gradient(135deg,#F0F2FF,#9BA3C4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.date{padding:4px 20px 16px;font-size:12px;color:#565E82;letter-spacing:0.5px}
+.dash-card{
+  background:linear-gradient(135deg,#1C1E2C,#222538);
+  border-radius:16px;padding:18px;margin:0 16px 16px;
+  cursor:pointer;border:1px solid #2A2D42;
+  transition:transform 0.15s,border-color 0.15s;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3);
+}
+.dash-card:active{transform:scale(0.98);border-color:#4F8EF7}
+.dash-card .dc-label{
+  font-size:10px;letter-spacing:2px;color:#565E82;
+  margin-bottom:6px;text-transform:uppercase;font-weight:600;
+}
+.dash-card .dc-rank{font-size:22px;font-weight:800;color:#4F8EF7}
+.nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.module{
+  background:#1C1E2C;border-radius:16px;padding:18px 14px;
+  cursor:pointer;transition:all 0.15s;
+  border:1px solid #2A2D42;
+  box-shadow:0 2px 12px rgba(0,0,0,0.2);
+}
+.module:active{transform:scale(0.97);border-color:currentColor}
+.module .name{font-size:14px;font-weight:700;margin-bottom:4px}
+.module .desc{font-size:11px;color:#9BA3C4;line-height:1.4}
+.module .stat{font-size:11px;margin-top:10px;font-weight:600;opacity:0.9}
+.stat-bar{height:4px;background:#2A2D42;border-radius:2px;margin-top:8px;overflow:hidden}
+.stat-fill{height:100%;border-radius:2px;transition:width 0.6s ease}
 .content{padding:16px}
-.card{background:#1C1E2C;border-radius:12px;padding:16px;margin-bottom:12px}
-.card h3{font-size:12px;letter-spacing:1px;color:#565E82;margin-bottom:12px;text-transform:uppercase}
-.field{width:100%;background:#161720;border:1px solid #2A2D42;border-radius:10px;padding:14px;color:#F0F2FF;font-size:15px;margin-bottom:10px;outline:none}
-.field:focus{border-color:#4F8EF7}
-.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px}
-.btn:active{opacity:0.85}
-.btn-primary{background:#4F8EF7;color:white}
-.btn-success{background:#34D399;color:#0C0D14}
-.btn-danger{background:#F87171;color:white}
-.btn-ghost{background:transparent;color:#9BA3C4;font-size:13px}
+.card{
+  background:#1C1E2C;border-radius:14px;padding:18px;
+  margin-bottom:12px;border:1px solid #222538;
+}
+.card h3{
+  font-size:10px;letter-spacing:1.5px;color:#565E82;
+  margin-bottom:14px;text-transform:uppercase;font-weight:600;
+}
+.field{
+  width:100%;background:#161720;border:1px solid #2A2D42;
+  border-radius:10px;padding:14px;color:#F0F2FF;font-size:15px;
+  margin-bottom:10px;outline:none;transition:border-color 0.2s;
+}
+.field:focus{border-color:#4F8EF7;background:#1C1E2C}
+.btn{
+  width:100%;padding:15px;border:none;border-radius:12px;
+  font-size:14px;font-weight:700;cursor:pointer;
+  margin-bottom:8px;transition:all 0.15s;letter-spacing:0.3px;
+}
+.btn:active{transform:scale(0.98);opacity:0.9}
+.btn-primary{background:linear-gradient(135deg,#4F8EF7,#3B6FD4);color:white;box-shadow:0 4px 12px rgba(79,142,247,0.3)}
+.btn-success{background:linear-gradient(135deg,#34D399,#059669);color:#0C0D14;box-shadow:0 4px 12px rgba(52,211,153,0.3)}
+.btn-danger{background:linear-gradient(135deg,#F87171,#DC2626);color:white;box-shadow:0 4px 12px rgba(248,113,113,0.3)}
+.btn-ghost{background:transparent;color:#9BA3C4;font-size:13px;box-shadow:none}
 .row{display:flex;gap:8px}
-.row .btn{flex:1}
-.log-item{background:#161720;border-radius:8px;padding:12px;margin-bottom:8px;border-left:3px solid}
-.log-item .li-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.row .btn{flex:1;margin-bottom:0}
+.log-item{
+  background:#161720;border-radius:10px;padding:14px;
+  margin-bottom:8px;border-left:3px solid;
+  transition:transform 0.1s;
+}
+.log-item:active{transform:scale(0.99)}
+.log-item .li-title{font-size:13px;font-weight:600;margin-bottom:3px}
 .log-item .li-sub{font-size:11px;color:#565E82}
-.empty{text-align:center;color:#565E82;font-size:13px;padding:32px 16px}
-.stat-bar{height:5px;background:#2A2D42;border-radius:3px;margin-top:8px;overflow:hidden}
-.stat-fill{height:100%;border-radius:3px;transition:width 0.5s}
-.greeting{padding:20px 20px 0;font-size:22px;font-weight:700}
-.date{padding:4px 20px 16px;font-size:12px;color:#565E82}
-.dash-card{background:#1C1E2C;border-radius:14px;padding:16px;margin:0 16px 16px;cursor:pointer}
-.dash-card .dc-label{font-size:11px;letter-spacing:1px;color:#565E82;margin-bottom:4px;text-transform:uppercase}
-.dash-card .dc-rank{font-size:20px;font-weight:700;color:#4F8EF7}
-.feedback-banner{background:#FBBF2415;border:1px solid #FBBF2430;border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:#FBBF24;line-height:1.5}
-select{width:100%;background:#161720;border:1px solid #2A2D42;border-radius:10px;padding:14px;color:#F0F2FF;font-size:15px;margin-bottom:10px;outline:none;-webkit-appearance:none}
-.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.empty{
+  text-align:center;color:#565E82;font-size:13px;
+  padding:32px 16px;line-height:1.6;
+}
+.feedback-banner{
+  background:linear-gradient(135deg,#FBBF2415,#FBBF2405);
+  border:1px solid #FBBF2430;border-radius:12px;
+  padding:14px;margin-bottom:14px;font-size:13px;
+  color:#FBBF24;line-height:1.6;
+}
+select{
+  width:100%;background:#161720;border:1px solid #2A2D42;
+  border-radius:10px;padding:14px;color:#F0F2FF;font-size:15px;
+  margin-bottom:10px;outline:none;-webkit-appearance:none;
+  transition:border-color 0.2s;
+}
+select:focus{border-color:#4F8EF7}
+textarea.field{resize:none;line-height:1.5}
+.pill{
+  display:inline-block;padding:4px 10px;border-radius:20px;
+  font-size:10px;font-weight:700;letter-spacing:1px;
+}
+.section-divider{
+  font-size:10px;letter-spacing:2px;color:#565E82;
+  padding:16px 0 8px;text-transform:uppercase;font-weight:600;
+}
 </style>
 </head>
 <body>
@@ -140,6 +227,10 @@ select{width:100%;background:#161720;border:1px solid #2A2D42;border-radius:10px
 
 <!-- DEECADENCE -->
 <div id="deecadence" class="screen">
+  <input class="field" id="sessionTask" placeholder="What are you working on?">
+  <input class="field" id="sessionMins" type="number" placeholder="Duration (minutes, min 4)" oninput="previewBlocks(this.value)">
+  <div id="blockPreview" style="font-size:12px;color:#38BDF8;margin-bottom:10px;min-height:18px"></div>
+  <button class="btn btn-primary" onclick="startSession()">Begin Session</button>
   <div class="topnav">
     <button class="back-btn" onclick="show('mind')">&#8249; Back</button>
     <h2 style="color:#38BDF8">DeeCadence</h2>
@@ -608,29 +699,117 @@ function logDistraction() {
   renderDeeCadence();
 }
 
+function calcBlocks(totalMins) {
+  if (totalMins < 20) {
+    // Single focus block, no splits
+    return {
+      mode: 'single',
+      focus: totalMins,
+      shortBreak: 0,
+      longBreak: 0,
+      blocks: 1
+    };
+  }
+  const focusTotal = Math.floor(totalMins * 0.75);
+  const focusPerBlock = Math.max(5, Math.floor(focusTotal / 4));
+  const shortBreak = Math.max(2, Math.floor(totalMins * 0.05));
+  const longBreak = Math.max(5, Math.floor(totalMins * 0.10));
+  return {
+    mode: 'blocks',
+    focus: focusPerBlock,
+    shortBreak,
+    longBreak,
+    blocks: 4
+  };
+}
+
 function startSession() {
   const task = document.getElementById('sessionTask').value.trim();
-  const mins = parseInt(document.getElementById('sessionMins').value||'0');
-  if(!task||mins<4) return;
-  sessionSeconds = mins*60;
-  document.getElementById('sessionActive').style.display='block';
+  const mins = parseInt(document.getElementById('sessionMins').value || '0');
+  if (!task) {
+    alert('Enter what you are working on');
+    return;
+  }
+  if (mins < 4) {
+    alert('Minimum session is 4 minutes');
+    return;
+  }
+  const blocks = calcBlocks(mins);
+  const label = blocks.mode === 'single'
+    ? `${mins}min focus`
+    : `4 blocks × ${blocks.focus}min + ${blocks.shortBreak}min breaks`;
+  document.getElementById('blockPreview').textContent = label;
+  sessionSeconds = blocks.focus * 60;
+  sessionBlocks = blocks;
+  currentBlock = 1;
+  sessionPhase = 'focus';
+  document.getElementById('sessionActive').style.display = 'block';
   document.getElementById('sessionTask2').textContent = task;
-  document.getElementById('sessionBlock').textContent = `Block 1 of 4`;
-  if(sessionInterval) clearInterval(sessionInterval);
-  sessionInterval = setInterval(()=>{
-    sessionSeconds--;
-    const m = Math.floor(sessionSeconds/60);
-    const s = sessionSeconds%60;
-    document.getElementById('sessionTimer').textContent =
-      `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    if(sessionSeconds<=0) endSession();
-  },1000);
-  STATE.sessions.push({task, mins, date:today()});
+  document.getElementById('sessionBlock').textContent =
+    blocks.mode === 'single'
+      ? 'Single focus block'
+      : `Block 1 of 4 · Focus ${blocks.focus}min`;
+  if (sessionInterval) clearInterval(sessionInterval);
+  sessionInterval = setInterval(sessionTick, 1000);
+  STATE.sessions.push({ task, mins, date: today() });
   save('sessions');
-  // Pay debt
-  const debt = parseInt(localStorage.getItem('dc_debt')||'0');
-  localStorage.setItem('dc_debt', String(Math.max(0,debt-mins)));
-  updateStat('Mind',3);
+  const debt = parseInt(localStorage.getItem('dc_debt') || '0');
+  localStorage.setItem('dc_debt', String(Math.max(0, debt - mins)));
+  updateStat('Mind', 3);
+}
+
+function previewBlocks(val) {
+  const mins = parseInt(val || '0');
+  if (mins < 4) {
+    document.getElementById('blockPreview').textContent = '';
+    return;
+  }
+  const b = calcBlocks(mins);
+  document.getElementById('blockPreview').textContent =
+    b.mode === 'single'
+      ? `${mins}min single focus block`
+      : `4 blocks × ${b.focus}min focus · ${b.shortBreak}min breaks · ${b.longBreak}min long break`;
+}
+
+let sessionBlocks = null;
+let currentBlock = 1;
+let sessionPhase = 'focus';
+
+function sessionTick() {
+  sessionSeconds--;
+  const m = Math.floor(sessionSeconds / 60);
+  const s = sessionSeconds % 60;
+  document.getElementById('sessionTimer').textContent =
+    `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  if (sessionSeconds <= 0) {
+    if (sessionBlocks.mode === 'single') {
+      endSession();
+      return;
+    }
+    if (sessionPhase === 'focus') {
+      if (currentBlock >= 4) {
+        endSession();
+        return;
+      }
+      // Go to break
+      const isLong = currentBlock === 3;
+      sessionPhase = isLong ? 'longBreak' : 'shortBreak';
+      sessionSeconds = isLong
+        ? sessionBlocks.longBreak * 60
+        : sessionBlocks.shortBreak * 60;
+      document.getElementById('sessionBlock').textContent =
+        isLong ? `Long break ${sessionBlocks.longBreak}min` : `Short break ${sessionBlocks.shortBreak}min`;
+      document.getElementById('sessionTimer').style.color = '#34D399';
+    } else {
+      // End of break — next block
+      currentBlock++;
+      sessionPhase = 'focus';
+      sessionSeconds = sessionBlocks.focus * 60;
+      document.getElementById('sessionBlock').textContent =
+        `Block ${currentBlock} of 4 · Focus ${sessionBlocks.focus}min`;
+      document.getElementById('sessionTimer').style.color = '#38BDF8';
+    }
+  }
 }
 
 function endSession() {
@@ -780,29 +959,64 @@ async function submitFeedback() {
   const module = document.getElementById('fbModule').value;
   const text   = document.getElementById('fbText').value.trim();
   const pay    = document.getElementById('fbPay').value;
+  const s = document.getElementById('fbStatus');
 
-  if(!rating||!text) {
-    const s = document.getElementById('fbStatus');
+  if (!rating || !text) {
     s.style.display='block';
     s.style.background='#F8717120';
     s.style.color='#F87171';
-    s.textContent='Please rate and add a comment';
+    s.textContent='Please add a rating and comment';
     return;
   }
 
-  // Store locally
+  s.style.display='block';
+  s.style.background='#4F8EF720';
+  s.style.color='#4F8EF7';
+  s.textContent='Sending...';
+
+  // Save locally always
   const fb = JSON.parse(localStorage.getItem('dc_feedback')||'[]');
   fb.push({rating,module,text,pay,date:new Date().toISOString()});
   localStorage.setItem('dc_feedback', JSON.stringify(fb));
 
-  const s = document.getElementById('fbStatus');
-  s.style.display='block';
-  s.style.background='#34D39920';
-  s.style.color='#34D399';
-  s.textContent='Thank you. Your feedback has been recorded.';
-  document.getElementById('fbText').value='';
-  document.getElementById('fbRating').value='';
-  document.getElementById('fbPay').value='';
+  // Try Supabase
+  const SUPA_URL = 'https://lnxvlpmvhjhvwzunkvts.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw';
+
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/beta_feedback`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        rating, module,
+        feedback: text,
+        would_pay: pay
+      })
+    });
+
+    if (res.ok) {
+      s.style.background='#34D39920';
+      s.style.color='#34D399';
+      s.textContent='Feedback sent. Thank you — this shapes the product directly.';
+      document.getElementById('fbText').value='';
+      document.getElementById('fbRating').value='';
+      document.getElementById('fbPay').value='';
+      document.getElementById('fbModule').value='';
+    } else {
+      s.style.background='#34D39920';
+      s.style.color='#34D399';
+      s.textContent='Saved locally. Thank you for the feedback.';
+    }
+  } catch(e) {
+    s.style.background='#34D39920';
+    s.style.color='#34D399';
+    s.textContent='Saved locally. Thank you for the feedback.';
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────

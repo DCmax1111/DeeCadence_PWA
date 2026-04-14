@@ -139,6 +139,21 @@
   </div>
 </div>
 
+<!-- Feedback -->
+<div class="card">
+  <h2>Beta Feedback
+    <button onclick="loadFeedback()"
+      style="width:auto;padding:4px 12px;font-size:11px;
+             background:#2A2D42;color:#9BA3C4;
+             border-radius:6px;margin-left:8px;">
+      Refresh
+    </button>
+  </h2>
+  <div id="feedbackList">
+    <p class="loading">Configure Supabase above to load feedback</p>
+  </div>
+</div>
+
 <script>
 // ── Config ────────────────────────────────────────────────────────
 
@@ -148,7 +163,10 @@ let SUPA_KEY = localStorage.getItem('supa_key') || '';
 window.onload = () => {
   if (SUPA_URL) document.getElementById('supabaseUrl').value = SUPA_URL;
   if (SUPA_KEY) document.getElementById('supabaseKey').value = SUPA_KEY;
-  if (SUPA_URL && SUPA_KEY) loadUsers();
+  if (SUPA_URL && SUPA_KEY) {
+    loadUsers();
+    loadFeedback(); // add this
+  }
 };
 
 function saveConfig() {
@@ -325,6 +343,56 @@ async function loadUsers() {
     document.getElementById('usersList').innerHTML =
       `<p class="loading">Error: ${e.message}</p>`;
   }
+}
+
+async function loadFeedback() {
+  if (!SUPA_URL || !SUPA_KEY) return;
+  document.getElementById('feedbackList').innerHTML =
+    '<p class="loading">Loading...</p>';
+
+  const res = await supaFetch(
+    'beta_feedback?order=created_at.desc&limit=50');
+
+  if (!res.ok || !res.data?.length) {
+    document.getElementById('feedbackList').innerHTML =
+      '<p class="loading">No feedback yet</p>';
+    return;
+  }
+
+  const stars = r => '★'.repeat(parseInt(r||0)) + '☆'.repeat(5-parseInt(r||0));
+  const payColor = p => ({
+    'yes5k':'#34D399','yes1500':'#60A5FA',
+    'maybe':'#FBBF24','no':'#F87171'
+  }[p]||'#9BA3C4');
+  const payLabel = p => ({
+    'yes5k':'Would pay ₦5k lifetime',
+    'yes1500':'Would pay ₦1.5k/month',
+    'maybe':'Maybe',
+    'no':'Not yet'
+  }[p]||p||'—');
+
+  document.getElementById('feedbackList').innerHTML =
+    res.data.map(f => `
+      <div style="border:1px solid #2A2D42;border-radius:8px;
+                  padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;
+                    margin-bottom:8px;align-items:center">
+          <span style="color:#FBBF24;font-size:14px">${stars(f.rating)}</span>
+          <span style="color:${payColor(f.would_pay)};font-size:11px;
+                       font-weight:600">${payLabel(f.would_pay)}</span>
+        </div>
+        <div style="font-size:13px;color:#F0F2FF;
+                    margin-bottom:6px;line-height:1.5">
+          "${f.feedback}"
+        </div>
+        <div style="font-size:11px;color:#565E82">
+          ${f.module||'—'} · ${new Date(f.created_at).toLocaleString()}
+        </div>
+      </div>`).join('') +
+    `<p style="color:#565E82;font-size:11px;
+               margin-top:8px;text-align:right">
+      ${res.data.length} response(s)
+    </p>`;
 }
 
 async function deactivate(accountId) {
