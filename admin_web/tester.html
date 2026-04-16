@@ -9,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Sora:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
 <style>
 :root{
   --premium-heading:'Sora',sans-serif;
@@ -409,14 +411,14 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
 /* Onboarding */
 #onboarding{
   position:fixed;inset:0;z-index:200;
-  background:rgba(12,13,20,0.96);display:flex;flex-direction:column;
-  justify-content:center;align-items:center;padding:24px;
+  background:var(--bg);display:flex;flex-direction:column;
+  justify-content:flex-start;align-items:center;padding:24px;
   overflow-y:auto;
 }
 .ob-step{
-  display:none;flex:1;flex-direction:column;
+  display:none;flex-direction:column;
   width:100%;max-width:430px;
-  padding:40px 28px 32px;animation:fadeIn .2s ease;
+  padding:20px 28px 32px;margin-top:60px;animation:fadeIn .2s ease;
 }
 .ob-step.active{display:flex}
 .ob-step.active{display:flex}
@@ -496,6 +498,21 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
     <div class="nav-label">Settings</div>
   </button>
 </nav>
+
+<!-- AUTH -->
+<div id="auth" class="screen active">
+  <div style="padding:40px 20px;text-align:center">
+    <h1 style="font-size:28px;margin-bottom:20px;color:var(--accent)">Welcome to Dee_Cistem</h1>
+    <div id="authForm">
+      <input class="field" id="authEmail" type="email" placeholder="Email" style="margin-bottom:10px">
+      <input class="field" id="authPassword" type="password" placeholder="Password" style="margin-bottom:20px">
+      <button class="btn btn-primary" onclick="login()" style="margin-bottom:10px">Login</button>
+      <button class="btn btn-ghost" onclick="signup()" style="margin-bottom:20px">Sign Up</button>
+      <button class="btn btn-ghost" onclick="googleAuth()">Continue with Google</button>
+    </div>
+    <div id="authStatus" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-top:20px"></div>
+  </div>
+</div>
 
 <!-- ONBOARDING -->
 <div id="onboarding">
@@ -790,6 +807,11 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
 </div>
 
 <script>
+
+const SUPA_URL = 'https://lnxvlpmvhjhvwzunkvts.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw';
+const supabase = supabaseJs.createClient(SUPA_URL, SUPA_ANON);
+
 // ── State ─────────────────────────────────────────────────────────
 
 const STATE = {
@@ -806,7 +828,10 @@ const STATE = {
 };
 
 function save(key) {
+  // Always keep localStorage as offline fallback
   localStorage.setItem('dc_' + key, JSON.stringify(STATE[key]));
+  // Sync to Supabase in background — no await, non-blocking
+  saveUserData(key).catch(e => console.error('sync failed:', e));
 }
 
 let showFullUsername = localStorage.getItem('dc_show_full_name') === 'true' || false;
@@ -1913,6 +1938,170 @@ async function submitFeedback() {
   }
 }
 
+// ── Auth ──────────────────────────────────────────────────────────
+
+async function login() {
+  const email = document.getElementById('authEmail').value;
+  const password = document.getElementById('authPassword').value;
+  const status = document.getElementById('authStatus');
+  status.style.display = 'block';
+  status.textContent = 'Logging in...';
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    status.textContent = 'Login successful!';
+    setTimeout(() => checkAuth(), 1000);
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function signup() {
+  const email = document.getElementById('authEmail').value;
+  const password = document.getElementById('authPassword').value;
+  const status = document.getElementById('authStatus');
+  status.style.display = 'block';
+  status.textContent = 'Signing up...';
+  try {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    status.textContent = 'Signup successful! Check your email.';
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function googleAuth() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin }
+  });
+  if (error) console.error(error);
+}
+
+async function registerDevice(userId) {
+  const ua = navigator.userAgent;
+  const deviceName = /Mobile/i.test(ua) ? 'Mobile' : 'Desktop';
+  await supabase.from('user_devices').upsert({
+    user_id: userId,
+    device_name: deviceName,
+    user_agent: ua.substring(0, 200),
+    last_seen: new Date().toISOString()
+  }, { onConflict: 'user_id,device_id' });
+}
+
+async function loadUserData(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('user_data')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) throw error;
+    const keys = ['stats','financial','spirit','mind',
+                  'energy','knowledge','dexterity','sessions'];
+    data.forEach(item => {
+      if (keys.includes(item.key)) {
+        try { STATE[item.key] = item.value; } catch {}
+      }
+      if (item.key === 'debt') {
+        localStorage.setItem('dc_debt', String(item.value));
+      }
+    });
+  } catch(e) {
+    console.error('loadUserData failed:', e);
+  }
+}
+ 
+async function checkAuth() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    // Load user data
+    await loadUserData(user.id);
+    // Check if new user (no profile)
+    registerDevice(user.id); // non-blocking, no await needed
+    const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
+    if (!profile) {
+      // New user, show onboarding
+      document.getElementById('auth').style.display = 'none';
+      initOnboarding();
+    } else {
+      // Returning user, load data and start app
+      document.getElementById('auth').style.display = 'none';
+      startApp();
+    }
+  } else {
+    // Show auth
+    document.getElementById('auth').style.display = 'block';
+  }
+}
+
+async function saveUserData(key) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const value = key === 'debt'
+    ? parseInt(localStorage.getItem('dc_debt') || '0')
+    : STATE[key];
+  await supabase.from('user_data').upsert({
+    user_id: user.id,
+    key,
+    value,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id,key' });
+}
+
+// Modify initOnboarding to save to Supabase
+function initOnboarding() {
+  const name = localStorage.getItem('dc_name');
+  const nav = document.querySelector('.bottom-nav');
+  document.body.classList.add('onboarding-active');
+  if(nav) nav.style.display = 'none';
+  if(name) {
+    document.getElementById('onboarding').style.display='none';
+    document.body.classList.remove('onboarding-active');
+    if(!localStorage.getItem('dc_tutdone') && !localStorage.getItem('dc_dismiss_tutorial')) {
+      document.getElementById('tutorial').style.display='flex';
+      document.body.classList.add('tutorial-active');
+      return;
+    }
+    startApp();
+    return;
+  }
+  // Build stat picker
+  const grid = document.getElementById('obStatGrid');
+  grid.innerHTML = OB_STATS.map(s=>`
+    <div id="obstat_${s.key}" class="card" style="cursor:pointer;border-color:${s.color}22;padding:16px;text-align:center" onclick="toggleObStat('${s.key}')">
+      <div style="color:${s.color};font-weight:700;margin-bottom:4px">${s.key}</div>
+      <div style="font-size:11px;color:#9BA3C4;margin-bottom:6px">${s.desc}</div>
+      <div style="font-size:10px;color:#565E82">Rank SS</div>
+    </div>
+  `).join('');
+}
+
+function obFinish() {
+  localStorage.setItem('dc_selected_modules',
+    JSON.stringify(Array.from(obSelected)));
+  // Save profile async
+  (async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('profiles').upsert({
+        user_id: user.id,
+        name: localStorage.getItem('dc_name'),
+        selected_modules: Array.from(obSelected),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+    }
+  })();
+  // Continue UI flow immediately
+  document.getElementById('onboarding').style.display = 'none';
+  document.body.classList.remove('onboarding-active');
+  if (!localStorage.getItem('dc_tutdone')) {
+    document.getElementById('tutorial').style.display = 'flex';
+  } else {
+    startApp();
+  }
+}
+
 // ── Onboarding ────────────────────────────────────────────────────
 
 const OB_STATS = [
@@ -2060,7 +2249,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if(activeTheme) activeTheme.classList.add('active');
 });
 
-initOnboarding();
+checkAuth();
 </script>
 </body>
 </html>
