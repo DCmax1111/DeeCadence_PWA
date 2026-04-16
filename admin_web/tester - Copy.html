@@ -1,0 +1,2255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Dee_Cistem — Beta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Sora:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+:root{
+  --premium-heading:'Sora',sans-serif;
+  --bg:#0C0D14;--bg-light:#F5F5F5;
+  --bg2:#11131D;--bg2-light:#F2F2F2;
+  --surface:#161B27;--surface-light:#FFFFFF;
+  --card:#1C1E2C;--card-light:#FFFFFF;
+  --card2:#1F2535;--card2-light:#F8FAFC;
+  --border:#2A2D42;--border-light:#D9D9D9;
+  --accent:#4F8EF7;--accent-light:#2563EB;
+  --fin:#2DD4A0;--spirit:#F5B942;--mind:#9B7FFA;
+  --energy:#5BA4F5;--know:#2DD4A0;--dex:#F472B6;--dc:#38BDF8;
+  --ok:#22C55E;--warn:#F59E0B;--err:#F87171;--gold:#FBBF24;
+  --t1:#F0F2FF;--t1-light:#1a1a1a;
+  --t2:#9BA3C4;--t2-light:#666;
+  --t3:#4A5070;--t3-light:#555555;
+  --t4:#252B3B;
+  --r:14px;--rs:8px;--rl:20px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --shadow-accent:0 4px 20px rgba(79,142,247,.25);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  min-height:100vh;max-width:430px;margin:0 auto;
+  padding-bottom:100px;
+  transition:background 0.3s, color 0.3s;
+}
+@media (min-width: 768px) {
+  body { max-width: 800px; padding-bottom: 120px; }
+}
+@media (min-width: 1200px) {
+  body { max-width: 1000px; padding-bottom: 140px; }
+}
+.header{
+  background:linear-gradient(180deg,var(--card) 0%,var(--bg) 100%);
+  padding:20px 20px 16px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:20;
+  backdrop-filter:blur(10px);
+}
+.header h1{
+  font-size:20px;font-weight:800;color:var(--accent);
+  letter-spacing:2px;
+}
+.header .sub{font-size:11px;color:var(--t2);margin-top:2px}
+.topnav{
+  background:rgba(17,18,28,0.95);
+  padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:10;
+  backdrop-filter:blur(10px);
+}
+.back-btn{
+  color:var(--t2);font-size:15px;cursor:pointer;
+  padding:6px 12px;border-radius:8px;
+  background:var(--card);border:1px solid var(--border);
+  font-weight:600;transition:all 0.1s;
+}
+.back-btn:active{background:var(--border);transform:scale(0.97)}
+.topnav h2{font-size:17px;font-weight:700}
+.screen{display:none}
+.screen.active{display:block}
+.greeting{
+  padding:24px 20px 4px;
+  font-size:24px;font-weight:600;
+  color:#2DD4A0;
+  font-family:'Sora',sans-serif;
+  text-shadow:0 2px 8px rgba(45,212,160,0.3);
+  letter-spacing:-0.5px;
+}
+.date{padding:4px 20px 16px;font-size:12px;color:#565E82;letter-spacing:0.5px}
+.theme-toggle{
+  display:flex;gap:8px;margin:0 16px 16px;justify-content:flex-end;
+}
+.theme-btn{
+  padding:6px 12px;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--t2);font-size:11px;cursor:pointer;
+  transition:.15s;font-weight:600;
+}
+.theme-btn.active{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+}
+.theme-btn:active{transform:scale(.97)}
+.username-toggle{
+  display:inline-block;width:32px;height:32px;
+  background:var(--accent);color:#fff;border:none;border-radius:50%;
+  cursor:pointer;font-size:11px;font-weight:700;
+  transition:.15s;margin-left:8px;
+}
+.username-toggle:active{transform:scale(.95)}
+.font-toggle-select{
+  background:var(--accent);color:#fff;border:none;border-radius:50%;
+  cursor:pointer;font-size:11px;font-weight:700;
+  transition:.15s;padding:6px 10px;
+  outline:none;
+}
+.font-toggle-select:active{transform:scale(.95)}
+.dash-card{
+  background:linear-gradient(135deg,var(--card),#222538);
+  border-radius:16px;padding:18px;margin:0 16px 16px;
+  cursor:pointer;border:1px solid var(--border);
+  transition:transform 0.15s,border-color 0.15s;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3);
+}
+.dash-card:active{transform:scale(0.98);border-color:var(--accent)}
+.dash-card .dc-label{
+  font-size:10px;letter-spacing:2px;color:var(--t2);
+  margin-bottom:6px;text-transform:uppercase;font-weight:600;
+}
+.dash-card .dc-rank{font-size:22px;font-weight:800;color:var(--accent)}
+.nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.module{
+  background:var(--card);border-radius:16px;padding:18px 14px;
+  cursor:pointer;transition:all 0.15s;
+  border:1px solid var(--border);border-left:4px solid;
+  box-shadow:0 2px 12px rgba(0,0,0,0.2);
+  position:relative;
+}
+.module::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:0px;
+  border-radius:16px 16px 0 0;
+  background:currentColor;opacity:0;
+}
+.module:active{transform:scale(0.97);border-color:currentColor}
+.module .name{font-size:14px;font-weight:700;margin-bottom:4px}
+.module .desc{font-size:11px;color:var(--t2);line-height:1.4}
+.module .stat{font-size:11px;margin-top:10px;font-weight:600;opacity:0.9}
+.stat-bar{height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
+.stat-fill{height:100%;border-radius:2px;transition:width 0.6s ease}
+.content{padding:16px}
+.card{
+  background:var(--card);border-radius:14px;padding:18px;
+  margin-bottom:12px;border:1px solid var(--border);
+}
+.card-title{font-size:10px;letter-spacing:2px;color:var(--t3);
+  text-transform:uppercase;font-weight:700;margin-bottom:14px;
+  font-family:'Syne',sans-serif;
+}
+.card h3{
+  font-size:10px;letter-spacing:1.5px;color:var(--t3);
+  margin-bottom:14px;text-transform:uppercase;font-weight:600;
+}
+.field{
+  width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:14px;color:var(--t1);font-size:15px;
+  margin-bottom:10px;outline:none;transition:border-color 0.2s;
+}
+.field:focus{border-color:var(--accent);background:var(--bg)}
+.btn{
+  width:100%;padding:15px;border:none;border-radius:12px;
+  font-size:14px;font-weight:700;cursor:pointer;
+  margin-bottom:8px;transition:all 0.15s;letter-spacing:0.3px;
+}
+.btn:active{transform:scale(0.98);opacity:0.9}
+.btn-primary{background:linear-gradient(135deg,#4F8EF7,#3B6FD4);color:white;box-shadow:0 4px 12px rgba(79,142,247,0.3)}
+.btn-success{background:linear-gradient(135deg,#34D399,#059669);color:#0C0D14;box-shadow:0 4px 12px rgba(52,211,153,0.3)}
+.btn-danger{background:linear-gradient(135deg,#F87171,#DC2626);color:white;box-shadow:0 4px 12px rgba(248,113,113,0.3)}
+.btn-ghost{background:transparent;color:var(--t2);font-size:13px;box-shadow:none}
+.row{display:flex;gap:8px}
+.row .btn{flex:1;margin-bottom:0}
+.tabs{display:flex;background:var(--bg2);border-radius:var(--rs);overflow:hidden;border:1px solid var(--border);margin-bottom:12px}
+.tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;transition:.15s;background:transparent}
+.tab.active{background:var(--card);color:var(--t1)}
+.sum-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.sum-cell{background:var(--card);border-radius:var(--rs);padding:12px;text-align:center;border:1px solid var(--border);}
+.sum-label{font-size:10px;color:var(--t3);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
+.sum-val{font-size:17px;font-weight:800;font-family:'Montserrat',sans-serif;letter-spacing:-0.5px}
+.log-item{
+  background:var(--card);border-radius:10px;padding:14px;
+  margin-bottom:8px;border-left:3px solid;
+  transition:transform 0.1s;
+}
+.log-item:active{transform:scale(0.99)}
+.log-item .li-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.log-item .li-sub{font-size:11px;color:var(--t2)}
+.empty{
+  text-align:center;color:var(--t3);font-size:13px;
+  padding:32px 16px;line-height:1.6;
+}
+.feedback-banner{
+  background:linear-gradient(135deg,#FBBF2415,#FBBF2405);
+  border:1px solid #FBBF2430;border-radius:12px;
+  padding:14px;margin-bottom:14px;font-size:13px;
+  color:#FBBF24;line-height:1.6;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+body.light-theme .feedback-banner {
+  background:linear-gradient(135deg,#FBBF2420,#FBBF240a);
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+select{
+  width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:14px;color:var(--t1);font-size:15px;
+  margin-bottom:10px;outline:none;-webkit-appearance:none;
+  transition:border-color 0.2s;
+}
+select:focus{border-color:var(--accent)}
+textarea.field{resize:none;line-height:1.5}
+.pill{
+  display:inline-block;padding:4px 10px;border-radius:20px;
+  font-size:10px;font-weight:700;letter-spacing:1px;
+}
+.section-divider{
+  font-size:10px;letter-spacing:2px;color:#565E82;
+  padding:16px 0 8px;text-transform:uppercase;font-weight:600;
+}
+
+.chart-wrap{
+  position:relative;height:250px;margin-bottom:16px;
+}
+
+
+/* ── Block Dots (DeeCadence) ────────────────── */
+.block-dots{
+  display:flex;justify-content:center;gap:8px;margin:12px 0;
+}
+.block-dot{
+  width:10px;height:10px;border-radius:50%;
+  background:#2A2D42;transition:0.3s;
+}
+.block-dot.active{
+  background:#38BDF8;
+}
+.block-dot.done{
+  background:#34D399;
+}
+
+/* ── Progress Bar ───────────────────────────── */
+.progress-bar{
+  height:4px;background:#2A2D42;
+  border-radius:2px;overflow:hidden;margin:8px 0 16px;
+}
+.progress-fill{
+  height:100%;border-radius:2px;
+  transition:width 1s linear;background:#38BDF8;
+}
+
+/* ── Timer Display ──────────────────────────── */
+.timer-display{
+  text-align:center;padding:24px 0;
+}
+.timer-num{
+  font-size:48px;font-weight:700;letter-spacing:2px;transition:color 0.3s;
+}
+.timer-phase{
+  font-size:12px;letter-spacing:2px;color:#565E82;
+  margin-top:4px;text-transform:uppercase;font-weight:700;
+}
+
+/* Dexterity quick log buttons */
+.btn-dex-quick{
+  background:var(--card)!important;border:2px solid #F472B6!important;color:#F472B6!important;
+  margin-bottom:0;font-weight:600;
+}
+body.light-theme{
+  --bg: var(--bg-light);
+  --bg2: var(--bg2-light);
+  --surface: var(--surface-light);
+  --card: var(--card-light);
+  --card2: var(--card2-light);
+  --border: var(--border-light);
+  --t1: var(--t1-light);
+  --t2: var(--t2-light);
+  --t3: var(--t3-light);
+  --accent: var(--accent-light);
+  --shadow: 0 4px 24px rgba(0,0,0,.08);
+}
+
+body.light-theme .greeting {
+  color: #2DD4A0;
+  text-shadow: 0 2px 8px rgba(45, 212, 160, 0.3);
+}
+
+body.light-theme .btn-dex-quick{
+  background:#f3f4f6!important;border:2px solid #d946ef!important;color:#d946ef!important;
+}
+
+body.light-theme .dash-card {
+  background: linear-gradient(135deg, #fff, #f0f4ff);
+  color: #0a0a0a;
+}
+
+body.light-theme .dc-label {
+  color: #666;
+}
+
+body.light-theme .dc-rank {
+  color: #2563EB;
+}
+
+body.light-theme .btn btn-primary {
+  color: #fff;
+}
+
+body.light-theme .topnav {
+  background: rgba(255,255,255,0.92);
+  border-color: var(--border);
+}
+
+body.light-theme .bottom-nav {
+  background: var(--card);
+  border-top-color: var(--border);
+}
+
+body.light-theme .nav-btn {
+  color: var(--t2);
+}
+
+body.light-theme #onboarding {
+  background: rgba(245,245,245,0.98);
+}
+
+body.light-theme #tutorial {
+  background: rgba(255,255,255,0.95);
+}
+
+body.light-theme .tut-card {
+  background: #fff;
+  border-color: var(--border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+body.light-theme .tut-head,
+body.light-theme .tut-body,
+body.light-theme .tut-step-text {
+  color: #1a1a1a;
+}
+
+body.light-theme .tut-step {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+}
+
+body.light-theme select {
+  background: #fff !important;
+  border-color: var(--border) !important;
+  color: var(--t1) !important;
+}
+
+body.light-theme .ob-step {
+  background: #fff;
+  color: #1A1A1A;
+}
+
+body.light-theme .ob-head {
+  color: #0a0a0a;
+  text-fill-color: #0a0a0a;
+}
+
+body.light-theme .ob-sub {
+  color: #0a0a0a;
+  font-weight: 500;
+}
+
+body.light-theme .ob-dot {
+  background: #2563eb;
+}
+
+body.light-theme .btn[style*="background:#1C1E2C"] {
+  background: var(--card) !important;
+  color: var(--t2) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* FAB feedback btn */
+#fabBtn{
+  position:fixed;bottom:80px;right:20px;z-index:100;
+  background:linear-gradient(135deg,#FBBF24,#D97706);
+  color:#000;font-weight:800;font-size:12px;
+  padding:12px 16px;border-radius:40px;border:none;cursor:pointer;
+  box-shadow:0 4px 20px rgba(245,185,66,.4);
+  font-family:'Syne',sans-serif;letter-spacing:.5px;
+  transition:.2s;display:none;
+}
+#fabBtn:active{transform:scale(.95)}
+
+/* Bottom Navigation */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:#1C1E2C;border-top:1px solid #2A2D42;
+  display:flex;padding:8px 0;
+  backdrop-filter:blur(10px);
+}
+.nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:8px;border:none;background:none;color:#9BA3C4;
+  cursor:pointer;transition:.15s;border-radius:8px;margin:0 4px;
+}
+.nav-btn.active{background:#4F8EF7;color:#fff}
+.nav-btn:active{transform:scale(.95)}
+.nav-icon{font-size:18px;margin-bottom:2px}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.5px}
+
+/* Onboarding */
+#onboarding{
+  position:fixed;inset:0;z-index:200;
+  background:var(--bg);display:flex;flex-direction:column;
+  justify-content:flex-start;align-items:center;padding:24px;
+  overflow-y:auto;
+}
+.ob-step{
+  display:none;flex-direction:column;
+  width:100%;max-width:430px;
+  padding:20px 28px 32px;margin-top:60px;animation:fadeIn .2s ease;
+}
+.ob-step.active{display:flex}
+.ob-step.active{display:flex}
+.ob-num{
+  font-size:11px;color:#565E82;letter-spacing:2px;
+  margin-bottom:32px;font-weight:700;
+}
+.ob-head{
+  font-family:var(--premium-heading),sans-serif;font-size:34px;
+  font-weight:800;line-height:1.2;margin-bottom:16px;
+  color:var(--t1);
+}
+.ob-sub{
+  font-size:15px;color:var(--t1);line-height:1.6;margin-bottom:auto;font-weight:500;
+}
+.ob-dots{
+  display:flex;gap:6px;margin-bottom:24px;
+}
+.ob-dot{
+  height:4px;border-radius:2px;background:#2A2D42;transition:.3s;
+}
+.ob-dot.active{background:#4F8EF7;width:24px}
+.ob-dot.done{background:#34D399}
+
+/* Tutorial overlay */
+#tutorial{
+  position:fixed;inset:0;z-index:250;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  display:none;flex-direction:column;padding:0;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.tut-card{
+  background:#1C1E2C;border-radius:20px;
+  padding:28px;border:1px solid #2A2D42;width:100%;max-width:360px;margin:auto;margin-top:50px;margin-bottom:50px;
+}
+.tut-icon{font-size:32px;margin-bottom:12px}
+.tut-head{
+  font-family:var(--premium-heading),sans-serif;font-size:20px;
+  font-weight:800;margin-bottom:8px;color:#F0F2FF;
+}
+.tut-body{
+  font-size:14px;color:#9BA3C4;line-height:1.6;margin-bottom:20px;
+}
+.tut-steps{margin-bottom:20px}
+.tut-step{
+  display:flex;gap:12px;align-items:flex-start;
+  margin-bottom:12px;padding:10px;background:var(--card);
+  border-radius:10px;
+}
+.tut-step-num{
+  background:#4F8EF7;color:#fff;font-size:11px;
+  font-weight:800;width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.tut-step-text{
+  font-size:13px;color:#9BA3C4;line-height:1.4;
+}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="show('home')" data-screen="home">
+    <div class="nav-icon">🏠</div>
+    <div class="nav-label">Home</div>
+  </button>
+  <button class="nav-btn" onclick="show('feedback')" data-screen="feedback">
+    <div class="nav-icon">💬</div>
+    <div class="nav-label">Feedback</div>
+  </button>
+  <button class="nav-btn" onclick="show('settings')" data-screen="settings">
+    <div class="nav-icon">⚙️</div>
+    <div class="nav-label">Settings</div>
+  </button>
+</nav>
+
+<!-- AUTH -->
+<div id="auth" class="screen active">
+  <div style="padding:40px 20px;text-align:center">
+    <h1 style="font-size:28px;margin-bottom:20px;color:var(--accent)">Welcome to Dee_Cistem</h1>
+    <div id="authForm">
+      <input class="field" id="authEmail" type="email" placeholder="Email" style="margin-bottom:10px">
+      <input class="field" id="authPassword" type="password" placeholder="Password" style="margin-bottom:20px">
+      <button class="btn btn-primary" onclick="login()" style="margin-bottom:10px">Login</button>
+      <button class="btn btn-ghost" onclick="signup()" style="margin-bottom:20px">Sign Up</button>
+      <button class="btn btn-ghost" onclick="googleAuth()">Continue with Google</button>
+    </div>
+    <div id="authStatus" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <!-- Step 1: Name -->
+  <div class="ob-step active" id="ob1">
+    <div class="ob-num">STEP 1 OF 3</div>
+    <div class="ob-head">Which version of yourself are you building?</div>
+    <div class="ob-sub">
+      Dee_Cistem tracks every dimension of your growth — finances, focus, spirit, body, knowledge, and craft. Your rank reflects who you're becoming, not just what you've done.
+      <br><br>
+      <strong style="color:var(--t1)">What should we call you?</strong>
+    </div>
+    <div style="margin-top:24px">
+      <input class="field" id="obName" placeholder="Your name" style="font-size:18px;padding:16px">
+      <button class="btn btn-primary" onclick="obNext(1)">Continue →</button>
+    </div>
+    <div class="ob-dots" style="margin-top:16px">
+      <div class="ob-dot active" style="width:24px"></div>
+      <div class="ob-dot"></div>
+      <div class="ob-dot"></div>
+    </div>
+  </div>
+
+  <!-- Step 2: What matters most -->
+  <div class="ob-step" id="ob2">
+    <div class="ob-num">STEP 2 OF 3</div>
+    <div class="ob-head">What matters most to you right now?</div>
+    <div class="ob-sub">Pick up to 3. You track all six, but these show first on your dashboard.</div>
+    <div id="obStatGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px"></div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="obBack(1)">← Back</button>
+      <button class="btn btn-primary" onclick="obNext(2)">Continue →</button>
+    </div>
+    <div class="ob-dots" style="margin-top:16px">
+      <div class="ob-dot done"></div>
+      <div class="ob-dot active" style="width:24px"></div>
+      <div class="ob-dot"></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Rank explainer -->
+  <div class="ob-step" id="ob3">
+    <div class="ob-num">STEP 3 OF 3</div>
+    <div class="ob-head" id="ob3Head">Your starting rank is E.</div>
+    <div class="ob-sub">
+      Every rank must be earned through real consistency. Logging alone doesn't move you up — improvement does. There are no participation trophies here.
+      <br><br>
+      <strong style="color:var(--t1)">E → D → C → B → A → S → SS</strong>
+      <br><br>
+      Ranks are calculated across all six modules. A consistent E in one area pulls your overall rank down. That's the point.
+    </div>
+    <div style="margin-top:24px;display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="obBack(2)">← Back</button>
+      <button class="btn btn-primary" onclick="obFinish()">Begin my journey →</button>
+    </div>
+    <div class="ob-dots" style="margin-top:16px">
+      <div class="ob-dot done"></div>
+      <div class="ob-dot done"></div>
+      <div class="ob-dot active" style="width:24px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TUTORIAL OVERLAY -->
+<div id="tutorial">
+  <div class="tut-card">
+    <div class="tut-icon">👋</div>
+    <div class="tut-head">Welcome to Dee_Cistem</div>
+    <div class="tut-body">Let's get you started with your growth journey. Here's how to use the app:</div>
+    <div class="tut-steps">
+      <div class="tut-step">
+        <div class="tut-step-num">1</div>
+        <div class="tut-step-text"><strong>Explore Modules:</strong> Tap any colored module card on the home screen to open it. Each module tracks a different aspect of your growth.</div>
+      </div>
+      <div class="tut-step">
+        <div class="tut-step-num">2</div>
+        <div class="tut-step-text"><strong>Log Activities:</strong> Use the log buttons in each module to record your progress. Your stats update automatically and affect your overall rank.</div>
+      </div>
+      <div class="tut-step">
+        <div class="tut-step-num">3</div>
+        <div class="tut-step-text"><strong>Track Progress:</strong> Check the dashboard for an overview of all your stats. Ranks go from E to SS — consistency matters more than perfection.</div>
+      </div>
+      <div class="tut-step">
+        <div class="tut-step-num">4</div>
+        <div class="tut-step-text"><strong>Customize:</strong> Use the theme toggle for light/dark mode, and the username button to show your full name or initial.</div>
+      </div>
+      <div class="tut-step">
+        <div class="tut-step-num">5</div>
+        <div class="tut-step-text"><strong>Get Help:</strong> Tap the Feedback button anytime to share ideas or report issues. Your input shapes the app!</div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-primary" onclick="closeTutorial()" style="margin-bottom:0;flex:1">Got it, let's go</button>
+      <button class="btn btn-ghost" onclick="dismissTutorial()" style="margin-bottom:0;flex:0.5">Dismiss</button>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button id="fabBtn" onclick="show('feedback')">✦ Feedback</button>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="header">
+    <div>
+      <h1>DEE_CISTEM</h1>
+      <div class="sub">Discipline · Growth · Mastery</div>
+    </div>
+    <div style="font-size:11px;color:#565E82;text-align:right">
+      BETA<br><span style="color:#34D399">●</span> Live
+    </div>
+  </div>
+
+  <div class="greeting" id="greeting">Good Morning</div>
+  <div class="date" id="dateStr"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px;">
+    <button class="username-toggle" onclick="toggleUsername()" id="usernameBtn" title="Toggle username display">DC</button>
+  </div>
+  
+  <div class="theme-toggle">
+    <button class="theme-btn active" onclick="setTheme('dark')" data-theme="dark">Dark</button>
+    <button class="theme-btn" onclick="setTheme('light')" data-theme="light">Light</button>
+    <button class="theme-btn" onclick="setTheme('system')" data-theme="system">System</button>
+  </div>
+
+  <!-- Dashboard card -->
+  <div class="dash-card" onclick="show('dashboard')">
+    <div class="dc-label">STAT DASHBOARD</div>
+    <div class="dc-rank" id="overallRank">Rank E · Score 1</div>
+    <div style="font-size:11px;color:#9BA3C4;margin-top:4px" id="keyStats">
+      Body 1 · Mind 1 · Spirit 1
+    </div>
+  </div>
+
+  <!-- Modules -->
+  <div class="nav" id="moduleGrid"></div>
+  
+  <!-- Tutorial Button -->
+  <div style="padding:0 16px;margin-top:12px;margin-bottom:60px">
+    <button class="btn btn-ghost" style="text-align:center" onclick="showTutorial()">Show tutorial</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#4F8EF7">Stat Dashboard</h2>
+  </div>
+  <div class="content" id="dashContent"></div>
+</div>
+
+<!-- FINANCIAL -->
+<div id="financial" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#34D399">Financial</h2>
+  </div>
+  <div class="content" id="financialContent"></div>
+</div>
+
+<!-- SPIRIT -->
+<div id="spirit" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#FBBF24">Spirit</h2>
+  </div>
+  <div class="content" id="spiritContent"></div>
+</div>
+
+<!-- MIND -->
+<div id="mind" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#A78BFA">Mind</h2>
+  </div>
+  <div class="content" id="mindContent"></div>
+</div>
+
+<!-- ENERGY -->
+<div id="energy" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#60A5FA">Energy</h2>
+  </div>
+  <div class="content" id="energyContent"></div>
+</div>
+
+<!-- KNOWLEDGE -->
+<div id="knowledge" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#34D399">Knowledge</h2>
+  </div>
+  <div class="content" id="knowledgeContent"></div>
+</div>
+
+<!-- DEXTERITY -->
+<div id="dexterity" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#F472B6">Dexterity</h2>
+  </div>
+  <div class="content" id="dexterityContent"></div>
+</div>
+
+<!-- DEECADENCE -->
+<div id="deecadence" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('mind')">&#8249; Back</button>
+    <h2 style="color:#38BDF8">DeeCadence</h2>
+  </div>
+  <div class="content" id="deecadenceContent"></div>
+</div>
+
+<!-- FEEDBACK -->
+<div id="feedback" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#FBBF24">Beta Feedback</h2>
+  </div>
+  <div class="content">
+    <div class="feedback-banner">
+      You are testing Dee_Cistem Beta. Your feedback directly shapes the product. Thank you for being here first.
+    </div>
+    <div class="card">
+      <h3>Your Experience</h3>
+      <select id="fbRating">
+        <option value="">Overall rating...</option>
+        <option value="5">5 — Would use daily</option>
+        <option value="4">4 — Very useful</option>
+        <option value="3">3 — Somewhat useful</option>
+        <option value="2">2 — Needs work</option>
+        <option value="1">1 — Not for me</option>
+      </select>
+      <select id="fbModule">
+        <option value="">Which module did you try first?</option>
+        <option>Financial</option>
+        <option>Spirit</option>
+        <option>Mind / DeeCadence</option>
+        <option>Energy</option>
+        <option>Knowledge</option>
+        <option>Dashboard</option>
+      </select>
+      <textarea class="field" id="fbText" rows="4"
+        placeholder="What would make you use this daily? What confused you? What's missing?"></textarea>
+      <select id="fbPay">
+        <option value="">Would you pay for full access?</option>
+        <option value="yes5k">Yes — NGN 5,000 lifetime</option>
+        <option value="yes1500">Yes — NGN 1,500/month</option>
+        <option value="maybe">Maybe — needs more features</option>
+        <option value="no">No — not yet</option>
+      </select>
+      <button class="btn btn-primary" onclick="submitFeedback()">
+        Submit Feedback
+      </button>
+    </div>
+    <div id="fbStatus" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings" class="screen">
+  <div class="topnav">
+    <button class="back-btn" onclick="show('home')">&#8249; Back</button>
+    <h2 style="color:#4F8EF7">Settings</h2>
+  </div>
+  <div class="content">
+    <div class="card">
+      <h3>Data Management</h3>
+      <button class="btn btn-primary" onclick="exportData()">Export Progress (CSV)</button>
+      <p style="font-size:12px;color:#9BA3C4;margin-top:8px">
+        Download your progress data as a spreadsheet for easy viewing and analysis.
+      </p>
+    </div>
+    <div class="card">
+      <h3>Progress Overview</h3>
+      <canvas id="progressChart" width="300" height="200"></canvas>
+    </div>
+    <div class="card">
+      <h3>App Info</h3>
+      <p style="font-size:13px;margin-bottom:8px">
+        <strong>Dee_Cistem v0.1.0 (Beta)</strong><br>
+        Discipline · Growth · Mastery<br><br>
+        <strong>Features:</strong> 6 core modules (Financial, Spirit, Mind, Energy, Knowledge, Dexterity), progress tracking, habit logging, dashboard analytics.<br><br>
+        <strong>Tech:</strong> Built with Kivy & KivyMD for Android, HTML5 web version for testing.<br><br>
+        <strong>Get Started:</strong> Available for Android testing, web version for beta testing.
+      </p>
+      <button class="btn btn-ghost" onclick="resetName()">Reset Onboarding</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const SUPA_URL = 'https://lnxvlpmvhjhvwzunkvts.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw';
+const supabase = supabaseJs.createClient(SUPA_URL, SUPA_ANON);
+
+// ── State ─────────────────────────────────────────────────────────
+
+const STATE = {
+  stats: JSON.parse(localStorage.getItem('dc_stats') || JSON.stringify({
+    Body:1,Mind:1,Spirit:1,Knowledge:1,Financial:1,Dexterity:1
+  })),
+  financial: JSON.parse(localStorage.getItem('dc_financial') || '[]'),
+  spirit:    JSON.parse(localStorage.getItem('dc_spirit') || '[]'),
+  mind:      JSON.parse(localStorage.getItem('dc_mind') || '[]'),
+  energy:    JSON.parse(localStorage.getItem('dc_energy') || '[]'),
+  knowledge: JSON.parse(localStorage.getItem('dc_knowledge') || '[]'),
+  dexterity: JSON.parse(localStorage.getItem('dc_dexterity') || '[]'),
+  sessions:  JSON.parse(localStorage.getItem('dc_sessions') || '[]'),
+};
+
+function save(key) {
+  // Always keep localStorage as offline fallback
+  localStorage.setItem('dc_' + key, JSON.stringify(STATE[key]));
+  // Sync to Supabase in background — no await, non-blocking
+  saveUserData(key).catch(e => console.error('sync failed:', e));
+}
+
+let showFullUsername = localStorage.getItem('dc_show_full_name') === 'true' || false;
+let currentTheme = localStorage.getItem('dc_theme') || 'dark';
+
+function setTheme(theme) {
+  currentTheme = theme;
+  localStorage.setItem('dc_theme', theme);
+  document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+  
+  if(theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.body.classList.toggle('light-theme', !prefersDark);
+  } else if(theme === 'light') {
+    document.body.classList.add('light-theme');
+  } else {
+    document.body.classList.remove('light-theme');
+  }
+  
+  // Update onboarding colors for system theme
+  const onboarding = document.getElementById('onboarding');
+  if(theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if(!prefersDark) {
+      onboarding.style.color = '#1a1a1a';
+      document.querySelectorAll('.ob-head').forEach(el => el.style.color = '#0a0a0a');
+      document.querySelectorAll('.ob-sub').forEach(el => el.style.color = '#0a0a0a');
+    } else {
+      onboarding.style.color = '';
+      document.querySelectorAll('.ob-head').forEach(el => el.style.color = '');
+      document.querySelectorAll('.ob-sub').forEach(el => el.style.color = '');
+    }
+  }
+}
+
+function toggleUsername() {
+  showFullUsername = !showFullUsername;
+  localStorage.setItem('dc_show_full_name', showFullUsername);
+  renderHome();
+  updateUsernameBtn();
+}
+
+function updateUsernameBtn() {
+  const btn = document.getElementById('usernameBtn');
+  if(!btn) return;
+  const rawName = localStorage.getItem('dc_name') || 'DC';
+  const processedName = processUsername(rawName);
+  const displayText = processedName.length >= 4 ? processedName.charAt(0).toUpperCase() : processedName;
+  btn.textContent = displayText;
+}
+
+function updateStat(name, delta) {
+  STATE.stats[name] = Math.min(100, Math.max(1, (STATE.stats[name]||1) + delta));
+  save('stats');
+  renderHome();
+}
+
+function getRank(v) {
+  if(v>=95)return'SS';if(v>=80)return'S';if(v>=65)return'A';
+  if(v>=50)return'B';if(v>=35)return'C';if(v>=20)return'D';return'E';
+}
+
+function renderSettings() {
+  // Render progress chart
+  const ctx = document.getElementById('progressChart');
+  if(ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(STATE.stats),
+        datasets: [{
+          label: 'Score',
+          data: Object.values(STATE.stats),
+          backgroundColor: Object.keys(STATE.stats).map(key => {
+            const colors = {Body:'#60A5FA',Mind:'#A78BFA',Spirit:'#FBBF24',Knowledge:'#34D399',Financial:'#34D399',Dexterity:'#F472B6'};
+            return colors[key] || '#4F8EF7';
+          }),
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, max: 100 } }
+      }
+    });
+  }
+}
+
+function exportData() {
+  // Create CSV content
+  let csv = 'Category,Date,Details,Amount\n';
+  
+  // Add financial logs
+  STATE.financial.forEach(entry => {
+    csv += `Financial,${entry.date},${entry.desc || ''},${entry.amount || 0}\n`;
+  });
+  
+  // Add other logs (simplified)
+  ['spirit', 'mind', 'energy', 'knowledge', 'dexterity'].forEach(cat => {
+    STATE[cat].forEach(entry => {
+      csv += `${cat.charAt(0).toUpperCase() + cat.slice(1)},${entry.date || ''},${entry.note || ''},1\n`;
+    });
+  });
+  
+  // Add stats summary
+  csv += '\nStats Summary\n';
+  csv += 'Module,Score,Rank\n';
+  Object.entries(STATE.stats).forEach(([key, val]) => {
+    csv += `${key},${val},${getRank(val)}\n`;
+  });
+  
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `deecistem-progress-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Navigation ────────────────────────────────────────────────────
+
+const _history = ['home'];
+
+function show(id, addHistory = true) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.add('active');
+  window.scrollTo(0,0);
+  
+  if(addHistory) {
+    _history.push(id);
+    history.pushState({screen:id}, '', '#'+id);
+  }
+  
+  // Update nav active state and visibility
+  const nav = document.querySelector('.bottom-nav');
+  if(id === 'feedback' || id === 'settings') {
+    nav.style.display = 'none';
+  } else {
+    nav.style.display = 'flex';
+    document.querySelectorAll('.nav-btn').forEach(btn=>btn.classList.remove('active'));
+    const activeBtn = document.querySelector(`.nav-btn[data-screen="${id}"]`);
+    if(activeBtn) activeBtn.classList.add('active');
+  }
+  const renders = {
+    home: renderHome,
+    dashboard: renderDashboard,
+    financial: renderFinancial,
+    spirit: renderSpirit,
+    mind: renderMind,
+    energy: renderEnergy,
+    knowledge: renderKnowledge,
+    dexterity: renderDexterity,
+    deecadence: renderDeeCadence,
+    settings: renderSettings,
+  };
+  if(renders[id]) renders[id]();
+  // Show/hide FAB
+  document.getElementById('fabBtn').style.display =
+    id === 'feedback' || id === 'home' ? 'none' : 'flex';
+}
+
+window.addEventListener('popstate', (e) => {
+  if(_history.length > 1) {
+    _history.pop();
+    const prev = _history[_history.length-1];
+    show(prev, false);
+  }
+});
+
+// ── Home ──────────────────────────────────────────────────────────
+
+const MODULES = [
+  {id:'financial', name:'Financial', color:'#34D399',
+   desc:'Income · Expenses · Cashflow', stat:'Financial', hover:'#0D2B1E'},
+  {id:'spirit',    name:'Spirit',    color:'#FBBF24',
+   desc:'Prayer · Bible · Leadership', stat:'Spirit', hover:'#2B1E00'},
+  {id:'mind',      name:'Mind',      color:'#A78BFA',
+   desc:'Focus · DeeCadence', stat:'Mind', hover:'#1A0D2E'},
+  {id:'energy',    name:'Energy',    color:'#60A5FA',
+   desc:'Sleep · Water · Exercise', stat:'Body', hover:'#0A1A2E'},
+  {id:'knowledge', name:'Knowledge', color:'#34D399',
+   desc:'Study · Reading · Skills', stat:'Knowledge', hover:'#0D2B1E'},
+  {id:'dexterity', name:'Dexterity', color:'#F472B6',
+   desc:'Art · Design · VoxScope', stat:'Dexterity', hover:'#6B0F3B'},
+];
+
+function processUsername(name) {
+  if (name.length < 3) return name.toUpperCase();
+  // Capitalize first letter, preserve existing caps
+  return name.replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function changeGreetingFont() {
+  const select = document.getElementById('fontSelect');
+  const font = select.value;
+  const greeting = document.getElementById('greeting');
+  greeting.style.fontFamily = font;
+  localStorage.setItem('dc_greeting_font', font);
+}
+
+function toggleGreetingFont() {
+  // Legacy, can remove if not used
+}
+
+function renderHome() {
+  // Greeting - capitalize each word
+  const h = new Date().getHours();
+  const greetingPhrase = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  const rawName = localStorage.getItem('dc_name') || 'DC';
+  const processedName = processUsername(rawName);
+  const displayName = showFullUsername ? processedName : processedName.charAt(0).toUpperCase();
+  const greeting = document.getElementById('greeting');
+  greeting.textContent = `${greetingPhrase}, ${displayName}`;
+  const savedFont = localStorage.getItem('dc_greeting_font') || "'Sora',sans-serif";
+  greeting.style.fontFamily = savedFont;
+  document.getElementById('dateStr').textContent =
+    new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  updateUsernameBtn();
+
+  // Overall rank
+  const vals = Object.values(STATE.stats);
+  const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+  document.getElementById('overallRank').textContent =
+    `Rank ${getRank(avg)} · Score ${Math.round(avg)}`;
+  document.getElementById('keyStats').textContent =
+    `Body ${STATE.stats.Body} · Mind ${STATE.stats.Mind} · Spirit ${STATE.stats.Spirit}`;
+
+  // Modules - prioritize selected ones
+  const selected = JSON.parse(localStorage.getItem('dc_selected_modules') || '[]');
+  const grid = document.getElementById('moduleGrid');
+  
+  // Create priority list: selected modules first, then all others
+  let prioritized = [];
+  selected.forEach(key => {
+    const m = MODULES.find(mod => mod.stat === key);
+    if(m) prioritized.push(m);
+  });
+  MODULES.forEach(m => {
+    if(!prioritized.includes(m)) prioritized.push(m);
+  });
+  
+  grid.innerHTML = prioritized.map(m => `
+    <div class="module" onclick="show('${m.id}')"
+         style="border-left:4px solid ${m.color};border-color:${m.color}">
+      <div class="name" style="color:${m.color}">${m.name}</div>
+      <div class="desc">${m.desc}</div>
+      <div class="stat" style="color:${m.color}">
+        ${STATE.stats[m.stat]||1} · Rank ${getRank(STATE.stats[m.stat]||1)}
+      </div>
+      <div class="stat-bar">
+        <div class="stat-fill" style="width:${STATE.stats[m.stat]||1}%;background:${m.color}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Dexterity ─────────────────────────────────────────────────────
+
+function renderDexterity() {
+  const el = document.getElementById('dexterityContent');
+  el.innerHTML = `
+    <div class="card" style="border-color:#F472B6;border-left:4px solid #F472B6;margin-bottom:12px">
+      <div style="color:#F472B6;font-weight:700;font-size:15px;margin-bottom:8px">
+        ✦ VoxScope
+      </div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.6">
+        <div style="margin-bottom:6px">✓ Vocal range analyzer</div>
+        <div style="margin-bottom:6px">✓ XP progression system</div>
+        <div style="margin-bottom:6px">✓ Artist comparison tool</div>
+        <div style="margin-bottom:6px">✓ Voice quality feedback</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:8px">Available in the full app</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Creative Session</h3>
+      <select class="field" id="dexType" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--t1)">
+        <option>Drawing</option><option>Design</option><option>Writing</option>
+        <option>Music Practice</option><option>Vocal Practice</option>
+        <option>Photography</option><option>Video Editing</option><option>Other</option>
+      </select>
+      <input class="field" id="dexMins" type="number" placeholder="Duration (minutes)">
+      <textarea class="field" id="dexNote" placeholder="What did you work on?" style="min-height:70px"></textarea>
+      <button class="btn btn-primary" onclick="logDex()">Log Session</button>
+    </div>
+    <div class="card">
+      <h3>Quick Log</h3>
+      <div class="row">
+        <button class="btn btn-dex-quick" onclick="quickDex('Sketching',15)">Sketch 15m</button>
+        <button class="btn btn-dex-quick" onclick="quickDex('Design',30)">Design 30m</button>
+        <button class="btn btn-dex-quick" onclick="quickDex('Writing',20)">Write 20m</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Recent Sessions</h3>
+      ${STATE.dexterity.length===0
+        ?'<div class="empty">Nothing logged yet.<br>Start creating.</div>'
+        :STATE.dexterity.slice(-5).reverse().map(e=>`
+          <div class="log-item" style="border-color:#F472B6">
+            <div class="li-title" style="color:#F472B6">${e.label}</div>
+            <div class="li-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logDex(){
+  const type=document.getElementById('dexType').value;
+  const mins=parseInt(document.getElementById('dexMins').value||'0');
+  const note=document.getElementById('dexNote').value.trim();
+  if(!mins||mins<=0)return;
+  STATE.dexterity.push({label:`${type} · ${mins}min${note?` — ${note}`:''}`,date:today()});
+  save('dexterity');document.getElementById('dexMins').value='';
+  document.getElementById('dexNote').value='';
+  updateStat('Dexterity',Math.min(5,Math.floor(mins/10)));renderDexterity();
+}
+
+function quickDex(type,mins){
+  STATE.dexterity.push({label:`${type} · ${mins}min`,date:today()});
+  save('dexterity');updateStat('Dexterity',2);renderDexterity();
+}
+
+// ── DeeCadence ────────────────────────────────────────────────────
+
+function renderDashboard() {
+  const el = document.getElementById('dashContent');
+  const stats = ['Body','Mind','Spirit','Knowledge','Financial','Dexterity'];
+  const colors = {
+    Body:'#60A5FA',Mind:'#A78BFA',Spirit:'#FBBF24',
+    Knowledge:'#34D399',Financial:'#34D399',Dexterity:'#F472B6'
+  };
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <h3>Stat Sheet</h3>
+      ${stats.map(s=>`
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:600">${s}</span>
+            <span style="font-size:11px;color:${colors[s]}">
+              ${STATE.stats[s]} · Rank ${getRank(STATE.stats[s])}
+            </span>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-fill"
+              style="width:${STATE.stats[s]}%;background:${colors[s]}"></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ── Financial ─────────────────────────────────────────────────────
+
+let currentLedger = 'personal';
+let currentTxnType = 'income';
+let cfChart = null;
+
+function fmtNum(n){return n>=1000?(n/1000).toFixed(1)+'k':n}
+
+function renderFinancial() {
+  const ledgerTxns = STATE.financial.filter(t=>t.ledger===currentLedger);
+  const income = ledgerTxns
+    .filter(t=>t.type==='income')
+    .reduce((a,t)=>a+t.amount,0);
+  const expense = ledgerTxns
+    .filter(t=>t.type==='expense')
+    .reduce((a,t)=>a+t.amount,0);
+  const cf = income - expense;
+
+  const el = document.getElementById('financialContent');
+  el.innerHTML = `
+    <div class="tabs">
+      <div class="tab ${currentLedger==='personal'?'active':''}"
+           onclick="switchLedger('personal')">Personal</div>
+      <div class="tab ${currentLedger==='business'?'active':''}"
+           onclick="switchLedger('business')">Business</div>
+    </div>
+    <div class="sum-row">
+      <div class="sum-cell">
+        <div class="sum-label">Income</div>
+        <div class="sum-val" style="color:var(--fin)">₦${(income||0).toLocaleString()}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Expenses</div>
+        <div class="sum-val" style="color:var(--err)">₦${(expense||0).toLocaleString()}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Cashflow</div>
+        <div class="sum-val" style="color:${cf>=0?'var(--fin)':'var(--err)'}">₦${(cf||0).toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn btn-success" onclick="showAddTxn('income')" style="flex:1;margin-bottom:0">+ Income</button>
+      <button class="btn btn-danger" onclick="showAddTxn('expense')" style="flex:1;margin-bottom:0">+ Expense</button>
+    </div>
+    <div id="txnForm" style="display:none" class="card">
+      <h3 id="txnTitle">Add Transaction</h3>
+      <input class="field" id="txnAmount" type="number" placeholder="Amount (₦)">
+      <select class="field" id="txnCat"></select>
+      <input class="field" id="txnNote" placeholder="Note (optional)">
+      <div class="row">
+        <button class="btn btn-primary" onclick="saveTxn()" style="margin-bottom:0">Save</button>
+        <button class="btn btn-ghost" onclick="hideTxnForm()" style="margin-bottom:0">Cancel</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Cashflow (Last 7 Days)</h3>
+      <div class="chart-wrap"><canvas id="cfChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Transactions</h3>
+      <select class="field" id="txnFilter" onchange="renderFinancial()" style="margin-bottom:12px">
+        <option value="all">All categories</option>
+        ${[...incCats,...expCats].filter((v,i,a)=>a.indexOf(v)===i).map(c=>`<option>${c}</option>`).join('')}
+      </select>
+      ${(()=>{
+        const filter = document.getElementById('txnFilter')?.value||'all';
+        const filtered = ledgerTxns.filter(t=>filter==='all'||t.category===filter);
+        return filtered.length===0
+          ? '<div class="empty">No transactions yet.</div>'
+          : filtered.slice(-8).reverse().map(t=>`
+            <div class="log-item" style="border-color:${t.type==='income'?'var(--fin)':'var(--err)'}">
+              <div class="li-title" style="color:${t.type==='income'?'var(--fin)':'var(--err)'}">
+                ${t.type==='income'?'+':'-'}₦${(t.amount||0).toLocaleString()} · ${t.category}
+              </div>
+              <div class="li-sub">${t.note||''} · ${t.date}</div>
+            </div>`).join('');
+      })()}
+    </div>`;
+
+  buildCfChart(ledgerTxns);
+}
+
+const incCats = ['Salary','Freelance','Business','Gift','Investment','Other'];
+const expCats = ['Food','Transport','Education','Health','Entertainment','Tithe','Savings','Utilities','Other'];
+
+function showAddTxn(type) {
+  currentTxnType = type;
+  document.getElementById('txnTitle').textContent =
+    type==='income' ? 'Add Income' : 'Add Expense';
+  const cats = type==='income' ? incCats : expCats;
+  document.getElementById('txnCat').innerHTML =
+    cats.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('txnForm').style.display = 'block';
+  document.getElementById('txnAmount').value = '';
+  document.getElementById('txnNote').value = '';
+  document.getElementById('txnAmount').focus();
+}
+
+function saveTxn() {
+  const amount = parseFloat(document.getElementById('txnAmount').value);
+  if(!amount||amount<=0) return;
+  STATE.financial.push({
+    type: currentTxnType,
+    amount,
+    category: document.getElementById('txnCat').value,
+    note: document.getElementById('txnNote').value,
+    date: new Date().toLocaleDateString(),
+    ledger: currentLedger
+  });
+  save('financial');
+  updateStat('Financial', currentTxnType==='income'?2:-1);
+  document.getElementById('txnForm').style.display='none';
+  renderFinancial();
+}
+
+function hideTxnForm() {
+  document.getElementById('txnForm').style.display='none';
+}
+
+function buildCfChart(txns) {
+  const ctx = document.getElementById('cfChart');
+  if(!ctx) return;
+  if(cfChart){cfChart.destroy();cfChart=null;}
+  const days=[];const inc=[];const exp=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const label=d.toLocaleDateString('en-GB',{weekday:'short'});
+    const dateStr=d.toLocaleDateString('en-GB');
+    days.push(label);
+    inc.push(txns.filter(t=>t.type==='income'&&t.date===dateStr).reduce((a,t)=>a+t.amount,0));
+    exp.push(txns.filter(t=>t.type==='expense'&&t.date===dateStr).reduce((a,t)=>a+t.amount,0));
+  }
+  cfChart = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:days,
+      datasets:[
+        {label:'Income',data:inc,backgroundColor:'rgba(45,212,160,.7)',borderRadius:4},
+        {label:'Expenses',data:exp,backgroundColor:'rgba(248,113,113,.7)',borderRadius:4},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8B93B8',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#4A5070',font:{size:10}},grid:{color:'#252B3B'}},
+        y:{ticks:{color:'#4A5070',font:{size:10}},grid:{color:'#252B3B'},
+           callback:v=>'₦'+fmtNum(v)},
+      }
+    }
+  });
+}
+
+function switchLedger(ledger) {
+  currentLedger = ledger;
+  renderFinancial();
+}
+
+// ── Spirit ────────────────────────────────────────────────────────
+
+function renderSpirit() {
+  const el = document.getElementById('spiritContent');
+  const todayPrayers = STATE.spirit.filter(
+    e=>e.type==='prayer'&&e.date===today()).length;
+  const todayBible = STATE.spirit.filter(
+    e=>e.type==='bible'&&e.date===today()).length;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">PRAYERS TODAY</div>
+        <div style="color:#FBBF24;font-weight:700;font-size:24px">${todayPrayers}</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">BIBLE TODAY</div>
+        <div style="color:#34D399;font-weight:700;font-size:24px">${todayBible}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Prayer</h3>
+      <div class="row">
+        <button class="btn btn-primary" onclick="logSpirit('prayer','Morning')">Morning</button>
+        <button class="btn btn-primary" onclick="logSpirit('prayer','Night')">Night</button>
+        <button class="btn btn-primary" onclick="logSpirit('prayer','Other')">Other</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Bible Reading</h3>
+      <input class="field" id="biblePassage" placeholder="Passage (e.g. John 3:16)">
+      <button class="btn btn-success" onclick="logBible()">Log Reading</button>
+    </div>
+    <div class="card">
+      <h3>Recent</h3>
+      ${STATE.spirit.length===0
+        ? '<div class="empty">Nothing logged yet</div>'
+        : STATE.spirit.slice(-5).reverse().map(e=>`
+          <div class="log-item" style="border-color:#FBBF24">
+            <div class="li-title" style="color:#FBBF24">${e.label}</div>
+            <div class="li-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logSpirit(type, label) {
+  STATE.spirit.push({type, label, date:today()});
+  save('spirit');
+  updateStat('Spirit', 3);
+  renderSpirit();
+}
+
+function logBible() {
+  const p = document.getElementById('biblePassage').value.trim();
+  if(!p) return;
+  STATE.spirit.push({type:'bible', label:`Bible: ${p}`, date:today()});
+  save('spirit');
+  document.getElementById('biblePassage').value='';
+  updateStat('Spirit', 2);
+  renderSpirit();
+}
+
+// ── Mind ──────────────────────────────────────────────────────────
+
+function renderMind() {
+  const el = document.getElementById('mindContent');
+  el.innerHTML = `
+    <div class="card" onclick="show('deecadence')"
+         style="border:1px solid #38BDF830;cursor:pointer">
+      <div style="color:#38BDF8;font-weight:700;margin-bottom:4px">
+        DeeCadence
+      </div>
+      <div style="font-size:12px;color:#9BA3C4">
+        Focus debt · Session tracker · Attention score
+      </div>
+      <div style="font-size:11px;color:#38BDF8;margin-top:8px">
+        Tap to open >
+      </div>
+    </div>
+    <div class="card">
+      <h3>Quick Focus Log</h3>
+      <input class="field" id="focusDur" type="number" placeholder="Duration (minutes)">
+      <select class="field" id="focusType">
+        <option>Deep Work</option><option>Study</option>
+        <option>Reading</option><option>Planning</option><option>Creative</option>
+      </select>
+      <button class="btn btn-primary" onclick="logFocus()">Log Session</button>
+    </div>
+    <div class="card">
+      <h3>Mood Check-in</h3>
+      <div class="row">
+        ${['Low','OK','Good','Great','Peak'].map((l,i)=>`
+          <button class="btn btn-secondary" style="font-size:11px;padding:10px 4px"
+            onclick="logMood(${i+1},'${l}')">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <h3>Recent</h3>
+      ${STATE.mind.length===0
+        ? '<div class="empty">Nothing logged yet</div>'
+        : STATE.mind.slice(-4).reverse().map(e=>`
+          <div class="log-item" style="border-color:#A78BFA">
+            <div class="li-title" style="color:#A78BFA">${e.label}</div>
+            <div class="li-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logFocus() {
+  const dur = parseInt(document.getElementById('focusDur').value);
+  if(!dur||dur<=0) return;
+  const type = document.getElementById('focusType').value;
+  STATE.mind.push({label:`${type} · ${dur}mins`, date:today()});
+  save('mind');
+  document.getElementById('focusDur').value='';
+  updateStat('Mind', Math.min(5, Math.floor(dur/10)));
+  renderMind();
+}
+
+function logMood(score, label) {
+  STATE.mind.push({label:`Mood: ${label} (${score}/5)`, date:today()});
+  save('mind');
+  updateStat('Mind', 2);
+  renderMind();
+}
+
+// ── DeeCadence ────────────────────────────────────────────────────
+
+function renderDeeCadence() {
+  const el = document.getElementById('deecadenceContent');
+  const sessions = STATE.sessions;
+  const totalFocus = sessions.reduce((a,s)=>a+(s.mins||0),0);
+  const debt = parseInt(localStorage.getItem('dc_debt')||'0');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">ATTENTION</div>
+        <div style="color:#38BDF8;font-weight:700;font-size:24px">
+          ${Math.max(0,100-Math.min(100,debt))}
+        </div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">FOCUS DEBT</div>
+        <div style="color:#F87171;font-weight:700">
+          ${debt>=60?`${(debt/60).toFixed(1)}h`:`${debt}m`}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Distraction</h3>
+      <select class="field" id="distractType">
+        <option>Social Media</option><option>YouTube</option>
+        <option>Gaming</option><option>Phone browsing</option>
+        <option>Daydreaming</option><option>Other</option>
+      </select>
+      <input class="field" id="distractHours" type="number" step="0.25" placeholder="Hours lost (e.g. 1.5)">
+      <button class="btn btn-danger" onclick="logDistraction()">Log Distraction</button>
+    </div>
+    <div class="card">
+      <h3>Start Focus Session</h3>
+      <input class="field" id="sessionTask" placeholder="What are you working on?">
+      <input class="field" id="sessionMins" type="number" placeholder="Duration (minutes, min 4)">
+      <button class="btn btn-primary" onclick="startSession()">Begin Session</button>
+    </div>
+    <div id="sessionActive" style="display:none" class="card">
+      <h3>Active Session</h3>
+      <div id="sessionInfo" style="text-align:center;padding:16px">
+        <div id="sessionTask2" style="font-size:16px;font-weight:700;color:#38BDF8;margin-bottom:8px"></div>
+        <div id="sessionTimer" style="font-size:48px;font-weight:700;color:#38BDF8">00:00</div>
+        <div id="sessionBlock" style="font-size:12px;color:#9BA3C4;margin-top:8px"></div>
+      </div>
+      <button class="btn btn-danger" style="margin-top:8px" onclick="endSession()">Stop Session</button>
+    </div>
+    <div class="card">
+      <h3>Recent Sessions</h3>
+      ${sessions.length===0
+        ? '<div class="empty">No sessions yet</div>'
+        : sessions.slice(-4).reverse().map(s=>`
+          <div class="log-item" style="border-color:#38BDF8">
+            <div class="li-title" style="color:#38BDF8">${s.task}</div>
+            <div class="li-sub">${s.mins}min · ${s.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+let sessionInterval = null;
+let sessionSeconds = 0;
+let sessionBlocks = null;
+let currentBlock = 1;
+let sessionPhase = 'focus';
+let sessionProgressMax = 0;
+
+function calcBlocks(totalMins) {
+  if (totalMins < 20) {
+    return {
+      mode: 'single',
+      focus: totalMins,
+      shortBreak: 0,
+      longBreak: 0,
+      blocks: 1
+    };
+  }
+  const focusPerBlock = Math.max(5, Math.floor(totalMins * 0.75 / 4));
+  const shortBreak = Math.max(2, Math.floor(totalMins * 0.05));
+  const longBreak = Math.max(5, Math.floor(totalMins * 0.10));
+  return {
+    mode: 'blocks',
+    focus: focusPerBlock,
+    shortBreak,
+    longBreak,
+    blocks: 4
+  };
+}
+
+function previewBlocks(val) {
+  const mins = parseInt(val || '0');
+  const el = document.getElementById('blockPreview');
+  if (!el) return;
+  if (mins < 4) {
+    el.textContent = '';
+    return;
+  }
+  const b = calcBlocks(mins);
+  el.textContent = b.mode === 'single'
+    ? `${mins}min single focus block`
+    : `4 blocks × ${b.focus}min focus · ${b.shortBreak}min breaks · ${b.longBreak}min long break`;
+}
+
+function renderDeeCadence() {
+  const el = document.getElementById('deecadenceContent');
+  const sessions = STATE.sessions;
+  const debt = parseInt(localStorage.getItem('dc_debt')||'0');
+  const score = Math.max(0, 100 - Math.min(100, Math.floor(debt / 6)));
+  const debtStr = debt >= 60 ? `${(debt/60).toFixed(1)}h` : `${debt}m`;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">ATTENTION</div>
+        <div style="color:#38BDF8;font-weight:700;font-size:24px">${score}</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">FOCUS DEBT</div>
+        <div style="color:#F87171;font-weight:700">${debt>0?debtStr:'Clear'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Distraction</h3>
+      <select class="field" id="distractType">
+        <option>Social Media</option><option>YouTube</option><option>Gaming</option>
+        <option>Phone browsing</option><option>Daydreaming</option><option>Other</option>
+      </select>
+      <input class="field" id="distractHours" type="number" step="0.25" placeholder="Hours lost (e.g. 1.5)">
+      <button class="btn btn-danger" onclick="logDistraction()">Log Distraction</button>
+    </div>
+    <div class="card">
+      <h3>Start Focus Session</h3>
+      <input class="field" id="sessionTask" placeholder="What are you working on?">
+      <input class="field" id="sessionMins" type="number" placeholder="Duration (minutes, min 4)"
+             oninput="previewBlocks(this.value)">
+      <div id="blockPreview" style="font-size:12px;color:#38BDF8;margin-bottom:10px;min-height:18px"></div>
+      <button class="btn btn-primary" onclick="startSession()">Begin Session</button>
+    </div>
+    <div id="sessionActive" style="display:none" class="card">
+      <h3>Active Session</h3>
+      <div class="timer-display">
+        <div id="sessionTask2" style="font-size:14px;font-weight:700;color:#38BDF8;margin-bottom:8px"></div>
+        <div class="block-dots" id="blockDots"></div>
+        <div class="timer-num" id="sessionTimer" style="color:#38BDF8">00:00</div>
+        <div class="timer-phase" id="sessionPhaseLabel">FOCUS</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="sessionProgress" style="width:0%"></div></div>
+      <button class="btn btn-danger" onclick="endSession()">End Session</button>
+    </div>
+    <div class="card">
+      <h3>Recent Sessions</h3>
+      ${sessions.length===0
+        ?'<div class="empty">No sessions yet.<br>Start your first one above.</div>'
+        :sessions.slice(-4).reverse().map(s=>`
+          <div class="log-item" style="border-color:#38BDF8">
+            <div class="li-title" style="color:#38BDF8">${s.task}</div>
+            <div class="li-sub">${s.mins}min · ${s.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logDistraction() {
+  const hrs = parseFloat(document.getElementById('distractHours').value||'0');
+  if(!hrs||hrs<=0) return;
+  const mins = Math.round(hrs*60);
+  const current = parseInt(localStorage.getItem('dc_debt')||'0');
+  localStorage.setItem('dc_debt', String(current+mins));
+  document.getElementById('distractHours').value='';
+  renderDeeCadence();
+}
+
+function updateBlockDots() {
+  const el = document.getElementById('blockDots');
+  if (!el) return;
+  const total = sessionBlocks?.mode === 'single' ? 1 : 4;
+  el.innerHTML = Array.from({length: total}, (_,i) => `
+    <div class="block-dot ${i<currentBlock-1?'done':i===currentBlock-1?'active':''}"></div>`).join('');
+}
+
+function updatePhaseLabel() {
+  const el = document.getElementById('sessionPhaseLabel');
+  if (!el) return;
+  const timer = document.getElementById('sessionTimer');
+  if (sessionPhase === 'focus') {
+    el.textContent = 'FOCUS';
+    if (timer) timer.style.color = '#38BDF8';
+  } else if (sessionPhase === 'shortBreak') {
+    el.textContent = 'SHORT BREAK';
+    if (timer) timer.style.color = '#34D399';
+  } else {
+    el.textContent = 'LONG BREAK';
+    if (timer) timer.style.color = '#F59E0B';
+  }
+}
+
+function startSession() {
+  const task = document.getElementById('sessionTask').value.trim();
+  const mins = parseInt(document.getElementById('sessionMins').value || '0');
+  if (!task) {
+    alert('Enter what you are working on');
+    return;
+  }
+  if (mins < 4) {
+    alert('Minimum session is 4 minutes');
+    return;
+  }
+  sessionBlocks = calcBlocks(mins);
+  currentBlock = 1;
+  sessionPhase = 'focus';
+  sessionSeconds = sessionBlocks.focus * 60;
+  sessionProgressMax = sessionSeconds;
+  document.getElementById('sessionActive').style.display = 'block';
+  document.getElementById('sessionTask2').textContent = task;
+  updateBlockDots();
+  updatePhaseLabel();
+  if (sessionInterval) clearInterval(sessionInterval);
+  sessionInterval = setInterval(sessionTick, 1000);
+  STATE.sessions.push({ task, mins, date: today() });
+  save('sessions');
+  const debt = parseInt(localStorage.getItem('dc_debt') || '0');
+  localStorage.setItem('dc_debt', String(Math.max(0, debt - mins)));
+  updateStat('Mind', 3);
+}
+
+function sessionTick() {
+  sessionSeconds--;
+  const m = Math.floor(sessionSeconds / 60);
+  const s = sessionSeconds % 60;
+  const timerEl = document.getElementById('sessionTimer');
+  const progEl = document.getElementById('sessionProgress');
+  if (timerEl) timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  if (progEl) {
+    const elapsed = sessionProgressMax - sessionSeconds;
+    progEl.style.width = `${Math.min(100, (elapsed/sessionProgressMax)*100)}%`;
+  }
+  if (sessionSeconds <= 0) {
+    if (sessionBlocks.mode === 'single') {
+      endSession();
+      return;
+    }
+    if (sessionPhase === 'focus') {
+      if (currentBlock >= 4) {
+        endSession();
+        return;
+      }
+      const isLong = currentBlock === 3;
+      sessionPhase = isLong ? 'longBreak' : 'shortBreak';
+      sessionSeconds = isLong ? sessionBlocks.longBreak * 60 : sessionBlocks.shortBreak * 60;
+      sessionProgressMax = sessionSeconds;
+      updatePhaseLabel();
+    } else {
+      currentBlock++;
+      sessionPhase = 'focus';
+      sessionSeconds = sessionBlocks.focus * 60;
+      sessionProgressMax = sessionSeconds;
+      updateBlockDots();
+      updatePhaseLabel();
+    }
+  }
+}
+
+function endSession() {
+  if(sessionInterval) clearInterval(sessionInterval);
+  sessionInterval = null;
+  document.getElementById('sessionActive').style.display = 'none';
+  renderDeeCadence();
+}
+
+// ── Energy ────────────────────────────────────────────────────────
+
+function renderEnergy() {
+  const el = document.getElementById('energyContent');
+  const todayWater = STATE.energy
+    .filter(e=>e.type==='water'&&e.date===today())
+    .reduce((a,e)=>a+e.glasses,0);
+  const todaySleep = STATE.energy.find(
+    e=>e.type==='sleep'&&e.date===today());
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">SLEEP</div>
+        <div style="color:#60A5FA;font-weight:700">${todaySleep?`${todaySleep.hours}h`:'—'}</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">WATER</div>
+        <div style="color:#60A5FA;font-weight:700">${todayWater}gl</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:#565E82;margin-bottom:4px">BODY</div>
+        <div style="color:#60A5FA;font-weight:700">${STATE.stats.Body}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Sleep</h3>
+      <input class="field" id="sleepHrs" type="number" step="0.5" placeholder="Hours slept">
+      <input class="field" id="sleepQ" type="number" min="1" max="5" placeholder="Quality 1-5">
+      <button class="btn btn-primary" onclick="logSleep()">Log Sleep</button>
+    </div>
+    <div class="card">
+      <h3>Water</h3>
+      <div class="row">
+        <button class="btn btn-primary" onclick="logWater(1)">+1 Glass</button>
+        <button class="btn btn-primary" onclick="logWater(2)">+2 Glasses</button>
+        <button class="btn btn-primary" onclick="logWater(3)">+3 Glasses</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Log Exercise</h3>
+      <select class="field" id="exType">
+        <option>Running</option><option>Walking</option><option>Gym</option>
+        <option>Cycling</option><option>HIIT</option><option>Other</option>
+      </select>
+      <input class="field" id="exMins" type="number" placeholder="Duration (minutes)">
+      <button class="btn btn-success" onclick="logExercise()">Log Exercise</button>
+    </div>`;
+}
+
+function logSleep() {
+  const hrs = parseFloat(document.getElementById('sleepHrs').value||'0');
+  const q = parseInt(document.getElementById('sleepQ').value||'3');
+  if(!hrs||hrs<=0) return;
+  STATE.energy.push({type:'sleep',hours:hrs,quality:q,date:today()});
+  save('energy');
+  document.getElementById('sleepHrs').value='';
+  document.getElementById('sleepQ').value='';
+  updateStat('Body',3);
+  renderEnergy();
+}
+
+function logWater(glasses) {
+  STATE.energy.push({type:'water',glasses,date:today()});
+  save('energy');
+  updateStat('Body',1);
+  renderEnergy();
+}
+
+function logExercise() {
+  const type = document.getElementById('exType').value;
+  const mins = parseInt(document.getElementById('exMins').value||'0');
+  if(!mins||mins<=0) return;
+  STATE.energy.push({type:'exercise',label:`${type} ${mins}min`,date:today()});
+  save('energy');
+  document.getElementById('exMins').value='';
+  updateStat('Body',4);
+  renderEnergy();
+}
+
+// ── Knowledge ─────────────────────────────────────────────────────
+
+function renderKnowledge() {
+  const el = document.getElementById('knowledgeContent');
+  el.innerHTML = `
+    <div class="card">
+      <h3>Log Reading</h3>
+      <input class="field" id="readTitle" placeholder="Book or article title">
+      <input class="field" id="readPages" type="number" placeholder="Pages read (optional)">
+      <button class="btn btn-success" onclick="logReading()">Log Reading</button>
+    </div>
+    <div class="card">
+      <h3>Add Vocabulary</h3>
+      <input class="field" id="vocabWord" placeholder="Word">
+      <input class="field" id="vocabMeaning" placeholder="Meaning / Definition">
+      <button class="btn btn-primary" onclick="logVocab()">Add Word</button>
+    </div>
+    <div class="card">
+      <h3>Recent</h3>
+      ${STATE.knowledge.length===0
+        ? '<div class="empty">Nothing logged yet</div>'
+        : STATE.knowledge.slice(-4).reverse().map(e=>`
+          <div class="log-item" style="border-color:#34D399">
+            <div class="li-title" style="color:#34D399">${e.label}</div>
+            <div class="li-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logReading() {
+  const title = document.getElementById('readTitle').value.trim();
+  if(!title) return;
+  const pages = document.getElementById('readPages').value;
+  STATE.knowledge.push({
+    label:`${title}${pages?` · ${pages}p`:''}`, date:today()});
+  save('knowledge');
+  document.getElementById('readTitle').value='';
+  document.getElementById('readPages').value='';
+  updateStat('Knowledge',3);
+  renderKnowledge();
+}
+
+function logVocab() {
+  const w = document.getElementById('vocabWord').value.trim();
+  const m = document.getElementById('vocabMeaning').value.trim();
+  if(!w||!m) return;
+  STATE.knowledge.push({label:`${w}: ${m}`, date:today()});
+  save('knowledge');
+  document.getElementById('vocabWord').value='';
+  document.getElementById('vocabMeaning').value='';
+  updateStat('Knowledge',2);
+  renderKnowledge();
+}
+
+// ── Feedback ──────────────────────────────────────────────────────
+
+async function submitFeedback() {
+  const rating = document.getElementById('fbRating').value;
+  const module = document.getElementById('fbModule').value;
+  const text   = document.getElementById('fbText').value.trim();
+  const pay    = document.getElementById('fbPay').value;
+  const s = document.getElementById('fbStatus');
+
+  if (!rating || !text) {
+    s.style.display='block';
+    s.style.background='#F8717120';
+    s.style.color='#F87171';
+    s.textContent='Please add a rating and comment';
+    return;
+  }
+
+  s.style.display='block';
+  s.style.background='#4F8EF720';
+  s.style.color='#4F8EF7';
+  s.textContent='Sending...';
+
+  // Save locally always
+  const fb = JSON.parse(localStorage.getItem('dc_feedback')||'[]');
+  fb.push({rating,module,text,pay,date:new Date().toISOString()});
+  localStorage.setItem('dc_feedback', JSON.stringify(fb));
+
+  // Try Supabase
+  const SUPA_URL = 'https://lnxvlpmvhjhvwzunkvts.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw';
+
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/beta_feedback`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        rating, module,
+        feedback: text,
+        would_pay: pay
+      })
+    });
+
+    if (res.ok) {
+      s.style.background='#34D39920';
+      s.style.color='#34D399';
+      s.textContent='Feedback sent. Thank you — this shapes the product directly.';
+      document.getElementById('fbText').value='';
+      document.getElementById('fbRating').value='';
+      document.getElementById('fbPay').value='';
+      document.getElementById('fbModule').value='';
+    } else {
+      s.style.background='#34D39920';
+      s.style.color='#34D399';
+      s.textContent='Saved locally. Thank you for the feedback.';
+    }
+  } catch(e) {
+    s.style.background='#34D39920';
+    s.style.color='#34D399';
+    s.textContent='Saved locally. Thank you for the feedback.';
+  }
+}
+
+// ── Auth ──────────────────────────────────────────────────────────
+
+async function login() {
+  const email = document.getElementById('authEmail').value;
+  const password = document.getElementById('authPassword').value;
+  const status = document.getElementById('authStatus');
+  status.style.display = 'block';
+  status.textContent = 'Logging in...';
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    status.textContent = 'Login successful!';
+    setTimeout(() => checkAuth(), 1000);
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function signup() {
+  const email = document.getElementById('authEmail').value;
+  const password = document.getElementById('authPassword').value;
+  const status = document.getElementById('authStatus');
+  status.style.display = 'block';
+  status.textContent = 'Signing up...';
+  try {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    status.textContent = 'Signup successful! Check your email.';
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function googleAuth() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin }
+  });
+  if (error) console.error(error);
+}
+
+async function registerDevice(userId) {
+  const ua = navigator.userAgent;
+  const deviceName = /Mobile/i.test(ua) ? 'Mobile' : 'Desktop';
+  await supabase.from('user_devices').upsert({
+    user_id: userId,
+    device_name: deviceName,
+    user_agent: ua.substring(0, 200),
+    last_seen: new Date().toISOString()
+  }, { onConflict: 'user_id,device_id' });
+}
+
+async function loadUserData(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('user_data')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) throw error;
+    const keys = ['stats','financial','spirit','mind',
+                  'energy','knowledge','dexterity','sessions'];
+    data.forEach(item => {
+      if (keys.includes(item.key)) {
+        try { STATE[item.key] = item.value; } catch {}
+      }
+      if (item.key === 'debt') {
+        localStorage.setItem('dc_debt', String(item.value));
+      }
+    });
+  } catch(e) {
+    console.error('loadUserData failed:', e);
+  }
+}
+ 
+async function checkAuth() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    // Load user data
+    await loadUserData(user.id);
+    // Check if new user (no profile)
+    registerDevice(user.id); // non-blocking, no await needed
+    const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
+    if (!profile) {
+      // New user, show onboarding
+      document.getElementById('auth').style.display = 'none';
+      initOnboarding();
+    } else {
+      // Returning user, load data and start app
+      document.getElementById('auth').style.display = 'none';
+      startApp();
+    }
+  } else {
+    // Show auth
+    document.getElementById('auth').style.display = 'block';
+  }
+}
+
+async function saveUserData(key) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const value = key === 'debt'
+    ? parseInt(localStorage.getItem('dc_debt') || '0')
+    : STATE[key];
+  await supabase.from('user_data').upsert({
+    user_id: user.id,
+    key,
+    value,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id,key' });
+}
+
+// Modify initOnboarding to save to Supabase
+function initOnboarding() {
+  const name = localStorage.getItem('dc_name');
+  const nav = document.querySelector('.bottom-nav');
+  document.body.classList.add('onboarding-active');
+  if(nav) nav.style.display = 'none';
+  if(name) {
+    document.getElementById('onboarding').style.display='none';
+    document.body.classList.remove('onboarding-active');
+    if(!localStorage.getItem('dc_tutdone') && !localStorage.getItem('dc_dismiss_tutorial')) {
+      document.getElementById('tutorial').style.display='flex';
+      document.body.classList.add('tutorial-active');
+      return;
+    }
+    startApp();
+    return;
+  }
+  // Build stat picker
+  const grid = document.getElementById('obStatGrid');
+  grid.innerHTML = OB_STATS.map(s=>`
+    <div id="obstat_${s.key}" class="card" style="cursor:pointer;border-color:${s.color}22;padding:16px;text-align:center" onclick="toggleObStat('${s.key}')">
+      <div style="color:${s.color};font-weight:700;margin-bottom:4px">${s.key}</div>
+      <div style="font-size:11px;color:#9BA3C4;margin-bottom:6px">${s.desc}</div>
+      <div style="font-size:10px;color:#565E82">Rank SS</div>
+    </div>
+  `).join('');
+}
+
+function obFinish() {
+  localStorage.setItem('dc_selected_modules',
+    JSON.stringify(Array.from(obSelected)));
+  // Save profile async
+  (async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('profiles').upsert({
+        user_id: user.id,
+        name: localStorage.getItem('dc_name'),
+        selected_modules: Array.from(obSelected),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+    }
+  })();
+  // Continue UI flow immediately
+  document.getElementById('onboarding').style.display = 'none';
+  document.body.classList.remove('onboarding-active');
+  if (!localStorage.getItem('dc_tutdone')) {
+    document.getElementById('tutorial').style.display = 'flex';
+  } else {
+    startApp();
+  }
+}
+
+// ── Onboarding ────────────────────────────────────────────────────
+
+const OB_STATS = [
+  {key:'Financial',color:'#34D399',desc:'Wealth building and money management'},
+  {key:'Spirit',color:'#FBBF24',desc:'Inner peace and spiritual growth'},
+  {key:'Mind',color:'#A78BFA',desc:'Mental clarity and cognitive development'},
+  {key:'Energy',color:'#60A5FA',desc:'Vitality and sustainable energy levels'},
+  {key:'Knowledge',color:'#34D399',desc:'Learning and intellectual pursuits'},
+  {key:'Dexterity',color:'#F472B6',desc:'Skill development and craftsmanship'},
+];
+let obSelected = new Set();
+
+function initOnboarding() {
+  const name = localStorage.getItem('dc_name');
+  const nav = document.querySelector('.bottom-nav');
+  document.body.classList.add('onboarding-active');
+  if(nav) nav.style.display = 'none';
+  if(name) {
+    document.getElementById('onboarding').style.display='none';
+    document.body.classList.remove('onboarding-active');
+    if(!localStorage.getItem('dc_tutdone') && !localStorage.getItem('dc_dismiss_tutorial')) {
+      document.getElementById('tutorial').style.display='flex';
+      document.body.classList.add('tutorial-active');
+      return;
+    }
+    startApp();
+    return;
+  }
+  // Build stat picker
+  const grid = document.getElementById('obStatGrid');
+  grid.innerHTML = OB_STATS.map(s=>`
+    <div id="obstat_${s.key}" class="card" style="cursor:pointer;border-color:${s.color}22;padding:16px;text-align:center" onclick="toggleObStat('${s.key}')">
+      <div style="color:${s.color};font-weight:700;margin-bottom:4px">${s.key}</div>
+      <div style="font-size:11px;color:#9BA3C4;margin-bottom:6px">${s.desc}</div>
+      <div style="font-size:10px;color:#565E82">Rank SS</div>
+    </div>
+  `).join('');
+}
+
+function toggleObStat(key) {
+  if(obSelected.has(key)) {
+    obSelected.delete(key);
+    document.getElementById('obstat_'+key).style.background='transparent';
+    document.getElementById('obstat_'+key).style.borderColor='#2A2D42';
+    document.getElementById('obstat_'+key).style.opacity='0.7';
+  } else {
+    if(obSelected.size >= 3) return; // Limit to 3
+    obSelected.add(key);
+    document.getElementById('obstat_'+key).style.background='#1C1E2C';
+    document.getElementById('obstat_'+key).style.borderColor='#4F8EF7';
+    document.getElementById('obstat_'+key).style.opacity='1';
+  }
+}
+
+function obNext(step) {
+  if(step===1) {
+    const n = document.getElementById('obName').value.trim();
+    if(!n) return;
+    localStorage.setItem('dc_name', n);
+    document.getElementById('ob1').classList.remove('active');
+    document.getElementById('ob2').classList.add('active');
+  } else if(step===2) {
+    document.getElementById('ob2').classList.remove('active');
+    document.getElementById('ob3').classList.add('active');
+  }
+}
+
+function obBack(step) {
+  if(step===1) {
+    document.getElementById('ob2').classList.remove('active');
+    document.getElementById('ob1').classList.add('active');
+  } else if(step===2) {
+    document.getElementById('ob3').classList.remove('active');
+    document.getElementById('ob2').classList.add('active');
+  }
+}
+
+function obFinish() {
+  // Store selected modules for dashboard priority
+  localStorage.setItem('dc_selected_modules', JSON.stringify(Array.from(obSelected)));
+  document.getElementById('onboarding').style.display='none';
+  document.body.classList.remove('onboarding-active');
+  const nav = document.querySelector('.bottom-nav');
+  if(nav) nav.style.display = 'none';
+  if(!localStorage.getItem('dc_tutdone') && !localStorage.getItem('dc_dismiss_tutorial')) {
+    document.getElementById('tutorial').style.display='flex';
+    document.body.classList.add('tutorial-active');
+  } else {
+    startApp();
+  }
+}
+
+function resetName() {
+  localStorage.removeItem('dc_name');
+  localStorage.removeItem('dc_selected_modules');
+  localStorage.removeItem('dc_tutdone');
+  localStorage.removeItem('dc_dismiss_tutorial');
+  document.getElementById('onboarding').style.display='flex';
+  document.getElementById('tutorial').style.display='none';
+  document.getElementById('ob1').classList.add('active');
+  document.getElementById('ob2').classList.remove('active');
+  document.getElementById('ob3').classList.remove('active');
+  document.getElementById('obName').value='';
+  obSelected.clear();
+  initOnboarding();
+}
+
+function showTutorial() {
+  document.getElementById('tutorial').style.display='flex';
+  document.body.classList.add('tutorial-active');
+}
+
+function dismissTutorial() {
+  localStorage.setItem('dc_dismiss_tutorial','1');
+  document.getElementById('tutorial').style.display='none';
+  document.body.classList.remove('tutorial-active');
+}
+
+function closeTutorial() {
+  localStorage.setItem('dc_tutdone','1');
+  localStorage.setItem('dc_dismiss_tutorial','1');
+  document.getElementById('tutorial').style.display='none';
+  document.body.classList.remove('tutorial-active');
+  startApp();
+}
+
+function startApp() {
+  document.body.classList.remove('onboarding-active','tutorial-active');
+  show('home', false);
+  // Force the app to load at home after refresh, even when a stale hash exists.
+  history.replaceState({screen:'home'}, '', '#home');
+}
+
+
+// ── Init ──────────────────────────────────────────────────────────
+
+// Initialize theme
+setTheme(currentTheme);
+
+// Update username button on load
+document.addEventListener('DOMContentLoaded', () => {
+  updateUsernameBtn();
+  // Set active theme button
+  const activeTheme = document.querySelector(`[data-theme="${currentTheme}"]`);
+  if(activeTheme) activeTheme.classList.add('active');
+});
+
+checkAuth();
+</script>
+</body>
+</html>

@@ -9,8 +9,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Sora:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
 <style>
 :root{
   --premium-heading:'Sora',sans-serif;
@@ -807,11 +805,6 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
 </div>
 
 <script>
-
-const SUPA_URL = 'https://lnxvlpmvhjhvwzunkvts.supabase.co';
-const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw';
-const supabase = supabaseJs.createClient(SUPA_URL, SUPA_ANON);
-
 // ── State ─────────────────────────────────────────────────────────
 
 const STATE = {
@@ -828,10 +821,7 @@ const STATE = {
 };
 
 function save(key) {
-  // Always keep localStorage as offline fallback
   localStorage.setItem('dc_' + key, JSON.stringify(STATE[key]));
-  // Sync to Supabase in background — no await, non-blocking
-  saveUserData(key).catch(e => console.error('sync failed:', e));
 }
 
 let showFullUsername = localStorage.getItem('dc_show_full_name') === 'true' || false;
@@ -1979,46 +1969,12 @@ async function googleAuth() {
   if (error) console.error(error);
 }
 
-async function registerDevice(userId) {
-  const ua = navigator.userAgent;
-  const deviceName = /Mobile/i.test(ua) ? 'Mobile' : 'Desktop';
-  await supabase.from('user_devices').upsert({
-    user_id: userId,
-    device_name: deviceName,
-    user_agent: ua.substring(0, 200),
-    last_seen: new Date().toISOString()
-  }, { onConflict: 'user_id,device_id' });
-}
-
-async function loadUserData(userId) {
-  try {
-    const { data, error } = await supabase
-      .from('user_data')
-      .select('*')
-      .eq('user_id', userId);
-    if (error) throw error;
-    const keys = ['stats','financial','spirit','mind',
-                  'energy','knowledge','dexterity','sessions'];
-    data.forEach(item => {
-      if (keys.includes(item.key)) {
-        try { STATE[item.key] = item.value; } catch {}
-      }
-      if (item.key === 'debt') {
-        localStorage.setItem('dc_debt', String(item.value));
-      }
-    });
-  } catch(e) {
-    console.error('loadUserData failed:', e);
-  }
-}
- 
 async function checkAuth() {
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     // Load user data
     await loadUserData(user.id);
     // Check if new user (no profile)
-    registerDevice(user.id); // non-blocking, no await needed
     const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
     if (!profile) {
       // New user, show onboarding
@@ -2035,18 +1991,20 @@ async function checkAuth() {
   }
 }
 
-async function saveUserData(key) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  const value = key === 'debt'
-    ? parseInt(localStorage.getItem('dc_debt') || '0')
-    : STATE[key];
-  await supabase.from('user_data').upsert({
-    user_id: user.id,
-    key,
-    value,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id,key' });
+async function loadUserData(userId) {
+  // Load from user_data table
+  const { data, error } = await supabase.from('user_data').select('*').eq('user_id', userId);
+  if (error) console.error(error);
+  data.forEach(item => {
+    if (item.key === 'stats') S.stats = JSON.parse(item.value);
+    else if (item.key === 'financial') S.financial = JSON.parse(item.value);
+    // Add other keys
+  });
+}
+
+async function saveUserData(userId, key, value) {
+  const { error } = await supabase.from('user_data').upsert({ user_id: userId, key, value: JSON.stringify(value) });
+  if (error) console.error(error);
 }
 
 // Modify initOnboarding to save to Supabase
@@ -2078,25 +2036,20 @@ function initOnboarding() {
 }
 
 function obFinish() {
-  localStorage.setItem('dc_selected_modules',
-    JSON.stringify(Array.from(obSelected)));
-  // Save profile async
-  (async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('profiles').upsert({
-        user_id: user.id,
-        name: localStorage.getItem('dc_name'),
-        selected_modules: Array.from(obSelected),
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-    }
-  })();
-  // Continue UI flow immediately
-  document.getElementById('onboarding').style.display = 'none';
+  // Store selected modules for dashboard priority
+  localStorage.setItem('dc_selected_modules', JSON.stringify(Array.from(obSelected)));
+  // Save to Supabase
+  const { data: { user } } = supabase.auth.getUser();
+  if (user) {
+    supabase.from('profiles').upsert({ user_id: user.id, name: localStorage.getItem('dc_name'), selected_modules: Array.from(obSelected) });
+  }
+  document.getElementById('onboarding').style.display='none';
   document.body.classList.remove('onboarding-active');
-  if (!localStorage.getItem('dc_tutdone')) {
-    document.getElementById('tutorial').style.display = 'flex';
+  const nav = document.querySelector('.bottom-nav');
+  if(nav) nav.style.display = 'none';
+  if(!localStorage.getItem('dc_tutdone') && !localStorage.getItem('dc_dismiss_tutorial')) {
+    document.getElementById('tutorial').style.display='flex';
+    document.body.classList.add('tutorial-active');
   } else {
     startApp();
   }
@@ -2249,7 +2202,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if(activeTheme) activeTheme.classList.add('active');
 });
 
-checkAuth();
+initOnboarding();
 </script>
 </body>
 </html>
