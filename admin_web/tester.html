@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Dee_Cistem — Beta</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Sora:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root{
@@ -103,13 +103,13 @@ body{
   transition:.15s;margin-left:8px;
 }
 .username-toggle:active{transform:scale(.95)}
-.font-toggle{
-  display:inline-block;width:32px;height:32px;
+.font-toggle-select{
   background:var(--accent);color:#fff;border:none;border-radius:50%;
-  cursor:pointer;font-size:14px;font-weight:700;
-  transition:.15s;margin-left:8px;
+  cursor:pointer;font-size:11px;font-weight:700;
+  transition:.15s;padding:6px 10px;
+  outline:none;
 }
-.font-toggle:active{transform:scale(.95)}
+.font-toggle-select:active{transform:scale(.95)}
 .dash-card{
   background:linear-gradient(135deg,var(--card),#222538);
   border-radius:16px;padding:18px;margin:0 16px 16px;
@@ -179,7 +179,7 @@ body{
 .sum-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
 .sum-cell{background:var(--card);border-radius:var(--rs);padding:12px;text-align:center;border:1px solid var(--border);}
 .sum-label{font-size:10px;color:var(--t3);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
-.sum-val{font-size:17px;font-weight:800;font-family:'Syne',sans-serif;letter-spacing:-0.5px}
+.sum-val{font-size:17px;font-weight:800;font-family:'Montserrat',sans-serif;letter-spacing:-0.5px}
 .log-item{
   background:var(--card);border-radius:10px;padding:14px;
   margin-bottom:8px;border-left:3px solid;
@@ -197,6 +197,11 @@ body{
   border:1px solid #FBBF2430;border-radius:12px;
   padding:14px;margin-bottom:14px;font-size:13px;
   color:#FBBF24;line-height:1.6;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+body.light-theme .feedback-banner {
+  background:linear-gradient(135deg,#FBBF2420,#FBBF240a);
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 select{
   width:100%;background:var(--card);border:1px solid var(--border);
@@ -422,10 +427,10 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
 .ob-head{
   font-family:var(--premium-heading),sans-serif;font-size:34px;
   font-weight:800;line-height:1.2;margin-bottom:16px;
-  color:#1A1A1A;text-fill-color:#1A1A1A;
+  color:var(--t1);
 }
 .ob-sub{
-  font-size:15px;color:#1a1a1a;line-height:1.6;margin-bottom:auto;font-weight:500;
+  font-size:15px;color:var(--t1);line-height:1.6;margin-bottom:auto;font-weight:500;
 }
 .ob-dots{
   display:flex;gap:6px;margin-bottom:24px;
@@ -441,12 +446,12 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
   position:fixed;inset:0;z-index:250;
   background:rgba(0,0,0,.85);backdrop-filter:blur(4px);
   -webkit-backdrop-filter:blur(4px);
-  display:none;align-items:center;justify-content:center;padding:24px;
-  max-width:430px;margin:0 auto;
+  display:none;flex-direction:column;padding:0;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
 }
 .tut-card{
   background:#1C1E2C;border-radius:20px;
-  padding:28px;border:1px solid #2A2D42;width:100%;max-width:360px;
+  padding:28px;border:1px solid #2A2D42;width:100%;max-width:360px;margin:auto;margin-top:50px;margin-bottom:50px;
 }
 .tut-icon{font-size:32px;margin-bottom:12px}
 .tut-head{
@@ -501,7 +506,7 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
     <div class="ob-sub">
       Dee_Cistem tracks every dimension of your growth — finances, focus, spirit, body, knowledge, and craft. Your rank reflects who you're becoming, not just what you've done.
       <br><br>
-      <strong style="color:#F0F2FF">What should we call you?</strong>
+      <strong style="color:var(--t1)">What should we call you?</strong>
     </div>
     <div style="margin-top:24px">
       <input class="field" id="obName" placeholder="Your name" style="font-size:18px;padding:16px">
@@ -538,7 +543,7 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
     <div class="ob-sub">
       Every rank must be earned through real consistency. Logging alone doesn't move you up — improvement does. There are no participation trophies here.
       <br><br>
-      <strong style="color:#F0F2FF">E → D → C → B → A → S → SS</strong>
+      <strong style="color:var(--t1)">E → D → C → B → A → S → SS</strong>
       <br><br>
       Ranks are calculated across all six modules. A consistent E in one area pulls your overall rank down. That's the point.
     </div>
@@ -608,7 +613,6 @@ body.light-theme .btn[style*="background:#1C1E2C"] {
   <div class="date" id="dateStr"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px;">
     <button class="username-toggle" onclick="toggleUsername()" id="usernameBtn" title="Toggle username display">DC</button>
-    <button class="font-toggle" onclick="toggleGreetingFont()" id="fontBtn" title="Toggle greeting font">Aa</button>
   </div>
   
   <div class="theme-toggle">
@@ -1000,14 +1004,16 @@ function processUsername(name) {
   return name.replace(/\b\w/g, l => l.toUpperCase());
 }
 
-function toggleGreetingFont() {
+function changeGreetingFont() {
+  const select = document.getElementById('fontSelect');
+  const font = select.value;
   const greeting = document.getElementById('greeting');
-  const currentFont = greeting.style.fontFamily || "'Sora',sans-serif";
-  if (currentFont.includes('Sora')) {
-    greeting.style.fontFamily = "'DM Sans',sans-serif";
-  } else {
-    greeting.style.fontFamily = "'Sora',sans-serif";
-  }
+  greeting.style.fontFamily = font;
+  localStorage.setItem('dc_greeting_font', font);
+}
+
+function toggleGreetingFont() {
+  // Legacy, can remove if not used
 }
 
 function renderHome() {
@@ -1017,7 +1023,10 @@ function renderHome() {
   const rawName = localStorage.getItem('dc_name') || 'DC';
   const processedName = processUsername(rawName);
   const displayName = showFullUsername ? processedName : processedName.charAt(0).toUpperCase();
-  document.getElementById('greeting').textContent = `${greetingPhrase}, ${displayName}`;
+  const greeting = document.getElementById('greeting');
+  greeting.textContent = `${greetingPhrase}, ${displayName}`;
+  const savedFont = localStorage.getItem('dc_greeting_font') || "'Sora',sans-serif";
+  greeting.style.fontFamily = savedFont;
   document.getElementById('dateStr').textContent =
     new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   updateUsernameBtn();
@@ -1919,11 +1928,14 @@ let obSelected = new Set();
 function initOnboarding() {
   const name = localStorage.getItem('dc_name');
   const nav = document.querySelector('.bottom-nav');
+  document.body.classList.add('onboarding-active');
   if(nav) nav.style.display = 'none';
   if(name) {
     document.getElementById('onboarding').style.display='none';
+    document.body.classList.remove('onboarding-active');
     if(!localStorage.getItem('dc_tutdone') && !localStorage.getItem('dc_dismiss_tutorial')) {
       document.getElementById('tutorial').style.display='flex';
+      document.body.classList.add('tutorial-active');
       return;
     }
     startApp();
@@ -1943,13 +1955,15 @@ function initOnboarding() {
 function toggleObStat(key) {
   if(obSelected.has(key)) {
     obSelected.delete(key);
-    document.getElementById('obstat_'+key).style.background='#1C1E2C';
+    document.getElementById('obstat_'+key).style.background='transparent';
     document.getElementById('obstat_'+key).style.borderColor='#2A2D42';
+    document.getElementById('obstat_'+key).style.opacity='0.7';
   } else {
     if(obSelected.size >= 3) return; // Limit to 3
     obSelected.add(key);
     document.getElementById('obstat_'+key).style.background='#1C1E2C';
     document.getElementById('obstat_'+key).style.borderColor='#4F8EF7';
+    document.getElementById('obstat_'+key).style.opacity='1';
   }
 }
 
@@ -1980,10 +1994,12 @@ function obFinish() {
   // Store selected modules for dashboard priority
   localStorage.setItem('dc_selected_modules', JSON.stringify(Array.from(obSelected)));
   document.getElementById('onboarding').style.display='none';
+  document.body.classList.remove('onboarding-active');
   const nav = document.querySelector('.bottom-nav');
   if(nav) nav.style.display = 'none';
   if(!localStorage.getItem('dc_tutdone') && !localStorage.getItem('dc_dismiss_tutorial')) {
     document.getElementById('tutorial').style.display='flex';
+    document.body.classList.add('tutorial-active');
   } else {
     startApp();
   }
@@ -2006,21 +2022,25 @@ function resetName() {
 
 function showTutorial() {
   document.getElementById('tutorial').style.display='flex';
+  document.body.classList.add('tutorial-active');
 }
 
 function dismissTutorial() {
   localStorage.setItem('dc_dismiss_tutorial','1');
   document.getElementById('tutorial').style.display='none';
+  document.body.classList.remove('tutorial-active');
 }
 
 function closeTutorial() {
   localStorage.setItem('dc_tutdone','1');
   localStorage.setItem('dc_dismiss_tutorial','1');
   document.getElementById('tutorial').style.display='none';
+  document.body.classList.remove('tutorial-active');
   startApp();
 }
 
 function startApp() {
+  document.body.classList.remove('onboarding-active','tutorial-active');
   show('home', false);
   // Force the app to load at home after refresh, even when a stale hash exists.
   history.replaceState({screen:'home'}, '', '#home');
