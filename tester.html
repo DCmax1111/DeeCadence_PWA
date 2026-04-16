@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Dee_Cistem — Beta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#090B12;--bg2:#0F111A;--surface:#161B27;
+  --card:#1A1F2E;--card2:#1F2535;--border:#252B3B;
+  --accent:#4F8EF7;--accent2:#7AABFF;
+  --fin:#2DD4A0;--spirit:#F5B942;--mind:#9B7FFA;
+  --energy:#5BA4F5;--know:#2DD4A0;--dex:#F472B6;--dc:#38BDF8;
+  --ok:#22C55E;--warn:#F59E0B;--err:#F87171;--gold:#FBBF24;
+  --t1:#EEF0FF;--t2:#8B93B8;--t3:#4A5070;--t4:#252B3B;
+  --r:14px;--rs:8px;--rl:20px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --shadow-accent:0 4px 20px rgba(79,142,247,.25);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:'DM Sans',sans-serif;font-size:15px;
+  max-width:430px;margin:0 auto;
+  display:flex;flex-direction:column;
+  position:relative;
+}
+
+/* ── Screens ─────────────────────────────────── */
+#app{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative}
+.screen{display:none;min-height:100%;animation:fadeIn .18s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── Header / Nav ────────────────────────────── */
+.topbar{
+  background:rgba(9,11,18,.92);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  padding:14px 16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50;
+}
+.back-btn{
+  background:var(--card);border:1px solid var(--border);
+  color:var(--t2);font-size:13px;font-family:'DM Sans',sans-serif;
+  padding:6px 12px;border-radius:var(--rs);cursor:pointer;
+  font-weight:600;transition:.12s;white-space:nowrap;
+  flex-shrink:0;
+}
+.back-btn:active{background:var(--border);transform:scale(.97)}
+.topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700}
+.main-header{
+  background:rgba(9,11,18,.95);backdrop-filter:blur(16px);
+  padding:18px 20px 14px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.logo{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:2px;}
+.beta-pill{background:var(--fin);color:#000;font-size:9px;font-weight:800;
+  padding:3px 8px;border-radius:20px;letter-spacing:1px;align-self:center;}
+
+/* ── Content ─────────────────────────────────── */
+.pad{padding:16px}
+.gap{height:12px}
+.gap-sm{height:8px}
+.gap-lg{height:20px}
+
+/* ── Cards ───────────────────────────────────── */
+.card{background:var(--card);border-radius:var(--r);
+  padding:18px;border:1px solid var(--border);margin-bottom:12px}
+.card-title{font-size:10px;letter-spacing:2px;color:var(--t3);
+  text-transform:uppercase;font-weight:700;margin-bottom:14px;
+  font-family:'Syne',sans-serif;}
+
+/* ── Greeting ────────────────────────────────── */
+.greeting-section{padding:22px 20px 8px}
+.greeting-text{font-family:'Syne',sans-serif;font-size:26px;
+  font-weight:800;line-height:1.2;
+  background:linear-gradient(135deg,var(--t1) 0%,var(--t2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.date-text{font-size:12px;color:var(--t3);margin-top:4px;
+  letter-spacing:.5px;}
+.small-btn{
+  margin-top:12px;padding:8px 12px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);background:transparent;
+  color:var(--t2);font-size:13px;cursor:pointer;
+  transition:.15s;
+}
+.small-btn:active{transform:scale(.97);}
+
+/* ── Dashboard card ──────────────────────────── */
+.dash-card{
+  background:linear-gradient(135deg,var(--card) 0%,var(--card2) 100%);
+  border-radius:var(--rl);padding:18px 20px;
+  margin:12px 16px;border:1px solid var(--border);
+  cursor:pointer;transition:.15s;box-shadow:var(--shadow);
+}
+.dash-card:active{transform:scale(.98);border-color:var(--accent)}
+.dash-rank{font-family:'Syne',sans-serif;font-size:24px;
+  font-weight:800;color:var(--accent);margin:4px 0 6px;}
+.dash-stats{font-size:12px;color:var(--t2);letter-spacing:.3px}
+
+/* ── Module grid ─────────────────────────────── */
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;padding:0 16px 16px;}
+.mod-card{
+  background:var(--card);border-radius:var(--r);
+  padding:18px 14px 14px;cursor:pointer;
+  border:1px solid var(--border);transition:.15s;
+  box-shadow:0 2px 12px rgba(0,0,0,.2);
+}
+.mod-card:active{transform:scale(.97)}
+.mod-name{font-family:'Syne',sans-serif;font-size:14px;
+  font-weight:700;margin-bottom:5px;}
+.mod-desc{font-size:11px;color:var(--t2);line-height:1.4}
+.mod-stat{font-size:11px;font-weight:600;margin-top:10px;opacity:.9}
+.stat-bar{height:3px;background:var(--border);
+  border-radius:2px;margin-top:8px;overflow:hidden;}
+.stat-fill{height:100%;border-radius:2px;transition:width .6s ease}
+
+/* ── Fields ──────────────────────────────────── */
+.field{
+  width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--rs);padding:14px;color:var(--t1);
+  font-size:15px;font-family:'DM Sans',sans-serif;
+  margin-bottom:10px;outline:none;transition:.2s;
+  -webkit-appearance:none;
+}
+.field:focus{border-color:var(--accent);background:var(--surface)}
+select.field{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234A5070' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;
+  padding-right:36px;}
+select.field option{background:var(--surface)}
+textarea.field{resize:none;line-height:1.6;min-height:100px}
+
+/* ── Buttons ─────────────────────────────────── */
+.btn{
+  width:100%;padding:15px;border:none;border-radius:var(--rs);
+  font-size:14px;font-weight:700;cursor:pointer;
+  margin-bottom:8px;transition:.15s;letter-spacing:.3px;
+  font-family:'DM Sans',sans-serif;
+}
+.btn:active{transform:scale(.98);opacity:.9}
+.btn-accent{background:linear-gradient(135deg,var(--accent),#3B6FD4);
+  color:#fff;box-shadow:var(--shadow-accent);}
+.btn-green{background:linear-gradient(135deg,var(--fin),#059669);
+  color:#000;box-shadow:0 4px 12px rgba(45,212,160,.25);}
+.btn-red{background:linear-gradient(135deg,var(--err),#DC2626);
+  color:#fff;box-shadow:0 4px 12px rgba(248,113,113,.2);}
+.btn-ghost{background:transparent;color:var(--t2);font-size:13px;box-shadow:none}
+.btn-outline{background:transparent;color:var(--accent);
+  border:1px solid var(--accent);box-shadow:none;}
+.row{display:flex;gap:8px}
+.row .btn{flex:1;margin-bottom:0}
+
+/* ── Log items ───────────────────────────────── */
+.log-item{
+  background:var(--bg2);border-radius:var(--rs);
+  padding:14px;margin-bottom:8px;border-left:3px solid;
+}
+.log-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.log-sub{font-size:11px;color:var(--t3)}
+.empty{text-align:center;color:var(--t3);font-size:13px;
+  padding:32px 16px;line-height:1.7}
+
+/* ── Stat rows ───────────────────────────────── */
+.stat-row{margin-bottom:14px}
+.stat-row-top{display:flex;justify-content:space-between;
+  align-items:center;margin-bottom:5px}
+.stat-name{font-size:13px;font-weight:600}
+.stat-badge{font-size:11px;font-weight:700}
+
+/* ── Summary row ─────────────────────────────── */
+.sum-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.sum-cell{background:var(--card);border-radius:var(--rs);
+  padding:12px;text-align:center;border:1px solid var(--border);}
+.sum-label{font-size:10px;color:var(--t3);margin-bottom:5px;
+  letter-spacing:1px;text-transform:uppercase;font-weight:600;}
+.sum-val{font-size:17px;font-weight:800;font-family:'Syne',sans-serif}
+
+/* ── Feedback ────────────────────────────────── */
+.fb-banner{
+  background:linear-gradient(135deg,rgba(245,185,66,.1),rgba(245,185,66,.03));
+  border:1px solid rgba(245,185,66,.2);border-radius:var(--rs);
+  padding:14px;margin-bottom:14px;font-size:13px;
+  color:var(--spirit);line-height:1.6;
+}
+
+/* ── FAB feedback btn ────────────────────────── */
+#fabBtn{
+  position:fixed;bottom:24px;right:20px;z-index:100;
+  background:linear-gradient(135deg,var(--spirit),#D97706);
+  color:#000;font-weight:800;font-size:12px;
+  padding:12px 16px;border-radius:40px;border:none;cursor:pointer;
+  box-shadow:0 4px 20px rgba(245,185,66,.4);
+  font-family:'Syne',sans-serif;letter-spacing:.5px;
+  transition:.2s;display:none;
+}
+#fabBtn:active{transform:scale(.95)}
+
+/* ── Onboarding ──────────────────────────────── */
+#onboarding{
+  position:fixed;inset:0;z-index:200;
+  background:var(--bg);display:flex;flex-direction:column;
+  max-width:430px;margin:0 auto;
+}
+.ob-step{display:none;flex:1;flex-direction:column;
+  padding:40px 28px 32px;animation:fadeIn .2s ease}
+.ob-step.active{display:flex}
+.ob-num{font-size:11px;color:var(--t3);letter-spacing:2px;
+  margin-bottom:32px;font-weight:700}
+.ob-head{font-family:'Syne',sans-serif;font-size:30px;
+  font-weight:800;line-height:1.2;margin-bottom:16px;
+  background:linear-gradient(135deg,var(--t1),var(--t2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.ob-sub{font-size:15px;color:var(--t2);line-height:1.6;margin-bottom:auto}
+.ob-dots{display:flex;gap:6px;margin-bottom:24px}
+.ob-dot{height:4px;border-radius:2px;background:var(--border);transition:.3s}
+.ob-dot.active{background:var(--accent);width:24px}
+.ob-dot.done{background:var(--fin)}
+
+/* ── Tutorial overlay ────────────────────────── */
+#tutorial{
+  position:fixed;inset:0;z-index:150;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:24px;
+  max-width:430px;margin:0 auto;
+}
+.tut-card{background:var(--card);border-radius:var(--rl);
+  padding:28px;border:1px solid var(--border);width:100%;max-width:360px;}
+.tut-icon{font-size:32px;margin-bottom:12px}
+.tut-head{font-family:'Syne',sans-serif;font-size:20px;
+  font-weight:800;margin-bottom:8px;color:var(--t1);}
+.tut-body{font-size:14px;color:var(--t2);line-height:1.6;margin-bottom:20px}
+.tut-steps{margin-bottom:20px}
+.tut-step{display:flex;gap:12px;align-items:flex-start;
+  margin-bottom:12px;padding:10px;background:var(--bg2);
+  border-radius:var(--rs);}
+.tut-step-num{background:var(--accent);color:#fff;font-size:11px;
+  font-weight:800;width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tut-step-text{font-size:13px;color:var(--t2);line-height:1.4}
+
+/* ── DeeCadence timer ────────────────────────── */
+.timer-display{
+  text-align:center;padding:24px 0;
+}
+.timer-num{font-family:'Syne',sans-serif;font-size:56px;
+  font-weight:800;letter-spacing:2px;transition:color .3s;}
+.timer-phase{font-size:12px;letter-spacing:2px;color:var(--t3);
+  margin-top:4px;text-transform:uppercase;font-weight:700;}
+.block-dots{display:flex;justify-content:center;gap:8px;margin:12px 0}
+.block-dot{width:10px;height:10px;border-radius:50%;
+  background:var(--border);transition:.3s;}
+.block-dot.active{background:var(--dc)}
+.block-dot.done{background:var(--ok)}
+.progress-bar{height:4px;background:var(--border);
+  border-radius:2px;overflow:hidden;margin:8px 0 16px}
+.progress-fill{height:100%;border-radius:2px;
+  transition:width 1s linear;background:var(--dc);}
+
+/* ── Ledger tabs ─────────────────────────────── */
+.tabs{display:flex;background:var(--bg2);border-radius:var(--rs);
+  padding:3px;margin-bottom:14px;border:1px solid var(--border);}
+.tab{flex:1;padding:9px;text-align:center;font-size:13px;
+  font-weight:600;border-radius:6px;cursor:pointer;
+  color:var(--t2);transition:.15s;}
+.tab.active{background:var(--card);color:var(--t1);
+  box-shadow:0 2px 8px rgba(0,0,0,.3);}
+
+/* ── Chart container ─────────────────────────── */
+.chart-wrap{position:relative;height:180px;margin:8px 0}
+</style>
+</head>
+<body>
+
+<!-- ── ONBOARDING ─────────────────────────────── -->
+<div id="onboarding">
+  <!-- Step 1: Name -->
+  <div class="ob-step active" id="ob1">
+    <div class="ob-num">STEP 1 OF 3</div>
+    <div class="ob-head">Which version of yourself are you building?</div>
+    <div class="ob-sub">
+      Dee_Cistem tracks every dimension of your growth — finances, focus, spirit, body, knowledge, and craft. Your rank reflects who you're becoming, not just what you've done.
+      <br><br>
+      <strong style="color:var(--t1)">What should we call you?</strong>
+    </div>
+    <div style="margin-top:24px">
+      <input class="field" id="obName" placeholder="Your name" style="font-size:18px;padding:16px">
+      <button class="btn btn-accent" onclick="obNext(1)">Continue →</button>
+    </div>
+    <div class="ob-dots" style="margin-top:16px">
+      <div class="ob-dot active" style="width:24px"></div>
+      <div class="ob-dot"></div>
+      <div class="ob-dot"></div>
+    </div>
+  </div>
+
+  <!-- Step 2: What matters most -->
+  <div class="ob-step" id="ob2">
+    <div class="ob-num">STEP 2 OF 3</div>
+    <div class="ob-head">What matters most to you right now?</div>
+    <div class="ob-sub">Pick up to 3. You track all six, but these show first on your dashboard.</div>
+    <div id="obStatGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px"></div>
+    <div style="margin-top:16px">
+      <button class="btn btn-accent" onclick="obNext(2)">Continue →</button>
+    </div>
+    <div class="ob-dots" style="margin-top:16px">
+      <div class="ob-dot done"></div>
+      <div class="ob-dot active" style="width:24px"></div>
+      <div class="ob-dot"></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Rank explainer -->
+  <div class="ob-step" id="ob3">
+    <div class="ob-num">STEP 3 OF 3</div>
+    <div class="ob-head" id="ob3Head">Your starting rank is E.</div>
+    <div class="ob-sub">
+      Every rank must be earned through real consistency. Logging alone doesn't move you up — improvement does. There are no participation trophies here.
+      <br><br>
+      <strong style="color:var(--t1)">E → D → C → B → A → S → SS</strong>
+      <br><br>
+      Ranks are calculated across all six modules. A consistent E in one area pulls your overall rank down. That's the point.
+    </div>
+    <div style="margin-top:24px">
+      <button class="btn btn-accent" onclick="obFinish()">Begin my journey →</button>
+    </div>
+    <div class="ob-dots" style="margin-top:16px">
+      <div class="ob-dot done"></div>
+      <div class="ob-dot done"></div>
+      <div class="ob-dot active" style="width:24px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TUTORIAL OVERLAY ───────────────────────── -->
+<div id="tutorial">
+  <div class="tut-card">
+    <div class="tut-icon">👋</div>
+    <div class="tut-head">Quick guide</div>
+    <div class="tut-body">Three things to know before you start:</div>
+    <div class="tut-steps">
+      <div class="tut-step">
+        <div class="tut-step-num">1</div>
+        <div class="tut-step-text">Tap any module card on the home screen to open it. Use the <strong style="color:var(--t1)">← Back</strong> button at the top to return.</div>
+      </div>
+      <div class="tut-step">
+        <div class="tut-step-num">2</div>
+        <div class="tut-step-text">Log anything — sleep, prayers, transactions, sessions. Your stats update in real time.</div>
+      </div>
+      <div class="tut-step">
+        <div class="tut-step-num">3</div>
+        <div class="tut-step-text">Tap the <strong style="color:var(--spirit)">Feedback</strong> button (bottom right, any screen) to tell us what you think.</div>
+      </div>
+    </div>
+    <button class="btn btn-accent" onclick="closeTutorial()">Got it, let's go</button>
+  </div>
+</div>
+
+<!-- ── FAB ────────────────────────────────────── -->
+<button id="fabBtn" onclick="goTo('feedback')">✦ Feedback</button>
+
+<!-- ── APP ───────────────────────────────────── -->
+<div id="app">
+
+<!-- HOME -->
+<div id="home" class="screen">
+  <div class="main-header">
+    <div>
+      <div class="logo">DEE_CISTEM</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">Discipline · Growth · Mastery</div>
+    </div>
+    <span class="beta-pill">BETA</span>
+  </div>
+  <div class="greeting-section">
+    <div class="greeting-text" id="greeting">Good morning</div>
+    <div class="date-text" id="dateStr"></div>
+    <button class="small-btn" onclick="resetName()">Reset name</button>
+  </div>
+  <div class="dash-card" onclick="goTo('dashboard')">
+    <div style="font-size:10px;letter-spacing:2px;color:var(--t3);font-weight:700;text-transform:uppercase;font-family:'Syne',sans-serif">Stat Dashboard</div>
+    <div class="dash-rank" id="overallRank">Rank E · Score 1</div>
+    <div class="dash-stats" id="keyStats">Body 1 · Mind 1 · Spirit 1</div>
+  </div>
+  <div class="mod-grid" id="moduleGrid"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--accent)">Dashboard</div>
+  </div>
+  <div class="pad" id="dashContent"></div>
+</div>
+
+<!-- FINANCIAL -->
+<div id="financial" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--fin)">Financial</div>
+  </div>
+  <div class="pad" id="financialContent"></div>
+</div>
+
+<!-- SPIRIT -->
+<div id="spirit" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--spirit)">Spirit</div>
+  </div>
+  <div class="pad" id="spiritContent"></div>
+</div>
+
+<!-- MIND -->
+<div id="mind" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--mind)">Mind</div>
+  </div>
+  <div class="pad" id="mindContent"></div>
+</div>
+
+<!-- ENERGY -->
+<div id="energy" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--energy)">Energy</div>
+  </div>
+  <div class="pad" id="energyContent"></div>
+</div>
+
+<!-- KNOWLEDGE -->
+<div id="knowledge" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--know)">Knowledge</div>
+  </div>
+  <div class="pad" id="knowledgeContent"></div>
+</div>
+
+<!-- DEXTERITY -->
+<div id="dexterity" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--dex)">Dexterity</div>
+  </div>
+  <div class="pad" id="dexterityContent"></div>
+</div>
+
+<!-- DEECADENCE -->
+<div id="deecadence" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--dc)">DeeCadence</div>
+  </div>
+  <div class="pad" id="deecadenceContent"></div>
+</div>
+
+<!-- FEEDBACK -->
+<div id="feedback" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--spirit)">Beta Feedback</div>
+  </div>
+  <div class="pad">
+    <div class="fb-banner">
+      You are one of the first people using Dee_Cistem. Your feedback shapes what this becomes. Thank you for being here first.
+    </div>
+    <div class="card">
+      <div class="card-title">Your Experience</div>
+      <select class="field" id="fbRating">
+        <option value="">Overall rating...</option>
+        <option value="5">★★★★★ — Would use daily</option>
+        <option value="4">★★★★☆ — Very useful</option>
+        <option value="3">★★★☆☆ — Somewhat useful</option>
+        <option value="2">★★☆☆☆ — Needs work</option>
+        <option value="1">★☆☆☆☆ — Not for me</option>
+      </select>
+      <select class="field" id="fbModule">
+        <option value="">Which module did you try first?</option>
+        <option>Financial</option><option>Spirit</option>
+        <option>Mind / DeeCadence</option><option>Energy</option>
+        <option>Knowledge</option><option>Dexterity</option>
+        <option>Dashboard</option>
+      </select>
+      <textarea class="field" id="fbText"
+        placeholder="What would make you use this daily? What confused you? What's missing?"></textarea>
+      <select class="field" id="fbPay">
+        <option value="">Would you pay for full access?</option>
+        <option value="yes5k">Yes — NGN 5,000 lifetime</option>
+        <option value="yes1500">Yes — NGN 1,500/month</option>
+        <option value="maybe">Maybe — needs more features</option>
+        <option value="no">Not yet</option>
+      </select>
+      <button class="btn btn-accent" onclick="submitFeedback()">Submit Feedback</button>
+      <div id="fbStatus" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-top:4px;line-height:1.5"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end #app -->
+
+<script>
+// ── Config ─────────────────────────────────────
+const SUPA_URL = 'https://lnxvlpmvhjhvwzunkvts.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw';
+
+// ── State ──────────────────────────────────────
+const S = {
+  stats:     load('stats',{Body:1,Mind:1,Spirit:1,Knowledge:1,Financial:1,Dexterity:1}),
+  financial: load('financial',[]),
+  spirit:    load('spirit',[]),
+  mind:      load('mind',[]),
+  energy:    load('energy',[]),
+  knowledge: load('knowledge',[]),
+  dexterity: load('dexterity',[]),
+  sessions:  load('sessions',[]),
+};
+
+function load(k,def){try{const v=localStorage.getItem('dc_'+k);return v?JSON.parse(v):def}catch{return def}}
+function save(k){localStorage.setItem('dc_'+k,JSON.stringify(S[k]))}
+function today(){return new Date().toLocaleDateString('en-GB')}
+function getRank(v){if(v>=95)return'SS';if(v>=80)return'S';if(v>=65)return'A';if(v>=50)return'B';if(v>=35)return'C';if(v>=20)return'D';return'E';}
+function updateStat(name,delta){S.stats[name]=Math.min(100,Math.max(1,(S.stats[name]||1)+delta));save('stats');}
+
+// ── Navigation (history-based for back button) ──
+const _history = ['home'];
+
+function goTo(id, addHistory=true) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.add('active');
+  document.getElementById('app').scrollTo(0,0);
+  if(addHistory) {
+    _history.push(id);
+    history.pushState({screen:id}, '', '#'+id);
+  }
+  // Show/hide FAB
+  document.getElementById('fabBtn').style.display =
+    id === 'feedback' || id === 'home' ? 'none' : 'flex';
+  // Render
+  const renders = {
+    home:renderHome, dashboard:renderDashboard,
+    financial:renderFinancial, spirit:renderSpirit,
+    mind:renderMind, energy:renderEnergy,
+    knowledge:renderKnowledge, dexterity:renderDexterity,
+    deecadence:renderDeeCadence,
+  };
+  if(renders[id]) renders[id]();
+}
+
+function goBack() {
+  if(_history.length > 1) {
+    _history.pop();
+    const prev = _history[_history.length-1];
+    goTo(prev, false);
+  } else {
+    goTo('home', false);
+  }
+}
+
+// Handle browser back button
+window.addEventListener('popstate', (e) => {
+  if(_history.length > 1) {
+    _history.pop();
+    const prev = _history[_history.length-1];
+    goTo(prev, false);
+  } else {
+    goTo('home', false);
+  }
+});
+
+// ── Onboarding ─────────────────────────────────
+const OB_STATS = [
+  {key:'Financial',color:'var(--fin)'},{key:'Spirit',color:'var(--spirit)'},
+  {key:'Mind',color:'var(--mind)'},{key:'Energy',color:'var(--energy)'},
+  {key:'Knowledge',color:'var(--know)'},{key:'Dexterity',color:'var(--dex)'},
+];
+let obSelected = new Set();
+
+function initOnboarding() {
+  const name = localStorage.getItem('dc_name');
+  if(name) {
+    document.getElementById('onboarding').style.display = 'none';
+    startApp();
+    return;
+  }
+  // Build stat picker
+  const grid = document.getElementById('obStatGrid');
+  grid.innerHTML = OB_STATS.map(s=>`
+    <div id="obstat_${s.key}" onclick="toggleObStat('${s.key}')"
+      style="background:var(--card);border:1px solid var(--border);
+             border-radius:var(--rs);padding:14px;cursor:pointer;
+             transition:.15s;text-align:center">
+      <div style="font-size:13px;font-weight:700;color:${s.color}">${s.key}</div>
+    </div>`).join('');
+}
+
+function toggleObStat(key) {
+  if(obSelected.has(key)) {
+    obSelected.delete(key);
+    document.getElementById('obstat_'+key).style.borderColor='var(--border)';
+    document.getElementById('obstat_'+key).style.background='var(--card)';
+  } else {
+    if(obSelected.size>=3) return;
+    obSelected.add(key);
+    document.getElementById('obstat_'+key).style.borderColor='var(--accent)';
+    document.getElementById('obstat_'+key).style.background='rgba(79,142,247,.1)';
+  }
+}
+
+function obNext(step) {
+  if(step===1) {
+    const name = document.getElementById('obName').value.trim();
+    if(!name){document.getElementById('obName').focus();return;}
+    localStorage.setItem('dc_name', name);
+    document.getElementById('ob3Head').textContent = `${name}, your starting rank is E.`;
+    document.getElementById('ob1').classList.remove('active');
+    document.getElementById('ob2').classList.add('active');
+  } else if(step===2) {
+    document.getElementById('ob2').classList.remove('active');
+    document.getElementById('ob3').classList.add('active');
+  }
+}
+
+function obFinish() {
+  document.getElementById('onboarding').style.display='none';
+  // First time — show tutorial
+  if(!localStorage.getItem('dc_tutdone')) {
+    document.getElementById('tutorial').style.display='flex';
+  } else {
+    startApp();
+  }
+}
+
+function resetName() {
+  localStorage.removeItem('dc_name');
+  document.getElementById('onboarding').style.display='flex';
+  document.getElementById('tutorial').style.display='none';
+  document.getElementById('ob1').classList.add('active');
+  document.getElementById('ob2').classList.remove('active');
+  document.getElementById('ob3').classList.remove('active');
+  document.getElementById('obName').value='';
+  obSelected.clear();
+  initOnboarding();
+}
+
+function closeTutorial() {
+  localStorage.setItem('dc_tutdone','1');
+  document.getElementById('tutorial').style.display='none';
+  startApp();
+}
+
+function startApp() {
+  goTo('home', false);
+  history.replaceState({screen:'home'},'','#home');
+  document.getElementById('fabBtn').style.display='none';
+  renderHome();
+}
+
+// ── Home ───────────────────────────────────────
+const MODULES = [
+  {id:'financial',name:'Financial',color:'var(--fin)',desc:'Income · Expenses · Cashflow',stat:'Financial'},
+  {id:'spirit',   name:'Spirit',   color:'var(--spirit)',desc:'Prayer · Bible · Leadership',stat:'Spirit'},
+  {id:'mind',     name:'Mind',     color:'var(--mind)',  desc:'Focus · DeeCadence',stat:'Mind'},
+  {id:'energy',   name:'Energy',   color:'var(--energy)',desc:'Sleep · Water · Exercise',stat:'Body'},
+  {id:'knowledge',name:'Knowledge',color:'var(--know)',  desc:'Study · Reading · Skills',stat:'Knowledge'},
+  {id:'dexterity',name:'Dexterity',color:'var(--dex)',   desc:'Art · Design · VoxScope',stat:'Dexterity'},
+];
+
+function renderHome() {
+  const name = localStorage.getItem('dc_name')||'DC';
+  const h = new Date().getHours();
+  const g = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  document.getElementById('greeting').textContent = `${g}, ${name}`;
+  document.getElementById('dateStr').textContent =
+    new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const vals = Object.values(S.stats);
+  const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+  document.getElementById('overallRank').textContent =
+    `Rank ${getRank(avg)} · Score ${Math.round(avg)}`;
+  document.getElementById('keyStats').textContent =
+    `Body ${S.stats.Body} · Mind ${S.stats.Mind} · Spirit ${S.stats.Spirit}`;
+  document.getElementById('moduleGrid').innerHTML =
+    MODULES.map(m=>`
+      <div class="mod-card" onclick="goTo('${m.id}')"
+           style="border-color:${m.color}22">
+        <div class="mod-name" style="color:${m.color}">${m.name}</div>
+        <div class="mod-desc">${m.desc}</div>
+        <div class="mod-stat" style="color:${m.color}">
+          ${S.stats[m.stat]||1} · Rank ${getRank(S.stats[m.stat]||1)}
+        </div>
+        <div class="stat-bar">
+          <div class="stat-fill" style="width:${S.stats[m.stat]||1}%;background:${m.color}"></div>
+        </div>
+      </div>`).join('');
+}
+
+// ── Dashboard ──────────────────────────────────
+function renderDashboard() {
+  const colors = {Body:'var(--energy)',Mind:'var(--mind)',Spirit:'var(--spirit)',
+    Knowledge:'var(--know)',Financial:'var(--fin)',Dexterity:'var(--dex)'};
+  document.getElementById('dashContent').innerHTML =
+    `<div class="card">
+      <div class="card-title">Stat Sheet</div>
+      ${Object.entries(S.stats).map(([k,v])=>`
+        <div class="stat-row">
+          <div class="stat-row-top">
+            <span class="stat-name">${k}</span>
+            <span class="stat-badge" style="color:${colors[k]}">
+              ${v} · Rank ${getRank(v)}
+            </span>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-fill" style="width:${v}%;background:${colors[k]}"></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ── Financial ──────────────────────────────────
+let currentLedger = 'personal';
+let currentTxnType = 'income';
+let cfChart = null;
+
+const INC_CATS = ['Salary','Freelance','Business','Gift','Investment','Other'];
+const EXP_CATS = ['Food','Transport','Education','Health','Entertainment','Tithe','Savings','Utilities','Clothing','Other'];
+
+function renderFinancial() {
+  const ledgerTxns = S.financial.filter(t=>t.ledger===currentLedger);
+  const income  = ledgerTxns.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
+  const expense = ledgerTxns.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+  const cf = income - expense;
+
+  document.getElementById('financialContent').innerHTML = `
+    <div class="tabs">
+      <div class="tab ${currentLedger==='personal'?'active':''}"
+           onclick="switchLedger('personal')">Personal</div>
+      <div class="tab ${currentLedger==='business'?'active':''}"
+           onclick="switchLedger('business')">Business</div>
+    </div>
+    <div class="sum-row">
+      <div class="sum-cell">
+        <div class="sum-label">Income</div>
+        <div class="sum-val" style="color:var(--fin)">₦${fmtNum(income)}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Expenses</div>
+        <div class="sum-val" style="color:var(--err)">₦${fmtNum(expense)}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Cashflow</div>
+        <div class="sum-val" style="color:${cf>=0?'var(--fin)':'var(--err)'}">₦${fmtNum(cf)}</div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn btn-green" onclick="showAddTxn('income')" style="margin-bottom:0">+ Income</button>
+      <button class="btn btn-red" onclick="showAddTxn('expense')" style="margin-bottom:0">+ Expense</button>
+    </div>
+    <div id="txnForm" style="display:none" class="card">
+      <div class="card-title" id="txnTitle">Add Transaction</div>
+      <input class="field" id="txnAmount" type="number" placeholder="Amount (₦)">
+      <select class="field" id="txnCat"></select>
+      <input class="field" id="txnNote" placeholder="Note (optional)">
+      <div class="row">
+        <button class="btn btn-accent" onclick="saveTxn()" style="margin-bottom:0">Save</button>
+        <button class="btn btn-ghost" onclick="hideTxnForm()" style="margin-bottom:0">Cancel</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Cashflow (Last 7 Days)</div>
+      <div class="chart-wrap"><canvas id="cfChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Transactions</div>
+      <select class="field" id="txnFilter" onchange="renderFinancial()" style="margin-bottom:12px">
+        <option value="all">All categories</option>
+        ${[...INC_CATS,...EXP_CATS].filter((v,i,a)=>a.indexOf(v)===i).map(c=>`<option>${c}</option>`).join('')}
+      </select>
+      ${(()=>{
+        const filter = document.getElementById('txnFilter')?.value||'all';
+        const filtered = ledgerTxns.filter(t=>filter==='all'||t.category===filter);
+        return filtered.length===0
+          ? `<div class="empty">No transactions yet.<br>Add your first one above.</div>`
+          : filtered.slice(-8).reverse().map(t=>`
+              <div class="log-item" style="border-color:${t.type==='income'?'var(--fin)':'var(--err)'}">
+                <div class="log-title" style="color:${t.type==='income'?'var(--fin)':'var(--err)'}">
+                  ${t.type==='income'?'+':'-'}₦${fmtNum(t.amount)} · ${t.category}
+                </div>
+                <div class="log-sub">${t.note||''} · ${t.date}</div>
+              </div>`).join('');
+      })()}
+    </div>`;
+  buildCfChart(ledgerTxns);
+}
+
+function buildCfChart(txns) {
+  const ctx = document.getElementById('cfChart');
+  if(!ctx) return;
+  if(cfChart){cfChart.destroy();cfChart=null;}
+  const days=[];const inc=[];const exp=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const label=d.toLocaleDateString('en-GB',{weekday:'short'});
+    const dateStr=d.toLocaleDateString('en-GB');
+    days.push(label);
+    inc.push(txns.filter(t=>t.type==='income'&&t.date===dateStr).reduce((a,t)=>a+t.amount,0));
+    exp.push(txns.filter(t=>t.type==='expense'&&t.date===dateStr).reduce((a,t)=>a+t.amount,0));
+  }
+  cfChart = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:days,
+      datasets:[
+        {label:'Income',data:inc,backgroundColor:'rgba(45,212,160,.7)',borderRadius:4},
+        {label:'Expenses',data:exp,backgroundColor:'rgba(248,113,113,.7)',borderRadius:4},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8B93B8',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#4A5070',font:{size:10}},grid:{color:'#252B3B'}},
+        y:{ticks:{color:'#4A5070',font:{size:10}},grid:{color:'#252B3B'},
+           callback:v=>'₦'+fmtNum(v)},
+      }
+    }
+  });
+}
+
+function switchLedger(l){currentLedger=l;renderFinancial()}
+function fmtNum(n){return n>=1000?(n/1000).toFixed(1)+'k':n}
+function hideTxnForm(){document.getElementById('txnForm').style.display='none'}
+
+function showAddTxn(type) {
+  currentTxnType=type;
+  document.getElementById('txnTitle').textContent=type==='income'?'Add Income':'Add Expense';
+  const cats=type==='income'?INC_CATS:EXP_CATS;
+  document.getElementById('txnCat').innerHTML=cats.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('txnForm').style.display='block';
+  document.getElementById('txnAmount').value='';
+  document.getElementById('txnNote').value='';
+  document.getElementById('txnAmount').focus();
+}
+
+function saveTxn() {
+  const amount=parseFloat(document.getElementById('txnAmount').value);
+  if(!amount||amount<=0)return;
+  S.financial.push({
+    type:currentTxnType,amount,ledger:currentLedger,
+    category:document.getElementById('txnCat').value,
+    note:document.getElementById('txnNote').value,
+    date:today()
+  });
+  save('financial');
+  updateStat('Financial',currentTxnType==='income'?2:-1);
+  hideTxnForm();
+  renderFinancial();
+}
+
+// ── Spirit ─────────────────────────────────────
+function renderSpirit() {
+  const tp=S.spirit.filter(e=>e.type==='prayer'&&e.date===today()).length;
+  const tb=S.spirit.filter(e=>e.type==='bible'&&e.date===today()).length;
+  document.getElementById('spiritContent').innerHTML=`
+    <div class="sum-row" style="grid-template-columns:1fr 1fr">
+      <div class="sum-cell"><div class="sum-label">Prayers Today</div>
+        <div class="sum-val" style="color:var(--spirit)">${tp}</div></div>
+      <div class="sum-cell"><div class="sum-label">Bible Today</div>
+        <div class="sum-val" style="color:var(--fin)">${tb}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Log Prayer</div>
+      <div class="row">
+        <button class="btn btn-accent" onclick="logSpirit('prayer','Morning Prayer')" style="margin-bottom:0">Morning</button>
+        <button class="btn btn-accent" onclick="logSpirit('prayer','Night Prayer')" style="margin-bottom:0">Night</button>
+        <button class="btn btn-accent" onclick="logSpirit('prayer','Prayer')" style="margin-bottom:0">Other</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Bible Reading</div>
+      <input class="field" id="biblePassage" placeholder="Passage (e.g. John 3:16-17)">
+      <button class="btn btn-green" onclick="logBible()">Log Reading</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Journal</div>
+      <textarea class="field" id="journalEntry" placeholder="Write your thoughts..."></textarea>
+      <button class="btn btn-outline" onclick="logJournal()">Save Entry</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent</div>
+      ${S.spirit.length===0
+        ?`<div class="empty">Nothing logged yet.<br>Start with a prayer.</div>`
+        :S.spirit.slice(-5).reverse().map(e=>`
+          <div class="log-item" style="border-color:var(--spirit)">
+            <div class="log-title" style="color:var(--spirit)">${e.label}</div>
+            <div class="log-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logSpirit(type,label){
+  S.spirit.push({type,label,date:today()});save('spirit');
+  updateStat('Spirit',3);renderSpirit();
+}
+function logBible(){
+  const p=document.getElementById('biblePassage').value.trim();
+  if(!p)return;
+  S.spirit.push({type:'bible',label:`Bible: ${p}`,date:today()});
+  save('spirit');document.getElementById('biblePassage').value='';
+  updateStat('Spirit',2);renderSpirit();
+}
+function logJournal(){
+  const t=document.getElementById('journalEntry').value.trim();
+  if(!t)return;
+  S.spirit.push({type:'journal',label:`Journal entry`,date:today()});
+  save('spirit');document.getElementById('journalEntry').value='';
+  updateStat('Spirit',1);renderSpirit();
+}
+
+// ── Mind ───────────────────────────────────────
+function renderMind(){
+  document.getElementById('mindContent').innerHTML=`
+    <div class="card" onclick="goTo('deecadence')"
+         style="border-color:rgba(56,189,248,.2);cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="color:var(--dc);font-weight:700;font-size:15px;
+                      font-family:'Syne',sans-serif">DeeCadence</div>
+          <div style="font-size:12px;color:var(--t2);margin-top:3px">
+            Focus debt · Session tracker · Attention score
+          </div>
+        </div>
+        <div style="color:var(--dc);font-size:20px">›</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Quick Focus Log</div>
+      <input class="field" id="focusDur" type="number" placeholder="Duration (minutes)">
+      <select class="field" id="focusType">
+        <option>Deep Work</option><option>Study</option>
+        <option>Reading</option><option>Planning</option><option>Creative</option>
+      </select>
+      <button class="btn btn-accent" onclick="logFocus()">Log Session</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Mood Check-in</div>
+      <div class="row">
+        ${['Low','OK','Good','Great','Peak'].map((l,i)=>`
+          <button class="btn" style="background:var(--card2);color:var(--t2);
+                  font-size:11px;padding:12px 4px;margin-bottom:0;border:1px solid var(--border)"
+            onclick="logMood(${i+1},'${l}')">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent</div>
+      ${S.mind.length===0
+        ?`<div class="empty">Nothing logged yet.</div>`
+        :S.mind.slice(-4).reverse().map(e=>`
+          <div class="log-item" style="border-color:var(--mind)">
+            <div class="log-title" style="color:var(--mind)">${e.label}</div>
+            <div class="log-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logFocus(){
+  const dur=parseInt(document.getElementById('focusDur').value);
+  if(!dur||dur<=0)return;
+  const type=document.getElementById('focusType').value;
+  S.mind.push({label:`${type} · ${dur}min`,date:today()});
+  save('mind');document.getElementById('focusDur').value='';
+  updateStat('Mind',Math.min(5,Math.floor(dur/10)));renderMind();
+}
+function logMood(score,label){
+  S.mind.push({label:`Mood: ${label} (${score}/5)`,date:today()});
+  save('mind');updateStat('Mind',2);renderMind();
+}
+
+// ── Energy ─────────────────────────────────────
+function renderEnergy(){
+  const tw=S.energy.filter(e=>e.type==='water'&&e.date===today()).reduce((a,e)=>a+e.glasses,0);
+  const ts=S.energy.find(e=>e.type==='sleep'&&e.date===today());
+  const te=S.energy.filter(e=>e.type==='exercise'&&e.date===today()).reduce((a,e)=>a+(e.mins||0),0);
+  document.getElementById('energyContent').innerHTML=`
+    <div class="sum-row">
+      <div class="sum-cell"><div class="sum-label">Sleep</div>
+        <div class="sum-val" style="color:var(--energy)">${ts?`${ts.hours}h`:'—'}</div></div>
+      <div class="sum-cell"><div class="sum-label">Water</div>
+        <div class="sum-val" style="color:var(--energy)">${tw}gl</div></div>
+      <div class="sum-cell"><div class="sum-label">Exercise</div>
+        <div class="sum-val" style="color:var(--energy)">${te?`${te}m`:'—'}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Log Sleep</div>
+      <input class="field" id="sleepHrs" type="number" step="0.5" placeholder="Hours slept">
+      <input class="field" id="sleepQ" type="number" min="1" max="5" placeholder="Quality 1–5">
+      <button class="btn btn-accent" onclick="logSleep()">Log Sleep</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Water Intake</div>
+      <div class="row">
+        <button class="btn btn-accent" onclick="logWater(1)" style="margin-bottom:0">+1 Glass</button>
+        <button class="btn btn-accent" onclick="logWater(2)" style="margin-bottom:0">+2 Glasses</button>
+        <button class="btn btn-accent" onclick="logWater(3)" style="margin-bottom:0">+3 Glasses</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Exercise</div>
+      <select class="field" id="exType">
+        <option>Running</option><option>Walking</option><option>Gym</option>
+        <option>Cycling</option><option>HIIT</option><option>Swimming</option><option>Other</option>
+      </select>
+      <input class="field" id="exMins" type="number" placeholder="Duration (minutes)">
+      <button class="btn btn-green" onclick="logExercise()">Log Exercise</button>
+    </div>`;
+}
+
+function logSleep(){
+  const hrs=parseFloat(document.getElementById('sleepHrs').value||'0');
+  const q=parseInt(document.getElementById('sleepQ').value||'3');
+  if(!hrs||hrs<=0)return;
+  S.energy.push({type:'sleep',hours:hrs,quality:q,date:today()});
+  save('energy');document.getElementById('sleepHrs').value='';
+  document.getElementById('sleepQ').value='';
+  updateStat('Body',3);renderEnergy();
+}
+function logWater(g){
+  S.energy.push({type:'water',glasses:g,date:today()});
+  save('energy');updateStat('Body',1);renderEnergy();
+}
+function logExercise(){
+  const type=document.getElementById('exType').value;
+  const mins=parseInt(document.getElementById('exMins').value||'0');
+  if(!mins||mins<=0)return;
+  S.energy.push({type:'exercise',label:`${type} ${mins}min`,mins,date:today()});
+  save('energy');document.getElementById('exMins').value='';
+  updateStat('Body',4);renderEnergy();
+}
+
+// ── Knowledge ──────────────────────────────────
+function renderKnowledge(){
+  document.getElementById('knowledgeContent').innerHTML=`
+    <div class="card">
+      <div class="card-title">Log Reading</div>
+      <input class="field" id="readTitle" placeholder="Book or article title">
+      <input class="field" id="readPages" type="number" placeholder="Pages read (optional)">
+      <button class="btn btn-green" onclick="logReading()">Log Reading</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Vocabulary</div>
+      <input class="field" id="vocabWord" placeholder="Word">
+      <input class="field" id="vocabMeaning" placeholder="Meaning / Definition">
+      <button class="btn btn-accent" onclick="logVocab()">Add Word</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Skill Practice</div>
+      <input class="field" id="skillName" placeholder="Skill (e.g. Python, Guitar)">
+      <input class="field" id="skillMins" type="number" placeholder="Minutes practiced">
+      <button class="btn btn-outline" onclick="logSkill()">Log Practice</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent</div>
+      ${S.knowledge.length===0
+        ?`<div class="empty">Nothing logged yet.</div>`
+        :S.knowledge.slice(-5).reverse().map(e=>`
+          <div class="log-item" style="border-color:var(--know)">
+            <div class="log-title" style="color:var(--know)">${e.label}</div>
+            <div class="log-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logReading(){
+  const t=document.getElementById('readTitle').value.trim();
+  if(!t)return;
+  const p=document.getElementById('readPages').value;
+  S.knowledge.push({label:`${t}${p?` · ${p}p`:''}`,date:today()});
+  save('knowledge');document.getElementById('readTitle').value='';
+  document.getElementById('readPages').value='';
+  updateStat('Knowledge',3);renderKnowledge();
+}
+function logVocab(){
+  const w=document.getElementById('vocabWord').value.trim();
+  const m=document.getElementById('vocabMeaning').value.trim();
+  if(!w||!m)return;
+  S.knowledge.push({label:`${w}: ${m}`,date:today()});
+  save('knowledge');document.getElementById('vocabWord').value='';
+  document.getElementById('vocabMeaning').value='';
+  updateStat('Knowledge',2);renderKnowledge();
+}
+function logSkill(){
+  const s=document.getElementById('skillName').value.trim();
+  const m=parseInt(document.getElementById('skillMins').value||'0');
+  if(!s||!m)return;
+  S.knowledge.push({label:`${s} · ${m}min practice`,date:today()});
+  save('knowledge');document.getElementById('skillName').value='';
+  document.getElementById('skillMins').value='';
+  updateStat('Knowledge',2);renderKnowledge();
+}
+
+// ── Dexterity ──────────────────────────────────
+function renderDexterity(){
+  document.getElementById('dexterityContent').innerHTML=`
+    <div class="card" style="border-color:rgba(244,114,182,.2)">
+      <div style="color:var(--dex);font-weight:700;font-size:15px;
+                  font-family:'Syne',sans-serif;margin-bottom:4px">VoxScope</div>
+      <div style="font-size:12px;color:var(--t2)">
+        Vocal range analyzer · XP system · Artist comparison
+      </div>
+      <div style="font-size:11px;color:var(--t3);margin-top:8px">
+        Available in the full app
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Log Creative Session</div>
+      <select class="field" id="dexType">
+        <option>Drawing</option><option>Design</option><option>Writing</option>
+        <option>Music Practice</option><option>Vocal Practice</option>
+        <option>Photography</option><option>Video Editing</option><option>Other</option>
+      </select>
+      <input class="field" id="dexMins" type="number" placeholder="Duration (minutes)">
+      <textarea class="field" id="dexNote" placeholder="What did you work on?" style="min-height:70px"></textarea>
+      <button class="btn btn-accent" onclick="logDex()">Log Session</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Quick Log</div>
+      <div class="row">
+        <button class="btn btn-outline" onclick="quickDex('Sketching',15)" style="margin-bottom:0">Sketch 15m</button>
+        <button class="btn btn-outline" onclick="quickDex('Design',30)" style="margin-bottom:0">Design 30m</button>
+        <button class="btn btn-outline" onclick="quickDex('Writing',20)" style="margin-bottom:0">Write 20m</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent Sessions</div>
+      ${S.dexterity.length===0
+        ?`<div class="empty">Nothing logged yet.<br>Start creating.</div>`
+        :S.dexterity.slice(-5).reverse().map(e=>`
+          <div class="log-item" style="border-color:var(--dex)">
+            <div class="log-title" style="color:var(--dex)">${e.label}</div>
+            <div class="log-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logDex(){
+  const type=document.getElementById('dexType').value;
+  const mins=parseInt(document.getElementById('dexMins').value||'0');
+  const note=document.getElementById('dexNote').value.trim();
+  if(!mins||mins<=0)return;
+  S.dexterity.push({label:`${type} · ${mins}min${note?` — ${note}`:''}`,date:today()});
+  save('dexterity');document.getElementById('dexMins').value='';
+  document.getElementById('dexNote').value='';
+  updateStat('Dexterity',Math.min(5,Math.floor(mins/10)));renderDexterity();
+}
+function quickDex(type,mins){
+  S.dexterity.push({label:`${type} · ${mins}min`,date:today()});
+  save('dexterity');updateStat('Dexterity',2);renderDexterity();
+}
+
+// ── DeeCadence ─────────────────────────────────
+let sessionInterval=null,sessionSeconds=0;
+let sessionBlocks=null,currentBlock=1,sessionPhase='focus';
+let sessionProgressMax=0;
+
+function calcBlocks(totalMins){
+  if(totalMins<20)return{mode:'single',focus:totalMins,shortBreak:0,longBreak:0,blocks:1};
+  const focusPerBlock=Math.max(5,Math.floor(totalMins*0.75/4));
+  const shortBreak=Math.max(2,Math.floor(totalMins*0.05));
+  const longBreak=Math.max(5,Math.floor(totalMins*0.10));
+  return{mode:'blocks',focus:focusPerBlock,shortBreak,longBreak,blocks:4};
+}
+
+function previewBlocks(val){
+  const mins=parseInt(val||'0');
+  const el=document.getElementById('blockPreview');
+  if(!el)return;
+  if(mins<4){el.textContent='';return;}
+  const b=calcBlocks(mins);
+  el.textContent=b.mode==='single'
+    ?`${mins}min single focus block`
+    :`4 blocks × ${b.focus}min focus · ${b.shortBreak}min short break · ${b.longBreak}min long break`;
+}
+
+function renderDeeCadence(){
+  const debt=parseInt(localStorage.getItem('dc_debt')||'0');
+  const score=Math.max(0,100-Math.min(100,Math.floor(debt/6)));
+  const scoreColor=score>=80?'var(--ok)':score>=50?'var(--warn)':'var(--err)';
+  const debtStr=debt>=60?`${(debt/60).toFixed(1)}h`:`${debt}m`;
+  const sessions=S.sessions;
+
+  document.getElementById('deecadenceContent').innerHTML=`
+    <div class="sum-row" style="grid-template-columns:1fr 1fr;margin-bottom:12px">
+      <div class="sum-cell">
+        <div class="sum-label">Attention</div>
+        <div class="sum-val" style="color:${scoreColor}">${score}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Focus Debt</div>
+        <div class="sum-val" style="color:var(--err)">${debt>0?debtStr:'Clear'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Log Distraction</div>
+      <select class="field" id="distractType">
+        <option>Social Media</option><option>YouTube</option><option>Gaming</option>
+        <option>Phone browsing</option><option>Daydreaming</option><option>Other</option>
+      </select>
+      <input class="field" id="distractHours" type="number" step="0.25" placeholder="Hours lost (e.g. 1.5)">
+      <button class="btn btn-red" onclick="logDistraction()">Log Distraction</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Start Focus Session</div>
+      <input class="field" id="sessionTask" placeholder="What are you working on?">
+      <input class="field" id="sessionMins" type="number" placeholder="Duration (minutes, min 4)"
+             oninput="previewBlocks(this.value)">
+      <div id="blockPreview" style="font-size:12px;color:var(--dc);margin-bottom:10px;min-height:18px"></div>
+      <button class="btn btn-accent" onclick="startSession()">Begin Session</button>
+    </div>
+    <div id="sessionActive" style="display:none" class="card">
+      <div class="card-title">Active Session</div>
+      <div class="timer-display">
+        <div id="sessionTask2" style="font-size:14px;font-weight:700;color:var(--dc);margin-bottom:8px"></div>
+        <div class="block-dots" id="blockDots"></div>
+        <div class="timer-num" id="sessionTimer" style="color:var(--dc)">00:00</div>
+        <div class="timer-phase" id="sessionPhaseLabel">FOCUS</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="sessionProgress" style="width:0%"></div></div>
+      <button class="btn btn-red" onclick="endSession()">End Session</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent Sessions</div>
+      ${sessions.length===0
+        ?`<div class="empty">No sessions yet.<br>Start your first one above.</div>`
+        :sessions.slice(-4).reverse().map(s=>`
+          <div class="log-item" style="border-color:var(--dc)">
+            <div class="log-title" style="color:var(--dc)">${s.task}</div>
+            <div class="log-sub">${s.mins}min · ${s.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logDistraction(){
+  const hrs=parseFloat(document.getElementById('distractHours').value||'0');
+  if(!hrs||hrs<=0)return;
+  const mins=Math.round(hrs*60);
+  const cur=parseInt(localStorage.getItem('dc_debt')||'0');
+  localStorage.setItem('dc_debt',String(cur+mins));
+  document.getElementById('distractHours').value='';
+  renderDeeCadence();
+}
+
+function startSession(){
+  const task=document.getElementById('sessionTask').value.trim();
+  const mins=parseInt(document.getElementById('sessionMins').value||'0');
+  if(!task){alert('Enter what you are working on');return;}
+  if(mins<4){alert('Minimum 4 minutes');return;}
+  sessionBlocks=calcBlocks(mins);
+  currentBlock=1;sessionPhase='focus';
+  sessionSeconds=sessionBlocks.focus*60;
+  sessionProgressMax=sessionSeconds;
+  document.getElementById('sessionActive').style.display='block';
+  document.getElementById('sessionTask2').textContent=task;
+  updateBlockDots();
+  updatePhaseLabel();
+  if(sessionInterval)clearInterval(sessionInterval);
+  sessionInterval=setInterval(sessionTick,1000);
+  S.sessions.push({task,mins,date:today()});save('sessions');
+  const debt=parseInt(localStorage.getItem('dc_debt')||'0');
+  localStorage.setItem('dc_debt',String(Math.max(0,debt-Math.floor(mins*0.5))));
+  updateStat('Mind',3);
+}
+
+function updateBlockDots(){
+  const el=document.getElementById('blockDots');
+  if(!el)return;
+  const total=sessionBlocks?.mode==='single'?1:4;
+  el.innerHTML=Array.from({length:total},(_,i)=>`
+    <div class="block-dot ${i<currentBlock-1?'done':i===currentBlock-1?'active':''}"></div>`).join('');
+}
+
+function updatePhaseLabel(){
+  const el=document.getElementById('sessionPhaseLabel');
+  if(!el)return;
+  const timer=document.getElementById('sessionTimer');
+  if(sessionPhase==='focus'){
+    el.textContent='FOCUS';
+    if(timer)timer.style.color='var(--dc)';
+  }else if(sessionPhase==='shortBreak'){
+    el.textContent='SHORT BREAK';
+    if(timer)timer.style.color='var(--ok)';
+  }else{
+    el.textContent='LONG BREAK';
+    if(timer)timer.style.color='var(--warn)';
+  }
+}
+
+function sessionTick(){
+  sessionSeconds--;
+  const m=Math.floor(sessionSeconds/60);
+  const s=sessionSeconds%60;
+  const timerEl=document.getElementById('sessionTimer');
+  const progEl=document.getElementById('sessionProgress');
+  if(timerEl)timerEl.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  if(progEl){
+    const elapsed=sessionProgressMax-sessionSeconds;
+    progEl.style.width=`${Math.min(100,(elapsed/sessionProgressMax)*100)}%`;
+  }
+  if(sessionSeconds<=0){
+    if(sessionBlocks?.mode==='single'){endSession();return;}
+    if(sessionPhase==='focus'){
+      if(currentBlock>=4){endSession();return;}
+      const isLong=currentBlock===3;
+      sessionPhase=isLong?'longBreak':'shortBreak';
+      sessionSeconds=(isLong?sessionBlocks.longBreak:sessionBlocks.shortBreak)*60;
+      sessionProgressMax=sessionSeconds;
+      updatePhaseLabel();
+    }else{
+      currentBlock++;sessionPhase='focus';
+      sessionSeconds=sessionBlocks.focus*60;
+      sessionProgressMax=sessionSeconds;
+      updateBlockDots();updatePhaseLabel();
+    }
+  }
+}
+
+function endSession(){
+  if(sessionInterval)clearInterval(sessionInterval);
+  sessionInterval=null;
+  document.getElementById('sessionActive').style.display='none';
+  renderDeeCadence();
+}
+
+// ── Feedback ───────────────────────────────────
+async function submitFeedback(){
+  const rating=document.getElementById('fbRating').value;
+  const module=document.getElementById('fbModule').value;
+  const text=document.getElementById('fbText').value.trim();
+  const pay=document.getElementById('fbPay').value;
+  const s=document.getElementById('fbStatus');
+
+  if(!rating||!text){
+    s.style.display='block';s.style.background='rgba(248,113,113,.1)';
+    s.style.color='var(--err)';s.textContent='Please add a rating and comment';return;
+  }
+  s.style.display='block';s.style.background='rgba(79,142,247,.1)';
+  s.style.color='var(--accent)';s.textContent='Sending...';
+
+  const fb=JSON.parse(localStorage.getItem('dc_feedback')||'[]');
+  fb.push({rating,module,text,pay,date:new Date().toISOString()});
+  localStorage.setItem('dc_feedback',JSON.stringify(fb));
+
+  try{
+    const res=await fetch(`${SUPA_URL}/rest/v1/beta_feedback`,{
+      method:'POST',
+      headers:{
+        'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,
+        'Content-Type':'application/json','Prefer':'return=minimal'
+      },
+      body:JSON.stringify({rating,module,feedback:text,would_pay:pay})
+    });
+    s.style.background='rgba(45,212,160,.1)';s.style.color='var(--fin)';
+    s.textContent=res.ok
+      ?'Thank you. Your feedback shapes this product directly.'
+      :'Saved locally. Thank you for the feedback.';
+  }catch{
+    s.style.background='rgba(45,212,160,.1)';s.style.color='var(--fin)';
+    s.textContent='Saved locally. Thank you for the feedback.';
+  }
+  document.getElementById('fbText').value='';
+  document.getElementById('fbRating').value='';
+  document.getElementById('fbPay').value='';
+  document.getElementById('fbModule').value='';
+}
+
+// ── Init ───────────────────────────────────────
+initOnboarding();
+</script>
+</body>
+</html>

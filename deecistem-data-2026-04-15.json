@@ -1,0 +1,22 @@
+{
+  "name": "DC",
+  "stats": {
+    "Body": 1,
+    "Mind": 1,
+    "Spirit": 1,
+    "Knowledge": 1,
+    "Financial": 1,
+    "Dexterity": 1
+  },
+  "logs": {
+    "financial": [],
+    "spirit": [],
+    "mind": [],
+    "energy": [],
+    "knowledge": [],
+    "dexterity": [],
+    "sessions": []
+  },
+  "exportDate": "2026-04-15T22:51:50.719Z",
+  "version": "1.0"
+}
