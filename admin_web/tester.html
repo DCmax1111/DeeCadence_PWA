@@ -1811,27 +1811,35 @@ function logExercise() {
 
 function renderKnowledge() {
   const el = document.getElementById('knowledgeContent');
+  if (!el) return;
   el.innerHTML = `
     <div class="card">
-      <h3>Log Reading</h3>
+      <div class="card-title">Log Reading</div>
       <input class="field" id="readTitle" placeholder="Book or article title">
       <input class="field" id="readPages" type="number" placeholder="Pages read (optional)">
       <button class="btn btn-success" onclick="logReading()">Log Reading</button>
     </div>
     <div class="card">
-      <h3>Add Vocabulary</h3>
+      <div class="card-title">Vocabulary</div>
       <input class="field" id="vocabWord" placeholder="Word">
       <input class="field" id="vocabMeaning" placeholder="Meaning / Definition">
       <button class="btn btn-primary" onclick="logVocab()">Add Word</button>
     </div>
     <div class="card">
-      <h3>Recent</h3>
+      <div class="card-title">Skill Practice</div>
+      <input class="field" id="skillName" placeholder="Skill (e.g. Python, Guitrr, Design)">
+      <input class="field" id="skillMins" placeholder="Minutes practiced">
+      <button class="btn btn-outline" onclick="logSkill()">Log Practice</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Recent</div>
       ${STATE.knowledge.length===0
-        ? '<div class="empty">Nothing logged yet</div>'
-        : STATE.knowledge.slice(-4).reverse().map(e=>`
+        ? '<div class="empty">Nothing logged yet.<br>Start with a book or new word.</div>'
+        : STATE.knowledge.slice(-5).reverse().map(e=>`
           <div class="log-item" style="border-color:#34D399">
-            <div class="li-title" style="color:#34D399">${e.label}</div>
-            <div class="li-sub">${e.date}</div>
+            <div class="log-title" style="color:#34D399">${e.label}</div>
+            <div class="log-sub">${e.type || ''} · ${e.date}</div>
           </div>`).join('')}
     </div>`;
 }
@@ -1841,7 +1849,10 @@ function logReading() {
   if(!title) return;
   const pages = document.getElementById('readPages').value;
   STATE.knowledge.push({
-    label:`${title}${pages?` · ${pages}p`:''}`, date:today()});
+    type: 'Reading',
+    label:`${title}${pages?` · ${pages}p`:''}`,
+    date:today()
+  });
   save('knowledge');
   document.getElementById('readTitle').value='';
   document.getElementById('readPages').value='';
@@ -1852,14 +1863,34 @@ function logReading() {
 function logVocab() {
   const w = document.getElementById('vocabWord').value.trim();
   const m = document.getElementById('vocabMeaning').value.trim();
-  if(!w||!m) return;
-  STATE.knowledge.push({label:`${w}: ${m}`, date:today()});
+  if(!w || !m) return;
+  STATE.knowledge.push({
+    type: 'Vocab',
+    label:`${w}: ${m}`,
+    date:today()
+  });
   save('knowledge');
   document.getElementById('vocabWord').value='';
   document.getElementById('vocabMeaning').value='';
   updateStat('Knowledge',2);
   renderKnowledge();
 }
+
+function logSkill() {
+  const s = document, getElementById('skillName').value.trim();
+  const m = parseInt(document.getElementById('skillMins').value || '0');
+  if (!s || !m) return;
+  STATE.knowledge.push({
+    type: 'Skill',
+    label: `${s} · ${m}min practice`,
+    date: today()
+    });
+    save ('knowledge');
+    document.getElementById('skillName').value = '';
+    document.getElementById('skillNMins').value = '';
+    updateStat('Knowledge', 2);
+    renderKnowledge();
+  }
 
 // ── Feedback ──────────────────────────────────────────────────────
 
@@ -2206,3 +2237,4 @@ initOnboarding();
 </script>
 </body>
 </html>
+
