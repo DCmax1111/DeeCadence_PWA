@@ -469,7 +469,81 @@ body.light select.field option{background:#fff}
 <div id="deecadence" class="screen">
   <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
     <div class="topbar-title" style="color:var(--dc)">DeeCadence</div></div>
+  <!-- DeeCadence inner tabs -->
+  <div style="display:flex;background:var(--bg2);border-bottom:1px solid var(--border);
+              padding:0 16px;gap:4px;position:sticky;top:56px;z-index:30">
+    <button class="dc-tab active" id="dctab-today"
+            onclick="switchDcTab('today')" style="padding:12px 16px;border:none;
+            background:none;font-size:12px;font-weight:700;letter-spacing:.5px;
+            color:var(--dc);border-bottom:2px solid var(--dc);cursor:pointer">
+      TODAY
+    </button>
+    <button class="dc-tab" id="dctab-schedule"
+            onclick="switchDcTab('schedule')" style="padding:12px 16px;border:none;
+            background:none;font-size:12px;font-weight:700;letter-spacing:.5px;
+            color:var(--t3);border-bottom:2px solid transparent;cursor:pointer">
+      SCHEDULE
+    </button>
+    <button class="dc-tab" id="dctab-insights"
+            onclick="switchDcTab('insights')" style="padding:12px 16px;border:none;
+            background:none;font-size:12px;font-weight:700;letter-spacing:.5px;
+            color:var(--t3);border-bottom:2px solid transparent;cursor:pointer">
+      INSIGHTS
+    </button>
+  </div>
   <div class="pad" id="deecadenceContent"></div>
+</div>
+
+<!-- Energy check modal -->
+<div id="energyModal" style="display:none;position:fixed;inset:0;z-index:600;
+     background:rgba(0,0,0,.85);backdrop-filter:blur(6px);align-items:center;
+     justify-content:center;padding:24px;max-width:430px;margin:0 auto">
+  <div style="background:var(--card);border-radius:var(--rl);padding:28px;
+              border:1px solid var(--border);width:100%;max-width:360px;text-align:center">
+    <div style="font-size:28px;margin-bottom:12px">⚡</div>
+    <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
+                color:var(--t1);margin-bottom:8px">Session Complete</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:20px;line-height:1.5"
+         id="energyModalSub">How's your energy right now?</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="saveEnergyCheck('High')"
+        style="flex:1;padding:14px 8px;border:1.5px solid var(--ok);background:rgba(34,197,94,.1);
+               color:var(--ok);border-radius:var(--rs);font-weight:700;cursor:pointer;font-size:13px">
+        ⚡ High
+      </button>
+      <button onclick="saveEnergyCheck('Medium')"
+        style="flex:1;padding:14px 8px;border:1.5px solid var(--warn);background:rgba(245,158,11,.1);
+               color:var(--warn);border-radius:var(--rs);font-weight:700;cursor:pointer;font-size:13px">
+        ➖ Medium
+      </button>
+      <button onclick="saveEnergyCheck('Low')"
+        style="flex:1;padding:14px 8px;border:1.5px solid var(--err);background:rgba(248,113,113,.1);
+               color:var(--err);border-radius:var(--rs);font-weight:700;cursor:pointer;font-size:13px">
+        🔋 Low
+      </button>
+    </div>
+    <button onclick="saveEnergyCheck('Skip')" class="btn btn-ghost"
+            style="font-size:12px;margin-bottom:0">Skip</button>
+  </div>
+</div>
+
+<!-- Add scheduled event modal -->
+<div id="scheduleModal" style="display:none;position:fixed;inset:0;z-index:600;
+     background:rgba(0,0,0,.85);backdrop-filter:blur(6px);align-items:center;
+     justify-content:center;padding:24px;max-width:430px;margin:0 auto">
+  <div style="background:var(--card);border-radius:var(--rl);padding:24px;
+              border:1px solid var(--border);width:100%;max-width:360px">
+    <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;
+                color:var(--t1);margin-bottom:16px">Schedule a Task</div>
+    <input class="field" id="evTask" placeholder="Task name" maxlength="50">
+    <input class="field" id="evTime" placeholder="Time (e.g. 09:00)" maxlength="5"
+           pattern="[0-2][0-9]:[0-5][0-9]">
+    <input class="field" id="evDur" type="number" placeholder="Duration (minutes)" min="1">
+    <div class="row">
+      <button class="btn btn-ghost" onclick="closeScheduleModal()" style="margin-bottom:0">Cancel</button>
+      <button class="btn btn-accent" onclick="saveScheduledEvent()" style="margin-bottom:0">Save</button>
+    </div>
+  </div>
 </div>
 
 <!-- FEEDBACK -->
@@ -1480,41 +1554,140 @@ function quickDex(type, mins) {
 }
 
 // ── DeeCadence ────────────────────────────────────────────────────
-let _sessInt=null, _sessSec=0, _sessBlocks=null, _curBlock=1, _sessPhase='focus', _sessMax=0;
+// State — all session vars in one object (v2 pattern)
+const DC = {
+  timerInterval: null,
+  endTime:       null,
+  focusMode:     false,
+  breakMode:     false,
+  sessionCount:  0,
+  totalSessions: 4,
+  currentTask:   null,
+  focusDuration: 0,  // seconds per block
+  shortBreak:    0,  // seconds
+  longBreak:     0,  // seconds
+  selectedDuration:   25,
+  selectedDifficulty: 'Medium',
+  currentTab: 'today',
+};
 
-function _calcBlocks(m) {
-  if (m < 20) return { mode:'single', focus:m, short:0, long:0 };
-  return {
-    mode:'blocks',
-    focus: Math.max(5, Math.floor(m*0.75/4)),
-    short: Math.max(2, Math.floor(m*0.05)),
-    long:  Math.max(5, Math.floor(m*0.10)),
-  };
+// ── Tab switching ─────────────────────────────────────────────────
+function switchDcTab(tab) {
+  DC.currentTab = tab;
+  document.querySelectorAll('.dc-tab').forEach(b => {
+    const isActive = b.id === 'dctab-' + tab;
+    b.style.color       = isActive ? 'var(--dc)' : 'var(--t3)';
+    b.style.borderBottom = isActive ? '2px solid var(--dc)' : '2px solid transparent';
+  });
+  renderDeeCadence();
 }
 
-function previewBlocks(val) {
-  const mins = parseInt(val||'0');
-  const el   = document.getElementById('blockPreview');
-  if (!el) return;
-  if (mins < 4) { el.textContent = ''; return; }
-  const b = _calcBlocks(mins);
-  el.textContent = b.mode === 'single'
-    ? `${mins}min single focus block`
-    : `4 blocks × ${b.focus}min focus · ${b.short}min break · ${b.long}min long break`;
+// ── Score helpers ─────────────────────────────────────────────────
+function _dcDebt()  { return parseInt(localStorage.getItem('dc_debt')||'0'); }
+function _dcScore() {
+  const sessions = _dcAllSessions();
+  const todayMins = _dcTodaySessions().reduce((a,s) => a + (s.duration||0), 0);
+  const debt = _dcDebt();
+  const raw  = Math.max(0, (todayMins * 2) - Math.floor(debt / 3));
+  return Math.min(100, raw);
+}
+function _dcAllSessions()   { try { return JSON.parse(localStorage.getItem('dc_sessions')||'[]'); } catch { return []; } }
+function _dcTodaySessions() {
+  const t = new Date().toDateString();
+  return _dcAllSessions().filter(s => new Date(s.startTime).toDateString() === t);
+}
+function _dcSaveSession(sess) {
+  const all = _dcAllSessions();
+  all.push(sess);
+  localStorage.setItem('dc_sessions', JSON.stringify(all));
+  // Also save into STATE for tester export
+  S.sessions.push({ task: sess.taskName, mins: sess.duration, date: today() });
+  save('sessions');
 }
 
+// ── Render dispatcher ─────────────────────────────────────────────
 function renderDeeCadence() {
-  const debt  = parseInt(localStorage.getItem('dc_debt')||'0');
-  const score = Math.max(0, 100 - Math.min(100, Math.floor(debt/6)));
+  switch(DC.currentTab) {
+    case 'today':    _renderDcToday();    break;
+    case 'schedule': _renderDcSchedule(); break;
+    case 'insights': _renderDcInsights(); break;
+  }
+}
+
+// ── TODAY tab ─────────────────────────────────────────────────────
+function _renderDcToday() {
+  const debt  = _dcDebt();
+  const score = _dcScore();
   const dStr  = debt >= 60 ? `${(debt/60).toFixed(1)}h` : `${debt}m`;
   const sCol  = score >= 80 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--err)';
+
+  // Build breakdown preview string
+  const total        = DC.selectedDuration;
+  const focusSec     = Math.floor(total * 0.85 * 60);
+  const sessMin      = Math.floor(focusSec / 4 / 60);
+  const breakSec     = Math.floor(total * 0.15 * 60);
+  const shortBrMin   = Math.max(1, Math.floor(breakSec * 0.4 / 3 / 60));
+  const longBrMin    = Math.max(1, Math.floor(breakSec * 0.6 / 60));
+  const breakdown    = `4 sessions × ${sessMin}m | Breaks: ${shortBrMin}m + ${longBrMin}m`;
+
+  const todaySess  = _dcTodaySessions();
+  const activeHTML = DC.focusMode || DC.breakMode ? `
+    <div class="card" id="sessActive">
+      <div id="sessTaskLabel" style="font-size:14px;font-weight:700;
+           color:var(--dc);text-align:center;margin-bottom:8px"></div>
+      <div class="block-dots" id="blockDots"></div>
+      <div class="timer-num" id="sessTimer" style="color:var(--dc)">00:00</div>
+      <div class="timer-phase" id="sessPhase">FOCUS</div>
+      <div class="progress-bar"><div class="progress-fill" id="sessProgress" style="width:0%"></div></div>
+      <button class="btn btn-red" onclick="endSession()" style="margin-top:8px">End Session</button>
+    </div>` : '';
+
   document.getElementById('deecadenceContent').innerHTML = `
     <div class="sum-row sum-row-2">
-      <div class="sum-cell"><div class="sum-label">Attention</div>
-        <div class="sum-val" style="color:${sCol}">${score}</div></div>
-      <div class="sum-cell"><div class="sum-label">Focus Debt</div>
-        <div class="sum-val" style="color:var(--err)">${debt>0?dStr:'Clear'}</div></div>
+      <div class="sum-cell">
+        <div class="sum-label">Attention Score</div>
+        <div class="sum-val" style="color:${sCol}">${score}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Focus Debt</div>
+        <div class="sum-val" style="color:var(--err)">${debt>0?dStr:'Clear'}</div>
+      </div>
     </div>
+
+    ${activeHTML}
+
+    <div class="card">
+      <div class="card-title">Start Focus Session</div>
+      <input class="field" id="sessTask" placeholder="What are you working on?" maxlength="100">
+      <!-- Duration selector -->
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        ${[15,25,45,90].map(d => `
+          <button onclick="selectDcDur(${d})" id="dcdur-${d}"
+            style="flex:1;padding:10px 4px;border-radius:var(--rs);font-size:12px;font-weight:700;
+                   border:1.5px solid ${DC.selectedDuration===d?'var(--dc)':'var(--border)'};
+                   background:${DC.selectedDuration===d?'rgba(56,189,248,.1)':'transparent'};
+                   color:${DC.selectedDuration===d?'var(--dc)':'var(--t2)'};cursor:pointer">
+            ${d}m
+          </button>`).join('')}
+      </div>
+      <!-- Difficulty selector -->
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        ${['Easy','Medium','Hard'].map(d => `
+          <button onclick="selectDcDiff('${d}')" id="dcdiff-${d}"
+            style="flex:1;padding:10px 4px;border-radius:var(--rs);font-size:12px;font-weight:700;
+                   border:1.5px solid ${DC.selectedDifficulty===d?'var(--dc)':'var(--border)'};
+                   background:${DC.selectedDifficulty===d?'rgba(56,189,248,.1)':'transparent'};
+                   color:${DC.selectedDifficulty===d?'var(--dc)':'var(--t2)'};cursor:pointer">
+            ${d}
+          </button>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--dc);margin-bottom:10px">${breakdown}</div>
+      <button class="btn btn-accent" onclick="startSession()"
+              ${DC.focusMode||DC.breakMode?'disabled style="opacity:.5"':''}>
+        ${DC.focusMode||DC.breakMode?'Session in progress':'Begin Session'}
+      </button>
+    </div>
+
     <div class="card">
       <div class="card-title">Log Distraction</div>
       <select class="field" id="distractType">
@@ -1524,118 +1697,343 @@ function renderDeeCadence() {
       <input class="field" id="distractHrs" type="number" step="0.25" placeholder="Hours lost (e.g. 1.5)">
       <button class="btn btn-red" onclick="logDistraction()">Log Distraction</button>
     </div>
+
     <div class="card">
-      <div class="card-title">Start Focus Session</div>
-      <input class="field" id="sessTask" placeholder="What are you working on?">
-      <input class="field" id="sessMins" type="number"
-             placeholder="Duration (minutes, min 4)" oninput="previewBlocks(this.value)">
-      <div id="blockPreview" style="font-size:12px;color:var(--dc);
-           min-height:18px;margin-bottom:10px"></div>
-      <button class="btn btn-accent" onclick="startSession()">Begin Session</button>
-    </div>
-    <div id="sessActive" style="display:none" class="card">
-      <div class="card-title">Active Session</div>
-      <div id="sessTaskLabel" style="font-size:14px;font-weight:700;
-           color:var(--dc);text-align:center;margin-bottom:8px"></div>
-      <div class="block-dots" id="blockDots"></div>
-      <div class="timer-num" id="sessTimer" style="color:var(--dc)">00:00</div>
-      <div class="timer-phase" id="sessPhase">FOCUS</div>
-      <div class="progress-bar"><div class="progress-fill" id="sessProgress" style="width:0%"></div></div>
-      <button class="btn btn-red" onclick="endSession()">End Session</button>
-    </div>
-    <div class="card">
-      <div class="card-title">Recent Sessions</div>
-      ${S.sessions.length === 0
+      <div class="card-title">Today's Sessions</div>
+      ${todaySess.length === 0
         ? '<div class="empty">No sessions yet.<br>Start your first one above.</div>'
-        : S.sessions.slice(-4).reverse().map(s => `
-          <div class="log-item" style="border-color:var(--dc)">
-            <div class="log-title" style="color:var(--dc)">${s.task}</div>
-            <div class="log-sub">${s.mins}min · ${s.date}</div>
-          </div>`).join('')}
+        : todaySess.slice().reverse().map(s => {
+            const emoji = s.energy==='High' ? '⚡' : s.energy==='Medium' ? '➖' : '🔋';
+            const time  = new Date(s.startTime).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+            return `<div class="log-item" style="border-color:var(--dc)">
+              <div class="log-title" style="color:var(--dc)">${s.taskName||s.task||'Focus'}</div>
+              <div class="log-sub">${time} · ${s.duration||0}min · ${emoji} ${s.energy||''} · ${s.difficulty||''}</div>
+            </div>`;
+          }).join('')}
     </div>`;
+
+  // If session running, restore UI state
+  if (DC.focusMode || DC.breakMode) {
+    _updateDots(); _updatePhase();
+    const tl = document.getElementById('sessTaskLabel');
+    if (tl && DC.currentTask) tl.textContent = DC.currentTask.name;
+    // Resume display update
+    _startDisplayLoop();
+  }
 }
 
-function logDistraction() {
-  const hrs = parseFloat(document.getElementById('distractHrs').value||'0');
-  if (!hrs || hrs <= 0) return;
-  const mins = Math.round(hrs * 60);
-  const cur  = parseInt(localStorage.getItem('dc_debt')||'0');
-  localStorage.setItem('dc_debt', String(cur + mins));
-  document.getElementById('distractHrs').value = '';
+function selectDcDur(d) {
+  DC.selectedDuration = d;
+  renderDeeCadence();
+}
+
+function selectDcDiff(d) {
+  DC.selectedDifficulty = d;
+  renderDeeCadence();
+}
+
+// ── Session logic (v2 accuracy pattern) ──────────────────────────
+function startSession() {
+  const taskEl = document.getElementById('sessTask');
+  if (!taskEl) return;
+  const task = (taskEl.value.trim() || 'Focus Work').substring(0, 100);
+  const total = DC.selectedDuration;
+
+  // Calculate using 85/15 ratio (v2 formula)
+  const focusSec   = Math.floor(total * 0.85 * 60);
+  const breakSec   = Math.floor(total * 0.15 * 60);
+  DC.focusDuration = Math.floor(focusSec / 4);
+  DC.shortBreak    = Math.max(60, Math.floor(breakSec * 0.4 / 3));
+  DC.longBreak     = Math.max(60, Math.floor(breakSec * 0.6));
+
+  DC.focusMode    = true;
+  DC.breakMode    = false;
+  DC.sessionCount = 1;
+  DC.currentTask  = { name: task, difficulty: DC.selectedDifficulty, startTime: new Date() };
+  DC.endTime      = new Date(Date.now() + DC.focusDuration * 1000);
+
+  updateStat('Mind', 3);
+  renderDeeCadence(); // rebuild UI with active session card
+  _startDisplayLoop();
+}
+
+function _startDisplayLoop() {
+  if (DC.timerInterval) clearInterval(DC.timerInterval);
+  DC.timerInterval = setInterval(() => {
+    const remaining = Math.max(0, Math.floor((DC.endTime - Date.now()) / 1000));
+    _updateTimerDisplay(remaining);
+    if (remaining <= 0) {
+      clearInterval(DC.timerInterval);
+      DC.timerInterval = null;
+      _onPhaseComplete();
+    }
+  }, 500); // 500ms for smoother display
+}
+
+function _updateTimerDisplay(seconds) {
+  const m   = Math.floor(seconds/60);
+  const s   = seconds % 60;
+  const tEl = document.getElementById('sessTimer');
+  const pEl = document.getElementById('sessProgress');
+  if (tEl) tEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  // Progress within current phase
+  const phaseDur = DC.focusMode
+    ? DC.focusDuration
+    : (DC.sessionCount % 4 === 0 ? DC.longBreak : DC.shortBreak);
+  if (pEl && phaseDur > 0) {
+    const elapsed = phaseDur - seconds;
+    pEl.style.width = `${Math.min(100, (elapsed/phaseDur)*100)}%`;
+  }
+}
+
+function _onPhaseComplete() {
+  if (DC.focusMode) {
+    // Show energy check modal
+    DC.focusMode = false;
+    const sub = document.getElementById('energyModalSub');
+    if (sub) sub.textContent = `Session ${DC.sessionCount} of ${DC.totalSessions} complete. How's your energy?`;
+    const modal = document.getElementById('energyModal');
+    if (modal) modal.style.display = 'flex';
+  } else if (DC.breakMode) {
+    DC.breakMode = false;
+    _autoNextSession(); // KEY: auto-continue, no prompt
+  }
+}
+
+function saveEnergyCheck(energy) {
+  // Save completed session
+  const sess = {
+    taskName:   DC.currentTask?.name || 'Focus',
+    difficulty: DC.currentTask?.difficulty || 'Medium',
+    energy,
+    startTime:  DC.currentTask?.startTime?.toISOString() || new Date().toISOString(),
+    endTime:    new Date().toISOString(),
+    duration:   Math.round((new Date() - (DC.currentTask?.startTime || new Date())) / 60000),
+  };
+  _dcSaveSession(sess);
+
+  // Update debt
+  const debt = _dcDebt();
+  localStorage.setItem('dc_debt', String(Math.max(0, debt - sess.duration)));
+
+  // Close modal
+  const modal = document.getElementById('energyModal');
+  if (modal) modal.style.display = 'none';
+
+  if (DC.sessionCount >= DC.totalSessions) {
+    // All 4 done — long break then finish
+    _startBreak(true);
+  } else {
+    _startBreak(false);
+  }
+}
+
+function _startBreak(isLong) {
+  DC.breakMode = true;
+  DC.focusMode = false;
+  const dur    = isLong ? DC.longBreak : DC.shortBreak;
+  DC.endTime   = new Date(Date.now() + dur * 1000);
+  _updatePhase();
+  _startDisplayLoop();
+}
+
+function _autoNextSession() {
+  // KEY v2 fix: auto-continue same task, no re-prompt
+  if (DC.sessionCount >= DC.totalSessions) {
+    endSession(); return;
+  }
+  DC.sessionCount++;
+  DC.focusMode = true;
+  DC.breakMode = false;
+  DC.endTime   = new Date(Date.now() + DC.focusDuration * 1000);
+  DC.currentTask.startTime = new Date();
+  _updateDots(); _updatePhase();
+  _startDisplayLoop();
+}
+
+function endSession() {
+  if (DC.timerInterval) clearInterval(DC.timerInterval);
+  DC.timerInterval = null;
+  DC.focusMode     = false;
+  DC.breakMode     = false;
+  DC.sessionCount  = 0;
+  DC.currentTask   = null;
+  DC.endTime       = null;
+  const modal = document.getElementById('energyModal');
+  if (modal) modal.style.display = 'none';
   renderDeeCadence();
 }
 
 function _updateDots() {
   const el = document.getElementById('blockDots');
   if (!el) return;
-  const total = _sessBlocks?.mode === 'single' ? 1 : 4;
-  el.innerHTML = Array.from({length:total}, (_,i) =>
-    `<div class="block-dot ${i<_curBlock-1?'done':i===_curBlock-1?'active':''}"></div>`).join('');
+  el.innerHTML = Array.from({length:4}, (_,i) =>
+    `<div class="block-dot ${i<DC.sessionCount-1?'done':i===DC.sessionCount-1?'active':''}"></div>`).join('');
 }
 
 function _updatePhase() {
   const el    = document.getElementById('sessPhase');
   const timer = document.getElementById('sessTimer');
   if (!el) return;
-  const cfg = {
-    focus:      { label:'FOCUS',        color:'var(--dc)'   },
-    short:      { label:'SHORT BREAK',  color:'var(--ok)'   },
-    long:       { label:'LONG BREAK',   color:'var(--warn)' },
-  }[_sessPhase] || { label:'FOCUS', color:'var(--dc)' };
+  const phase = DC.focusMode ? 'focus' : DC.breakMode ? 'break' : 'idle';
+  const cfg   = {
+    focus: { label:`FOCUS · ${DC.sessionCount}/${DC.totalSessions}`, color:'var(--dc)'   },
+    break: { label:'BREAK',                                            color:'var(--ok)'  },
+    idle:  { label:'READY',                                            color:'var(--t3)'  },
+  }[phase];
   el.textContent = cfg.label;
   if (timer) timer.style.color = cfg.color;
 }
 
-function startSession() {
-  const task = document.getElementById('sessTask').value.trim();
-  const mins = parseInt(document.getElementById('sessMins').value||'0');
-  if (!task) { alert('Enter what you are working on'); return; }
-  if (mins < 4) { alert('Minimum session is 4 minutes'); return; }
-  _sessBlocks = _calcBlocks(mins);
-  _curBlock   = 1;
-  _sessPhase  = 'focus';
-  _sessSec    = _sessBlocks.focus * 60;
-  _sessMax    = _sessSec;
-  document.getElementById('sessActive').style.display = 'block';
-  document.getElementById('sessTaskLabel').textContent = task;
-  _updateDots(); _updatePhase();
-  if (_sessInt) clearInterval(_sessInt);
-  _sessInt = setInterval(_sessTick, 1000);
-  S.sessions.push({ task, mins, date:today() });
-  save('sessions');
-  const debt = parseInt(localStorage.getItem('dc_debt')||'0');
-  localStorage.setItem('dc_debt', String(Math.max(0, debt - Math.floor(mins*0.5))));
-  updateStat('Mind', 3);
-}
-
-function _sessTick() {
-  _sessSec--;
-  const m = Math.floor(_sessSec/60), s = _sessSec%60;
-  const tEl = document.getElementById('sessTimer');
-  const pEl = document.getElementById('sessProgress');
-  if (tEl) tEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  if (pEl) pEl.style.width = `${Math.min(100,((_sessMax-_sessSec)/_sessMax)*100)}%`;
-  if (_sessSec > 0) return;
-  // Phase complete
-  if (_sessBlocks.mode === 'single') { endSession(); return; }
-  if (_sessPhase === 'focus') {
-    if (_curBlock >= 4) { endSession(); return; }
-    _sessPhase = _curBlock === 3 ? 'long' : 'short';
-    _sessSec   = (_sessPhase==='long' ? _sessBlocks.long : _sessBlocks.short) * 60;
-    _sessMax   = _sessSec; _updatePhase();
-  } else {
-    _curBlock++; _sessPhase = 'focus';
-    _sessSec = _sessBlocks.focus * 60; _sessMax = _sessSec;
-    _updateDots(); _updatePhase();
-  }
-}
-
-function endSession() {
-  if (_sessInt) clearInterval(_sessInt);
-  _sessInt = null;
-  const el = document.getElementById('sessActive');
-  if (el) el.style.display = 'none';
+function logDistraction() {
+  const hrs = parseFloat(document.getElementById('distractHrs')?.value||'0');
+  if (!hrs || hrs <= 0) return;
+  const mins = Math.round(hrs * 60);
+  const cur  = _dcDebt();
+  localStorage.setItem('dc_debt', String(cur + mins));
+  const el = document.getElementById('distractHrs');
+  if (el) el.value = '';
   renderDeeCadence();
+}
+
+// ── SCHEDULE tab ──────────────────────────────────────────────────
+function _renderDcSchedule() {
+  const events = JSON.parse(localStorage.getItem('dc_events')||'[]');
+  document.getElementById('deecadenceContent').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;color:var(--t2)">
+        ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}
+      </div>
+      <button onclick="openScheduleModal()"
+        style="background:var(--dc);color:#000;border:none;border-radius:var(--rs);
+               padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer">+ Add</button>
+    </div>
+    ${events.length === 0
+      ? '<div class="empty">No scheduled tasks.<br>Tap + to plan your day.</div>'
+      : events.map(e => `
+        <div onclick="toggleEventDone(${e.id})"
+          style="background:var(--card);border-radius:var(--rs);padding:14px;margin-bottom:8px;
+                 border:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;
+                 opacity:${e.done?'.5':'1'}">
+          <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${e.done?'var(--ok)':'var(--border)'};
+                      background:${e.done?'var(--ok)':'transparent'};flex-shrink:0;display:flex;align-items:center;
+                      justify-content:center;color:#000;font-size:12px;font-weight:900">
+            ${e.done?'✓':''}
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:${e.done?'var(--t3)':'var(--t1)'}
+                        ;text-decoration:${e.done?'line-through':'none'}">${e.task}</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:2px">${e.time} · ${e.duration}min</div>
+          </div>
+        </div>`).join('')}`;
+}
+
+function openScheduleModal() {
+  const m = document.getElementById('scheduleModal');
+  if (m) m.style.display = 'flex';
+}
+
+function closeScheduleModal() {
+  const m = document.getElementById('scheduleModal');
+  if (m) m.style.display = 'none';
+}
+
+function saveScheduledEvent() {
+  const task = document.getElementById('evTask').value.trim();
+  const time = document.getElementById('evTime').value.trim();
+  const dur  = document.getElementById('evDur').value.trim();
+  if (!task || !time || !dur) { alert('Please fill all fields'); return; }
+  if (!/^[0-2]\d:[0-5]\d$/.test(time)) { alert('Use HH:MM format, e.g. 09:00'); return; }
+  const events = JSON.parse(localStorage.getItem('dc_events')||'[]');
+  events.push({ id: Date.now(), task: task.substring(0,50), time, duration: parseInt(dur)||30, done: false });
+  localStorage.setItem('dc_events', JSON.stringify(events));
+  document.getElementById('evTask').value = '';
+  document.getElementById('evTime').value = '';
+  document.getElementById('evDur').value  = '';
+  closeScheduleModal();
+  _renderDcSchedule();
+}
+
+function toggleEventDone(id) {
+  const events = JSON.parse(localStorage.getItem('dc_events')||'[]');
+  const ev = events.find(e => e.id === id);
+  if (ev) { ev.done = !ev.done; localStorage.setItem('dc_events', JSON.stringify(events)); }
+  _renderDcSchedule();
+}
+
+// ── INSIGHTS tab ──────────────────────────────────────────────────
+function _renderDcInsights() {
+  const sessions   = _dcAllSessions();
+  const total      = sessions.length;
+  const totalMins  = sessions.reduce((a,s) => a+(s.duration||0), 0);
+  const avgDur     = total > 0 ? Math.round(totalMins/total) : 0;
+  const debt       = _dcDebt();
+  const score      = _dcScore();
+  const sCol       = score >= 80 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--err)';
+
+  // 7-day bar chart data
+  const days = [];
+  for (let i=6; i>=0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toDateString();
+    const mins = sessions.filter(s => new Date(s.startTime).toDateString()===ds)
+                         .reduce((a,s) => a+(s.duration||0), 0);
+    days.push({ label: d.toLocaleDateString('en-GB',{weekday:'short'}), mins });
+  }
+  const maxMins = Math.max(...days.map(d=>d.mins), 30);
+
+  document.getElementById('deecadenceContent').innerHTML = `
+    <div class="sum-row sum-row-3">
+      <div class="sum-cell">
+        <div class="sum-label">Sessions</div>
+        <div class="sum-val" style="color:var(--dc)">${total}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Hours</div>
+        <div class="sum-val" style="color:var(--dc)">${(totalMins/60).toFixed(1)}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Avg (min)</div>
+        <div class="sum-val" style="color:var(--dc)">${avgDur}</div>
+      </div>
+    </div>
+    <div class="sum-row sum-row-2">
+      <div class="sum-cell">
+        <div class="sum-label">Attention</div>
+        <div class="sum-val" style="color:${sCol}">${score}</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-label">Focus Debt</div>
+        <div class="sum-val" style="color:var(--err)">
+          ${debt>=60?`${(debt/60).toFixed(1)}h`:`${debt}m`}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Focus — Last 7 Days</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:12px">
+        ${days.map(d => {
+          const h = maxMins > 0 ? Math.max(4, (d.mins/maxMins)*100) : 4;
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="width:100%;border-radius:4px 4px 0 0;background:var(--dc);opacity:${d.mins>0?.9:.2};
+                        height:${h}%;transition:.4s"></div>
+            <div style="font-size:10px;color:var(--t3)">${d.label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ${sessions.length > 0 ? `
+    <div class="card">
+      <div class="card-title">Recent Sessions</div>
+      ${sessions.slice(-5).reverse().map(s => {
+        const emoji = s.energy==='High'?'⚡':s.energy==='Medium'?'➖':'🔋';
+        const time  = new Date(s.startTime).toLocaleDateString('en-GB',{weekday:'short',day:'numeric'});
+        return `<div class="log-item" style="border-color:var(--dc)">
+          <div class="log-title" style="color:var(--dc)">${s.taskName||'Focus'}</div>
+          <div class="log-sub">${time} · ${s.duration}min · ${emoji} ${s.energy||''}</div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}`;
 }
 
 // ── Feedback ──────────────────────────────────────────────────────
