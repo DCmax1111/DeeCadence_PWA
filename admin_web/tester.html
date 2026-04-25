@@ -643,7 +643,7 @@ const S = {
 };
 
 const ALL_KEYS = ['stats','financial','spirit','mind','energy','knowledge','dexterity','sessions'];
-
+ 
 function save(key) {
   LS_SET(key, S[key]);
   _syncKey(key).catch(() => {}); // background, non-blocking
