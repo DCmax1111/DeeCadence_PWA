@@ -2,687 +2,1698 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Dee_Cistem — Beta</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0C0D14">
+<title>Dee_Cistem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Sora:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<!-- FIX 1: Supabase JS client — was never imported -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* ── Variables ─────────────────────────────────────────────────── */
 :root{
-  --premium-heading:'Sora',sans-serif;
-  --bg:#0C0D14;--bg-light:#F5F5F5;--bg2:#11131D;--bg2-light:#F2F2F2;
-  --surface:#161B27;--surface-light:#FFFFFF;--card:#1C1E2C;--card-light:#FFFFFF;
-  --card2:#1F2535;--card2-light:#F8FAFC;--border:#2A2D42;--border-light:#D9D9D9;
-  --accent:#4F8EF7;--accent-light:#2563EB;
-  --fin:#2DD4A0;--spirit:#F5B942;--mind:#9B7FFA;
-  --energy:#5BA4F5;--know:#2DD4A0;--dex:#F472B6;--dc:#38BDF8;
+  --bg:#0C0D14;--bg2:#11131D;--surface:#161B27;
+  --card:#1C1E2C;--card2:#222538;--border:#2A2D42;
+  --accent:#4F8EF7;--fin:#2DD4A0;--spirit:#F5B942;
+  --mind:#9B7FFA;--energy:#5BA4F5;--know:#2DD4A0;
+  --dex:#F472B6;--dc:#38BDF8;
   --ok:#22C55E;--warn:#F59E0B;--err:#F87171;--gold:#FBBF24;
-  --t1:#F0F2FF;--t1-light:#1a1a1a;--t2:#9BA3C4;--t2-light:#666;
-  --t3:#4A5070;--t3-light:#555555;--t4:#252B3B;
+  --t1:#F0F2FF;--t2:#9BA3C4;--t3:#4A5070;--t4:#252B3B;
   --r:14px;--rs:8px;--rl:20px;
-  --shadow:0 4px 24px rgba(0,0,0,.4);--shadow-accent:0 4px 20px rgba(79,142,247,.25);
 }
+/* ── Reset ──────────────────────────────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--t1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;max-width:430px;margin:0 auto;padding-bottom:100px;transition:background 0.3s,color 0.3s}
-@media(min-width:768px){body{max-width:800px}}
-.header{background:linear-gradient(180deg,var(--card) 0%,var(--bg) 100%);padding:20px 20px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;backdrop-filter:blur(10px)}
-.header h1{font-size:20px;font-weight:800;color:var(--accent);letter-spacing:2px}
-.header .sub{font-size:11px;color:var(--t2);margin-top:2px}
-.topnav{background:rgba(17,18,28,0.95);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;backdrop-filter:blur(10px)}
-.back-btn{color:var(--t2);font-size:15px;cursor:pointer;padding:6px 12px;border-radius:8px;background:var(--card);border:1px solid var(--border);font-weight:600;transition:all 0.1s}
-.back-btn:active{background:var(--border);transform:scale(0.97)}
-.topnav h2{font-size:17px;font-weight:700}
-.screen{display:none}.screen.active{display:block}
-.greeting{padding:24px 20px 4px;font-size:24px;font-weight:600;color:#2DD4A0;font-family:'Sora',sans-serif;text-shadow:0 2px 8px rgba(45,212,160,0.3);letter-spacing:-0.5px}
-.date{padding:4px 20px 16px;font-size:12px;color:#565E82;letter-spacing:0.5px}
-.theme-toggle{display:flex;gap:8px;margin:0 16px 16px;justify-content:flex-end}
-.theme-btn{padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:11px;cursor:pointer;transition:.15s;font-weight:600}
-.theme-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.username-toggle{display:inline-block;width:32px;height:32px;background:var(--accent);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:11px;font-weight:700;transition:.15s;margin-left:8px}
-.dash-card{background:linear-gradient(135deg,var(--card),#222538);border-radius:16px;padding:18px;margin:0 16px 16px;cursor:pointer;border:1px solid var(--border);transition:transform 0.15s,border-color 0.15s;box-shadow:0 4px 20px rgba(0,0,0,0.3)}
-.dash-card:active{transform:scale(0.98);border-color:var(--accent)}
-.dash-card .dc-label{font-size:10px;letter-spacing:2px;color:var(--t2);margin-bottom:6px;text-transform:uppercase;font-weight:600}
-.dash-card .dc-rank{font-size:22px;font-weight:800;color:var(--accent)}
-.nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
-.module{background:var(--card);border-radius:16px;padding:18px 14px;cursor:pointer;transition:all 0.15s;border:1px solid var(--border);border-left:4px solid;box-shadow:0 2px 12px rgba(0,0,0,0.2)}
-.module:active{transform:scale(0.97)}
-.module .name{font-size:14px;font-weight:700;margin-bottom:4px}
-.module .desc{font-size:11px;color:var(--t2);line-height:1.4}
-.module .stat{font-size:11px;margin-top:10px;font-weight:600;opacity:0.9}
-.stat-bar{height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
-.stat-fill{height:100%;border-radius:2px;transition:width 0.6s ease}
-.content{padding:16px}
-.card{background:var(--card);border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid var(--border)}
-.card-title{font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;font-weight:700;margin-bottom:14px;font-family:'Syne',sans-serif}
-.card h3{font-size:10px;letter-spacing:1.5px;color:var(--t3);margin-bottom:14px;text-transform:uppercase;font-weight:600}
-.field{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--t1);font-size:15px;margin-bottom:10px;outline:none;transition:border-color 0.2s}
-.field:focus{border-color:var(--accent);background:var(--bg)}
-.btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;transition:all 0.15s;letter-spacing:0.3px}
-.btn:active{transform:scale(0.98);opacity:0.9}
-.btn-primary{background:linear-gradient(135deg,#4F8EF7,#3B6FD4);color:white;box-shadow:0 4px 12px rgba(79,142,247,0.3)}
-.btn-success{background:linear-gradient(135deg,#34D399,#059669);color:#0C0D14;box-shadow:0 4px 12px rgba(52,211,153,0.3)}
-.btn-danger{background:linear-gradient(135deg,#F87171,#DC2626);color:white;box-shadow:0 4px 12px rgba(248,113,113,0.3)}
-.btn-ghost{background:transparent;color:var(--t2);font-size:13px;box-shadow:none}
-/* FIX 8: Added missing classes */
-.btn-outline{background:transparent;color:var(--accent);border:1px solid var(--accent);box-shadow:none}
-.btn-secondary{background:var(--card2);color:var(--t2);border:1px solid var(--border);box-shadow:none}
-.row{display:flex;gap:8px}.row .btn{flex:1;margin-bottom:0}
-.tabs{display:flex;background:var(--bg2);border-radius:var(--rs);overflow:hidden;border:1px solid var(--border);margin-bottom:12px}
-.tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;transition:.15s;background:transparent}
-.tab.active{background:var(--card);color:var(--t1)}
-.sum-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
-.sum-cell{background:var(--card);border-radius:var(--rs);padding:12px;text-align:center;border:1px solid var(--border)}
-.sum-label{font-size:10px;color:var(--t3);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
-.sum-val{font-size:17px;font-weight:800;font-family:'Montserrat',sans-serif;letter-spacing:-0.5px}
-.log-item{background:var(--card);border-radius:10px;padding:14px;margin-bottom:8px;border-left:3px solid;transition:transform 0.1s}
-.log-item:active{transform:scale(0.99)}
-.log-item .li-title{font-size:13px;font-weight:600;margin-bottom:3px}
-.log-item .li-sub{font-size:11px;color:var(--t2)}
-.empty{text-align:center;color:var(--t3);font-size:13px;padding:32px 16px;line-height:1.6}
-.feedback-banner{background:linear-gradient(135deg,#FBBF2415,#FBBF2405);border:1px solid #FBBF2430;border-radius:12px;padding:14px;margin-bottom:14px;font-size:13px;color:#FBBF24;line-height:1.6}
-select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--t1);font-size:15px;margin-bottom:10px;outline:none;-webkit-appearance:none}
-select:focus{border-color:var(--accent)}
-textarea.field{resize:none;line-height:1.5}
-.chart-wrap{position:relative;height:250px;margin-bottom:16px}
-.block-dots{display:flex;justify-content:center;gap:8px;margin:12px 0}
-.block-dot{width:10px;height:10px;border-radius:50%;background:#2A2D42;transition:0.3s}
-.block-dot.active{background:#38BDF8}.block-dot.done{background:#34D399}
-.progress-bar{height:4px;background:#2A2D42;border-radius:2px;overflow:hidden;margin:8px 0 16px}
-.progress-fill{height:100%;border-radius:2px;transition:width 1s linear;background:#38BDF8}
-.timer-display{text-align:center;padding:24px 0}
-.timer-num{font-size:48px;font-weight:700;letter-spacing:2px;transition:color 0.3s}
-.timer-phase{font-size:12px;letter-spacing:2px;color:#565E82;margin-top:4px;text-transform:uppercase;font-weight:700}
-.btn-dex-quick{background:var(--card)!important;border:2px solid #F472B6!important;color:#F472B6!important;margin-bottom:0;font-weight:600}
-#fabBtn{position:fixed;bottom:80px;right:20px;z-index:100;background:linear-gradient(135deg,#FBBF24,#D97706);color:#000;font-weight:800;font-size:12px;padding:12px 16px;border-radius:40px;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(245,185,66,.4);font-family:'Syne',sans-serif;letter-spacing:.5px;transition:.2s;display:none}
-#fabBtn:active{transform:scale(.95)}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:#1C1E2C;border-top:1px solid #2A2D42;display:flex;padding:8px 0;backdrop-filter:blur(10px)}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px;border:none;background:none;color:#9BA3C4;cursor:pointer;transition:.15s;border-radius:8px;margin:0 4px}
-.nav-btn.active{background:#4F8EF7;color:#fff}
-.nav-icon{font-size:18px;margin-bottom:2px}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;
+  font-size:15px;max-width:430px;margin:0 auto;
+  display:flex;flex-direction:column;transition:background .3s,color .3s}
+
+/* ── App shell ──────────────────────────────────────────────────── */
+#app{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+
+/* ── Screens ────────────────────────────────────────────────────── */
+.screen{display:none;min-height:100%}
+.screen.active{display:block;animation:fadeUp .18s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── Top bars ───────────────────────────────────────────────────── */
+.main-header{
+  background:rgba(12,13,20,.95);backdrop-filter:blur(16px);
+  padding:18px 20px 14px;display:flex;justify-content:space-between;
+  align-items:center;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:40;
+}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
+  color:var(--accent);letter-spacing:2px}
+.topbar{
+  background:rgba(12,13,20,.95);backdrop-filter:blur(16px);
+  padding:14px 16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:40;
+}
+.back-btn{background:var(--card);border:1px solid var(--border);color:var(--t2);
+  font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;
+  padding:6px 12px;border-radius:var(--rs);cursor:pointer;transition:.12s;flex-shrink:0}
+.back-btn:active{background:var(--border);transform:scale(.97)}
+.topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700}
+
+/* ── Bottom nav ─────────────────────────────────────────────────── */
+.bottom-nav{
+  background:var(--card);border-top:1px solid var(--border);
+  display:flex;padding:6px 0 8px;flex-shrink:0;
+}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:8px 4px;border:none;background:none;color:var(--t3);
+  cursor:pointer;transition:.15s;border-radius:var(--rs);margin:0 4px;
+  font-family:'DM Sans',sans-serif}
+.nav-btn.active{color:var(--accent)}
+.nav-btn:active{transform:scale(.95)}
+.nav-icon{font-size:20px;margin-bottom:2px}
 .nav-label{font-size:10px;font-weight:600;letter-spacing:.5px}
-#onboarding{position:fixed;inset:0;z-index:200;background:var(--bg);display:none;flex-direction:column;justify-content:flex-start;align-items:center;padding:24px;overflow-y:auto}
-.ob-step{display:none;flex-direction:column;width:100%;max-width:430px;padding:20px 28px 32px;margin-top:60px;animation:fadeIn .2s ease}
-.ob-step.active{display:flex}
-.ob-num{font-size:11px;color:#565E82;letter-spacing:2px;margin-bottom:32px;font-weight:700}
-.ob-head{font-family:var(--premium-heading),sans-serif;font-size:34px;font-weight:800;line-height:1.2;margin-bottom:16px;color:var(--t1)}
-.ob-sub{font-size:15px;color:var(--t1);line-height:1.6;margin-bottom:auto;font-weight:500}
-.ob-dots{display:flex;gap:6px;margin-bottom:24px}
-.ob-dot{height:4px;border-radius:2px;background:#2A2D42;transition:.3s}
-.ob-dot.active{background:#4F8EF7;width:24px}.ob-dot.done{background:#34D399}
-#tutorial{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.85);backdrop-filter:blur(4px);display:none;flex-direction:column;padding:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.tut-card{background:#1C1E2C;border-radius:20px;padding:28px;border:1px solid #2A2D42;width:100%;max-width:360px;margin:50px auto}
-.tut-icon{font-size:32px;margin-bottom:12px}
-.tut-head{font-family:var(--premium-heading),sans-serif;font-size:20px;font-weight:800;margin-bottom:8px;color:#F0F2FF}
-.tut-body{font-size:14px;color:#9BA3C4;line-height:1.6;margin-bottom:20px}
-.tut-steps{margin-bottom:20px}
-.tut-step{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;padding:10px;background:var(--card);border-radius:10px}
-.tut-step-num{background:#4F8EF7;color:#fff;font-size:11px;font-weight:800;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.tut-step-text{font-size:13px;color:#9BA3C4;line-height:1.4}
-body.light-theme{--bg:var(--bg-light);--bg2:var(--bg2-light);--surface:var(--surface-light);--card:var(--card-light);--card2:var(--card2-light);--border:var(--border-light);--t1:var(--t1-light);--t2:var(--t2-light);--t3:var(--t3-light);--accent:var(--accent-light);--shadow:0 4px 24px rgba(0,0,0,.08)}
-body.light-theme .greeting{color:#2DD4A0}
-body.light-theme .dash-card{background:linear-gradient(135deg,#fff,#f0f4ff);color:#0a0a0a}
-body.light-theme .topnav{background:rgba(255,255,255,0.92);border-color:var(--border)}
-body.light-theme .bottom-nav{background:var(--card);border-top-color:var(--border)}
-body.light-theme select{background:#fff!important;border-color:var(--border)!important;color:var(--t1)!important}
-body.light-theme .tut-card{background:#fff;border-color:var(--border)}
-body.light-theme .btn-dex-quick{background:#f3f4f6!important;border:2px solid #d946ef!important;color:#d946ef!important}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── Layout helpers ─────────────────────────────────────────────── */
+.pad{padding:16px}
+.pad-h{padding:0 16px}
+
+/* ── Cards ──────────────────────────────────────────────────────── */
+.card{background:var(--card);border-radius:var(--r);padding:18px;
+  margin-bottom:12px;border:1px solid var(--border)}
+.card-title{font-size:10px;letter-spacing:2px;color:var(--t3);
+  text-transform:uppercase;font-weight:700;margin-bottom:14px;
+  font-family:'Syne',sans-serif}
+
+/* ── Fields ─────────────────────────────────────────────────────── */
+.field{width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--rs);padding:14px;color:var(--t1);font-size:15px;
+  font-family:'DM Sans',sans-serif;margin-bottom:10px;outline:none;transition:.2s;
+  -webkit-appearance:none;appearance:none}
+.field:focus{border-color:var(--accent);background:var(--surface)}
+select.field{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234A5070' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+select.field option{background:var(--surface)}
+textarea.field{resize:none;line-height:1.6}
+
+/* ── Buttons ────────────────────────────────────────────────────── */
+.btn{width:100%;padding:15px;border:none;border-radius:var(--rs);
+  font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;
+  cursor:pointer;margin-bottom:8px;transition:.15s;letter-spacing:.3px}
+.btn:active{transform:scale(.98);opacity:.9}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-accent{background:linear-gradient(135deg,#4F8EF7,#3B6FD4);color:#fff;
+  box-shadow:0 4px 16px rgba(79,142,247,.3)}
+.btn-green{background:linear-gradient(135deg,#2DD4A0,#059669);color:#000;
+  box-shadow:0 4px 12px rgba(45,212,160,.25)}
+.btn-red{background:linear-gradient(135deg,#F87171,#DC2626);color:#fff;
+  box-shadow:0 4px 12px rgba(248,113,113,.2)}
+.btn-ghost{background:transparent;color:var(--t2);font-size:13px;box-shadow:none}
+.btn-outline{background:transparent;color:var(--accent);
+  border:1px solid var(--accent);box-shadow:none}
+.btn-muted{background:var(--card2);color:var(--t2);
+  border:1px solid var(--border);box-shadow:none}
+.row{display:flex;gap:8px}.row .btn{flex:1;margin-bottom:0}
+
+/* ── Tabs ───────────────────────────────────────────────────────── */
+.tabs{display:flex;background:var(--bg2);border-radius:var(--rs);
+  padding:3px;margin-bottom:14px;border:1px solid var(--border)}
+.tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:600;
+  border-radius:6px;cursor:pointer;color:var(--t2);transition:.15s}
+.tab.active{background:var(--card);color:var(--t1);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
+/* ── Summary cells ──────────────────────────────────────────────── */
+.sum-row{display:grid;gap:8px;margin-bottom:12px}
+.sum-row-2{grid-template-columns:1fr 1fr}
+.sum-row-3{grid-template-columns:1fr 1fr 1fr}
+.sum-cell{background:var(--card);border-radius:var(--rs);padding:14px;
+  text-align:center;border:1px solid var(--border)}
+.sum-label{font-size:10px;color:var(--t3);margin-bottom:6px;
+  letter-spacing:1.5px;text-transform:uppercase;font-weight:700;
+  font-family:'Syne',sans-serif}
+.sum-val{font-size:20px;font-weight:800;font-family:'Syne',sans-serif}
+
+/* ── Log items ──────────────────────────────────────────────────── */
+.log-item{background:var(--bg2);border-radius:var(--rs);padding:14px;
+  margin-bottom:8px;border-left:3px solid;transition:.1s}
+.log-item:active{transform:scale(.99)}
+.log-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.log-sub{font-size:11px;color:var(--t3)}
+
+/* ── Stat bar ───────────────────────────────────────────────────── */
+.stat-bar{height:4px;background:var(--border);border-radius:2px;
+  margin-top:8px;overflow:hidden}
+.stat-fill{height:100%;border-radius:2px;transition:width .6s ease}
+
+/* ── Empty state ────────────────────────────────────────────────── */
+.empty{text-align:center;color:var(--t3);font-size:13px;
+  padding:32px 16px;line-height:1.7}
+
+/* ── Chart ──────────────────────────────────────────────────────── */
+.chart-wrap{position:relative;height:200px;margin:4px 0 8px}
+
+/* ── DeeCadence ─────────────────────────────────────────────────── */
+.block-dots{display:flex;justify-content:center;gap:8px;margin:12px 0}
+.block-dot{width:10px;height:10px;border-radius:50%;
+  background:var(--border);transition:.3s}
+.block-dot.active{background:var(--dc)}
+.block-dot.done{background:var(--ok)}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;
+  overflow:hidden;margin:8px 0 16px}
+.progress-fill{height:100%;border-radius:2px;transition:width 1s linear;
+  background:var(--dc)}
+.timer-num{font-family:'Syne',sans-serif;font-size:54px;font-weight:800;
+  letter-spacing:2px;text-align:center;transition:color .3s}
+.timer-phase{font-size:11px;letter-spacing:2px;color:var(--t3);
+  text-align:center;margin-top:4px;text-transform:uppercase;font-weight:700}
+
+/* ── Home greeting ──────────────────────────────────────────────── */
+.greeting-section{padding:22px 20px 8px}
+.greeting-text{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;
+  color:var(--fin);line-height:1.2}
+.date-text{font-size:12px;color:var(--t3);margin-top:4px}
+
+/* ── Dashboard card ─────────────────────────────────────────────── */
+.dash-card{background:linear-gradient(135deg,var(--card),var(--card2));
+  border-radius:var(--rl);padding:18px 20px;margin:12px 16px;
+  border:1px solid var(--border);cursor:pointer;transition:.15s;
+  box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.dash-card:active{transform:scale(.98);border-color:var(--accent)}
+
+/* ── Module grid ────────────────────────────────────────────────── */
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px}
+.mod-card{background:var(--card);border-radius:var(--r);padding:18px 14px 14px;
+  cursor:pointer;border:1px solid var(--border);transition:.15s;
+  box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.mod-card:active{transform:scale(.97)}
+.mod-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+  margin-bottom:5px}
+.mod-desc{font-size:11px;color:var(--t2);line-height:1.4}
+.mod-stat{font-size:11px;font-weight:600;margin-top:10px;opacity:.9}
+
+/* ── FAB ────────────────────────────────────────────────────────── */
+#fabBtn{position:fixed;bottom:76px;right:20px;z-index:100;
+  background:linear-gradient(135deg,var(--spirit),#D97706);
+  color:#000;font-weight:800;font-size:12px;font-family:'Syne',sans-serif;
+  padding:12px 16px;border-radius:40px;border:none;cursor:pointer;
+  box-shadow:0 4px 20px rgba(245,185,66,.4);letter-spacing:.5px;
+  transition:.2s;display:none}
+#fabBtn:active{transform:scale(.95)}
+
+/* ── Onboarding ─────────────────────────────────────────────────── */
+#onboarding{position:fixed;inset:0;z-index:300;background:var(--bg);
+  display:none;flex-direction:column;overflow-y:auto;max-width:430px;margin:0 auto}
+.ob-step{display:none;flex-direction:column;padding:52px 28px 32px;min-height:100%}
+.ob-step.active{display:flex;animation:fadeUp .2s ease}
+.ob-num{font-size:11px;color:var(--t3);letter-spacing:2px;margin-bottom:36px;font-weight:700}
+.ob-head{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;
+  line-height:1.2;margin-bottom:16px;color:var(--t1)}
+.ob-body{font-size:15px;color:var(--t2);line-height:1.7;margin-bottom:auto}
+.ob-actions{margin-top:28px}
+.ob-dots{display:flex;gap:6px;margin-top:20px}
+.ob-dot{height:4px;border-radius:2px;background:var(--border);transition:.3s;width:20px}
+.ob-dot.active{background:var(--accent);width:32px}
+.ob-dot.done{background:var(--fin);width:20px}
+
+/* ── Tutorial ───────────────────────────────────────────────────── */
+#tutorial{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.88);
+  backdrop-filter:blur(6px);display:none;align-items:center;
+  justify-content:center;padding:24px;max-width:430px;margin:0 auto}
+.tut-card{background:var(--card);border-radius:var(--rl);padding:28px;
+  border:1px solid var(--border);width:100%;max-width:360px}
+.tut-step{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;
+  padding:10px;background:var(--bg2);border-radius:var(--rs)}
+.tut-step-num{background:var(--accent);color:#fff;font-size:11px;font-weight:800;
+  width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.tut-step-text{font-size:13px;color:var(--t2);line-height:1.4}
+
+/* ── Auth screen ────────────────────────────────────────────────── */
+#authConfirmScreen{position:fixed;inset:0;z-index:500;background:var(--bg);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;text-align:center;max-width:430px;margin:0 auto}
+
+/* ── Feedback banner ────────────────────────────────────────────── */
+.fb-banner{background:rgba(245,185,66,.08);border:1px solid rgba(245,185,66,.2);
+  border-radius:var(--rs);padding:14px;margin-bottom:14px;font-size:13px;
+  color:var(--spirit);line-height:1.6}
+
+/* ── Quick dex buttons ──────────────────────────────────────────── */
+.btn-dex{background:transparent;border:1.5px solid var(--dex);color:var(--dex);
+  font-size:12px;padding:10px;margin-bottom:0}
+
+/* ── Light theme ────────────────────────────────────────────────── */
+body.light{
+  --bg:#F4F5FA;--bg2:#ECEEF6;--surface:#FFFFFF;--card:#FFFFFF;
+  --card2:#F0F2FB;--border:#D8DCF0;--t1:#0F1124;--t2:#4B5280;--t3:#8890B0;
+  --accent:#2563EB;--fin:#059669;--spirit:#D97706;--mind:#7C3AED;
+  --energy:#2563EB;--err:#DC2626;
+}
+body.light .main-header,body.light .topbar{background:rgba(244,245,250,.95)}
+body.light .bottom-nav{background:#fff}
+body.light .greeting-text{color:var(--fin)}
+body.light select.field option{background:#fff}
 </style>
 </head>
 <body>
 
-<nav class="bottom-nav">
-  <button class="nav-btn active" onclick="show('home')" data-screen="home"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></button>
-  <button class="nav-btn" onclick="show('feedback')" data-screen="feedback"><div class="nav-icon">💬</div><div class="nav-label">Feedback</div></button>
-  <button class="nav-btn" onclick="show('settings')" data-screen="settings"><div class="nav-icon">⚙️</div><div class="nav-label">Settings</div></button>
-</nav>
-
-<!-- AUTH -->
-<div id="auth" class="screen active">
-  <div style="padding:48px 24px;max-width:380px;margin:0 auto">
-    <h1 style="font-size:28px;font-weight:800;color:var(--accent);letter-spacing:2px;margin-bottom:6px">DEE_CISTEM</h1>
-    <p style="color:var(--t2);margin-bottom:36px;font-size:14px">Discipline · Growth · Mastery</p>
-    <input class="field" id="authEmail" type="email" placeholder="Email address">
-    <input class="field" id="authPassword" type="password" placeholder="Password (min 6 characters)">
-    <button class="btn btn-primary" onclick="login()">Sign In</button>
-    <button class="btn btn-ghost" onclick="signup()">Create Account</button>
-    <div id="authStatus" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-top:8px;line-height:1.5"></div>
+<!-- ── EMAIL CONFIRMATION SCREEN ────────────────────────────────── -->
+<div id="authConfirmScreen">
+  <div style="font-size:56px;margin-bottom:20px">📬</div>
+  <h2 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;
+             color:var(--t1);margin-bottom:12px">Check your email</h2>
+  <p id="confirmMsg" style="color:var(--t2);font-size:15px;line-height:1.7;margin-bottom:24px"></p>
+  <div style="background:var(--card);border-radius:var(--rs);padding:16px;
+              border:1px solid var(--border);margin-bottom:24px;font-size:13px;
+              color:var(--t2);line-height:1.6">
+    Didn't get it? Check your spam folder.<br>It may take up to 2 minutes.
+  </div>
+  <button class="btn btn-accent" onclick="backToAuth()">← Back to Sign In</button>
+  <button class="btn btn-ghost" onclick="resendConfirmation()">Resend confirmation email</button>
+  <div id="resendMsg" style="font-size:12px;color:var(--fin);margin-top:8px;display:none">
+    ✓ Resent! Check your inbox.
   </div>
 </div>
 
-<!-- ONBOARDING -->
+<!-- ── ONBOARDING ────────────────────────────────────────────────── -->
 <div id="onboarding">
+  <!-- Step 1 -->
   <div class="ob-step active" id="ob1">
     <div class="ob-num">STEP 1 OF 3</div>
     <div class="ob-head">Which version of yourself are you building?</div>
-    <div class="ob-sub">Dee_Cistem tracks every dimension of your growth — finances, focus, spirit, body, knowledge, and craft. Your rank reflects who you're becoming, not just what you've done.<br><br><strong style="color:var(--t1)">What should we call you?</strong></div>
-    <div style="margin-top:24px">
-      <input class="field" id="obName" placeholder="Your name" style="font-size:18px;padding:16px">
-      <button class="btn btn-primary" onclick="obNext(1)">Continue →</button>
+    <div class="ob-body">
+      Dee_Cistem tracks every dimension of your growth — finances, focus, spirit, body, knowledge, and craft.<br><br>
+      Your rank reflects who you're <em>becoming</em>, not just what you've done.<br><br>
+      <strong style="color:var(--t1)">What should we call you?</strong>
     </div>
-    <div class="ob-dots" style="margin-top:16px"><div class="ob-dot active" style="width:24px"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
+    <div class="ob-actions">
+      <input class="field" id="obName" placeholder="Your name" style="font-size:18px;padding:16px;margin-bottom:16px">
+      <button class="btn btn-accent" onclick="obNext(1)">Continue →</button>
+    </div>
+    <div class="ob-dots"><div class="ob-dot active"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
   </div>
+  <!-- Step 2 -->
   <div class="ob-step" id="ob2">
     <div class="ob-num">STEP 2 OF 3</div>
-    <div class="ob-head">What matters most right now?</div>
-    <div class="ob-sub">Pick up to 3. You track all six, but these show first on your dashboard.</div>
+    <div class="ob-head">What matters most to you right now?</div>
+    <div class="ob-body">Pick up to 3. These show first on your dashboard — everything else is still tracked.</div>
     <div id="obStatGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px"></div>
-    <div style="margin-top:16px;display:flex;gap:8px">
-      <button class="btn btn-ghost" onclick="obBack(1)">← Back</button>
-      <button class="btn btn-primary" onclick="obNext(2)">Continue →</button>
+    <div class="ob-actions">
+      <div class="row"><button class="btn btn-ghost" onclick="obBack(1)">← Back</button><button class="btn btn-accent" onclick="obNext(2)">Continue →</button></div>
     </div>
-    <div class="ob-dots" style="margin-top:16px"><div class="ob-dot done"></div><div class="ob-dot active" style="width:24px"></div><div class="ob-dot"></div></div>
+    <div class="ob-dots"><div class="ob-dot done"></div><div class="ob-dot active"></div><div class="ob-dot"></div></div>
   </div>
+  <!-- Step 3 -->
   <div class="ob-step" id="ob3">
     <div class="ob-num">STEP 3 OF 3</div>
     <div class="ob-head" id="ob3Head">Your starting rank is E.</div>
-    <div class="ob-sub">Every rank must be earned through real consistency. Logging alone doesn't move you up — improvement does. There are no participation trophies here.<br><br><strong style="color:var(--t1)">E → D → C → B → A → S → SS</strong><br><br>Ranks are calculated across all six modules. A consistent E in one area pulls your overall rank down. That's the point.</div>
-    <div style="margin-top:24px;display:flex;gap:8px">
-      <button class="btn btn-ghost" onclick="obBack(2)">← Back</button>
-      <button class="btn btn-primary" onclick="obFinish()">Begin my journey →</button>
+    <div class="ob-body">
+      Every rank must be earned through real consistency. Logging alone doesn't move you up — improvement does.<br><br>
+      <strong style="color:var(--t1)">E → D → C → B → A → S → SS</strong><br><br>
+      A consistent E in one area pulls your overall rank down. That's the point. No participation trophies here.
     </div>
-    <div class="ob-dots" style="margin-top:16px"><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot active" style="width:24px"></div></div>
+    <div class="ob-actions">
+      <div class="row"><button class="btn btn-ghost" onclick="obBack(2)">← Back</button><button class="btn btn-accent" onclick="obFinish()">Begin my journey →</button></div>
+    </div>
+    <div class="ob-dots"><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot active"></div></div>
   </div>
 </div>
 
-<!-- TUTORIAL -->
+<!-- ── TUTORIAL ───────────────────────────────────────────────────── -->
 <div id="tutorial">
   <div class="tut-card">
-    <div class="tut-icon">👋</div>
-    <div class="tut-head">Welcome to Dee_Cistem</div>
-    <div class="tut-body">Here's everything you need to know:</div>
-    <div class="tut-steps">
-      <div class="tut-step"><div class="tut-step-num">1</div><div class="tut-step-text"><strong>Modules:</strong> Tap any colored card on the home screen to open a module.</div></div>
-      <div class="tut-step"><div class="tut-step-num">2</div><div class="tut-step-text"><strong>Navigate back:</strong> Use the ‹ Back button at the top — not your phone's back button.</div></div>
-      <div class="tut-step"><div class="tut-step-num">3</div><div class="tut-step-text"><strong>Log activities:</strong> Tap the log buttons inside each module. Stats update live.</div></div>
-      <div class="tut-step"><div class="tut-step-num">4</div><div class="tut-step-text"><strong>Feedback:</strong> Tap the <strong style="color:#FBBF24">✦ Feedback</strong> button (bottom right) on any screen.</div></div>
+    <div style="font-size:30px;margin-bottom:12px">👋</div>
+    <div style="font-family:'Syne',sans-serif;font-size:19px;font-weight:800;margin-bottom:8px">Welcome to Dee_Cistem</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.5">Three things to know before you start:</div>
+    <div style="margin-bottom:16px">
+      <div class="tut-step"><div class="tut-step-num">1</div><div class="tut-step-text">Tap any <strong style="color:var(--t1)">module card</strong> on the home screen to open it.</div></div>
+      <div class="tut-step"><div class="tut-step-num">2</div><div class="tut-step-text">Use the <strong style="color:var(--t1)">← Back</strong> button at the top to navigate — not your phone's back button.</div></div>
+      <div class="tut-step"><div class="tut-step-num">3</div><div class="tut-step-text">Tap the <strong style="color:var(--spirit)">✦ Feedback</strong> button (bottom right) on any screen to send us your thoughts.</div></div>
     </div>
-    <div class="row">
-      <button class="btn btn-primary" onclick="closeTutorial()" style="margin-bottom:0;flex:1">Got it, let's go</button>
-      <button class="btn btn-ghost" onclick="dismissTutorial()" style="margin-bottom:0;flex:0.5">Skip</button>
-    </div>
+    <button class="btn btn-accent" onclick="closeTutorial()" style="margin-bottom:0">Got it, let's go →</button>
   </div>
 </div>
 
-<button id="fabBtn" onclick="show('feedback')">✦ Feedback</button>
+<!-- ── FAB ───────────────────────────────────────────────────────── -->
+<button id="fabBtn" onclick="goTo('feedback')">✦ Feedback</button>
+
+<!-- ── BOTTOM NAV ────────────────────────────────────────────────── -->
+<nav class="bottom-nav" id="bottomNav" style="display:none">
+  <button class="nav-btn active" onclick="goTo('home')" data-screen="home">
+    <div class="nav-icon">⬡</div><div class="nav-label">Home</div>
+  </button>
+  <button class="nav-btn" onclick="goTo('dashboard')" data-screen="dashboard">
+    <div class="nav-icon">◈</div><div class="nav-label">Stats</div>
+  </button>
+  <button class="nav-btn" onclick="goTo('settings')" data-screen="settings">
+    <div class="nav-icon">◎</div><div class="nav-label">Settings</div>
+  </button>
+</nav>
+
+<!-- ── APP ───────────────────────────────────────────────────────── -->
+<div id="app">
+
+<!-- AUTH -->
+<div id="auth" class="screen active">
+  <div style="padding:56px 24px 32px;max-width:360px;margin:0 auto">
+    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
+                color:var(--accent);letter-spacing:2px;margin-bottom:4px">DEE_CISTEM</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:40px;letter-spacing:.5px">
+      DISCIPLINE · GROWTH · MASTERY
+    </div>
+    <!-- Tab toggle -->
+    <div class="tabs">
+      <div class="tab active" id="tabSignIn" onclick="switchAuthTab('in')">Sign In</div>
+      <div class="tab" id="tabSignUp" onclick="switchAuthTab('up')">Create Account</div>
+    </div>
+    <!-- Sign in -->
+    <div id="formSignIn">
+      <input class="field" id="siEmail" type="email" placeholder="Email address" autocomplete="email">
+      <input class="field" id="siPassword" type="password" placeholder="Password" autocomplete="current-password">
+      <button class="btn btn-accent" id="btnSignIn" onclick="doLogin()">Sign In</button>
+      <button class="btn btn-ghost" onclick="doForgot()" style="font-size:12px;margin-top:0">Forgot password?</button>
+    </div>
+    <!-- Sign up -->
+    <div id="formSignUp" style="display:none">
+      <input class="field" id="suEmail" type="email" placeholder="Email address" autocomplete="email">
+      <input class="field" id="suPassword" type="password" placeholder="Password (min 6 characters)" autocomplete="new-password">
+      <input class="field" id="suConfirm" type="password" placeholder="Confirm password" autocomplete="new-password">
+      <button class="btn btn-accent" id="btnSignUp" onclick="doSignup()">Create Account</button>
+    </div>
+    <!-- Status -->
+    <div id="authMsg" style="display:none;padding:14px;border-radius:var(--rs);
+         font-size:13px;margin-top:8px;line-height:1.5;text-align:center"></div>
+  </div>
+</div>
 
 <!-- HOME -->
 <div id="home" class="screen">
-  <div class="header"><div><h1>DEE_CISTEM</h1><div class="sub">Discipline · Growth · Mastery</div></div><div style="font-size:11px;color:#565E82;text-align:right">BETA<br><span style="color:#34D399">●</span> Live</div></div>
-  <div class="greeting" id="greeting">Good morning</div>
-  <div class="date" id="dateStr"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px">
-    <button class="username-toggle" onclick="toggleUsername()" id="usernameBtn">DC</button>
+  <div class="main-header">
+    <div class="logo">DEE_CISTEM</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button id="themeBtn" onclick="toggleTheme()"
+        style="background:var(--card2);border:1px solid var(--border);color:var(--t2);
+               font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;cursor:pointer">
+        Light
+      </button>
+      <span style="font-size:10px;color:var(--ok);letter-spacing:1px">● BETA</span>
+    </div>
   </div>
-  <div class="theme-toggle">
-    <button class="theme-btn active" onclick="setTheme('dark')" data-theme="dark">Dark</button>
-    <button class="theme-btn" onclick="setTheme('light')" data-theme="light">Light</button>
-    <button class="theme-btn" onclick="setTheme('system')" data-theme="system">System</button>
+  <div class="greeting-section">
+    <div class="greeting-text" id="greeting">Good morning</div>
+    <div class="date-text" id="dateStr"></div>
   </div>
-  <div class="dash-card" onclick="show('dashboard')">
-    <div class="dc-label">STAT DASHBOARD</div>
-    <div class="dc-rank" id="overallRank">Rank E · Score 1</div>
-    <div style="font-size:11px;color:#9BA3C4;margin-top:4px" id="keyStats">Body 1 · Mind 1 · Spirit 1</div>
+  <div class="dash-card" onclick="goTo('dashboard')">
+    <div style="font-size:10px;letter-spacing:2px;color:var(--t3);margin-bottom:6px;
+                font-weight:700;font-family:'Syne',sans-serif">STAT DASHBOARD</div>
+    <div id="overallRank" style="font-family:'Syne',sans-serif;font-size:22px;
+         font-weight:800;color:var(--accent);margin-bottom:4px">Rank E · Score 1</div>
+    <div id="keyStats" style="font-size:12px;color:var(--t2)">Body 1 · Mind 1 · Spirit 1</div>
   </div>
-  <div class="nav" id="moduleGrid"></div>
-  <div style="padding:0 16px;margin-top:12px;margin-bottom:60px"><button class="btn btn-ghost" onclick="showTutorial()">Show tutorial</button></div>
+  <div class="mod-grid" id="moduleGrid"></div>
+  <div style="padding:0 16px 20px">
+    <button class="btn btn-ghost" onclick="showTutorial()" style="font-size:12px">Show tutorial</button>
+  </div>
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboard" class="screen"><div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#4F8EF7">Stat Dashboard</h2></div><div class="content" id="dashContent"></div></div>
+<div id="dashboard" class="screen">
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--accent)">Stat Dashboard</div></div>
+  <div class="pad" id="dashContent"></div>
+</div>
+
 <!-- FINANCIAL -->
-<div id="financial" class="screen"><div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#34D399">Financial</h2></div><div class="content" id="financialContent"></div></div>
+<div id="financial" class="screen">
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--fin)">Financial</div></div>
+  <div class="pad" id="financialContent"></div>
+</div>
+
 <!-- SPIRIT -->
-<div id="spirit" class="screen"><div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#FBBF24">Spirit</h2></div><div class="content" id="spiritContent"></div></div>
+<div id="spirit" class="screen">
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--spirit)">Spirit</div></div>
+  <div class="pad" id="spiritContent"></div>
+</div>
+
 <!-- MIND -->
-<div id="mind" class="screen"><div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#A78BFA">Mind</h2></div><div class="content" id="mindContent"></div></div>
+<div id="mind" class="screen">
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--mind)">Mind</div></div>
+  <div class="pad" id="mindContent"></div>
+</div>
+
 <!-- ENERGY -->
-<div id="energy" class="screen"><div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#60A5FA">Energy</h2></div><div class="content" id="energyContent"></div></div>
+<div id="energy" class="screen">
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--energy)">Energy</div></div>
+  <div class="pad" id="energyContent"></div>
+</div>
+
 <!-- KNOWLEDGE -->
-<div id="knowledge" class="screen"><div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#34D399">Knowledge</h2></div><div class="content" id="knowledgeContent"></div></div>
+<div id="knowledge" class="screen">
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--know)">Knowledge</div></div>
+  <div class="pad" id="knowledgeContent"></div>
+</div>
+
 <!-- DEXTERITY -->
-<div id="dexterity" class="screen"><div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#F472B6">Dexterity</h2></div><div class="content" id="dexterityContent"></div></div>
+<div id="dexterity" class="screen">
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--dex)">Dexterity</div></div>
+  <div class="pad" id="dexterityContent"></div>
+</div>
+
 <!-- DEECADENCE -->
-<div id="deecadence" class="screen"><div class="topnav"><button class="back-btn" onclick="show('mind')">&#8249; Back</button><h2 style="color:#38BDF8">DeeCadence</h2></div><div class="content" id="deecadenceContent"></div></div>
+<div id="deecadence" class="screen">
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--dc)">DeeCadence</div></div>
+  <div class="pad" id="deecadenceContent"></div>
+</div>
 
 <!-- FEEDBACK -->
 <div id="feedback" class="screen">
-  <div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#FBBF24">Beta Feedback</h2></div>
-  <div class="content">
-    <div class="feedback-banner">You are testing Dee_Cistem Beta. Your feedback directly shapes the product. Thank you for being here first.</div>
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--spirit)">Beta Feedback</div></div>
+  <div class="pad">
+    <div class="fb-banner">
+      You are one of the first people using Dee_Cistem. Your feedback shapes what this becomes. Thank you for being here first.
+    </div>
     <div class="card">
-      <h3>Your Experience</h3>
-      <select id="fbRating"><option value="">Overall rating...</option><option value="5">5 — Would use daily</option><option value="4">4 — Very useful</option><option value="3">3 — Somewhat useful</option><option value="2">2 — Needs work</option><option value="1">1 — Not for me</option></select>
-      <select id="fbModule"><option value="">Which module first?</option><option>Financial</option><option>Spirit</option><option>Mind / DeeCadence</option><option>Energy</option><option>Knowledge</option><option>Dexterity</option><option>Dashboard</option></select>
-      <textarea class="field" id="fbText" rows="4" placeholder="What would make you use this daily? What confused you? What's missing?"></textarea>
-      <select id="fbPay"><option value="">Would you pay for full access?</option><option value="yes5k">Yes — NGN 5,000 lifetime</option><option value="yes1500">Yes — NGN 1,500/month</option><option value="maybe">Maybe — needs more features</option><option value="no">No — not yet</option></select>
-      <button class="btn btn-primary" onclick="submitFeedback()">Submit Feedback</button>
-      <div id="fbStatus" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-top:8px"></div>
+      <div class="card-title">Your Experience</div>
+      <select class="field" id="fbRating">
+        <option value="">Overall rating...</option>
+        <option value="5">★★★★★ — Would use daily</option>
+        <option value="4">★★★★☆ — Very useful</option>
+        <option value="3">★★★☆☆ — Somewhat useful</option>
+        <option value="2">★★☆☆☆ — Needs work</option>
+        <option value="1">★☆☆☆☆ — Not for me</option>
+      </select>
+      <select class="field" id="fbModule">
+        <option value="">Which module did you try first?</option>
+        <option>Financial</option><option>Spirit</option>
+        <option>Mind / DeeCadence</option><option>Energy</option>
+        <option>Knowledge</option><option>Dexterity</option><option>Dashboard</option>
+      </select>
+      <textarea class="field" id="fbText"
+        placeholder="What would make you use this daily? What confused you? What's missing?"></textarea>
+      <select class="field" id="fbPay">
+        <option value="">Would you pay for full access?</option>
+        <option value="yes5k">Yes — NGN 5,000 lifetime</option>
+        <option value="yes1500">Yes — NGN 1,500/month</option>
+        <option value="maybe">Maybe — needs more features</option>
+        <option value="no">Not yet</option>
+      </select>
+      <button class="btn btn-accent" onclick="submitFeedback()">Submit Feedback</button>
+      <div id="fbStatus" style="display:none;padding:12px;border-radius:var(--rs);
+           font-size:13px;margin-top:4px;line-height:1.5;text-align:center"></div>
     </div>
   </div>
 </div>
 
 <!-- SETTINGS -->
 <div id="settings" class="screen">
-  <div class="topnav"><button class="back-btn" onclick="show('home')">&#8249; Back</button><h2 style="color:#4F8EF7">Settings</h2></div>
-  <div class="content">
-    <div class="card"><h3>Account</h3><button class="btn btn-danger" onclick="signOut()">Sign Out</button></div>
-    <div class="card"><h3>Data Management</h3><button class="btn btn-primary" onclick="exportData()">Export Progress (CSV)</button></div>
-    <div class="card"><h3>Progress Overview</h3><canvas id="progressChart" width="300" height="200"></canvas></div>
-    <div class="card"><h3>App Info</h3><p style="font-size:13px;color:var(--t2);line-height:1.6"><strong style="color:var(--t1)">Dee_Cistem v0.1.0 (Beta)</strong><br>Discipline · Growth · Mastery<br><br>6 modules · Progress tracking · Habit logging</p><button class="btn btn-ghost" onclick="resetOnboarding()" style="margin-top:8px">Reset Onboarding</button></div>
+  <div class="topbar"><button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="topbar-title" style="color:var(--accent)">Settings</div></div>
+  <div class="pad">
+    <div class="card">
+      <div class="card-title">Account</div>
+      <div id="accountEmail" style="font-size:13px;color:var(--t2);margin-bottom:14px"></div>
+      <button class="btn btn-red" onclick="doSignOut()">Sign Out</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Display Name</div>
+      <input class="field" id="displayNameField" placeholder="Your name">
+      <button class="btn btn-accent" onclick="saveName()">Save Name</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Export Data</div>
+      <button class="btn btn-outline" onclick="exportData()">Download Progress CSV</button>
+    </div>
+    <div class="card">
+      <div class="card-title">App Info</div>
+      <p style="font-size:13px;color:var(--t2);line-height:1.7">
+        <strong style="color:var(--t1)">Dee_Cistem v0.2.0 (Beta)</strong><br>
+        Discipline · Growth · Mastery<br><br>
+        6 modules · Supabase sync · Progress tracking
+      </p>
+      <button class="btn btn-ghost" onclick="resetOnboarding()" style="margin-top:8px;font-size:12px">Reset Onboarding</button>
+    </div>
   </div>
 </div>
 
+</div><!-- #app -->
+
 <script>
-// ── FIX 1: Supabase initialized once at top ───────────────────────
+'use strict';
+
+// ── Supabase ──────────────────────────────────────────────────────
 const SUPA_URL  = 'https://lnxvlpmvhjhvwzunkvts.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw';
-const supabase  = supabaseJs.createClient(SUPA_URL, SUPA_ANON);
+const sb = window.supabase.createClient(SUPA_URL, SUPA_ANON);
 
 // ── State ─────────────────────────────────────────────────────────
-const STATE = {
-  stats:     JSON.parse(localStorage.getItem('dc_stats')     || JSON.stringify({Body:1,Mind:1,Spirit:1,Knowledge:1,Financial:1,Dexterity:1})),
-  financial: JSON.parse(localStorage.getItem('dc_financial') || '[]'),
-  spirit:    JSON.parse(localStorage.getItem('dc_spirit')    || '[]'),
-  mind:      JSON.parse(localStorage.getItem('dc_mind')      || '[]'),
-  energy:    JSON.parse(localStorage.getItem('dc_energy')    || '[]'),
-  knowledge: JSON.parse(localStorage.getItem('dc_knowledge') || '[]'),
-  dexterity: JSON.parse(localStorage.getItem('dc_dexterity') || '[]'),
-  sessions:  JSON.parse(localStorage.getItem('dc_sessions')  || '[]'),
+const LS = k => { try { return JSON.parse(localStorage.getItem('dc_'+k)); } catch { return null; } };
+const LS_SET = (k,v) => localStorage.setItem('dc_'+k, JSON.stringify(v));
+
+const S = {
+  stats:     LS('stats')     || {Body:1,Mind:1,Spirit:1,Knowledge:1,Financial:1,Dexterity:1},
+  financial: LS('financial') || [],
+  spirit:    LS('spirit')    || [],
+  mind:      LS('mind')      || [],
+  energy:    LS('energy')    || [],
+  knowledge: LS('knowledge') || [],
+  dexterity: LS('dexterity') || [],
+  sessions:  LS('sessions')  || [],
 };
 
-// save: localStorage always + Supabase in background
+const ALL_KEYS = ['stats','financial','spirit','mind','energy','knowledge','dexterity','sessions'];
+
 function save(key) {
-  localStorage.setItem('dc_' + key, JSON.stringify(STATE[key]));
-  _syncKey(key);
+  LS_SET(key, S[key]);
+  _syncKey(key).catch(() => {}); // background, non-blocking
 }
 
 async function _syncKey(key) {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from('user_data').upsert(
-      { user_id: user.id, key, value: STATE[key], updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,key' }
-    );
-  } catch(e) { /* localStorage saved — silent */ }
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+  await sb.from('user_data').upsert(
+    { user_id: user.id, key, value: S[key], updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,key' }
+  );
 }
 
-// FIX 3: loadUserData uses STATE (not S), all 8 keys, jsonb no JSON.parse
 async function loadUserData(userId) {
   try {
-    const { data, error } = await supabase.from('user_data').select('*').eq('user_id', userId);
-    if (error || !data) return;
-    const KEYS = ['stats','financial','spirit','mind','energy','knowledge','dexterity','sessions'];
+    const { data } = await sb.from('user_data').select('key,value').eq('user_id', userId);
+    if (!data) return;
     data.forEach(row => {
-      if (KEYS.includes(row.key) && row.value != null) {
-        STATE[row.key] = row.value; // jsonb — already parsed by Supabase client
+      if (ALL_KEYS.includes(row.key) && row.value != null) {
+        S[row.key] = row.value; // jsonb — already parsed
       }
       if (row.key === 'debt') localStorage.setItem('dc_debt', String(row.value));
     });
-    KEYS.forEach(k => localStorage.setItem('dc_' + k, JSON.stringify(STATE[k])));
-  } catch(e) { console.error('loadUserData', e); }
+    ALL_KEYS.forEach(k => LS_SET(k, S[k]));
+  } catch(e) { console.warn('loadUserData:', e.message); }
 }
 
-let showFullUsername = localStorage.getItem('dc_show_full_name') === 'true';
-let currentTheme = localStorage.getItem('dc_theme') || 'dark';
+// ── Helpers ───────────────────────────────────────────────────────
+const today  = () => new Date().toLocaleDateString('en-GB');
+const fmtN   = n  => n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
 
-function setTheme(theme) {
-  currentTheme = theme; localStorage.setItem('dc_theme', theme);
-  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`[data-theme="${theme}"]`);
-  if (btn) btn.classList.add('active');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  document.body.classList.toggle('light-theme',
-    theme === 'light' || (theme === 'system' && !prefersDark));
+function getRank(v) {
+  if (v>=95) return 'SS'; if (v>=80) return 'S'; if (v>=65) return 'A';
+  if (v>=50) return 'B';  if (v>=35) return 'C'; if (v>=20) return 'D';
+  return 'E';
 }
 
-function today() { return new Date().toLocaleDateString('en-GB'); }
-function getRank(v){if(v>=95)return'SS';if(v>=80)return'S';if(v>=65)return'A';if(v>=50)return'B';if(v>=35)return'C';if(v>=20)return'D';return'E'}
-function updateStat(name, delta){ STATE.stats[name]=Math.min(100,Math.max(1,(STATE.stats[name]||1)+delta)); save('stats'); renderHome(); }
-function toggleUsername(){ showFullUsername=!showFullUsername; localStorage.setItem('dc_show_full_name',showFullUsername); renderHome(); updateUsernameBtn(); }
-function updateUsernameBtn(){ const btn=document.getElementById('usernameBtn'); if(!btn)return; const n=(localStorage.getItem('dc_name')||'DC').replace(/\b\w/g,l=>l.toUpperCase()); btn.textContent=showFullUsername?n:n.charAt(0).toUpperCase(); }
+function updateStat(name, delta) {
+  S.stats[name] = Math.min(100, Math.max(1, (S.stats[name]||1) + delta));
+  save('stats');
+  _refreshHomeStats();
+}
+
+function _refreshHomeStats() {
+  const vals = Object.values(S.stats);
+  const avg  = vals.reduce((a,b)=>a+b,0) / vals.length;
+  const el   = document.getElementById('overallRank');
+  const ks   = document.getElementById('keyStats');
+  if (el) el.textContent = `Rank ${getRank(avg)} · Score ${Math.round(avg)}`;
+  if (ks) ks.textContent = `Body ${S.stats.Body} · Mind ${S.stats.Mind} · Spirit ${S.stats.Spirit}`;
+}
+
+// ── Theme ─────────────────────────────────────────────────────────
+let _dark = localStorage.getItem('dc_theme') !== 'light';
+
+function toggleTheme() {
+  _dark = !_dark;
+  localStorage.setItem('dc_theme', _dark ? 'dark' : 'light');
+  _applyTheme();
+}
+
+function _applyTheme() {
+  document.body.classList.toggle('light', !_dark);
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = _dark ? 'Light' : 'Dark';
+}
+
+_applyTheme();
 
 // ── Navigation ────────────────────────────────────────────────────
-const _history = ['home'];
-function show(id, addHistory=true) {
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const el=document.getElementById(id); if(!el)return;
-  el.classList.add('active'); window.scrollTo(0,0);
-  if(addHistory){ _history.push(id); history.pushState({screen:id},'','#'+id); }
-  const nav=document.querySelector('.bottom-nav');
-  if(id==='feedback'||id==='settings'){ nav.style.display='none'; }
-  else { nav.style.display='flex'; document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); const ab=document.querySelector(`.nav-btn[data-screen="${id}"]`); if(ab)ab.classList.add('active'); }
-  document.getElementById('fabBtn').style.display=(id==='feedback'||id==='home')?'none':'flex';
-  ({home:renderHome,dashboard:renderDashboard,financial:renderFinancial,spirit:renderSpirit,mind:renderMind,energy:renderEnergy,knowledge:renderKnowledge,dexterity:renderDexterity,deecadence:renderDeeCadence,settings:renderSettings}[id]||function(){})();
+const _navHistory = [];
+
+function goTo(id, pushHistory = true) {
+  document.querySelectorAll('#app .screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (!el) { console.warn('goTo: screen not found:', id); return; }
+  el.classList.add('active');
+  document.getElementById('app').scrollTo(0, 0);
+
+  if (pushHistory) {
+    _navHistory.push(id);
+    history.pushState({ screen: id }, '', '#' + id);
+  }
+
+  // FAB
+  const fab = document.getElementById('fabBtn');
+  if (fab) fab.style.display = (id === 'feedback' || id === 'home' || id === 'auth') ? 'none' : 'flex';
+
+  // Bottom nav highlight
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const nb = document.querySelector(`.nav-btn[data-screen="${id}"]`);
+  if (nb) nb.classList.add('active');
+
+  // Render
+  const renders = {
+    home: renderHome, dashboard: renderDashboard,
+    financial: renderFinancial, spirit: renderSpirit,
+    mind: renderMind, energy: renderEnergy,
+    knowledge: renderKnowledge, dexterity: renderDexterity,
+    deecadence: renderDeeCadence, settings: renderSettings,
+  };
+  if (renders[id]) renders[id]();
 }
-window.addEventListener('popstate',()=>{ if(_history.length>1){ _history.pop(); show(_history[_history.length-1],false); } });
+
+function goBack() {
+  if (_navHistory.length > 1) {
+    _navHistory.pop();
+    goTo(_navHistory[_navHistory.length - 1], false);
+  } else {
+    goTo('home', false);
+  }
+}
+
+window.addEventListener('popstate', () => {
+  if (_navHistory.length > 1) {
+    _navHistory.pop();
+    goTo(_navHistory[_navHistory.length - 1], false);
+  } else {
+    goTo('home', false);
+  }
+});
 
 // ── Auth ──────────────────────────────────────────────────────────
-function _authStatus(msg, ok) {
-  const s=document.getElementById('authStatus');
-  s.style.display='block'; s.style.background=ok?'#34D39920':'#F8717120';
-  s.style.color=ok?'#34D399':'#F87171'; s.textContent=msg;
+let _lastEmail = '';
+
+function switchAuthTab(tab) {
+  const isIn = tab === 'in';
+  document.getElementById('formSignIn').style.display  = isIn ? 'block' : 'none';
+  document.getElementById('formSignUp').style.display  = isIn ? 'none'  : 'block';
+  document.getElementById('tabSignIn').classList.toggle('active', isIn);
+  document.getElementById('tabSignUp').classList.toggle('active', !isIn);
+  _setAuthMsg('');
 }
 
-async function login() {
-  const email=document.getElementById('authEmail').value.trim();
-  const password=document.getElementById('authPassword').value;
-  _authStatus('Signing in...', true);
-  try { const{data,error}=await supabase.auth.signInWithPassword({email,password}); if(error)throw error; await afterLogin(data.user); }
-  catch(e){ _authStatus(e.message, false); }
+function _setAuthMsg(msg, ok = true, loading = false) {
+  const el = document.getElementById('authMsg');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.style.display   = 'block';
+  el.style.background = loading ? 'rgba(79,142,247,.1)' : ok ? 'rgba(45,212,160,.1)' : 'rgba(248,113,113,.1)';
+  el.style.color      = loading ? 'var(--accent)' : ok ? 'var(--fin)' : 'var(--err)';
+  el.textContent      = msg;
 }
 
-async function signup() {
-  const email=document.getElementById('authEmail').value.trim();
-  const password=document.getElementById('authPassword').value;
-  _authStatus('Creating account...', true);
+function _btnLoading(id, loading, label) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.disabled    = loading;
+  btn.textContent = loading ? '...' : label;
+  btn.style.opacity = loading ? '.6' : '1';
+}
+
+function _showConfirmScreen(email) {
+  document.getElementById('confirmMsg').innerHTML =
+    `We sent a confirmation link to<br>
+     <strong style="color:var(--t1)">${email}</strong><br><br>
+     Click it to activate your account, then come back here and sign in.`;
+  document.getElementById('authConfirmScreen').style.display = 'flex';
+}
+
+function backToAuth() {
+  document.getElementById('authConfirmScreen').style.display = 'none';
+}
+
+async function resendConfirmation() {
+  if (!_lastEmail) return;
   try {
-    const{data,error}=await supabase.auth.signUp({email,password}); if(error)throw error;
-    if(data.user&&!data.user.email_confirmed_at){ _authStatus('Check your email to confirm, then sign in.',true); }
-    else if(data.user){ await afterLogin(data.user); }
-  } catch(e){ _authStatus(e.message, false); }
+    await sb.auth.resend({ type: 'signup', email: _lastEmail });
+    const m = document.getElementById('resendMsg');
+    m.style.display = 'block';
+    setTimeout(() => m.style.display = 'none', 3000);
+  } catch(e) { console.warn(e); }
 }
 
-async function signOut() {
-  await supabase.auth.signOut();
-  localStorage.removeItem('dc_name'); localStorage.removeItem('dc_tutdone');
-  document.querySelector('.bottom-nav').style.display='none';
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('auth').classList.add('active');
+async function doLogin() {
+  const email    = document.getElementById('siEmail').value.trim();
+  const password = document.getElementById('siPassword').value;
+  if (!email || !password) { _setAuthMsg('Please enter your email and password', false); return; }
+  _btnLoading('btnSignIn', true, 'Sign In');
+  _setAuthMsg('Signing in...', true, true);
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    _setAuthMsg('Welcome back! Loading your data...', true);
+    await afterLogin(data.user);
+  } catch(e) {
+    _setAuthMsg(
+      e.message.includes('Invalid login') ? 'Incorrect email or password.'
+      : e.message.includes('confirm')     ? 'Please confirm your email first, then sign in.'
+      : e.message, false
+    );
+  } finally { _btnLoading('btnSignIn', false, 'Sign In'); }
+}
+
+async function doSignup() {
+  const email    = document.getElementById('suEmail').value.trim();
+  const password = document.getElementById('suPassword').value;
+  const confirm  = document.getElementById('suConfirm').value;
+  if (!email || !password)    { _setAuthMsg('Please fill in all fields', false); return; }
+  if (password.length < 6)    { _setAuthMsg('Password must be at least 6 characters', false); return; }
+  if (password !== confirm)   { _setAuthMsg('Passwords do not match', false); return; }
+  _btnLoading('btnSignUp', true, 'Create Account');
+  _setAuthMsg('Creating your account...', true, true);
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) throw error;
+    _lastEmail = email;
+    if (data.user && !data.user.email_confirmed_at) {
+      // Email confirmation required — show the dedicated screen
+      _btnLoading('btnSignUp', false, 'Create Account');
+      _setAuthMsg('');
+      _showConfirmScreen(email);
+    } else if (data.user) {
+      // Confirmation disabled — go straight in
+      _setAuthMsg('Account created!', true);
+      await afterLogin(data.user);
+    }
+  } catch(e) {
+    _setAuthMsg(
+      e.message.includes('already registered') ? 'An account with this email already exists. Try signing in.'
+      : e.message, false
+    );
+  } finally { _btnLoading('btnSignUp', false, 'Create Account'); }
+}
+
+async function doForgot() {
+  const email = document.getElementById('siEmail').value.trim();
+  if (!email) { _setAuthMsg('Enter your email above first', false); return; }
+  _setAuthMsg('Sending reset link...', true, true);
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname,
+    });
+    if (error) throw error;
+    _setAuthMsg(`Reset link sent to ${email}. Check your inbox.`, true);
+  } catch(e) { _setAuthMsg(e.message, false); }
+}
+
+async function doSignOut() {
+  if (!confirm('Sign out of Dee_Cistem?')) return;
+  await sb.auth.signOut();
+  localStorage.removeItem('dc_name');
+  document.getElementById('bottomNav').style.display = 'none';
+  document.getElementById('fabBtn').style.display    = 'none';
+  _navHistory.length = 0;
+  goTo('auth', false);
+  _setAuthMsg('');
 }
 
 async function afterLogin(user) {
-  await loadUserData(user.id);
-  const{data:profile}=await supabase.from('profiles').select('name').eq('user_id',user.id).single();
-  document.getElementById('auth').classList.remove('active');
-  if(!profile||!profile.name){ showOnboarding(); }
-  else { localStorage.setItem('dc_name',profile.name); startApp(); }
+  try {
+    await loadUserData(user.id);
+    const { data: profile } = await sb.from('profiles').select('name').eq('user_id', user.id).single();
+    document.getElementById('auth').classList.remove('active');
+    document.getElementById('authConfirmScreen').style.display = 'none';
+    if (!profile?.name) {
+      showOnboarding();
+    } else {
+      localStorage.setItem('dc_name', profile.name);
+      startApp();
+    }
+  } catch(e) {
+    console.warn('afterLogin:', e.message);
+    // Fallback — still let them in
+    document.getElementById('auth').classList.remove('active');
+    showOnboarding();
+  }
 }
 
-// Check existing session on load
-supabase.auth.getSession().then(({data:{session}})=>{ if(session) afterLogin(session.user); });
+// Session restore
+sb.auth.getSession().then(({ data: { session } }) => {
+  if (session) afterLogin(session.user);
+});
 
-// ── Onboarding — single definition (FIX 6) ───────────────────────
-const OB_STATS=[
-  {key:'Financial',color:'#34D399',desc:'Wealth and money management'},
-  {key:'Spirit',color:'#FBBF24',desc:'Inner peace and spiritual growth'},
-  {key:'Mind',color:'#A78BFA',desc:'Mental clarity and focus'},
-  {key:'Energy',color:'#60A5FA',desc:'Vitality and physical health'},
-  {key:'Knowledge',color:'#34D399',desc:'Learning and intellectual growth'},
-  {key:'Dexterity',color:'#F472B6',desc:'Skill and creative development'},
+// Handle email confirmation redirect
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    document.getElementById('authConfirmScreen').style.display = 'none';
+    afterLogin(session.user);
+  }
+});
+
+// ── Onboarding ────────────────────────────────────────────────────
+const OB_STATS = [
+  { key:'Financial', color:'var(--fin)',    desc:'Wealth & money management' },
+  { key:'Spirit',    color:'var(--spirit)', desc:'Inner peace & growth' },
+  { key:'Mind',      color:'var(--mind)',   desc:'Clarity & focus' },
+  { key:'Energy',    color:'var(--energy)', desc:'Vitality & physical health' },
+  { key:'Knowledge', color:'var(--know)',   desc:'Learning & study' },
+  { key:'Dexterity', color:'var(--dex)',    desc:'Skill & creativity' },
 ];
-let obSelected=new Set();
+let _obSelected = new Set();
 
 function showOnboarding() {
-  document.getElementById('onboarding').style.display='flex';
-  document.querySelector('.bottom-nav').style.display='none';
-  const grid=document.getElementById('obStatGrid');
-  grid.innerHTML=OB_STATS.map(s=>`<div id="obstat_${s.key}" class="card" style="cursor:pointer;border-color:${s.color}22;padding:16px;text-align:center" onclick="toggleObStat('${s.key}')"><div style="color:${s.color};font-weight:700;margin-bottom:4px">${s.key}</div><div style="font-size:11px;color:#9BA3C4">${s.desc}</div></div>`).join('');
+  document.getElementById('onboarding').style.display = 'flex';
+  document.getElementById('bottomNav').style.display  = 'none';
+  const grid = document.getElementById('obStatGrid');
+  grid.innerHTML = OB_STATS.map(s => `
+    <div id="obs_${s.key}" onclick="toggleOb('${s.key}')"
+      style="background:var(--card);border:1px solid var(--border);border-radius:var(--rs);
+             padding:14px;cursor:pointer;text-align:center;transition:.15s">
+      <div style="font-weight:700;color:${s.color};margin-bottom:4px">${s.key}</div>
+      <div style="font-size:11px;color:var(--t2)">${s.desc}</div>
+    </div>`).join('');
 }
 
-function toggleObStat(key) {
-  if(obSelected.has(key)){ obSelected.delete(key); document.getElementById('obstat_'+key).style.cssText='border-color:#2A2D42'; }
-  else { if(obSelected.size>=3)return; obSelected.add(key); document.getElementById('obstat_'+key).style.cssText='border-color:#4F8EF7;background:rgba(79,142,247,.1)'; }
+function toggleOb(key) {
+  if (_obSelected.has(key)) {
+    _obSelected.delete(key);
+    const el = document.getElementById('obs_'+key);
+    el.style.borderColor = 'var(--border)';
+    el.style.background  = 'var(--card)';
+  } else {
+    if (_obSelected.size >= 3) return;
+    _obSelected.add(key);
+    const el = document.getElementById('obs_'+key);
+    el.style.borderColor = 'var(--accent)';
+    el.style.background  = 'rgba(79,142,247,.1)';
+  }
 }
 
 function obNext(step) {
-  if(step===1){ const n=document.getElementById('obName').value.trim(); if(!n)return; localStorage.setItem('dc_name',n); document.getElementById('ob3Head').textContent=`${n}, your starting rank is E.`; document.getElementById('ob1').classList.remove('active'); document.getElementById('ob2').classList.add('active'); }
-  else{ document.getElementById('ob2').classList.remove('active'); document.getElementById('ob3').classList.add('active'); }
+  if (step === 1) {
+    const n = document.getElementById('obName').value.trim();
+    if (!n) return;
+    localStorage.setItem('dc_name', n);
+    document.getElementById('ob3Head').textContent = `${n}, your starting rank is E.`;
+    document.getElementById('ob1').classList.remove('active');
+    document.getElementById('ob2').classList.add('active');
+  } else {
+    document.getElementById('ob2').classList.remove('active');
+    document.getElementById('ob3').classList.add('active');
+  }
 }
 
 function obBack(step) {
-  if(step===1){ document.getElementById('ob2').classList.remove('active'); document.getElementById('ob1').classList.add('active'); }
-  else{ document.getElementById('ob3').classList.remove('active'); document.getElementById('ob2').classList.add('active'); }
+  if (step === 1) {
+    document.getElementById('ob2').classList.remove('active');
+    document.getElementById('ob1').classList.add('active');
+  } else {
+    document.getElementById('ob3').classList.remove('active');
+    document.getElementById('ob2').classList.add('active');
+  }
 }
 
-// FIX 5: Single obFinish — correct async Supabase save
 function obFinish() {
-  const name=localStorage.getItem('dc_name')||'';
-  localStorage.setItem('dc_selected_modules',JSON.stringify(Array.from(obSelected)));
-  document.getElementById('onboarding').style.display='none';
-  (async()=>{
-    try{ const{data:{user}}=await supabase.auth.getUser(); if(user) await supabase.from('profiles').upsert({user_id:user.id,name,selected_modules:Array.from(obSelected),updated_at:new Date().toISOString()},{onConflict:'user_id'}); }
-    catch(e){ console.error('profile save',e); }
+  const name = localStorage.getItem('dc_name') || '';
+  const mods = Array.from(_obSelected);
+  localStorage.setItem('dc_selected_mods', JSON.stringify(mods));
+  document.getElementById('onboarding').style.display = 'none';
+  // Save profile to Supabase async
+  (async () => {
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) {
+        await sb.from('profiles').upsert(
+          { user_id: user.id, name, selected_modules: mods, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        );
+      }
+    } catch(e) { console.warn('profile save:', e.message); }
   })();
-  if(!localStorage.getItem('dc_tutdone')){ document.getElementById('tutorial').style.display='flex'; }
-  else{ startApp(); }
+  if (!localStorage.getItem('dc_tut')) {
+    document.getElementById('tutorial').style.display = 'flex';
+  } else {
+    startApp();
+  }
 }
 
-function closeTutorial(){ localStorage.setItem('dc_tutdone','1'); document.getElementById('tutorial').style.display='none'; startApp(); }
-function dismissTutorial(){ localStorage.setItem('dc_tutdone','1'); document.getElementById('tutorial').style.display='none'; startApp(); }
-function showTutorial(){ document.getElementById('tutorial').style.display='flex'; }
+function closeTutorial() {
+  localStorage.setItem('dc_tut', '1');
+  document.getElementById('tutorial').style.display = 'none';
+  startApp();
+}
 
-function startApp() {
-  document.querySelector('.bottom-nav').style.display='flex';
-  show('home',false); history.replaceState({screen:'home'},'','#home');
-  setTheme(currentTheme);
+function showTutorial() {
+  document.getElementById('tutorial').style.display = 'flex';
 }
 
 function resetOnboarding() {
-  localStorage.removeItem('dc_name'); localStorage.removeItem('dc_tutdone'); localStorage.removeItem('dc_selected_modules');
-  obSelected.clear(); showOnboarding();
+  if (!confirm('Reset onboarding? Your data is kept.')) return;
+  localStorage.removeItem('dc_name');
+  localStorage.removeItem('dc_tut');
+  localStorage.removeItem('dc_selected_mods');
+  _obSelected.clear();
   document.getElementById('ob1').classList.add('active');
   document.getElementById('ob2').classList.remove('active');
   document.getElementById('ob3').classList.remove('active');
+  showOnboarding();
+}
+
+function startApp() {
+  document.getElementById('bottomNav').style.display = 'flex';
+  _navHistory.length = 0;
+  goTo('home', false);
+  history.replaceState({ screen: 'home' }, '', '#home');
+  _applyTheme();
 }
 
 // ── Home ──────────────────────────────────────────────────────────
-const MODULES=[
-  {id:'financial',name:'Financial',color:'#34D399',desc:'Income · Expenses · Cashflow',stat:'Financial'},
-  {id:'spirit',   name:'Spirit',   color:'#FBBF24',desc:'Prayer · Bible · Leadership',stat:'Spirit'},
-  {id:'mind',     name:'Mind',     color:'#A78BFA',desc:'Focus · DeeCadence',stat:'Mind'},
-  {id:'energy',   name:'Energy',   color:'#60A5FA',desc:'Sleep · Water · Exercise',stat:'Body'},
-  {id:'knowledge',name:'Knowledge',color:'#34D399',desc:'Study · Reading · Skills',stat:'Knowledge'},
-  {id:'dexterity',name:'Dexterity',color:'#F472B6',desc:'Art · Design · VoxScope',stat:'Dexterity'},
+const MODULES = [
+  { id:'financial', name:'Financial', color:'var(--fin)',    desc:'Income · Expenses · Cashflow', stat:'Financial' },
+  { id:'spirit',    name:'Spirit',    color:'var(--spirit)', desc:'Prayer · Bible · Leadership',  stat:'Spirit' },
+  { id:'mind',      name:'Mind',      color:'var(--mind)',   desc:'Focus · DeeCadence',            stat:'Mind' },
+  { id:'energy',    name:'Energy',    color:'var(--energy)', desc:'Sleep · Water · Exercise',      stat:'Body' },
+  { id:'knowledge', name:'Knowledge', color:'var(--know)',   desc:'Study · Reading · Skills',      stat:'Knowledge' },
+  { id:'dexterity', name:'Dexterity', color:'var(--dex)',   desc:'Art · Design · VoxScope',        stat:'Dexterity' },
 ];
 
 function renderHome() {
-  const h=new Date().getHours(); const g=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
-  const name=(localStorage.getItem('dc_name')||'DC').replace(/\b\w/g,l=>l.toUpperCase());
-  const display=showFullUsername?name:name.charAt(0).toUpperCase();
-  document.getElementById('greeting').textContent=`${g}, ${display}`;
-  document.getElementById('dateStr').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  updateUsernameBtn();
-  const vals=Object.values(STATE.stats); const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
-  document.getElementById('overallRank').textContent=`Rank ${getRank(avg)} · Score ${Math.round(avg)}`;
-  document.getElementById('keyStats').textContent=`Body ${STATE.stats.Body} · Mind ${STATE.stats.Mind} · Spirit ${STATE.stats.Spirit}`;
-  const sel=JSON.parse(localStorage.getItem('dc_selected_modules')||'[]');
-  let ordered=[]; sel.forEach(k=>{const m=MODULES.find(x=>x.stat===k);if(m)ordered.push(m);}); MODULES.forEach(m=>{if(!ordered.includes(m))ordered.push(m);});
-  document.getElementById('moduleGrid').innerHTML=ordered.map(m=>`<div class="module" onclick="show('${m.id}')" style="border-left:4px solid ${m.color}"><div class="name" style="color:${m.color}">${m.name}</div><div class="desc">${m.desc}</div><div class="stat" style="color:${m.color}">${STATE.stats[m.stat]||1} · Rank ${getRank(STATE.stats[m.stat]||1)}</div><div class="stat-bar"><div class="stat-fill" style="width:${STATE.stats[m.stat]||1}%;background:${m.color}"></div></div></div>`).join('');
+  const h = new Date().getHours();
+  const g = h<12 ? 'Good morning' : h<17 ? 'Good afternoon' : 'Good evening';
+  const name = localStorage.getItem('dc_name') || 'DC';
+  const n    = name.replace(/\b\w/g, l => l.toUpperCase());
+  document.getElementById('greeting').textContent = `${g}, ${n}`;
+  document.getElementById('dateStr').textContent  =
+    new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  _refreshHomeStats();
+  const sel = JSON.parse(localStorage.getItem('dc_selected_mods') || '[]');
+  let ordered = [];
+  sel.forEach(k => { const m = MODULES.find(x => x.stat===k); if(m) ordered.push(m); });
+  MODULES.forEach(m => { if (!ordered.includes(m)) ordered.push(m); });
+  document.getElementById('moduleGrid').innerHTML = ordered.map(m => `
+    <div class="mod-card" onclick="goTo('${m.id}')" style="border-left:3px solid ${m.color}">
+      <div class="mod-name" style="color:${m.color}">${m.name}</div>
+      <div class="mod-desc">${m.desc}</div>
+      <div class="mod-stat" style="color:${m.color}">
+        ${S.stats[m.stat]||1} · Rank ${getRank(S.stats[m.stat]||1)}
+      </div>
+      <div class="stat-bar">
+        <div class="stat-fill" style="width:${S.stats[m.stat]||1}%;background:${m.color}"></div>
+      </div>
+    </div>`).join('');
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────
+const STAT_COLORS = { Body:'var(--energy)', Mind:'var(--mind)', Spirit:'var(--spirit)',
+  Knowledge:'var(--know)', Financial:'var(--fin)', Dexterity:'var(--dex)' };
+
 function renderDashboard() {
-  const colors={Body:'#60A5FA',Mind:'#A78BFA',Spirit:'#FBBF24',Knowledge:'#34D399',Financial:'#34D399',Dexterity:'#F472B6'};
-  document.getElementById('dashContent').innerHTML=`<div class="card"><h3>Stat Sheet</h3>${Object.entries(STATE.stats).map(([k,v])=>`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${k}</span><span style="font-size:11px;color:${colors[k]}">${v} · Rank ${getRank(v)}</span></div><div class="stat-bar"><div class="stat-fill" style="width:${v}%;background:${colors[k]}"></div></div></div>`).join('')}</div>`;
+  const vals = Object.values(S.stats);
+  const avg  = vals.reduce((a,b)=>a+b,0) / vals.length;
+  document.getElementById('dashContent').innerHTML = `
+    <div class="card">
+      <div class="card-title">Overall</div>
+      <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;
+                  color:var(--accent);margin-bottom:4px">Rank ${getRank(avg)}</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:16px">Score ${Math.round(avg)} / 100</div>
+    </div>
+    <div class="card">
+      <div class="card-title">All Stats</div>
+      ${Object.entries(S.stats).map(([k,v]) => `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+            <span style="font-size:13px;font-weight:600">${k}</span>
+            <span style="font-size:11px;color:${STAT_COLORS[k]}">${v} · Rank ${getRank(v)}</span>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-fill" style="width:${v}%;background:${STAT_COLORS[k]}"></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
 }
 
 // ── Settings ──────────────────────────────────────────────────────
-function renderSettings() {
-  const ctx=document.getElementById('progressChart'); if(!ctx)return;
-  new Chart(ctx,{type:'bar',data:{labels:Object.keys(STATE.stats),datasets:[{label:'Score',data:Object.values(STATE.stats),backgroundColor:['#60A5FA','#A78BFA','#FBBF24','#34D399','#34D399','#F472B6'],borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});
+async function renderSettings() {
+  const { data: { user } } = await sb.auth.getUser().catch(() => ({ data: { user: null } }));
+  const emailEl = document.getElementById('accountEmail');
+  if (emailEl && user) emailEl.textContent = user.email;
+  const nameField = document.getElementById('displayNameField');
+  if (nameField) nameField.value = localStorage.getItem('dc_name') || '';
+}
+
+async function saveName() {
+  const name = document.getElementById('displayNameField').value.trim();
+  if (!name) return;
+  localStorage.setItem('dc_name', name);
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (user) await sb.from('profiles').upsert({ user_id: user.id, name, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  } catch(e) { console.warn(e); }
+  _refreshHomeStats();
+  alert('Name saved!');
 }
 
 function exportData() {
-  let csv='Category,Date,Details,Amount\n';
-  STATE.financial.forEach(e=>csv+=`Financial,${e.date},"${e.category||''}",${e.amount||0}\n`);
-  ['spirit','mind','energy','knowledge','dexterity'].forEach(cat=>STATE[cat].forEach(e=>csv+=`${cat},${e.date||''},"${e.label||''}",1\n`));
-  csv+='\nStats\nModule,Score,Rank\n'; Object.entries(STATE.stats).forEach(([k,v])=>csv+=`${k},${v},${getRank(v)}\n`);
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`deecistem-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+  let csv = 'Category,Type,Label,Amount,Date\n';
+  S.financial.forEach(e => csv += `Financial,${e.type},"${e.category||''}",${e.amount||0},${e.date}\n`);
+  ['spirit','mind','energy','knowledge','dexterity'].forEach(cat =>
+    S[cat].forEach(e => csv += `${cat},log,"${e.label||''}",1,${e.date||''}\n`));
+  csv += '\nModule,Score,Rank\n';
+  Object.entries(S.stats).forEach(([k,v]) => csv += `${k},${v},${getRank(v)}\n`);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv' }));
+  a.download = `deecistem-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
 }
 
 // ── Financial ─────────────────────────────────────────────────────
-let currentLedger='personal',currentTxnType='income',cfChart=null;
-const incCats=['Salary','Freelance','Business','Gift','Investment','Other'];
-const expCats=['Food','Transport','Education','Health','Entertainment','Tithe','Savings','Utilities','Clothing','Other'];
-function fmtNum(n){return n>=1000?(n/1000).toFixed(1)+'k':String(n)}
+let _ledger = 'personal', _txnType = 'income', _cfChart = null;
+const INC_CATS = ['Salary','Freelance','Business','Gift','Investment','Other'];
+const EXP_CATS = ['Food','Transport','Education','Health','Entertainment','Tithe','Savings','Utilities','Clothing','Other'];
+const ALL_CATS  = [...new Set([...INC_CATS, ...EXP_CATS])];
 
 function renderFinancial() {
-  const txns=STATE.financial.filter(t=>t.ledger===currentLedger);
-  const income=txns.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
-  const expense=txns.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  const cf=income-expense;
-  document.getElementById('financialContent').innerHTML=`
-    <div class="tabs"><div class="tab ${currentLedger==='personal'?'active':''}" onclick="switchLedger('personal')">Personal</div><div class="tab ${currentLedger==='business'?'active':''}" onclick="switchLedger('business')">Business</div></div>
-    <div class="sum-row"><div class="sum-cell"><div class="sum-label">Income</div><div class="sum-val" style="color:var(--fin)">₦${income.toLocaleString()}</div></div><div class="sum-cell"><div class="sum-label">Expenses</div><div class="sum-val" style="color:var(--err)">₦${expense.toLocaleString()}</div></div><div class="sum-cell"><div class="sum-label">Cashflow</div><div class="sum-val" style="color:${cf>=0?'var(--fin)':'var(--err)'}">₦${cf.toLocaleString()}</div></div></div>
-    <div class="row" style="margin-bottom:12px"><button class="btn btn-success" onclick="showAddTxn('income')" style="margin-bottom:0">+ Income</button><button class="btn btn-danger" onclick="showAddTxn('expense')" style="margin-bottom:0">+ Expense</button></div>
-    <div id="txnForm" style="display:none" class="card"><h3 id="txnTitle">Add</h3><input class="field" id="txnAmount" type="number" placeholder="Amount (₦)"><select class="field" id="txnCat"></select><input class="field" id="txnNote" placeholder="Note (optional)"><div class="row"><button class="btn btn-primary" onclick="saveTxn()" style="margin-bottom:0">Save</button><button class="btn btn-ghost" onclick="document.getElementById('txnForm').style.display='none'" style="margin-bottom:0">Cancel</button></div></div>
-    <div class="card"><h3>Cashflow (Last 7 Days)</h3><div class="chart-wrap"><canvas id="cfChart"></canvas></div></div>
-    <div class="card"><h3>Transactions</h3><select class="field" id="txnFilter" onchange="renderFinancial()"><option value="all">All categories</option>${[...incCats,...expCats].filter((v,i,a)=>a.indexOf(v)===i).map(c=>`<option>${c}</option>`).join('')}</select>${(()=>{const filter=document.getElementById('txnFilter')?.value||'all';const filtered=txns.filter(t=>filter==='all'||t.category===filter);return filtered.length===0?'<div class="empty">No transactions yet.</div>':filtered.slice(-8).reverse().map(t=>`<div class="log-item" style="border-color:${t.type==='income'?'var(--fin)':'var(--err)'}"><div class="li-title" style="color:${t.type==='income'?'var(--fin)':'var(--err)'}">${t.type==='income'?'+':'-'}₦${(t.amount||0).toLocaleString()} · ${t.category}</div><div class="li-sub">${t.note||''} · ${t.date}</div></div>`).join('');})()}</div>`;
-  buildCfChart(txns);
+  const txns    = S.financial.filter(t => t.ledger === _ledger);
+  const income  = txns.filter(t => t.type==='income').reduce((a,t) => a+t.amount, 0);
+  const expense = txns.filter(t => t.type==='expense').reduce((a,t) => a+t.amount, 0);
+  const cf      = income - expense;
+  document.getElementById('financialContent').innerHTML = `
+    <div class="tabs">
+      <div class="tab ${_ledger==='personal'?'active':''}" onclick="switchLedger('personal')">Personal</div>
+      <div class="tab ${_ledger==='business'?'active':''}" onclick="switchLedger('business')">Business</div>
+    </div>
+    <div class="sum-row sum-row-3">
+      <div class="sum-cell"><div class="sum-label">Income</div>
+        <div class="sum-val" style="color:var(--fin)">₦${fmtN(income)}</div></div>
+      <div class="sum-cell"><div class="sum-label">Expenses</div>
+        <div class="sum-val" style="color:var(--err)">₦${fmtN(expense)}</div></div>
+      <div class="sum-cell"><div class="sum-label">Cashflow</div>
+        <div class="sum-val" style="color:${cf>=0?'var(--fin)':'var(--err)'}">₦${fmtN(cf)}</div></div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn btn-green" onclick="showAddTxn('income')" style="margin-bottom:0">+ Income</button>
+      <button class="btn btn-red" onclick="showAddTxn('expense')" style="margin-bottom:0">+ Expense</button>
+    </div>
+    <div id="txnForm" style="display:none" class="card">
+      <div class="card-title" id="txnTitle">Add</div>
+      <input class="field" id="txnAmt" type="number" placeholder="Amount (₦)">
+      <select class="field" id="txnCat"></select>
+      <input class="field" id="txnNote" placeholder="Note (optional)">
+      <div class="row">
+        <button class="btn btn-accent" onclick="saveTxn()" style="margin-bottom:0">Save</button>
+        <button class="btn btn-ghost" onclick="hideTxnForm()" style="margin-bottom:0">Cancel</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Cashflow — Last 7 Days</div>
+      <div class="chart-wrap"><canvas id="cfChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Transactions</div>
+      <select class="field" id="txnFilter" onchange="renderFinancial()" style="margin-bottom:12px">
+        <option value="all">All categories</option>
+        ${ALL_CATS.map(c=>`<option>${c}</option>`).join('')}
+      </select>
+      ${(() => {
+        const f = document.getElementById('txnFilter')?.value || 'all';
+        const filtered = txns.filter(t => f==='all' || t.category===f);
+        return filtered.length === 0
+          ? '<div class="empty">No transactions yet.<br>Add your first one above.</div>'
+          : filtered.slice(-10).reverse().map(t => `
+            <div class="log-item" style="border-color:${t.type==='income'?'var(--fin)':'var(--err)'}">
+              <div class="log-title" style="color:${t.type==='income'?'var(--fin)':'var(--err)'}">
+                ${t.type==='income'?'+':'-'}₦${(t.amount||0).toLocaleString()} · ${t.category}
+              </div>
+              <div class="log-sub">${t.note||''} · ${t.date}</div>
+            </div>`).join('');
+      })()}
+    </div>`;
+  _buildCfChart(txns);
 }
 
-function buildCfChart(txns) {
-  const ctx=document.getElementById('cfChart'); if(!ctx)return;
-  if(cfChart){cfChart.destroy();cfChart=null;}
-  const days=[],inc=[],exp=[];
-  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const l=d.toLocaleDateString('en-GB',{weekday:'short'});const ds=d.toLocaleDateString('en-GB');days.push(l);inc.push(txns.filter(t=>t.type==='income'&&t.date===ds).reduce((a,t)=>a+t.amount,0));exp.push(txns.filter(t=>t.type==='expense'&&t.date===ds).reduce((a,t)=>a+t.amount,0));}
-  cfChart=new Chart(ctx,{type:'bar',data:{labels:days,datasets:[{label:'Income',data:inc,backgroundColor:'rgba(45,212,160,.7)',borderRadius:4},{label:'Expenses',data:exp,backgroundColor:'rgba(248,113,113,.7)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B93B8',font:{size:11}}}},scales:{x:{ticks:{color:'#4A5070',font:{size:10}},grid:{color:'#252B3B'}},y:{ticks:{color:'#4A5070',font:{size:10},callback:v=>'₦'+fmtNum(v)},grid:{color:'#252B3B'}}}}});
+function _buildCfChart(txns) {
+  const ctx = document.getElementById('cfChart');
+  if (!ctx) return;
+  if (_cfChart) { _cfChart.destroy(); _cfChart = null; }
+  const days=[], inc=[], exp=[];
+  for (let i=6; i>=0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toLocaleDateString('en-GB');
+    days.push(d.toLocaleDateString('en-GB', { weekday:'short' }));
+    inc.push(txns.filter(t => t.type==='income'  && t.date===ds).reduce((a,t) => a+t.amount, 0));
+    exp.push(txns.filter(t => t.type==='expense' && t.date===ds).reduce((a,t) => a+t.amount, 0));
+  }
+  _cfChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: days, datasets: [
+      { label:'Income',   data:inc, backgroundColor:'rgba(45,212,160,.7)', borderRadius:4 },
+      { label:'Expenses', data:exp, backgroundColor:'rgba(248,113,113,.7)', borderRadius:4 },
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#9BA3C4', font:{ size:11 } } } },
+      scales:{
+        x:{ ticks:{ color:'#4A5070', font:{ size:10 } }, grid:{ color:'#2A2D42' } },
+        y:{ ticks:{ color:'#4A5070', font:{ size:10 }, callback: v=>'₦'+fmtN(v) }, grid:{ color:'#2A2D42' } },
+      },
+    },
+  });
 }
 
-function switchLedger(l){currentLedger=l;renderFinancial()}
-function showAddTxn(type){currentTxnType=type;document.getElementById('txnTitle').textContent=type==='income'?'Add Income':'Add Expense';document.getElementById('txnCat').innerHTML=(type==='income'?incCats:expCats).map(c=>`<option>${c}</option>`).join('');document.getElementById('txnForm').style.display='block';document.getElementById('txnAmount').value='';document.getElementById('txnNote').value='';document.getElementById('txnAmount').focus()}
-function saveTxn(){const amount=parseFloat(document.getElementById('txnAmount').value);if(!amount||amount<=0)return;STATE.financial.push({type:currentTxnType,amount,ledger:currentLedger,category:document.getElementById('txnCat').value,note:document.getElementById('txnNote').value,date:today()});save('financial');updateStat('Financial',currentTxnType==='income'?2:-1);document.getElementById('txnForm').style.display='none';renderFinancial()}
+function switchLedger(l) { _ledger = l; renderFinancial(); }
+function hideTxnForm() { document.getElementById('txnForm').style.display = 'none'; }
+
+function showAddTxn(type) {
+  _txnType = type;
+  document.getElementById('txnTitle').textContent = type==='income' ? 'Add Income' : 'Add Expense';
+  document.getElementById('txnCat').innerHTML = (type==='income' ? INC_CATS : EXP_CATS).map(c => `<option>${c}</option>`).join('');
+  document.getElementById('txnForm').style.display = 'block';
+  document.getElementById('txnAmt').value  = '';
+  document.getElementById('txnNote').value = '';
+  document.getElementById('txnAmt').focus();
+}
+
+function saveTxn() {
+  const amount = parseFloat(document.getElementById('txnAmt').value);
+  if (!amount || amount <= 0) return;
+  S.financial.push({
+    type:_txnType, amount, ledger:_ledger,
+    category: document.getElementById('txnCat').value,
+    note:     document.getElementById('txnNote').value,
+    date:     today(),
+  });
+  save('financial');
+  updateStat('Financial', _txnType==='income' ? 2 : -1);
+  hideTxnForm();
+  renderFinancial();
+}
 
 // ── Spirit ────────────────────────────────────────────────────────
-function renderSpirit(){
-  const tp=STATE.spirit.filter(e=>e.type==='prayer'&&e.date===today()).length;
-  const tb=STATE.spirit.filter(e=>e.type==='bible'&&e.date===today()).length;
-  document.getElementById('spiritContent').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div class="card" style="padding:12px;text-align:center"><div class="sum-label">Prayers Today</div><div class="sum-val" style="color:#FBBF24">${tp}</div></div><div class="card" style="padding:12px;text-align:center"><div class="sum-label">Bible Today</div><div class="sum-val" style="color:#34D399">${tb}</div></div></div><div class="card"><h3>Log Prayer</h3><div class="row"><button class="btn btn-primary" onclick="logSpirit('prayer','Morning Prayer')">Morning</button><button class="btn btn-primary" onclick="logSpirit('prayer','Night Prayer')">Night</button><button class="btn btn-primary" onclick="logSpirit('prayer','Prayer')">Other</button></div></div><div class="card"><h3>Bible Reading</h3><input class="field" id="biblePassage" placeholder="Passage (e.g. John 3:16)"><button class="btn btn-success" onclick="logBible()">Log Reading</button></div><div class="card"><h3>Recent</h3>${STATE.spirit.length===0?'<div class="empty">Nothing logged yet.</div>':STATE.spirit.slice(-5).reverse().map(e=>`<div class="log-item" style="border-color:#FBBF24"><div class="li-title" style="color:#FBBF24">${e.label}</div><div class="li-sub">${e.date}</div></div>`).join('')}</div>`;
+function renderSpirit() {
+  const tp = S.spirit.filter(e => e.type==='prayer' && e.date===today()).length;
+  const tb = S.spirit.filter(e => e.type==='bible'  && e.date===today()).length;
+  document.getElementById('spiritContent').innerHTML = `
+    <div class="sum-row sum-row-2">
+      <div class="sum-cell"><div class="sum-label">Prayers Today</div>
+        <div class="sum-val" style="color:var(--spirit)">${tp}</div></div>
+      <div class="sum-cell"><div class="sum-label">Bible Today</div>
+        <div class="sum-val" style="color:var(--fin)">${tb}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Log Prayer</div>
+      <div class="row">
+        <button class="btn btn-accent" onclick="logSpirit('prayer','Morning Prayer')" style="margin-bottom:0">Morning</button>
+        <button class="btn btn-accent" onclick="logSpirit('prayer','Night Prayer')" style="margin-bottom:0">Night</button>
+        <button class="btn btn-accent" onclick="logSpirit('prayer','Prayer')" style="margin-bottom:0">Other</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Bible Reading</div>
+      <input class="field" id="bibleRef" placeholder="Passage (e.g. John 3:16–18)">
+      <button class="btn btn-green" onclick="logBible()">Log Reading</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent</div>
+      ${S.spirit.length === 0
+        ? '<div class="empty">Nothing logged yet.<br>Start with a prayer.</div>'
+        : S.spirit.slice(-5).reverse().map(e => `
+          <div class="log-item" style="border-color:var(--spirit)">
+            <div class="log-title" style="color:var(--spirit)">${e.label}</div>
+            <div class="log-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
 }
-function logSpirit(type,label){STATE.spirit.push({type,label,date:today()});save('spirit');updateStat('Spirit',3);renderSpirit()}
-function logBible(){const p=document.getElementById('biblePassage').value.trim();if(!p)return;STATE.spirit.push({type:'bible',label:`Bible: ${p}`,date:today()});save('spirit');document.getElementById('biblePassage').value='';updateStat('Spirit',2);renderSpirit()}
+
+function logSpirit(type, label) { S.spirit.push({type,label,date:today()}); save('spirit'); updateStat('Spirit',3); renderSpirit(); }
+function logBible() {
+  const p = document.getElementById('bibleRef').value.trim();
+  if (!p) return;
+  S.spirit.push({ type:'bible', label:`Bible: ${p}`, date:today() });
+  save('spirit'); document.getElementById('bibleRef').value = '';
+  updateStat('Spirit', 2); renderSpirit();
+}
 
 // ── Mind ──────────────────────────────────────────────────────────
-function renderMind(){
-  document.getElementById('mindContent').innerHTML=`<div class="card" onclick="show('deecadence')" style="border:1px solid #38BDF830;cursor:pointer"><div style="color:#38BDF8;font-weight:700;margin-bottom:4px">DeeCadence</div><div style="font-size:12px;color:#9BA3C4">Focus debt · Session tracker · Attention score</div><div style="font-size:11px;color:#38BDF8;margin-top:8px">Tap to open ›</div></div><div class="card"><h3>Quick Focus Log</h3><input class="field" id="focusDur" type="number" placeholder="Duration (minutes)"><select class="field" id="focusType"><option>Deep Work</option><option>Study</option><option>Reading</option><option>Planning</option><option>Creative</option></select><button class="btn btn-primary" onclick="logFocus()">Log Session</button></div><div class="card"><h3>Mood Check-in</h3><div class="row">${['Low','OK','Good','Great','Peak'].map((l,i)=>`<button class="btn btn-secondary" style="font-size:11px;padding:10px 4px;margin-bottom:0" onclick="logMood(${i+1},'${l}')">${l}</button>`).join('')}</div></div><div class="card"><h3>Recent</h3>${STATE.mind.length===0?'<div class="empty">Nothing logged yet.</div>':STATE.mind.slice(-4).reverse().map(e=>`<div class="log-item" style="border-color:#A78BFA"><div class="li-title" style="color:#A78BFA">${e.label}</div><div class="li-sub">${e.date}</div></div>`).join('')}</div>`;
+function renderMind() {
+  document.getElementById('mindContent').innerHTML = `
+    <div class="card" onclick="goTo('deecadence')"
+         style="border:1px solid rgba(56,189,248,.2);cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="color:var(--dc);font-family:'Syne',sans-serif;font-weight:700;
+                      font-size:15px;margin-bottom:4px">DeeCadence</div>
+          <div style="font-size:12px;color:var(--t2)">
+            Focus debt · Session tracker · Attention score
+          </div>
+        </div>
+        <div style="color:var(--dc);font-size:22px">›</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Quick Focus Log</div>
+      <input class="field" id="focusDur" type="number" placeholder="Duration (minutes)">
+      <select class="field" id="focusType">
+        <option>Deep Work</option><option>Study</option>
+        <option>Reading</option><option>Planning</option><option>Creative</option>
+      </select>
+      <button class="btn btn-accent" onclick="logFocus()">Log Session</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Mood Check-in</div>
+      <div class="row">
+        ${['Low','OK','Good','Great','Peak'].map((l,i) => `
+          <button class="btn btn-muted" style="font-size:11px;padding:12px 4px;margin-bottom:0"
+            onclick="logMood(${i+1},'${l}')">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent</div>
+      ${S.mind.length === 0
+        ? '<div class="empty">Nothing logged yet.</div>'
+        : S.mind.slice(-4).reverse().map(e => `
+          <div class="log-item" style="border-color:var(--mind)">
+            <div class="log-title" style="color:var(--mind)">${e.label}</div>
+            <div class="log-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
 }
-function logFocus(){const dur=parseInt(document.getElementById('focusDur').value);if(!dur||dur<=0)return;const type=document.getElementById('focusType').value;STATE.mind.push({label:`${type} · ${dur}min`,date:today()});save('mind');document.getElementById('focusDur').value='';updateStat('Mind',Math.min(5,Math.floor(dur/10)));renderMind()}
-function logMood(score,label){STATE.mind.push({label:`Mood: ${label} (${score}/5)`,date:today()});save('mind');updateStat('Mind',2);renderMind()}
+
+function logFocus() {
+  const dur = parseInt(document.getElementById('focusDur').value);
+  if (!dur || dur <= 0) return;
+  const type = document.getElementById('focusType').value;
+  S.mind.push({ label:`${type} · ${dur}min`, date:today() });
+  save('mind'); document.getElementById('focusDur').value = '';
+  updateStat('Mind', Math.min(5, Math.floor(dur/10))); renderMind();
+}
+function logMood(score, label) {
+  S.mind.push({ label:`Mood: ${label} (${score}/5)`, date:today() });
+  save('mind'); updateStat('Mind', 2); renderMind();
+}
 
 // ── Energy ────────────────────────────────────────────────────────
-function renderEnergy(){
-  const tw=STATE.energy.filter(e=>e.type==='water'&&e.date===today()).reduce((a,e)=>a+e.glasses,0);
-  const ts=STATE.energy.find(e=>e.type==='sleep'&&e.date===today());
-  const te=STATE.energy.filter(e=>e.type==='exercise'&&e.date===today()).reduce((a,e)=>a+(e.mins||0),0);
-  document.getElementById('energyContent').innerHTML=`<div class="sum-row"><div class="sum-cell"><div class="sum-label">Sleep</div><div class="sum-val" style="color:#60A5FA">${ts?`${ts.hours}h`:'—'}</div></div><div class="sum-cell"><div class="sum-label">Water</div><div class="sum-val" style="color:#60A5FA">${tw}gl</div></div><div class="sum-cell"><div class="sum-label">Exercise</div><div class="sum-val" style="color:#60A5FA">${te?`${te}m`:'—'}</div></div></div><div class="card"><h3>Log Sleep</h3><input class="field" id="sleepHrs" type="number" step="0.5" placeholder="Hours slept"><input class="field" id="sleepQ" type="number" min="1" max="5" placeholder="Quality 1–5"><button class="btn btn-primary" onclick="logSleep()">Log Sleep</button></div><div class="card"><h3>Water</h3><div class="row"><button class="btn btn-primary" onclick="logWater(1)">+1 Glass</button><button class="btn btn-primary" onclick="logWater(2)">+2 Glasses</button><button class="btn btn-primary" onclick="logWater(3)">+3 Glasses</button></div></div><div class="card"><h3>Exercise</h3><select class="field" id="exType"><option>Running</option><option>Walking</option><option>Gym</option><option>Cycling</option><option>HIIT</option><option>Swimming</option><option>Other</option></select><input class="field" id="exMins" type="number" placeholder="Duration (minutes)"><button class="btn btn-success" onclick="logExercise()">Log Exercise</button></div>`;
+function renderEnergy() {
+  const tw = S.energy.filter(e => e.type==='water'    && e.date===today()).reduce((a,e) => a+e.glasses, 0);
+  const ts = S.energy.find  (e => e.type==='sleep'    && e.date===today());
+  const te = S.energy.filter(e => e.type==='exercise' && e.date===today()).reduce((a,e) => a+(e.mins||0), 0);
+  document.getElementById('energyContent').innerHTML = `
+    <div class="sum-row sum-row-3">
+      <div class="sum-cell"><div class="sum-label">Sleep</div>
+        <div class="sum-val" style="color:var(--energy)">${ts ? `${ts.hours}h` : '—'}</div></div>
+      <div class="sum-cell"><div class="sum-label">Water</div>
+        <div class="sum-val" style="color:var(--energy)">${tw}gl</div></div>
+      <div class="sum-cell"><div class="sum-label">Exercise</div>
+        <div class="sum-val" style="color:var(--energy)">${te ? `${te}m` : '—'}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Log Sleep</div>
+      <input class="field" id="sleepHrs" type="number" step="0.5" placeholder="Hours slept">
+      <input class="field" id="sleepQ"   type="number" min="1" max="5" placeholder="Quality 1–5">
+      <button class="btn btn-accent" onclick="logSleep()">Log Sleep</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Water</div>
+      <div class="row">
+        <button class="btn btn-accent" onclick="logWater(1)" style="margin-bottom:0">+1 Glass</button>
+        <button class="btn btn-accent" onclick="logWater(2)" style="margin-bottom:0">+2 Glasses</button>
+        <button class="btn btn-accent" onclick="logWater(3)" style="margin-bottom:0">+3 Glasses</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Exercise</div>
+      <select class="field" id="exType">
+        <option>Running</option><option>Walking</option><option>Gym</option>
+        <option>Cycling</option><option>HIIT</option><option>Swimming</option><option>Other</option>
+      </select>
+      <input class="field" id="exMins" type="number" placeholder="Duration (minutes)">
+      <button class="btn btn-green" onclick="logExercise()">Log Exercise</button>
+    </div>`;
 }
-function logSleep(){const hrs=parseFloat(document.getElementById('sleepHrs').value||'0');const q=parseInt(document.getElementById('sleepQ').value||'3');if(!hrs||hrs<=0)return;STATE.energy.push({type:'sleep',hours:hrs,quality:q,date:today()});save('energy');document.getElementById('sleepHrs').value='';document.getElementById('sleepQ').value='';updateStat('Body',3);renderEnergy()}
-function logWater(g){STATE.energy.push({type:'water',glasses:g,date:today()});save('energy');updateStat('Body',1);renderEnergy()}
-function logExercise(){const type=document.getElementById('exType').value;const mins=parseInt(document.getElementById('exMins').value||'0');if(!mins||mins<=0)return;STATE.energy.push({type:'exercise',label:`${type} ${mins}min`,mins,date:today()});save('energy');document.getElementById('exMins').value='';updateStat('Body',4);renderEnergy()}
 
-// ── Knowledge — single definition (FIX 4) ────────────────────────
-function renderKnowledge(){
-  const el=document.getElementById('knowledgeContent'); if(!el)return;
-  el.innerHTML=`<div class="card"><div class="card-title">Log Reading</div><input class="field" id="readTitle" placeholder="Book or article title"><input class="field" id="readPages" type="number" placeholder="Pages read (optional)"><button class="btn btn-success" onclick="logReading()">Log Reading</button></div><div class="card"><div class="card-title">Vocabulary</div><input class="field" id="vocabWord" placeholder="Word"><input class="field" id="vocabMeaning" placeholder="Meaning / Definition"><button class="btn btn-primary" onclick="logVocab()">Add Word</button></div><div class="card"><div class="card-title">Skill Practice</div><input class="field" id="skillName" placeholder="Skill (e.g. Python, Guitar, Design)"><input class="field" id="skillMins" type="number" placeholder="Minutes practiced"><button class="btn btn-outline" onclick="logSkill()">Log Practice</button></div><div class="card"><div class="card-title">Recent</div>${STATE.knowledge.length===0?'<div class="empty">Nothing logged yet.<br>Start with a book or new word.</div>':STATE.knowledge.slice(-5).reverse().map(e=>`<div class="log-item" style="border-color:#34D399"><div class="li-title" style="color:#34D399">${e.label}</div><div class="li-sub">${e.type||''} · ${e.date}</div></div>`).join('')}</div>`;
+function logSleep() {
+  const hrs = parseFloat(document.getElementById('sleepHrs').value||'0');
+  const q   = parseInt  (document.getElementById('sleepQ').value||'3');
+  if (!hrs || hrs <= 0) return;
+  S.energy.push({ type:'sleep', hours:hrs, quality:q, date:today() });
+  save('energy');
+  document.getElementById('sleepHrs').value = '';
+  document.getElementById('sleepQ').value   = '';
+  updateStat('Body', 3); renderEnergy();
 }
-function logReading(){const title=document.getElementById('readTitle').value.trim();if(!title)return;const pages=document.getElementById('readPages').value;STATE.knowledge.push({type:'Reading',label:`${title}${pages?` · ${pages}p`:''}`,date:today()});save('knowledge');document.getElementById('readTitle').value='';document.getElementById('readPages').value='';updateStat('Knowledge',3);renderKnowledge()}
-function logVocab(){const w=document.getElementById('vocabWord').value.trim();const m=document.getElementById('vocabMeaning').value.trim();if(!w||!m)return;STATE.knowledge.push({type:'Vocab',label:`${w}: ${m}`,date:today()});save('knowledge');document.getElementById('vocabWord').value='';document.getElementById('vocabMeaning').value='';updateStat('Knowledge',2);renderKnowledge()}
-// FIX 2: "document, getElementById" comma → dot; skillNMins typo → skillMins
-function logSkill(){
-  const s=document.getElementById('skillName').value.trim();
-  const m=parseInt(document.getElementById('skillMins').value||'0');
-  if(!s||!m)return;
-  STATE.knowledge.push({type:'Skill',label:`${s} · ${m}min practice`,date:today()});
+function logWater(g) { S.energy.push({ type:'water', glasses:g, date:today() }); save('energy'); updateStat('Body',1); renderEnergy(); }
+function logExercise() {
+  const type = document.getElementById('exType').value;
+  const mins = parseInt(document.getElementById('exMins').value||'0');
+  if (!mins || mins <= 0) return;
+  S.energy.push({ type:'exercise', label:`${type} ${mins}min`, mins, date:today() });
+  save('energy'); document.getElementById('exMins').value = '';
+  updateStat('Body', 4); renderEnergy();
+}
+
+// ── Knowledge ─────────────────────────────────────────────────────
+function renderKnowledge() {
+  const el = document.getElementById('knowledgeContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">Log Reading</div>
+      <input class="field" id="readTitle" placeholder="Book or article title">
+      <input class="field" id="readPages" type="number" placeholder="Pages read (optional)">
+      <button class="btn btn-green" onclick="logReading()">Log Reading</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Vocabulary</div>
+      <input class="field" id="vocabWord"    placeholder="Word">
+      <input class="field" id="vocabMeaning" placeholder="Meaning / Definition">
+      <button class="btn btn-accent" onclick="logVocab()">Add Word</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Skill Practice</div>
+      <input class="field" id="skillName" placeholder="Skill (e.g. Python, Guitar, Design)">
+      <input class="field" id="skillMins" type="number" placeholder="Minutes practiced">
+      <button class="btn btn-outline" onclick="logSkill()">Log Practice</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent</div>
+      ${S.knowledge.length === 0
+        ? '<div class="empty">Nothing logged yet.<br>Start with a book or new word.</div>'
+        : S.knowledge.slice(-5).reverse().map(e => `
+          <div class="log-item" style="border-color:var(--know)">
+            <div class="log-title" style="color:var(--know)">${e.label}</div>
+            <div class="log-sub">${e.type||''} · ${e.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logReading() {
+  const title = document.getElementById('readTitle').value.trim();
+  if (!title) return;
+  const pages = document.getElementById('readPages').value;
+  S.knowledge.push({ type:'Reading', label:`${title}${pages?` · ${pages}p`:''}`, date:today() });
   save('knowledge');
-  document.getElementById('skillName').value='';
-  document.getElementById('skillMins').value='';
-  updateStat('Knowledge',2);
-  renderKnowledge();
+  document.getElementById('readTitle').value = '';
+  document.getElementById('readPages').value = '';
+  updateStat('Knowledge', 3); renderKnowledge();
+}
+function logVocab() {
+  const w = document.getElementById('vocabWord').value.trim();
+  const m = document.getElementById('vocabMeaning').value.trim();
+  if (!w || !m) return;
+  S.knowledge.push({ type:'Vocab', label:`${w}: ${m}`, date:today() });
+  save('knowledge');
+  document.getElementById('vocabWord').value    = '';
+  document.getElementById('vocabMeaning').value = '';
+  updateStat('Knowledge', 2); renderKnowledge();
+}
+function logSkill() {
+  const s = document.getElementById('skillName').value.trim();
+  const m = parseInt(document.getElementById('skillMins').value || '0');
+  if (!s || !m) return;
+  S.knowledge.push({ type:'Skill', label:`${s} · ${m}min practice`, date:today() });
+  save('knowledge');
+  document.getElementById('skillName').value = '';
+  document.getElementById('skillMins').value = '';
+  updateStat('Knowledge', 2); renderKnowledge();
 }
 
 // ── Dexterity ─────────────────────────────────────────────────────
-function renderDexterity(){
-  document.getElementById('dexterityContent').innerHTML=`<div class="card" style="border-color:#F472B630"><div style="color:#F472B6;font-weight:700;font-size:15px;margin-bottom:8px">✦ VoxScope</div><div style="font-size:12px;color:var(--t2);line-height:1.6"><div>✓ Vocal range analyzer</div><div>✓ XP progression system</div><div>✓ 46 artist comparison</div><div style="font-size:11px;color:var(--t3);margin-top:8px">Available in the full app</div></div></div><div class="card"><h3>Log Creative Session</h3><select class="field" id="dexType"><option>Drawing</option><option>Design</option><option>Writing</option><option>Music Practice</option><option>Vocal Practice</option><option>Photography</option><option>Video Editing</option><option>Other</option></select><input class="field" id="dexMins" type="number" placeholder="Duration (minutes)"><textarea class="field" id="dexNote" placeholder="What did you work on?" style="min-height:70px"></textarea><button class="btn btn-primary" onclick="logDex()">Log Session</button></div><div class="card"><h3>Quick Log</h3><div class="row"><button class="btn btn-dex-quick" onclick="quickDex('Sketching',15)">Sketch 15m</button><button class="btn btn-dex-quick" onclick="quickDex('Design',30)">Design 30m</button><button class="btn btn-dex-quick" onclick="quickDex('Writing',20)">Write 20m</button></div></div><div class="card"><h3>Recent</h3>${STATE.dexterity.length===0?'<div class="empty">Nothing logged yet.<br>Start creating.</div>':STATE.dexterity.slice(-5).reverse().map(e=>`<div class="log-item" style="border-color:#F472B6"><div class="li-title" style="color:#F472B6">${e.label}</div><div class="li-sub">${e.date}</div></div>`).join('')}</div>`;
-}
-function logDex(){const type=document.getElementById('dexType').value;const mins=parseInt(document.getElementById('dexMins').value||'0');const note=document.getElementById('dexNote').value.trim();if(!mins||mins<=0)return;STATE.dexterity.push({label:`${type} · ${mins}min${note?` — ${note}`:''}`,date:today()});save('dexterity');document.getElementById('dexMins').value='';document.getElementById('dexNote').value='';updateStat('Dexterity',Math.min(5,Math.floor(mins/10)));renderDexterity()}
-function quickDex(type,mins){STATE.dexterity.push({label:`${type} · ${mins}min`,date:today()});save('dexterity');updateStat('Dexterity',2);renderDexterity()}
-
-// ── DeeCadence — single definition (FIX 7) ───────────────────────
-let sessionInterval=null,sessionSeconds=0,sessionBlocks=null,currentBlock=1,sessionPhase='focus',sessionProgressMax=0;
-
-function calcBlocks(m){if(m<20)return{mode:'single',focus:m,shortBreak:0,longBreak:0};return{mode:'blocks',focus:Math.max(5,Math.floor(m*0.75/4)),shortBreak:Math.max(2,Math.floor(m*0.05)),longBreak:Math.max(5,Math.floor(m*0.10))}}
-
-function previewBlocks(val){
-  const mins=parseInt(val||'0');const el=document.getElementById('blockPreview');if(!el)return;
-  if(mins<4){el.textContent='';return;}
-  const b=calcBlocks(mins);
-  el.textContent=b.mode==='single'?`${mins}min single focus block`:`4 blocks × ${b.focus}min · ${b.shortBreak}min break · ${b.longBreak}min long break`;
-}
-
-function renderDeeCadence(){
-  const debt=parseInt(localStorage.getItem('dc_debt')||'0');
-  const score=Math.max(0,100-Math.min(100,Math.floor(debt/6)));
-  const debtStr=debt>=60?`${(debt/60).toFixed(1)}h`:`${debt}m`;
-  document.getElementById('deecadenceContent').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div class="card" style="padding:12px;text-align:center"><div class="sum-label">Attention</div><div class="sum-val" style="color:#38BDF8">${score}</div></div><div class="card" style="padding:12px;text-align:center"><div class="sum-label">Focus Debt</div><div class="sum-val" style="color:#F87171">${debt>0?debtStr:'Clear'}</div></div></div><div class="card"><h3>Log Distraction</h3><select class="field" id="distractType"><option>Social Media</option><option>YouTube</option><option>Gaming</option><option>Phone browsing</option><option>Daydreaming</option><option>Other</option></select><input class="field" id="distractHours" type="number" step="0.25" placeholder="Hours lost (e.g. 1.5)"><button class="btn btn-danger" onclick="logDistraction()">Log Distraction</button></div><div class="card"><h3>Start Focus Session</h3><input class="field" id="sessionTask" placeholder="What are you working on?"><input class="field" id="sessionMins" type="number" placeholder="Duration (minutes, min 4)" oninput="previewBlocks(this.value)"><div id="blockPreview" style="font-size:12px;color:#38BDF8;margin-bottom:10px;min-height:18px"></div><button class="btn btn-primary" onclick="startSession()">Begin Session</button></div><div id="sessionActive" style="display:none" class="card"><h3>Active Session</h3><div class="timer-display"><div id="sessionTask2" style="font-size:14px;font-weight:700;color:#38BDF8;margin-bottom:8px"></div><div class="block-dots" id="blockDots"></div><div class="timer-num" id="sessionTimer" style="color:#38BDF8">00:00</div><div class="timer-phase" id="sessionPhaseLabel">FOCUS</div></div><div class="progress-bar"><div class="progress-fill" id="sessionProgress" style="width:0%"></div></div><button class="btn btn-danger" onclick="endSession()">End Session</button></div><div class="card"><h3>Recent Sessions</h3>${STATE.sessions.length===0?'<div class="empty">No sessions yet.</div>':STATE.sessions.slice(-4).reverse().map(s=>`<div class="log-item" style="border-color:#38BDF8"><div class="li-title" style="color:#38BDF8">${s.task}</div><div class="li-sub">${s.mins}min · ${s.date}</div></div>`).join('')}</div>`;
-}
-
-function logDistraction(){const hrs=parseFloat(document.getElementById('distractHours').value||'0');if(!hrs||hrs<=0)return;const mins=Math.round(hrs*60);const cur=parseInt(localStorage.getItem('dc_debt')||'0');localStorage.setItem('dc_debt',String(cur+mins));document.getElementById('distractHours').value='';renderDeeCadence()}
-function updateBlockDots(){const el=document.getElementById('blockDots');if(!el)return;const total=sessionBlocks?.mode==='single'?1:4;el.innerHTML=Array.from({length:total},(_,i)=>`<div class="block-dot ${i<currentBlock-1?'done':i===currentBlock-1?'active':''}"></div>`).join('')}
-function updatePhaseLabel(){const el=document.getElementById('sessionPhaseLabel');const timer=document.getElementById('sessionTimer');if(!el)return;if(sessionPhase==='focus'){el.textContent='FOCUS';if(timer)timer.style.color='#38BDF8';}else if(sessionPhase==='shortBreak'){el.textContent='SHORT BREAK';if(timer)timer.style.color='#34D399';}else{el.textContent='LONG BREAK';if(timer)timer.style.color='#F59E0B';}}
-
-function startSession(){
-  const task=document.getElementById('sessionTask').value.trim();
-  const mins=parseInt(document.getElementById('sessionMins').value||'0');
-  if(!task){alert('Enter what you are working on');return}
-  if(mins<4){alert('Minimum 4 minutes');return}
-  sessionBlocks=calcBlocks(mins);currentBlock=1;sessionPhase='focus';
-  sessionSeconds=sessionBlocks.focus*60;sessionProgressMax=sessionSeconds;
-  document.getElementById('sessionActive').style.display='block';
-  document.getElementById('sessionTask2').textContent=task;
-  updateBlockDots();updatePhaseLabel();
-  if(sessionInterval)clearInterval(sessionInterval);
-  sessionInterval=setInterval(sessionTick,1000);
-  STATE.sessions.push({task,mins,date:today()});save('sessions');
-  const debt=parseInt(localStorage.getItem('dc_debt')||'0');
-  localStorage.setItem('dc_debt',String(Math.max(0,debt-Math.floor(mins*0.5))));
-  updateStat('Mind',3);
+function renderDexterity() {
+  document.getElementById('dexterityContent').innerHTML = `
+    <div class="card" style="border:1px solid rgba(244,114,182,.2)">
+      <div style="color:var(--dex);font-family:'Syne',sans-serif;font-weight:700;
+                  font-size:15px;margin-bottom:8px">✦ VoxScope</div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.7">
+        <div>✓ Vocal range analyzer</div>
+        <div>✓ XP progression system</div>
+        <div>✓ 46 artist comparison</div>
+        <div>✓ Warmup exercise guides</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:8px">Available in the full app →</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Log Creative Session</div>
+      <select class="field" id="dexType">
+        <option>Drawing</option><option>Design</option><option>Writing</option>
+        <option>Music Practice</option><option>Vocal Practice</option>
+        <option>Photography</option><option>Video Editing</option><option>Other</option>
+      </select>
+      <input class="field" id="dexMins" type="number" placeholder="Duration (minutes)">
+      <textarea class="field" id="dexNote" placeholder="What did you work on?" style="min-height:70px"></textarea>
+      <button class="btn btn-accent" onclick="logDex()">Log Session</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Quick Log</div>
+      <div class="row">
+        <button class="btn btn-dex" onclick="quickDex('Sketching',15)">Sketch 15m</button>
+        <button class="btn btn-dex" onclick="quickDex('Design',30)">Design 30m</button>
+        <button class="btn btn-dex" onclick="quickDex('Writing',20)">Write 20m</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent</div>
+      ${S.dexterity.length === 0
+        ? '<div class="empty">Nothing logged yet.<br>Start creating.</div>'
+        : S.dexterity.slice(-5).reverse().map(e => `
+          <div class="log-item" style="border-color:var(--dex)">
+            <div class="log-title" style="color:var(--dex)">${e.label}</div>
+            <div class="log-sub">${e.date}</div>
+          </div>`).join('')}
+    </div>`;
 }
 
-function sessionTick(){
-  sessionSeconds--;
-  const m=Math.floor(sessionSeconds/60),s=sessionSeconds%60;
-  const tEl=document.getElementById('sessionTimer');const pEl=document.getElementById('sessionProgress');
-  if(tEl)tEl.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  if(pEl){const e=sessionProgressMax-sessionSeconds;pEl.style.width=`${Math.min(100,(e/sessionProgressMax)*100)}%`}
-  if(sessionSeconds<=0){
-    if(sessionBlocks.mode==='single'){endSession();return}
-    if(sessionPhase==='focus'){
-      if(currentBlock>=4){endSession();return}
-      const isLong=currentBlock===3;
-      sessionPhase=isLong?'longBreak':'shortBreak';
-      sessionSeconds=(isLong?sessionBlocks.longBreak:sessionBlocks.shortBreak)*60;
-      sessionProgressMax=sessionSeconds;updatePhaseLabel();
-    }else{currentBlock++;sessionPhase='focus';sessionSeconds=sessionBlocks.focus*60;sessionProgressMax=sessionSeconds;updateBlockDots();updatePhaseLabel();}
+function logDex() {
+  const type = document.getElementById('dexType').value;
+  const mins = parseInt(document.getElementById('dexMins').value||'0');
+  const note = document.getElementById('dexNote').value.trim();
+  if (!mins || mins <= 0) return;
+  S.dexterity.push({ label:`${type} · ${mins}min${note?` — ${note}`:''}`, date:today() });
+  save('dexterity');
+  document.getElementById('dexMins').value = '';
+  document.getElementById('dexNote').value = '';
+  updateStat('Dexterity', Math.min(5, Math.floor(mins/10))); renderDexterity();
+}
+function quickDex(type, mins) {
+  S.dexterity.push({ label:`${type} · ${mins}min`, date:today() });
+  save('dexterity'); updateStat('Dexterity', 2); renderDexterity();
+}
+
+// ── DeeCadence ────────────────────────────────────────────────────
+let _sessInt=null, _sessSec=0, _sessBlocks=null, _curBlock=1, _sessPhase='focus', _sessMax=0;
+
+function _calcBlocks(m) {
+  if (m < 20) return { mode:'single', focus:m, short:0, long:0 };
+  return {
+    mode:'blocks',
+    focus: Math.max(5, Math.floor(m*0.75/4)),
+    short: Math.max(2, Math.floor(m*0.05)),
+    long:  Math.max(5, Math.floor(m*0.10)),
+  };
+}
+
+function previewBlocks(val) {
+  const mins = parseInt(val||'0');
+  const el   = document.getElementById('blockPreview');
+  if (!el) return;
+  if (mins < 4) { el.textContent = ''; return; }
+  const b = _calcBlocks(mins);
+  el.textContent = b.mode === 'single'
+    ? `${mins}min single focus block`
+    : `4 blocks × ${b.focus}min focus · ${b.short}min break · ${b.long}min long break`;
+}
+
+function renderDeeCadence() {
+  const debt  = parseInt(localStorage.getItem('dc_debt')||'0');
+  const score = Math.max(0, 100 - Math.min(100, Math.floor(debt/6)));
+  const dStr  = debt >= 60 ? `${(debt/60).toFixed(1)}h` : `${debt}m`;
+  const sCol  = score >= 80 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--err)';
+  document.getElementById('deecadenceContent').innerHTML = `
+    <div class="sum-row sum-row-2">
+      <div class="sum-cell"><div class="sum-label">Attention</div>
+        <div class="sum-val" style="color:${sCol}">${score}</div></div>
+      <div class="sum-cell"><div class="sum-label">Focus Debt</div>
+        <div class="sum-val" style="color:var(--err)">${debt>0?dStr:'Clear'}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Log Distraction</div>
+      <select class="field" id="distractType">
+        <option>Social Media</option><option>YouTube</option><option>Gaming</option>
+        <option>Phone browsing</option><option>Daydreaming</option><option>Other</option>
+      </select>
+      <input class="field" id="distractHrs" type="number" step="0.25" placeholder="Hours lost (e.g. 1.5)">
+      <button class="btn btn-red" onclick="logDistraction()">Log Distraction</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Start Focus Session</div>
+      <input class="field" id="sessTask" placeholder="What are you working on?">
+      <input class="field" id="sessMins" type="number"
+             placeholder="Duration (minutes, min 4)" oninput="previewBlocks(this.value)">
+      <div id="blockPreview" style="font-size:12px;color:var(--dc);
+           min-height:18px;margin-bottom:10px"></div>
+      <button class="btn btn-accent" onclick="startSession()">Begin Session</button>
+    </div>
+    <div id="sessActive" style="display:none" class="card">
+      <div class="card-title">Active Session</div>
+      <div id="sessTaskLabel" style="font-size:14px;font-weight:700;
+           color:var(--dc);text-align:center;margin-bottom:8px"></div>
+      <div class="block-dots" id="blockDots"></div>
+      <div class="timer-num" id="sessTimer" style="color:var(--dc)">00:00</div>
+      <div class="timer-phase" id="sessPhase">FOCUS</div>
+      <div class="progress-bar"><div class="progress-fill" id="sessProgress" style="width:0%"></div></div>
+      <button class="btn btn-red" onclick="endSession()">End Session</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent Sessions</div>
+      ${S.sessions.length === 0
+        ? '<div class="empty">No sessions yet.<br>Start your first one above.</div>'
+        : S.sessions.slice(-4).reverse().map(s => `
+          <div class="log-item" style="border-color:var(--dc)">
+            <div class="log-title" style="color:var(--dc)">${s.task}</div>
+            <div class="log-sub">${s.mins}min · ${s.date}</div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function logDistraction() {
+  const hrs = parseFloat(document.getElementById('distractHrs').value||'0');
+  if (!hrs || hrs <= 0) return;
+  const mins = Math.round(hrs * 60);
+  const cur  = parseInt(localStorage.getItem('dc_debt')||'0');
+  localStorage.setItem('dc_debt', String(cur + mins));
+  document.getElementById('distractHrs').value = '';
+  renderDeeCadence();
+}
+
+function _updateDots() {
+  const el = document.getElementById('blockDots');
+  if (!el) return;
+  const total = _sessBlocks?.mode === 'single' ? 1 : 4;
+  el.innerHTML = Array.from({length:total}, (_,i) =>
+    `<div class="block-dot ${i<_curBlock-1?'done':i===_curBlock-1?'active':''}"></div>`).join('');
+}
+
+function _updatePhase() {
+  const el    = document.getElementById('sessPhase');
+  const timer = document.getElementById('sessTimer');
+  if (!el) return;
+  const cfg = {
+    focus:      { label:'FOCUS',        color:'var(--dc)'   },
+    short:      { label:'SHORT BREAK',  color:'var(--ok)'   },
+    long:       { label:'LONG BREAK',   color:'var(--warn)' },
+  }[_sessPhase] || { label:'FOCUS', color:'var(--dc)' };
+  el.textContent = cfg.label;
+  if (timer) timer.style.color = cfg.color;
+}
+
+function startSession() {
+  const task = document.getElementById('sessTask').value.trim();
+  const mins = parseInt(document.getElementById('sessMins').value||'0');
+  if (!task) { alert('Enter what you are working on'); return; }
+  if (mins < 4) { alert('Minimum session is 4 minutes'); return; }
+  _sessBlocks = _calcBlocks(mins);
+  _curBlock   = 1;
+  _sessPhase  = 'focus';
+  _sessSec    = _sessBlocks.focus * 60;
+  _sessMax    = _sessSec;
+  document.getElementById('sessActive').style.display = 'block';
+  document.getElementById('sessTaskLabel').textContent = task;
+  _updateDots(); _updatePhase();
+  if (_sessInt) clearInterval(_sessInt);
+  _sessInt = setInterval(_sessTick, 1000);
+  S.sessions.push({ task, mins, date:today() });
+  save('sessions');
+  const debt = parseInt(localStorage.getItem('dc_debt')||'0');
+  localStorage.setItem('dc_debt', String(Math.max(0, debt - Math.floor(mins*0.5))));
+  updateStat('Mind', 3);
+}
+
+function _sessTick() {
+  _sessSec--;
+  const m = Math.floor(_sessSec/60), s = _sessSec%60;
+  const tEl = document.getElementById('sessTimer');
+  const pEl = document.getElementById('sessProgress');
+  if (tEl) tEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  if (pEl) pEl.style.width = `${Math.min(100,((_sessMax-_sessSec)/_sessMax)*100)}%`;
+  if (_sessSec > 0) return;
+  // Phase complete
+  if (_sessBlocks.mode === 'single') { endSession(); return; }
+  if (_sessPhase === 'focus') {
+    if (_curBlock >= 4) { endSession(); return; }
+    _sessPhase = _curBlock === 3 ? 'long' : 'short';
+    _sessSec   = (_sessPhase==='long' ? _sessBlocks.long : _sessBlocks.short) * 60;
+    _sessMax   = _sessSec; _updatePhase();
+  } else {
+    _curBlock++; _sessPhase = 'focus';
+    _sessSec = _sessBlocks.focus * 60; _sessMax = _sessSec;
+    _updateDots(); _updatePhase();
   }
 }
-function endSession(){if(sessionInterval)clearInterval(sessionInterval);sessionInterval=null;document.getElementById('sessionActive').style.display='none';renderDeeCadence()}
+
+function endSession() {
+  if (_sessInt) clearInterval(_sessInt);
+  _sessInt = null;
+  const el = document.getElementById('sessActive');
+  if (el) el.style.display = 'none';
+  renderDeeCadence();
+}
 
 // ── Feedback ──────────────────────────────────────────────────────
-async function submitFeedback(){
-  const rating=document.getElementById('fbRating').value;
-  const module=document.getElementById('fbModule').value;
-  const text=document.getElementById('fbText').value.trim();
-  const pay=document.getElementById('fbPay').value;
-  const s=document.getElementById('fbStatus');
-  if(!rating||!text){s.style.display='block';s.style.background='#F8717120';s.style.color='#F87171';s.textContent='Please add a rating and comment';return}
-  s.style.display='block';s.style.background='#4F8EF720';s.style.color='#4F8EF7';s.textContent='Sending...';
-  const fb=JSON.parse(localStorage.getItem('dc_feedback')||'[]');fb.push({rating,module,text,pay,date:new Date().toISOString()});localStorage.setItem('dc_feedback',JSON.stringify(fb));
-  try{
-    const res=await fetch(`${SUPA_URL}/rest/v1/beta_feedback`,{method:'POST',headers:{'apikey':SUPA_ANON,'Authorization':`Bearer ${SUPA_ANON}`,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({rating,module,feedback:text,would_pay:pay})});
-    s.style.background='#34D39920';s.style.color='#34D399';s.textContent=res.ok?'Thank you. Your feedback shapes this product.':'Saved locally. Thank you.';
-  }catch{s.style.background='#34D39920';s.style.color='#34D399';s.textContent='Saved locally. Thank you for the feedback.'}
-  document.getElementById('fbText').value='';document.getElementById('fbRating').value='';document.getElementById('fbPay').value='';document.getElementById('fbModule').value='';
+async function submitFeedback() {
+  const rating  = document.getElementById('fbRating').value;
+  const module  = document.getElementById('fbModule').value;
+  const text    = document.getElementById('fbText').value.trim();
+  const pay     = document.getElementById('fbPay').value;
+  const statusEl = document.getElementById('fbStatus');
+
+  function _fbStatus(msg, ok) {
+    statusEl.style.display    = 'block';
+    statusEl.style.background = ok ? 'rgba(45,212,160,.1)' : 'rgba(248,113,113,.1)';
+    statusEl.style.color      = ok ? 'var(--fin)' : 'var(--err)';
+    statusEl.textContent      = msg;
+  }
+
+  if (!rating || !text) { _fbStatus('Please add a rating and a comment', false); return; }
+
+  statusEl.style.display    = 'block';
+  statusEl.style.background = 'rgba(79,142,247,.1)';
+  statusEl.style.color      = 'var(--accent)';
+  statusEl.textContent      = 'Sending...';
+
+  // Always save locally first
+  const local = JSON.parse(localStorage.getItem('dc_feedback')||'[]');
+  local.push({ rating, module, text, pay, date:new Date().toISOString() });
+  localStorage.setItem('dc_feedback', JSON.stringify(local));
+
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/beta_feedback`, {
+      method: 'POST',
+      headers: {
+        'apikey':       SUPA_ANON,
+        'Authorization': `Bearer ${SUPA_ANON}`,
+        'Content-Type': 'application/json',
+        'Prefer':       'return=minimal',
+      },
+      body: JSON.stringify({ rating, module, feedback:text, would_pay:pay }),
+    });
+    _fbStatus(res.ok
+      ? 'Thank you. Your feedback shapes this product directly.'
+      : 'Saved locally. Thank you for the feedback.', true);
+  } catch {
+    _fbStatus('Saved locally. Thank you for the feedback.', true);
+  }
+
+  document.getElementById('fbText').value   = '';
+  document.getElementById('fbRating').value = '';
+  document.getElementById('fbPay').value    = '';
+  document.getElementById('fbModule').value = '';
 }
 
 // ── Init ──────────────────────────────────────────────────────────
-setTheme(currentTheme);
-document.addEventListener('DOMContentLoaded', updateUsernameBtn);
+document.addEventListener('DOMContentLoaded', () => {
+  // Session restore happens via sb.auth.getSession() above
+  // If no session, auth screen is already active
+});
 </script>
 </body>
 </html>
