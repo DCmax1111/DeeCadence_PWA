@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GET 312 - Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            overflow: visible;
+        }
+
+        .header {
+            background: #2a5298;
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 4px solid #1e3c72;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header .course-info {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .timer-section {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .timer {
+            font-size: 48px;
+            font-weight: bold;
+            color: #2a5298;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
+        }
+
+        .timer.warning {
+            color: #ff6b6b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .timer-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            color: #2a5298;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #2a5298;
+            font-weight: 600;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .question-block {
+            margin-bottom: 35px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #2a5298;
+        }
+
+        .question-number {
+            font-weight: bold;
+            color: #2a5298;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .question-text {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .options {
+            margin-left: 20px;
+        }
+
+        .option {
+            display: block;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option:hover {
+            border-color: #2a5298;
+            background: #f0f4ff;
+        }
+
+        .option input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .option label {
+            cursor: pointer;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .option.correct {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .option.wrong {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+
+        .option.correct::before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .option.wrong::before {
+            content: "✗ ";
+            color: #dc3545;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .theory-answer {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        .theory-answer:focus {
+            outline: none;
+            border-color: #2a5298;
+            background: #f0f4ff;
+        }
+
+        .theory-counter {
+            position: sticky;
+            top: 90px;
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            z-index: 999;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .theory-counter.valid {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .theory-counter.invalid {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .marks-info {
+            color: #666;
+            font-size: 13px;
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        .submit-btn {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            display: block;
+            margin: 40px auto;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(42, 82, 152, 0.3);
+        }
+
+        .submit-btn:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(42, 82, 152, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .results {
+            display: none;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 30px;
+            border: 3px solid #2a5298;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h2 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .score-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #2a5298;
+            text-align: center;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .result-details {
+            font-size: 16px;
+            line-height: 2;
+            color: #333;
+        }
+
+        .warning-message {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .timer-section, .submit-btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>GET 312: Engineering Statistics & Data Analytics - MOCK EXAM 1 (Diagnostic Mode)</h1>
+            <div class="course-info">
+                <div>UNIVERSITY OF UYO, UYO</div>
+                <div>FACULTY OF ENGINEERING - DEPARTMENT OF COMPUTER ENGINEERING</div>
+                <div>SESSION: 2025/2026 | SEMESTER: FIRST</div>
+            </div>
+        </div>
+
+        <div class="timer-section">
+            <div class="timer" id="timer">02:00:00</div>
+            <div class="timer-label">Time Remaining</div>
+        </div>
+
+        <div class="content" id="examContent">
+            <div class="section-title">SECTION A: OBJECTIVE QUESTIONS (30 Marks)</div>
+            <div class="instructions">
+                <strong>INSTRUCTION:</strong> Answer ALL questions in this section. Choose the correct option for each question.
+            </div>
+
+            <div id="objectiveQuestions"></div>
+
+            <div class="section-title" style="margin-top: 50px;">SECTION B: THEORY QUESTIONS (70 Marks)</div>
+            <div class="instructions">
+                <strong>INSTRUCTION:</strong> Answer QUESTION ONE and ANY OTHER THREE QUESTIONS. Submit your question paper at the end of the examination.<br>
+                <strong>NOTE:</strong> For questions requiring diagrams, sketches, or flowcharts, you may draw them on your answer sheet/notebook.
+            </div>
+
+            <div class="theory-counter" id="theoryCounter">
+                📝 Questions answered: <span id="questionCount">0</span> / 4 (Q1 + any 3 others)
+            </div>
+
+            <div id="theoryQuestions"></div>
+
+            <button class="submit-btn" onclick="submitExam()">SUBMIT EXAM</button>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const EXAM_CONFIG = {
+            title: "GET 312: Engineering Statistics & Data Analytics - MOCK EXAM 1 (Diagnostic Mode)",
+            session: "2025/2026",
+            semester: "FIRST",
+            duration: 120,
+            objectiveMarks: 30,
+            theoryMarks: 70
+        };
+
+        const objectiveQuestions = [
+        {
+                "question": "The primary purpose of descriptive statistics is to:",
+                "options": [
+                        "A. Predict future outcomes",
+                        "B. Summarize and organize data",
+                        "C. Test hypotheses",
+                        "D. Establish causation"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "The measure of central tendency most affected by extreme values is:",
+                "options": [
+                        "A. Median",
+                        "B. Mode",
+                        "C. Mean",
+                        "D. Quartile"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "The interquartile range is calculated as:",
+                "options": [
+                        "A. Q1 + Q3",
+                        "B. Q3 \u2212 Q1",
+                        "C. Median \u2212 Mean",
+                        "D. Maximum \u2212 Minimum"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "A positively skewed distribution implies:",
+                "options": [
+                        "A. Mean < Median",
+                        "B. Mean > Median",
+                        "C. Mean = Median",
+                        "D. No outliers exist"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "If events A and B are mutually exclusive, then:",
+                "options": [
+                        "A. P(A \u2229 B) = 1",
+                        "B. P(A \u2229 B) = 0",
+                        "C. P(A) = P(B)",
+                        "D. They are independent"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "In a binomial experiment, trials must be:",
+                "options": [
+                        "A. Dependent",
+                        "B. Continuous",
+                        "C. Independent",
+                        "D. Infinite"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "The mean of a Poisson distribution is:",
+                "options": [
+                        "A. n",
+                        "B. p",
+                        "C. \u03bb",
+                        "D. \u03c3\u00b2"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "Hypergeometric distribution differs from binomial because:",
+                "options": [
+                        "A. It assumes replacement",
+                        "B. It uses normal approximation",
+                        "C. It is without replacement",
+                        "D. It requires infinite population"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "The standard normal distribution has:",
+                "options": [
+                        "A. \u03bc = 1, \u03c3 = 0",
+                        "B. \u03bc = 0, \u03c3 = 1",
+                        "C. \u03bc = 1, \u03c3 = 1",
+                        "D. \u03bc = 0, \u03c3 = 0"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "A z-score represents:",
+                "options": [
+                        "A. Raw data value",
+                        "B. Variance of data",
+                        "C. Number of standard deviations from the mean",
+                        "D. Correlation strength"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "The slope in simple linear regression represents:",
+                "options": [
+                        "A. Value of Y when X = 0",
+                        "B. Change in Y per unit change in X",
+                        "C. Total variation in Y",
+                        "D. Residual value"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Residual is defined as:",
+                "options": [
+                        "A. \u0232 \u2212 Y",
+                        "B. Y \u2212 \u0176",
+                        "C. \u0176 \u2212 \u0232",
+                        "D. X \u2212 Y"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Coefficient of determination (R\u00b2) measures:",
+                "options": [
+                        "A. Correlation direction",
+                        "B. Model bias",
+                        "C. Proportion of variance explained",
+                        "D. Prediction error only"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "Homoscedasticity assumes:",
+                "options": [
+                        "A. Constant variance of residuals",
+                        "B. Linear mean",
+                        "C. Zero slope",
+                        "D. Normal X values"
+                ],
+                "correctAnswer": "A"
+        },
+        {
+                "question": "In hypothesis testing, a p-value less than \u03b1 means:",
+                "options": [
+                        "A. Accept H\u2080",
+                        "B. Reject H\u2080",
+                        "C. Increase \u03b1",
+                        "D. No decision"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "A 95% confidence interval implies:",
+                "options": [
+                        "A. 95% of data lies inside",
+                        "B. 95% probability parameter is inside",
+                        "C. 95% of intervals contain the true parameter",
+                        "D. Mean equals median"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "Which Python structure stores ordered, mutable data?",
+                "options": [
+                        "A. Tuple",
+                        "B. List",
+                        "C. Set",
+                        "D. Dictionary"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "In Python, 0.5**2 evaluates to:",
+                "options": [
+                        "A. 0.25",
+                        "B. 1.0",
+                        "C. 0.75",
+                        "D. 2.0"
+                ],
+                "correctAnswer": "A"
+        },
+        {
+                "question": "The math.comb(n, k) function calculates:",
+                "options": [
+                        "A. Permutations",
+                        "B. Variance",
+                        "C. Combinations",
+                        "D. Probability density"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "A loop used to iterate a fixed number of times is:",
+                "options": [
+                        "A. while",
+                        "B. if",
+                        "C. for",
+                        "D. def"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "If \u03c3 increases in a normal distribution:",
+                "options": [
+                        "A. Curve becomes narrower",
+                        "B. Curve becomes wider",
+                        "C. Mean changes",
+                        "D. Total area changes"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "The complement rule states:",
+                "options": [
+                        "A. P(A) = 1 \u2212 P(A')",
+                        "B. P(A') = 1 \u2212 P(A)",
+                        "C. P(A \u2229 B) = P(A) + P(B)",
+                        "D. P(A) = 0"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Variance is the:",
+                "options": [
+                        "A. Square root of deviation",
+                        "B. Average squared deviation from mean",
+                        "C. Absolute deviation",
+                        "D. Midpoint value"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "If correlation r = \u22120.8, the relationship is:",
+                "options": [
+                        "A. Weak positive",
+                        "B. Strong positive",
+                        "C. Strong negative",
+                        "D. No relationship"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "In regression, \u0176 represents:",
+                "options": [
+                        "A. Observed value",
+                        "B. Predicted value",
+                        "C. Residual",
+                        "D. Mean of X"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "In Python, which keyword defines a function?",
+                "options": [
+                        "A. func",
+                        "B. lambda",
+                        "C. define",
+                        "D. def"
+                ],
+                "correctAnswer": "D"
+        },
+        {
+                "question": "A Type I error occurs when:",
+                "options": [
+                        "A. H\u2080 is false and rejected",
+                        "B. H\u2080 is true and rejected",
+                        "C. H\u2080 is false and accepted",
+                        "D. Data is normal"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Standard deviation is:",
+                "options": [
+                        "A. Always negative",
+                        "B. Square of variance",
+                        "C. Square root of variance",
+                        "D. Same as mean"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "The total probability under a normal curve equals:",
+                "options": [
+                        "A. 0",
+                        "B. 0.5",
+                        "C. 1",
+                        "D. \u03c3"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "In regression, SSE measures:",
+                "options": [
+                        "A. Explained variation",
+                        "B. Total variation",
+                        "C. Unexplained error variation",
+                        "D. Mean square regression"
+                ],
+                "correctAnswer": "C"
+        }
+];
+
+        const theoryQuestions = [
+        {
+                "questionNumber": "ONE",
+                "isCompulsory": true,
+                "marks": 35,
+                "parts": [
+                        {
+                                "label": "a.(i)",
+                                "text": "Define population and sample. Distinguish between parameter and statistic.",
+                                "marks": 3
+                        },
+                        {
+                                "label": "a.(ii)",
+                                "text": "Define mean, median, and mode. State when each is most appropriate.",
+                                "marks": 4
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Given the data: 4, 6, 8, 10, 12. Compute mean, variance, and standard deviation. Show all steps.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "Explain binomial distribution and state its assumptions. Illustrate with a coin toss example.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "d.",
+                                "text": "Define residual and explain its role in regression analysis.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "e.",
+                                "text": "Define coefficient of determination (R\u00b2) and interpret R\u00b2 = 0.72 in context.",
+                                "marks": 5
+                        },
+                        {
+                                "label": "f.",
+                                "text": "Write a Python function that computes the binomial probability of exactly k successes in n trials.",
+                                "marks": 5
+                        }
+                ]
+        },
+        {
+                "questionNumber": "TWO",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "A fair coin is tossed 6 times. (i) Compute the probability of exactly 4 heads. (ii) Compute the probability of at least 4 heads. Show all workings.",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Given the dataset X: 1, 2, 3, 4 and Y: 2, 4, 5, 4. (i) Compute the regression line Y = a + bX. (ii) Compute predicted value when X = 5. (iii) Interpret slope.",
+                                "marks": 10
+                        }
+                ]
+        },
+        {
+                "questionNumber": "THREE",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Explain normal distribution. Sketch and label mean and standard deviations. Explain z-score.",
+                                "marks": 7
+                        },
+                        {
+                                "label": "b.",
+                                "text": "State and explain assumptions of simple linear regression.",
+                                "marks": 5
+                        },
+                        {
+                                "label": "c.",
+                                "text": "Using Python syntax, demonstrate: (i) A loop computing sum of squares. (ii) A function returning variance of a list.",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "FOUR",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Explain Type I and Type II errors with examples.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "What is a confidence interval? Interpret a 95% confidence interval for a population mean.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "Explain the difference between correlation and causation with examples.",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "FIVE",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Explain the Central Limit Theorem and its importance in statistics.",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Given a dataset with mean = 50 and standard deviation = 10. (i) Calculate the z-score for X = 65. (ii) If the data is normally distributed, what percentage of values lie between 40 and 60? Show working.",
+                                "marks": 10
+                        }
+                ]
+        },
+        {
+                "questionNumber": "SIX",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Explain Poisson distribution and give two real-world examples.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Differentiate between discrete and continuous probability distributions with examples.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "In Python, write code to: (i) Create a list of 10 random numbers. (ii) Calculate their mean and standard deviation using appropriate functions.",
+                                "marks": 6
+                        }
+                ]
+        }
+];
+
+        let timeRemaining = EXAM_CONFIG.duration * 60;
+        let timerInterval;
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Time's up! The exam will be submitted automatically.");
+                    submitExam();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const hours = Math.floor(timeRemaining / 3600);
+            const minutes = Math.floor((timeRemaining % 3600) / 60);
+            const seconds = timeRemaining % 60;
+
+            const display = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            document.getElementById('timer').textContent = display;
+
+            if (timeRemaining < 600) {
+                document.getElementById('timer').classList.add('warning');
+            }
+        }
+
+        function renderObjectiveQuestions() {
+            const container = document.getElementById('objectiveQuestions');
+            objectiveQuestions.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-block';
+                questionDiv.innerHTML = `
+                    <div class="question-number">Question ${index + 1}</div>
+                    <div class="question-text">${q.question}</div>
+                    <div class="options">
+                        ${q.options.map((option, optIndex) => `
+                            <label class="option">
+                                <input type="radio" name="q${index}" value="${option.charAt(0)}">
+                                ${option}
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+        }
+
+        function renderTheoryQuestions() {
+            const container = document.getElementById('theoryQuestions');
+            theoryQuestions.forEach((q) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-block';
+                questionDiv.dataset.questionNumber = q.questionNumber;
+                
+                let html = `
+                    <div class="question-number">
+                        QUESTION ${q.questionNumber} ${q.isCompulsory ? '(Compulsory)' : ''} - ${q.marks} marks
+                    </div>
+                `;
+
+                q.parts.forEach((part) => {
+                    html += `
+                        <div style="margin-bottom: 25px;">
+                            <div class="question-text"><strong>${part.label}</strong> ${part.text}</div>
+                            <div class="marks-info">(${part.marks} marks)</div>
+                            <textarea class="theory-answer" placeholder="Write your answer here..." data-question="${q.questionNumber}" data-part="${part.label}" oninput="updateTheoryCounter()"></textarea>
+                        </div>
+                    `;
+                });
+
+                questionDiv.innerHTML = html;
+                container.appendChild(questionDiv);
+            });
+        }
+
+        function updateTheoryCounter() {
+            const answeredQuestions = new Set();
+            
+            document.querySelectorAll('.theory-answer').forEach(textarea => {
+                if (textarea.value.trim().length > 10) {  // Must have at least 10 characters
+                    answeredQuestions.add(textarea.dataset.question);
+                }
+            });
+
+            const count = answeredQuestions.size;
+            const counterDiv = document.getElementById('theoryCounter');
+            const countSpan = document.getElementById('questionCount');
+            
+            countSpan.textContent = count;
+            
+            // Update styling based on count
+            counterDiv.classList.remove('valid', 'invalid');
+            if (count === 4 && answeredQuestions.has('ONE')) {
+                counterDiv.classList.add('valid');
+                counterDiv.innerHTML = `✅ Perfect! Questions answered: <span id="questionCount">${count}</span> / 4 (Q1 + 3 others)`;
+            } else if (count > 4) {
+                counterDiv.classList.add('invalid');
+                counterDiv.innerHTML = `⚠️ Too many! Questions answered: <span id="questionCount">${count}</span> / 4 (Answer only Q1 + 3 others)`;
+            } else if (!answeredQuestions.has('ONE') && count > 0) {
+                counterDiv.classList.add('invalid');
+                counterDiv.innerHTML = `⚠️ Question ONE is compulsory! Questions answered: <span id="questionCount">${count}</span> / 4`;
+            } else {
+                counterDiv.innerHTML = `📝 Questions answered: <span id="questionCount">${count}</span> / 4 (Q1 + any 3 others)`;
+            }
+        }
+
+        function submitExam() {
+            // Validate theory questions first
+            const answeredQuestions = new Set();
+            document.querySelectorAll('.theory-answer').forEach(textarea => {
+                if (textarea.value.trim().length > 10) {
+                    answeredQuestions.add(textarea.dataset.question);
+                }
+            });
+
+            const count = answeredQuestions.size;
+            
+            // Check if exactly 4 questions answered
+            if (count !== 4) {
+                alert(`⚠️ Theory Section Error!
+                
+You must answer exactly 4 theory questions (Question ONE + any 3 others).
+
+Currently answered: ${count} questions
+
+Please review the theory section before submitting.`);
+                document.getElementById('theoryCounter').scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
+
+            // Check if Question ONE is answered
+            if (!answeredQuestions.has('ONE')) {
+                alert(`⚠️ Theory Section Error!
+                
+Question ONE is COMPULSORY and must be answered.
+
+Please answer Question ONE before submitting.`);
+                document.getElementById('theoryCounter').scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
+
+            // Confirm submission
+            const confirmSubmit = confirm(`📋 Ready to submit?
+
+Objective: All ${objectiveQuestions.length} questions
+Theory: ${count} questions (Q1 + ${count - 1} others)
+
+Once submitted, you cannot change your answers.`);
+            
+            if (!confirmSubmit) {
+                return;
+            }
+
+            clearInterval(timerInterval);
+
+            let correctAnswers = 0;
+            objectiveQuestions.forEach((q, index) => {
+                const selected = document.querySelector(`input[name="q${index}"]:checked`);
+                const allOptions = document.querySelectorAll(`input[name="q${index}"]`);
+                
+                // Highlight all options
+                allOptions.forEach(option => {
+                    const optionContainer = option.closest('.option');
+                    if (option.value === q.correctAnswer) {
+                        optionContainer.classList.add('correct');
+                    } else if (option.checked) {
+                        optionContainer.classList.add('wrong');
+                    }
+                    // Disable all options after submission
+                    option.disabled = true;
+                });
+                
+                if (selected && selected.value === q.correctAnswer) {
+                    correctAnswers++;
+                }
+            });
+
+            const objectiveScore = (correctAnswers / objectiveQuestions.length) * EXAM_CONFIG.objectiveMarks;
+            const percentage = ((correctAnswers / objectiveQuestions.length) * 100).toFixed(1);
+
+            const theoryAnswers = [];
+            document.querySelectorAll('.theory-answer').forEach(textarea => {
+                if (textarea.value.trim()) {
+                    theoryAnswers.push({
+                        question: textarea.dataset.question,
+                        part: textarea.dataset.part,
+                        answer: textarea.value.trim()
+                    });
+                }
+            });
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h2>📊 EXAM RESULTS</h2>
+                <div class="score-display">${objectiveScore.toFixed(1)} / ${EXAM_CONFIG.objectiveMarks}</div>
+                <div class="result-details">
+                    <strong>Objective Section:</strong><br>
+                    • Correct Answers: ${correctAnswers} out of ${objectiveQuestions.length}<br>
+                    • Percentage: ${percentage}%<br>
+                    • Score: ${objectiveScore.toFixed(1)} / ${EXAM_CONFIG.objectiveMarks} marks<br><br>
+                    
+                    <strong>Theory Section:</strong><br>
+                    • Answered ${theoryAnswers.length} question parts<br>
+                    • Review your answers manually for grading<br><br>
+                    
+                    <div class="warning-message">
+                        Theory questions require manual grading. Review your answers carefully.
+                    </div>
+                </div>
+                <button class="download-btn" onclick="downloadAnswers()">📥 DOWNLOAD MY ANSWERS</button>
+            `;
+            resultsDiv.classList.add('show');
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+
+            // Store answers globally for download
+            window.examAnswers = {
+                objective: objectiveQuestions.map((q, index) => {
+                    const selected = document.querySelector(`input[name="q${index}"]:checked`);
+                    return {
+                        question: q.question,
+                        yourAnswer: selected ? selected.value : 'Not answered',
+                        correctAnswer: q.correctAnswer,
+                        isCorrect: selected && selected.value === q.correctAnswer
+                    };
+                }),
+                theory: theoryAnswers
+            };
+
+            console.log("Theory Answers:", theoryAnswers);
+        }
+
+        function downloadAnswers() {
+            const answers = window.examAnswers;
+            const date = new Date().toLocaleString();
+            
+            let content = `${EXAM_CONFIG.title}
+EXAM ANSWERS REVIEW
+Date: ${date}
+===================================================
+
+SECTION A: OBJECTIVE QUESTIONS
+Score: ${answers.objective.filter(a => a.isCorrect).length} / ${answers.objective.length}
+
+`;
+
+            answers.objective.forEach((a, index) => {
+                const status = a.isCorrect ? '✓ CORRECT' : '✗ WRONG';
+                content += `
+Q${index + 1}. ${a.question}
+   Your Answer: ${a.yourAnswer} ${status}
+   Correct Answer: ${a.correctAnswer}
+`;
+            });
+
+            content += `
+
+===================================================
+SECTION B: THEORY QUESTIONS
+Total Parts Answered: ${answers.theory.length}
+
+`;
+
+            answers.theory.forEach((a) => {
+                content += `
+QUESTION ${a.question} - Part ${a.part}
+${'-'.repeat(50)}
+${a.answer}
+
+`;
+            });
+
+            content += `
+===================================================
+END OF ANSWERS
+Review your theory answers and mark them against your notes.
+`;
+
+            // Create download
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${EXAM_CONFIG.title.replace(/[^a-z0-9]/gi, '_')}_answers.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        window.onload = function() {
+            renderObjectiveQuestions();
+            renderTheoryQuestions();
+            startTimer();
+        };
+
+        window.onbeforeunload = function() {
+            return "Are you sure you want to leave? Your exam progress will be lost.";
+        };
+    </script>
+</body>
+</html>

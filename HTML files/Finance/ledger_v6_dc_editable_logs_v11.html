@@ -1,0 +1,2385 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>LEDGER</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050508;--sf:#0c0c14;--sf2:#131320;--sf3:#1c1c2e;
+  --bd:rgba(60,90,255,.09);--bd2:rgba(80,110,255,.22);
+  --tx:#e8e8f8;--tx2:#6060a0;--tx3:#30305a;
+  --cbg:linear-gradient(135deg,#0c0c14 0%,#07091c 100%);
+  --grid:rgba(34,68,255,.025);--topbg:rgba(5,5,8,.92);
+  --inc:#00e5a0;--incd:rgba(0,229,160,.1);
+  --exp:#ff4d6d;--expd:rgba(255,77,109,.1);
+  --loan:#f5a623;--loand:rgba(245,166,35,.1);
+  --sub:#a78bfa;--subd:rgba(167,139,250,.1);
+  --trf:#60c0ff;--trfd:rgba(96,192,255,.1);
+  --xp:#4d8aff;--xp2:#7aaeff;--xpd:rgba(77,138,255,.13);
+  --acc:#2244ff;--acc2:#3d5eff;--aglow:rgba(34,68,255,.28);
+  --re:#555580;--rd:#4d8aff;--rc:#00c896;--rb:#a855f7;--ra:#f97316;--rs:#eab308;--rss:#ff2d6e;--rsss:#e0e0ff;
+  --a0:#2244ff;--a1:#00c896;--a2:#f97316;
+}
+[data-theme="light"]{
+  --bg:#f0f2ff;--sf:#fff;--sf2:#e8ecff;--sf3:#dce2ff;
+  --bd:rgba(34,68,255,.1);--bd2:rgba(34,68,255,.22);
+  --tx:#08081a;--tx2:#4040a0;--tx3:#9090c0;
+  --cbg:linear-gradient(135deg,#fff 0%,#dde5ff 100%);
+  --grid:rgba(34,68,255,.04);--topbg:rgba(240,242,255,.94);
+  --inc:#00a870;--incd:rgba(0,168,112,.1);
+  --exp:#e0294a;--expd:rgba(224,41,74,.1);
+  --trf:#0088cc;--trfd:rgba(0,136,204,.1);
+  --xp:#2255dd;--xp2:#3366ff;--xpd:rgba(34,86,221,.12);
+  --acc:#1133dd;--acc2:#2244ee;--aglow:rgba(17,51,221,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;height:100%;overflow:hidden;overscroll-behavior:none;transition:background .3s,color .3s}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+#app::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;z-index:0}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease;transform:translateY(10px);z-index:1}
+.screen.active{opacity:1;pointer-events:all;transform:translateY(0)}
+.topbar{padding:48px 16px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:linear-gradient(to bottom,var(--bg) 50%,transparent);position:relative;z-index:2}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.22em;color:var(--tx2)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.icon-btn{width:28px;height:28px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:background .2s}
+.icon-btn:active{opacity:.7}
+.rank-badge{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.1em;border:1px solid;transition:all .4s}
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:88px}
+.scroll-area::-webkit-scrollbar{display:none}
+
+/* ── BALANCE CARD ── */
+.bal-card{margin:0 13px 11px;background:var(--cbg);border:1px solid var(--bd2);border-radius:18px;padding:16px;position:relative;overflow:hidden;transition:background .3s}
+.bal-card::after{content:'';position:absolute;top:-50px;right:-50px;width:130px;height:130px;background:radial-gradient(circle,rgba(34,68,255,.12) 0%,transparent 70%);pointer-events:none}
+.acc-chips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-bottom:11px;padding-bottom:2px}
+.acc-chips::-webkit-scrollbar{display:none}
+.acc-chip{flex-shrink:0;font-family:'Space Mono',monospace;font-size:8px;padding:4px 10px;border-radius:5px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx3);cursor:pointer;letter-spacing:.07em;transition:all .15s;white-space:nowrap}
+.acc-chip.on{color:#fff;border-color:transparent}
+.bal-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.16em;margin-bottom:3px}
+.bal-amount{font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:.04em;line-height:1;margin-bottom:1px;transition:color .3s}
+.bal-amount.pos{color:var(--inc)}.bal-amount.neg{color:var(--exp)}.bal-amount.zer{color:var(--tx)}
+.bal-sub{font-size:10px;color:var(--tx3);font-family:'Space Mono',monospace;margin-bottom:11px}
+.bal-row{display:flex;gap:8px}
+.bal-pill{flex:1;background:rgba(0,0,0,.18);border-radius:9px;padding:8px 10px;border:1px solid var(--bd)}
+[data-theme="light"] .bal-pill{background:rgba(34,68,255,.05)}
+.bal-pill-lbl{font-size:8px;color:var(--tx3);font-family:'Space Mono',monospace;letter-spacing:.09em;margin-bottom:2px}
+.bal-pill-val{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em}
+.iv{color:var(--inc)}.ev{color:var(--exp)}.tv{color:var(--trf)}
+
+/* ── DISCIPLINE ── */
+.disc-card{margin:0 13px 11px;background:var(--sf);border:1px solid var(--bd);border-radius:13px;padding:12px 14px;transition:background .3s}
+.disc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.disc-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--xp);letter-spacing:.13em;margin-bottom:2px}
+.disc-score{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.06em;color:var(--xp2);line-height:1}
+.streak-val{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.04em;color:var(--xp2);text-align:right}
+.streak-sub{font-size:8px;color:var(--tx3);font-family:'Space Mono',monospace;text-align:right}
+.track{height:4px;background:var(--sf3);border-radius:99px;overflow:hidden;margin-bottom:6px}
+.fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.34,1.56,.64,1)}
+.xp-meta{display:flex;justify-content:space-between;margin-top:4px}
+.xp-mi{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);transition:color .3s}
+.xp-mi.on{color:var(--xp2)}
+.sec-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--xp);letter-spacing:.13em;margin-bottom:4px;display:block}
+
+/* ── DECAY ── */
+.decay-box{margin:0 13px 10px;background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.15);border-radius:9px;padding:9px 12px;display:none;align-items:center;gap:8px}
+.decay-box.show{display:flex}
+.decay-txt{font-size:10px;color:var(--exp);font-family:'Space Mono',monospace;line-height:1.4}
+
+/* ── REC BANNER ── */
+.rec-banner{margin:0 13px 11px;background:linear-gradient(135deg,var(--xpd),rgba(34,68,255,.03));border:1px solid rgba(77,138,255,.18);border-radius:11px;padding:10px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .18s}
+.rec-banner:active{border-color:rgba(77,138,255,.38)}
+
+/* ── SEC HEADER ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 13px;margin-bottom:5px}
+.sec-title{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.16em}
+.sec-action{font-size:10px;color:var(--xp2);cursor:pointer;font-family:'Space Mono',monospace}
+
+/* ── TX LIST ── */
+.tx-date-hdr{padding:6px 13px 3px;font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.13em}
+.tx-item{display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;transition:background .12s;position:relative}
+.tx-item:active{background:var(--sf2)}
+.tx-item::after{content:'';position:absolute;bottom:0;left:13px;right:13px;height:1px;background:var(--bd)}
+
+.tx-swipe-wrap{position:relative;overflow:hidden;touch-action:pan-y;user-select:none}
+.tx-swipe-wrap .tx-item{background:var(--bg);z-index:2;will-change:transform;transition:transform .18s ease,background .12s}
+.tx-swipe-wrap.dragging .tx-item{transition:none}
+.tx-action{position:absolute;top:0;bottom:0;width:92px;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.08em;z-index:1;color:#fff}
+.tx-action.delete{right:0;background:linear-gradient(135deg,#ff335f,var(--exp))}
+.tx-action.edit{left:0;background:linear-gradient(135deg,var(--acc2),var(--acc))}
+.tx-hint{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);padding:0 13px 7px;letter-spacing:.08em}
+
+.tx-ico{width:35px;height:35px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.tx-ico.income{background:var(--incd);border:1px solid rgba(0,229,160,.14)}
+.tx-ico.expense{background:var(--expd);border:1px solid rgba(255,77,109,.14)}
+.tx-ico.transfer{background:var(--trfd);border:1px solid rgba(96,192,255,.14)}
+.tx-ico.loan-given,.tx-ico.loan-received{background:var(--loand);border:1px solid rgba(245,166,35,.14)}
+.tx-ico.subscription{background:var(--subd);border:1px solid rgba(167,139,250,.14)}
+.tx-info{flex:1;min-width:0}
+.tx-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-cat{font-size:9px;color:var(--tx3);font-family:'Space Mono',monospace;margin-top:1px}
+.tx-amt{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;flex-shrink:0}
+.tx-amt.income{color:var(--inc)}.tx-amt.expense{color:var(--exp)}.tx-amt.transfer{color:var(--trf)}
+.tx-amt.loan-given{color:var(--loan)}.tx-amt.loan-received{color:var(--exp)}.tx-amt.subscription{color:var(--sub)}
+.empty-state{text-align:center;padding:40px 20px}
+.empty-icon{font-size:28px;margin-bottom:9px;opacity:.4}
+.empty-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.1em;margin-bottom:5px;color:var(--tx3)}
+.empty-sub{font-size:10px;color:var(--tx3);line-height:1.6;font-family:'Space Mono',monospace}
+
+/* ── SEARCH ── */
+.search-wrap{padding:0 13px 9px;flex-shrink:0}
+.search-input{width:100%;background:var(--sf);border:1px solid var(--bd2);border-radius:10px;padding:10px 13px;color:var(--tx);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
+.search-input::placeholder{color:var(--tx3)}
+.search-input:focus{border-color:var(--xp)}
+.search-count{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);padding:0 13px 5px;letter-spacing:.1em}
+
+/* ── ACCOUNTS SCREEN ── */
+.nw-card{margin:0 13px 14px;background:var(--cbg);border:1px solid var(--bd2);border-radius:18px;padding:18px;position:relative;overflow:hidden;text-align:center}
+.nw-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.18em;margin-bottom:4px}
+.nw-amt{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:.04em;line-height:1;transition:color .3s}
+.nw-sub{font-size:10px;color:var(--tx3);font-family:'Space Mono',monospace;margin-top:3px}
+.acc-card{margin:0 13px 10px;background:var(--sf);border:1px solid var(--bd);border-radius:13px;overflow:hidden;transition:background .3s}
+.acc-card-hdr{display:flex;align-items:center;gap:10px;padding:12px 13px;cursor:pointer}
+.acc-card-hdr:active{background:var(--sf2)}
+.acc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.acc-card-name{font-size:13px;font-weight:500;flex:1}
+.acc-card-num{font-family:'Space Mono',monospace;font-size:9px;color:var(--tx3);margin-top:1px}
+.acc-card-bal{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em}
+.acc-card-arr{color:var(--tx3);font-size:12px;margin-left:4px;transition:transform .2s}
+.acc-card-arr.open{transform:rotate(90deg)}
+.acc-savings{border-top:1px solid var(--bd);display:none}
+.acc-savings.show{display:block}
+.sav-row{display:flex;align-items:center;gap:9px;padding:9px 13px 9px 31px;border-top:1px solid var(--bd);cursor:pointer;transition:background .12s}
+.sav-row:active{background:var(--sf2)}
+.sav-dot{width:6px;height:6px;border-radius:50%;background:var(--tx3);flex-shrink:0}
+.sav-name{font-size:12px;font-weight:500;flex:1}
+.sav-bal{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em}
+.sav-del{font-size:14px;color:var(--tx3);cursor:pointer;padding:2px 4px}
+.add-sav-btn{display:flex;align-items:center;gap:8px;padding:9px 13px 9px 31px;border-top:1px solid var(--bd);cursor:pointer;color:var(--xp2);font-size:12px;font-family:'Space Mono',monospace;letter-spacing:.06em;transition:background .12s}
+.add-sav-btn:active{background:var(--sf2)}
+
+/* ── SUBSCRIPTIONS ── */
+.sub-reg-item{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .12s}
+.sub-reg-item:active{background:var(--sf2)}
+.sub-reg-ico{width:32px;height:32px;border-radius:9px;background:var(--subd);border:1px solid rgba(167,139,250,.18);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sub-reg-info{flex:1;min-width:0}
+.sub-reg-name{font-size:13px;font-weight:500}
+.sub-reg-meta{font-size:9px;color:var(--tx3);font-family:'Space Mono',monospace;margin-top:1px}
+.sub-reg-right{text-align:right}
+.sub-reg-amt{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.04em;color:var(--sub)}
+.sub-reg-next{font-size:8px;color:var(--tx3);font-family:'Space Mono',monospace;margin-top:1px}
+.sub-status{font-size:8px;font-family:'Space Mono',monospace;padding:2px 6px;border-radius:3px;letter-spacing:.06em;display:inline-block;margin-top:3px}
+.sub-status.active{background:var(--incd);color:var(--inc)}
+.sub-status.paused{background:var(--loand);color:var(--loan)}
+.sub-status.cancelled{background:var(--expd);color:var(--exp)}
+.add-sub-btn{display:flex;align-items:center;gap:9px;padding:12px 13px;cursor:pointer;color:var(--xp2);font-size:12px;font-family:'Space Mono',monospace;letter-spacing:.06em;transition:background .12s}
+.add-sub-btn:active{background:var(--sf2)}
+
+/* ── ANALYSIS ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 13px;margin-bottom:12px}
+.stat-card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:12px;transition:background .3s}
+.stat-card.wide{grid-column:span 2}
+.stat-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.12em;margin-bottom:4px}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.04em}
+.stat-sub{font-size:9px;color:var(--tx3);margin-top:2px}
+.donut-wrap{position:relative;width:100px;height:100px;margin:0 auto 12px}
+.donut-svg{transform:rotate(-90deg)}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-pct{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em}
+.donut-lbl{font-size:8px;color:var(--tx3);font-family:'Space Mono',monospace}
+.cat-bar{display:flex;align-items:center;gap:9px;padding:8px 13px}
+.cat-bar-ico{font-size:15px;width:19px;text-align:center}
+.cat-bar-info{flex:1}
+.cat-bar-name{font-size:12px;font-weight:500;margin-bottom:3px}
+.cat-bar-track{height:3px;background:var(--sf3);border-radius:99px;overflow:hidden}
+.cat-bar-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.cat-bar-amt{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em;color:var(--exp)}
+.chart-wrap{margin:0 13px 13px;background:var(--sf);border:1px solid var(--bd);border-radius:13px;padding:13px}
+.chart-empty{text-align:center;padding:14px;color:var(--tx3);font-family:'Space Mono',monospace;font-size:9px}
+.chart-legend{display:flex;gap:13px;margin-bottom:9px}
+.legend-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;margin-top:2px}
+.legend-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.05em}
+.budget-bar-item{display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid var(--bd)}
+.budget-bar-ico{font-size:15px;width:19px;text-align:center;flex-shrink:0}
+.budget-bar-info{flex:1}
+.budget-bar-name{font-size:12px;font-weight:500;margin-bottom:2px}
+.budget-bar-track{height:3px;background:var(--sf3);border-radius:99px;overflow:hidden;margin-bottom:3px}
+.budget-bar-fill{height:100%;border-radius:99px;transition:width .6s ease,background .3s}
+.budget-bar-meta{font-size:9px;color:var(--tx3);font-family:'Space Mono',monospace}
+.budget-num-input{width:100px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;color:var(--tx);font-size:12px;font-family:'Space Mono',monospace;outline:none;text-align:right}
+.budget-num-input:focus{border-color:var(--xp)}
+.budget-input-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+
+/* ── PROFILE ── */
+.prof-hdr{padding:12px 13px 8px;text-align:center}
+.prof-circle{width:66px;height:66px;border-radius:50%;background:var(--sf2);border:2px solid var(--xp);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;color:var(--xp2);transition:all .4s}
+.prof-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.12em;margin-bottom:2px}
+.prof-sub{font-size:10px;color:var(--tx3);font-family:'Space Mono',monospace}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .12s}
+.set-row:active{background:var(--sf2)}
+.set-left{display:flex;align-items:center;gap:10px}
+.set-ico{width:31px;height:31px;border-radius:8px;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:13px}
+.set-name{font-size:13px;font-weight:500}
+.set-sub{font-size:9px;color:var(--tx3);margin-top:1px;font-family:'Space Mono',monospace}
+.rank-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);transition:opacity .3s}
+.rank-row.locked{opacity:.25}
+.rank-sm{width:31px;height:31px;border-radius:50%;background:var(--sf2);border:2px solid;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.06em;flex-shrink:0}
+.ss-box{margin:0 13px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;transition:background .3s}
+.ss-txt{font-family:'Space Mono',monospace;font-size:9px;color:var(--tx2);line-height:1.75}
+
+/* ── NAV ── */
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;display:flex;background:var(--topbg);backdrop-filter:blur(24px);border-top:1px solid var(--bd2);padding:8px 0 22px;z-index:10;transition:background .3s}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;cursor:pointer;opacity:.32;transition:opacity .15s}
+.nav-item.active{opacity:1}
+.nav-icon{font-size:17px;line-height:1}
+.nav-label{font-size:7px;font-family:'Space Mono',monospace;color:var(--tx2);letter-spacing:.06em}
+.nav-item.active .nav-label{color:var(--xp2)}
+
+/* ── FAB ── */
+.fab{position:absolute;bottom:68px;right:16px;width:50px;height:50px;border-radius:13px;background:linear-gradient(135deg,var(--acc2),var(--acc));border:none;color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:11;box-shadow:0 5px 18px var(--aglow);transition:transform .2s cubic-bezier(.34,1.56,.64,1);line-height:1}
+.fab:active{transform:scale(.91)}.fab.open{transform:rotate(45deg)}
+
+/* ── SHEETS ── */
+.sh-overlay{position:fixed;inset:0;background:rgba(0,0,0,.76);backdrop-filter:blur(6px);z-index:50;opacity:0;pointer-events:none;transition:opacity .24s}
+.sh-overlay.open{opacity:1;pointer-events:all}
+.sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:480px;background:var(--sf);border-radius:22px 22px 0 0;border-top:1px solid var(--bd2);z-index:51;transition:transform .32s cubic-bezier(.32,.72,0,1),background .3s;max-height:95dvh;display:flex;flex-direction:column}
+.sheet.open{transform:translateX(-50%) translateY(0)}
+.sh-handle{width:30px;height:3px;background:var(--sf3);border-radius:99px;margin:9px auto 0;flex-shrink:0}
+.sh-hdr{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sh-title{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.1em}
+.sh-close{width:27px;height:27px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd);color:var(--tx2);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sh-body{padding:0 16px 36px;overflow-y:auto;flex:1}
+
+/* ── ENTRY FORM ── */
+.type-scroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:13px;padding-bottom:2px}
+.type-scroll::-webkit-scrollbar{display:none}
+.type-chip{flex-shrink:0;padding:7px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--sf2);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.07em;cursor:pointer;color:var(--tx3);transition:all .15s;white-space:nowrap}
+.type-chip.ae{background:var(--expd);color:var(--exp);border-color:rgba(255,77,109,.25)}
+.type-chip.ai{background:var(--incd);color:var(--inc);border-color:rgba(0,229,160,.25)}
+.type-chip.al{background:var(--loand);color:var(--loan);border-color:rgba(245,166,35,.25)}
+.type-chip.alr{background:var(--expd);color:var(--exp);border-color:rgba(255,77,109,.25)}
+.type-chip.as{background:var(--subd);color:var(--sub);border-color:rgba(167,139,250,.25)}
+.type-chip.at{background:var(--trfd);color:var(--trf);border-color:rgba(96,192,255,.25)}
+.amt-display{text-align:center;margin-bottom:14px}
+.amt-cur{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--tx3);vertical-align:middle;letter-spacing:.04em}
+.amt-num{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:.04em;line-height:1;vertical-align:middle;transition:color .2s}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:11px}
+.num-btn{height:48px;border-radius:10px;background:var(--sf2);border:1px solid var(--bd);color:var(--tx);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;cursor:pointer;transition:all .1s;display:flex;align-items:center;justify-content:center}
+.num-btn:active{background:var(--sf3);transform:scale(.93)}
+.num-btn.del{color:var(--exp);font-family:'DM Sans',sans-serif;font-size:16px}
+.num-btn.zero{grid-column:span 2}
+.field-row{display:flex;gap:7px;margin-bottom:8px}
+.field{flex:1;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:9px 11px;cursor:pointer;transition:border-color .14s}
+.field:active{border-color:var(--bd2)}
+.field-lbl{font-family:'Space Mono',monospace;font-size:7px;color:var(--tx3);letter-spacing:.12em;margin-bottom:2px}
+.field-val{font-size:12px;font-weight:500;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field-val.ph{color:var(--tx3)}
+.field-input{background:transparent;border:none;outline:none;color:var(--tx);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;width:100%;color-scheme:dark}
+.field-input::placeholder{color:var(--tx3)}
+.extra-fields{display:none;flex-direction:column;gap:8px;margin-bottom:8px}
+.extra-fields.show{display:flex}
+.cycle-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.cycle-chip{padding:6px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--sf2);font-family:'Space Mono',monospace;font-size:9px;color:var(--tx3);cursor:pointer;transition:all .13s}
+.cycle-chip.sel{background:var(--xpd);color:var(--xp2);border-color:rgba(77,138,255,.3)}
+.save-btn{width:100%;padding:13px;border-radius:12px;border:none;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.12em;cursor:pointer;transition:all .16s;margin-top:4px}
+.save-btn:active{transform:scale(.97)}
+.save-btn.em{background:linear-gradient(135deg,var(--acc2),var(--acc));color:#fff;box-shadow:0 4px 14px var(--aglow)}
+.save-btn.im{background:var(--inc);color:#000;box-shadow:0 4px 14px rgba(0,229,160,.2)}
+.save-btn.lm{background:var(--loan);color:#000}
+.save-btn.sm{background:var(--sub);color:#fff}
+.save-btn.tm{background:var(--trf);color:#000}
+.acc-select-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.acc-select-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;cursor:pointer;transition:all .14s;background:var(--sf2)}
+.acc-select-item:active,.acc-select-item.sel{border-color:var(--xp);background:var(--xpd)}
+.acc-select-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.acc-select-name{font-size:13px;font-weight:500;flex:1}
+.acc-select-num{font-size:9px;color:var(--tx3);font-family:'Space Mono',monospace}
+
+/* ── CAT / DATE PICKERS ── */
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.cat-item{background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:10px 5px;text-align:center;cursor:pointer;transition:all .13s}
+.cat-item:active,.cat-item.sel{border-color:var(--xp);background:var(--xpd)}
+.cat-emoji{font-size:20px;margin-bottom:4px}
+.cat-name{font-size:8px;color:var(--tx2);font-family:'Space Mono',monospace;letter-spacing:.05em}
+.date-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.date-chip{padding:9px 6px;border-radius:9px;background:var(--sf2);border:1px solid var(--bd);font-family:'Space Mono',monospace;color:var(--tx2);cursor:pointer;transition:all .13s;text-align:center;line-height:1.3}
+.date-chip .chip-day{font-size:8px;color:var(--tx3);margin-bottom:2px}
+.date-chip .chip-date{font-size:12px;font-weight:700}
+.date-chip.sel{background:var(--xpd);border-color:var(--xp);color:var(--xp2)}
+.date-chip:active{transform:scale(.93)}
+.picker-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.13em;margin-bottom:7px;display:block}
+
+/* ── LOAN STATUS ── */
+.status-option{display:flex;align-items:center;gap:12px;padding:11px;border:1px solid var(--bd);border-radius:10px;cursor:pointer;transition:all .14s;margin-bottom:7px;background:var(--sf2)}
+.status-option:active,.status-option.active{border-color:var(--xp);background:var(--xpd)}
+.status-option-icon{font-size:20px;width:28px;text-align:center}
+.status-option-name{font-size:13px;font-weight:500}
+.status-option-sub{font-size:9px;color:var(--tx3);font-family:'Space Mono',monospace;margin-top:1px}
+.commit-row{display:flex;align-items:center;gap:9px;padding:7px 13px;border-top:1px solid var(--bd);cursor:pointer;transition:background .12s}
+.commit-row:active{background:var(--sf2)}
+.commit-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.commit-ico.lg{background:var(--loand);border:1px solid rgba(245,166,35,.18)}
+.commit-ico.sb{background:var(--subd);border:1px solid rgba(167,139,250,.18)}
+.commit-info{flex:1;min-width:0}
+.commit-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.commit-meta{font-size:8px;color:var(--tx3);font-family:'Space Mono',monospace;margin-top:1px}
+.commit-amt{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em}
+.commit-amt.loan{color:var(--loan)}.commit-amt.sub{color:var(--sub)}
+.status-badge{font-size:8px;font-family:'Space Mono',monospace;padding:2px 6px;border-radius:3px;letter-spacing:.06em;cursor:pointer}
+.status-badge.pending{background:var(--loand);color:var(--loan);border:1px solid rgba(245,166,35,.2)}
+.status-badge.partial{background:rgba(245,166,35,.06);color:var(--loan);border:1px solid rgba(245,166,35,.15)}
+.status-badge.repaid{background:var(--incd);color:var(--inc);border:1px solid rgba(0,229,160,.2)}
+
+.sub-home-card{margin:0 13px 11px;background:var(--sf);border:1px solid var(--bd);border-radius:13px;overflow:hidden;transition:background .3s}
+.sub-home-head{display:flex;align-items:center;justify-content:space-between;padding:9px 13px 6px}
+.sub-home-title{font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.15em}
+.sub-home-total{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em;color:var(--sub)}
+.sub-home-row{display:flex;align-items:center;gap:9px;padding:8px 13px;border-top:1px solid var(--bd);cursor:pointer;transition:background .12s}
+.sub-home-row:active{background:var(--sf2)}
+.sub-home-ico{width:28px;height:28px;border-radius:7px;background:var(--subd);border:1px solid rgba(167,139,250,.18);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.sub-home-info{flex:1;min-width:0}
+.sub-home-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub-home-meta{font-size:8px;color:var(--tx3);font-family:'Space Mono',monospace;margin-top:1px}
+.sub-home-amt{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em;color:var(--sub);text-align:right}
+.sub-home-next{font-size:8px;color:var(--tx3);font-family:'Space Mono',monospace;text-align:right;margin-top:1px}
+
+/* ── TOAST / XP ── */
+.toast{position:fixed;top:54px;left:50%;transform:translateX(-50%) translateY(-14px);background:var(--sf2);border:1px solid var(--bd2);border-radius:9px;padding:8px 15px;display:flex;align-items:center;gap:8px;font-size:11px;z-index:100;opacity:0;transition:all .28s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast-xp{font-family:'Space Mono',monospace;font-size:9px;color:var(--xp2);font-weight:700}
+.xp-pop{position:fixed;pointer-events:none;z-index:200;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.1em;color:var(--xp2);opacity:0;transition:all .9s ease;text-shadow:0 0 10px var(--xp)}
+.xp-pop.go{opacity:1;transform:translateY(-55px) !important}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ HOME ══ -->
+<div class="screen active" id="screen-home">
+  <div class="topbar">
+    <span class="topbar-title">LEDGER</span>
+    <div class="topbar-right">
+      <div class="icon-btn" id="theme-btn" onclick="toggleTheme()">☀️</div>
+      <span class="rank-badge" id="rank-badge">RANK E</span>
+    </div>
+  </div>
+  <div class="scroll-area">
+    <div class="bal-card">
+      <div class="acc-chips" id="home-acc-chips"></div>
+      <div class="bal-lbl" id="home-bal-lbl">NET BALANCE</div>
+      <div class="bal-amount zer" id="main-balance">₦0</div>
+      <div class="bal-sub" id="bal-period">—</div>
+      <div class="bal-row">
+        <div class="bal-pill"><div class="bal-pill-lbl">INFLOW</div><div class="bal-pill-val iv" id="total-income">₦0</div></div>
+        <div class="bal-pill"><div class="bal-pill-lbl">OUTFLOW</div><div class="bal-pill-val ev" id="total-expense">₦0</div></div>
+        <div class="bal-pill"><div class="bal-pill-lbl">TRANSFERS</div><div class="bal-pill-val tv" id="total-trf">₦0</div></div>
+      </div>
+    </div>
+    <div class="disc-card">
+      <div class="disc-top">
+        <div><div class="disc-lbl">⚡ DISCIPLINE SCORE</div><div class="disc-score" id="disc-score">100</div></div>
+        <div><div class="streak-val" id="streak-val">🔥 0</div><div class="streak-sub">day streak</div></div>
+      </div>
+      <div class="track"><div class="fill" id="disc-fill" style="width:100%;background:linear-gradient(90deg,var(--xp),var(--xp2))"></div></div>
+      <div style="margin-top:8px">
+        <span class="sec-lbl">RANK XP</span>
+        <div class="track"><div class="fill" id="xp-fill" style="width:0%;background:linear-gradient(90deg,var(--acc2),var(--xp2))"></div></div>
+        <div class="xp-meta"><span class="xp-mi" id="m1">15 entries</span><span class="xp-mi" id="m2">7-day streak</span><span class="xp-mi" id="m3">rank up</span><span class="xp-mi" id="m4">0 XP</span></div>
+      </div>
+    </div>
+    <div class="decay-box" id="decay-box"><span style="font-size:16px">⚠️</span><span class="decay-txt" id="decay-txt">Discipline decaying</span></div>
+    <div class="rec-banner" onclick="openRecovery()">
+      <span style="font-size:17px">⏪</span>
+      <div><div style="font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:var(--xp2);letter-spacing:.09em;margin-bottom:1px">RECOVERY MODE</div><div style="font-size:10px;color:var(--tx3)">Log past entries up to 90 days back</div></div>
+      <span style="color:var(--xp);font-size:15px;margin-left:auto">›</span>
+    </div>
+    <div id="loans-card"></div>
+    <div id="subs-card"></div>
+    <div class="sec-hdr"><span class="sec-title">RECENT</span><span class="sec-action" onclick="navigate('log')">See all</span></div>
+    <div id="tx-list"></div>
+  </div>
+</div>
+
+<!-- ══ ANALYSIS ══ -->
+<div class="screen" id="screen-analysis">
+  <div class="topbar">
+    <span class="topbar-title">ANALYSIS</span>
+    <div class="topbar-right"><div class="icon-btn" onclick="toggleTheme()">☀️</div><span class="rank-badge" id="rank-badge-2">RANK E</span></div>
+  </div>
+  <div class="scroll-area" style="padding-bottom:80px">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-lbl">SAVE RATIO</div><div class="stat-val iv" id="save-ratio">0%</div><div class="stat-sub">of income kept</div></div>
+      <div class="stat-card"><div class="stat-lbl">AVG / DAY</div><div class="stat-val ev" id="avg-day">₦0</div><div class="stat-sub">spent daily</div></div>
+      <div class="stat-card wide"><div class="stat-lbl">ALL TIME NET</div><div class="stat-val" id="alltime-net">₦0</div><div class="stat-sub" id="alltime-sub">0 entries</div></div>
+    </div>
+    <div class="sec-hdr" style="margin-bottom:8px"><span class="sec-title">6-MONTH CASHFLOW</span></div>
+    <div class="chart-wrap"><div class="chart-legend"><div style="display:flex;align-items:center;gap:5px"><div class="legend-dot" style="background:var(--inc)"></div><span class="legend-lbl">INCOME</span></div><div style="display:flex;align-items:center;gap:5px"><div class="legend-dot" style="background:var(--exp)"></div><span class="legend-lbl">EXPENSE</span></div></div><div id="cashflow-chart"></div></div>
+    <div class="sec-hdr" style="margin-bottom:12px"><span class="sec-title">EXPENSE BREAKDOWN</span></div>
+    <div style="margin:0 13px 13px">
+      <div class="donut-wrap"><svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--sf2)" stroke-width="13"/><circle id="donut-circle" cx="50" cy="50" r="40" fill="none" stroke="var(--exp)" stroke-width="13" stroke-dasharray="0 251" stroke-linecap="round" style="transition:stroke-dasharray .8s ease"/></svg><div class="donut-center"><div class="donut-pct ev" id="donut-pct">0%</div><div class="donut-lbl">SPENT</div></div></div>
+      <div id="cat-breakdown"><div class="chart-empty">Log expenses to see breakdown</div></div>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">BUDGETS</span><span class="sec-action" onclick="openBudgetSheet()">Edit</span></div>
+    <div id="budget-section" style="margin-bottom:12px"><div class="chart-empty" style="padding:12px;color:var(--tx3);font-family:Space Mono,monospace;font-size:9px">No budgets set yet — tap Edit</div></div>
+  </div>
+</div>
+
+<!-- ══ LOG ══ -->
+<div class="screen" id="screen-log">
+  <div class="topbar"><span class="topbar-title">ALL ENTRIES</span><div class="icon-btn" onclick="toggleTheme()">☀️</div></div>
+  <div class="acc-chips" id="log-acc-chips" style="padding:0 13px 9px"></div>
+  <div class="search-wrap"><input class="search-input" id="search-input" placeholder="🔍  Search by name, category, account..." oninput="filterTx(this.value)"></div>
+  <div class="search-count" id="search-count"></div>
+  <div class="scroll-area" style="padding-bottom:80px;padding-top:0"><div id="all-tx-list"></div></div>
+</div>
+
+<!-- ══ ACCOUNTS ══ -->
+<div class="screen" id="screen-accounts">
+  <div class="topbar"><span class="topbar-title">ACCOUNTS</span><div class="icon-btn" onclick="toggleTheme()">☀️</div></div>
+  <div class="scroll-area" style="padding-bottom:80px">
+    <div class="nw-card">
+      <div class="nw-lbl">NET WORTH</div>
+      <div class="nw-amt zer" id="nw-amount">₦0</div>
+      <div class="nw-sub" id="nw-sub">across all accounts & savings</div>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">ACCOUNTS</span></div>
+    <div id="accounts-list"></div>
+    <div class="sec-hdr" style="margin-top:6px"><span class="sec-title">SUBSCRIPTIONS</span><span class="sec-action" onclick="openAddSub()">+ Add</span></div>
+    <div id="sub-registry"><div class="chart-empty" style="padding:14px;color:var(--tx3);font-family:Space Mono,monospace;font-size:9px">No subscriptions yet — tap Add</div></div>
+  </div>
+</div>
+
+<!-- ══ RANK ══ -->
+<div class="screen" id="screen-profile">
+  <div class="topbar"><span class="topbar-title">RANK</span><div class="icon-btn" onclick="toggleTheme()">☀️</div></div>
+  <div class="scroll-area" style="padding-bottom:80px">
+    <div class="prof-hdr">
+      <div class="prof-circle" id="prof-circle">E</div>
+      <div class="prof-name">DC</div>
+      <div class="prof-sub" id="prof-sub">Rank E — Initiate</div>
+    </div>
+    <div class="disc-card" style="margin:0 13px 12px">
+      <span class="sec-lbl">TOTAL RANK XP</span>
+      <div class="track" style="margin-top:4px"><div class="fill" id="prof-xp-fill" style="width:0%;background:linear-gradient(90deg,var(--acc2),var(--xp2))"></div></div>
+      <div style="text-align:right;margin-top:4px;font-family:'Space Mono',monospace;font-size:10px;color:var(--xp2)" id="prof-xp">0 XP</div>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">RANK PROGRESSION</span></div>
+    <div id="rank-list" style="padding:0 13px 13px"></div>
+    <div class="sec-hdr" style="margin-top:6px"><span class="sec-title">SPECIAL RANKS</span></div>
+    <div class="ss-box"><div class="ss-txt">
+      <span style="color:var(--rss)">SS — ARCHITECT</span><br>S Rank + 60-day streak + 500 entries + 3 positive months<br><br>
+      <span style="color:var(--rsss)">SSS — ABSOLUTE</span><br>SS + 365-day streak + 1000 entries + 6 positive months + 20% savings + Discipline ≥ 60<br><br>
+      <span style="color:var(--tx3)">Ranks never decay. Discipline Score does.</span>
+    </div></div>
+    <div class="sec-hdr"><span class="sec-title">DATA</span></div>
+    <div class="set-row" onclick="exportData()"><div class="set-left"><div class="set-ico">📤</div><div><div class="set-name">Export to JSON</div><div class="set-sub">Download full transaction log</div></div></div><span style="color:var(--tx3);font-size:12px">›</span></div>
+    <div class="set-row" onclick="clearData()"><div class="set-left"><div class="set-ico">🗑️</div><div><div class="set-name">Clear all data</div><div class="set-sub">Reset everything — irreversible</div></div></div><span style="color:var(--exp);font-size:12px">›</span></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="navigate('home')" id="nav-home"><div class="nav-icon">⚡</div><div class="nav-label">HOME</div></div>
+  <div class="nav-item" onclick="navigate('analysis')" id="nav-analysis"><div class="nav-icon">📊</div><div class="nav-label">ANALYSIS</div></div>
+  <div class="nav-item" onclick="navigate('log')" id="nav-log"><div class="nav-icon">📋</div><div class="nav-label">LOG</div></div>
+  <div class="nav-item" onclick="navigate('accounts')" id="nav-accounts"><div class="nav-icon">🏦</div><div class="nav-label">ACCOUNTS</div></div>
+  <div class="nav-item" onclick="navigate('profile')" id="nav-profile"><div class="nav-icon">🎖️</div><div class="nav-label">RANK</div></div>
+</nav>
+<button class="fab" id="fab" onclick="openEntry()">+</button>
+
+<!-- ENTRY SHEET -->
+<div class="sh-overlay" id="entry-overlay" onclick="closeEntry()"></div>
+<div class="sheet" id="entry-sheet">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div class="sh-title">Log Entry</div><button class="sh-close" onclick="closeEntry()">×</button></div>
+  <div class="sh-body">
+    <div class="type-scroll">
+      <div class="type-chip ae" id="chip-expense" onclick="setType('expense')">EXPENSE</div>
+      <div class="type-chip" id="chip-income" onclick="setType('income')">INCOME</div>
+      <div class="type-chip" id="chip-transfer" onclick="setType('transfer')">TRANSFER</div>
+      <div class="type-chip" id="chip-loan-given" onclick="setType('loan-given')">LOAN GIVEN</div>
+      <div class="type-chip" id="chip-loan-received" onclick="setType('loan-received')">BORROWED</div>
+      <div class="type-chip" id="chip-subscription" onclick="setType('subscription')">SUBSCRIPTION</div>
+    </div>
+    <div class="amt-display"><span class="amt-cur">₦</span><span class="amt-num" id="amt-display" style="color:var(--exp)">0</span></div>
+    <div class="numpad">
+      <button class="num-btn" onclick="numpad('7')">7</button><button class="num-btn" onclick="numpad('8')">8</button><button class="num-btn" onclick="numpad('9')">9</button>
+      <button class="num-btn" onclick="numpad('4')">4</button><button class="num-btn" onclick="numpad('5')">5</button><button class="num-btn" onclick="numpad('6')">6</button>
+      <button class="num-btn" onclick="numpad('1')">1</button><button class="num-btn" onclick="numpad('2')">2</button><button class="num-btn" onclick="numpad('3')">3</button>
+      <button class="num-btn del" onclick="numpad('del')">⌫</button><button class="num-btn zero" onclick="numpad('0')">0</button><button class="num-btn" onclick="numpad('.')">.</button>
+    </div>
+    <!-- Standard fields -->
+    <div id="std-fields">
+      <div class="field-row">
+        <div class="field" onclick="openCat()"><div class="field-lbl">CATEGORY</div><div class="field-val ph" id="cat-display">Pick one</div></div>
+        <div class="field" onclick="openDatePicker()"><div class="field-lbl">DATE</div><div class="field-val" id="date-display">Today</div></div>
+      </div>
+      <div class="field-row">
+        <div class="field" onclick="openAccPicker('account')"><div class="field-lbl">ACCOUNT</div><div class="field-val" id="acc-display">Moniepoint Personal</div></div>
+      </div>
+    </div>
+    <!-- Transfer fields -->
+    <div class="extra-fields" id="trf-fields">
+      <div class="field" onclick="openAccPicker('from')"><div class="field-lbl">FROM ACCOUNT</div><div class="field-val" id="trf-from-display">Pick account</div></div>
+      <div class="field" onclick="openAccPicker('to')"><div class="field-lbl">TO ACCOUNT</div><div class="field-val" id="trf-to-display">Pick account</div></div>
+      <div class="field" onclick="openDatePicker()"><div class="field-lbl">DATE</div><div class="field-val" id="date-display-trf">Today</div></div>
+    </div>
+    <!-- Loan extra -->
+    <div class="extra-fields" id="loan-fields">
+      <div class="field"><div class="field-lbl">PERSON</div><input class="field-input" id="loan-person" placeholder="e.g. Mum, Tunde..." maxlength="40"></div>
+      <div class="field"><div class="field-lbl">STATUS</div><div class="cycle-row" id="repay-row"><div class="cycle-chip sel" onclick="selRepay(this,'pending')">Pending</div><div class="cycle-chip" onclick="selRepay(this,'partial')">Partial</div><div class="cycle-chip" onclick="selRepay(this,'repaid')">Repaid</div></div></div>
+    </div>
+    <!-- Sub extra -->
+    <div class="extra-fields" id="sub-fields">
+      <div class="field"><div class="field-lbl">SERVICE NAME</div><input class="field-input" id="sub-name" placeholder="e.g. ChatGPT Go, Canva Pro..." maxlength="40"></div>
+      <div class="field"><div class="field-lbl">BILLING CYCLE</div><div class="cycle-row" id="cycle-row"><div class="cycle-chip" onclick="selCycle(this,'weekly')">Weekly</div><div class="cycle-chip sel" onclick="selCycle(this,'monthly')">Monthly</div><div class="cycle-chip" onclick="selCycle(this,'yearly')">Yearly</div></div></div>
+    </div>
+    <div class="field" id="note-field" style="margin-bottom:8px"><div class="field-lbl">NOTE (OPTIONAL)</div><input class="field-input" id="note-input" placeholder="What was this for?" maxlength="60"></div>
+    <button class="save-btn em" id="save-btn" onclick="saveEntry()">LOG EXPENSE</button>
+  </div>
+</div>
+
+<!-- CATEGORY SHEET -->
+<div class="sh-overlay" id="cat-overlay" onclick="closeCat()"></div>
+<div class="sheet" id="cat-sheet"><div class="sh-handle"></div><div class="sh-hdr"><div class="sh-title">Category</div><button class="sh-close" onclick="closeCat()">×</button></div><div class="sh-body" id="cat-body"></div></div>
+
+<!-- DATE SHEET -->
+<div class="sh-overlay" id="date-overlay" onclick="closeDate()"></div>
+<div class="sheet" id="date-sheet">
+  <div class="sh-handle"></div><div class="sh-hdr"><div class="sh-title">Select Date</div><button class="sh-close" onclick="closeDate()">×</button></div>
+  <div class="sh-body"><span class="picker-lbl">QUICK SELECT</span><div class="date-grid" id="quick-dates"></div><span class="picker-lbl">CUSTOM DATE</span><div class="field"><div class="field-lbl">ANY DATE</div><input type="date" class="field-input" id="custom-date" onchange="setCustomDate(this.value)"></div></div>
+</div>
+
+<!-- ACCOUNT PICKER SHEET -->
+<div class="sh-overlay" id="acc-overlay" onclick="closeAccPicker()"></div>
+<div class="sheet" id="acc-sheet"><div class="sh-handle"></div><div class="sh-hdr"><div class="sh-title" id="acc-sheet-title">Select Account</div><button class="sh-close" onclick="closeAccPicker()">×</button></div><div class="sh-body" id="acc-body"></div></div>
+
+<!-- LOAN STATUS SHEET -->
+<div class="sh-overlay" id="loan-status-overlay" onclick="closeLoanStatus()"></div>
+<div class="sheet" id="loan-status-sheet">
+  <div class="sh-handle"></div><div class="sh-hdr"><div class="sh-title">Update Loan</div><button class="sh-close" onclick="closeLoanStatus()">×</button></div>
+  <div class="sh-body">
+    <div id="loan-status-info" style="margin-bottom:14px;padding:12px;background:var(--sf2);border-radius:10px;border:1px solid var(--bd)"></div>
+    <span class="picker-lbl">REPAYMENT STATUS</span>
+    <div class="status-option" onclick="pickLoanStatus('pending')"><div class="status-option-icon">⏳</div><div><div class="status-option-name">Pending</div><div class="status-option-sub">Not yet repaid</div></div></div>
+    <div class="status-option" onclick="pickLoanStatus('partial')"><div class="status-option-icon">🔄</div><div><div class="status-option-name">Partial</div><div class="status-option-sub">Some returned</div></div></div>
+    <div class="status-option" onclick="pickLoanStatus('repaid')"><div class="status-option-icon">✅</div><div><div class="status-option-name">Repaid</div><div class="status-option-sub">Fully returned — removes from view</div></div></div>
+  </div>
+</div>
+
+<!-- ADD SAVINGS SHEET -->
+<div class="sh-overlay" id="addsav-overlay" onclick="closeAddSav()"></div>
+<div class="sheet" id="addsav-sheet">
+  <div class="sh-handle"></div><div class="sh-hdr"><div class="sh-title">Add Savings Pocket</div><button class="sh-close" onclick="closeAddSav()">×</button></div>
+  <div class="sh-body">
+    <div class="field" style="margin-bottom:10px"><div class="field-lbl">POCKET NAME</div><input class="field-input" id="new-sav-name" placeholder="e.g. Holiday Fund, Emergency..." maxlength="40"></div>
+    <p style="font-family:'Space Mono',monospace;font-size:9px;color:var(--tx3);margin-bottom:14px;line-height:1.6">Under: <span id="new-sav-parent" style="color:var(--xp2)">—</span></p>
+    <button class="save-btn em" onclick="confirmAddSav()">CREATE POCKET</button>
+  </div>
+</div>
+
+<!-- ADD SUBSCRIPTION SHEET -->
+<div class="sh-overlay" id="addsub-overlay" onclick="closeAddSub()"></div>
+<div class="sheet" id="addsub-sheet">
+  <div class="sh-handle"></div><div class="sh-hdr"><div class="sh-title" id="addsub-title">Add Subscription</div><button class="sh-close" onclick="closeAddSub()">×</button></div>
+  <div class="sh-body">
+    <div class="field" style="margin-bottom:8px"><div class="field-lbl">SERVICE NAME</div><input class="field-input" id="sub-svc-name" placeholder="e.g. ChatGPT Go, Canva Pro..."></div>
+    <div class="field-row">
+      <div class="field"><div class="field-lbl">AMOUNT</div><input type="number" class="field-input" id="sub-svc-amt" placeholder="0"></div>
+      <div class="field"><div class="field-lbl">CURRENCY</div><div class="cycle-row" id="sub-currency-row"><div class="cycle-chip sel" onclick="selSubCur(this,'NGN')">NGN</div><div class="cycle-chip" onclick="selSubCur(this,'USD')">USD</div></div></div>
+    </div>
+    <div class="field" style="margin-bottom:8px"><div class="field-lbl">BILLING CYCLE</div><div class="cycle-row" id="sub-svc-cycle"><div class="cycle-chip" onclick="selSubCycle(this,'weekly')">Weekly</div><div class="cycle-chip sel" onclick="selSubCycle(this,'monthly')">Monthly</div><div class="cycle-chip" onclick="selSubCycle(this,'yearly')">Yearly</div></div></div>
+    <div class="field" style="margin-bottom:8px"><div class="field-lbl">START DATE (first billing)</div><input type="date" class="field-input" id="sub-svc-date" style="color-scheme:dark"></div>
+    <div class="field" style="margin-bottom:8px"><div class="field-lbl">CHARGED TO</div><div class="acc-select-list" id="sub-acc-list"></div></div>
+    <div class="field" style="margin-bottom:8px"><div class="field-lbl">STATUS</div><div class="cycle-row" id="sub-status-row"><div class="cycle-chip sel" onclick="selSubStatus(this,'active')">Active</div><div class="cycle-chip" onclick="selSubStatus(this,'paused')">Paused</div><div class="cycle-chip" onclick="selSubStatus(this,'cancelled')">Cancelled</div></div></div>
+    <button class="save-btn sm" onclick="confirmAddSub()">SAVE SUBSCRIPTION</button>
+  </div>
+</div>
+
+<!-- BUDGET SHEET -->
+<div class="sh-overlay" id="budget-overlay" onclick="closeBudgetSheet()"></div>
+<div class="sheet" id="budget-sheet">
+  <div class="sh-handle"></div><div class="sh-hdr"><div class="sh-title">Set Budgets</div><button class="sh-close" onclick="closeBudgetSheet()">×</button></div>
+  <div class="sh-body"><p style="font-family:'Space Mono',monospace;font-size:9px;color:var(--tx3);margin-bottom:11px;line-height:1.7">Monthly limits per category. Leave blank for no limit.</p><div id="budget-list"></div><button class="save-btn em" onclick="saveBudgets()" style="margin-top:11px">SAVE BUDGETS</button></div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-msg">Logged!</span><span class="toast-xp" id="toast-xp">+10 XP</span></div>
+</div>
+
+<script>
+// ══ CONSTANTS ══
+const RANKS=[
+  {rank:'E',label:'Initiate',xp:0,entries:0,streak:0,posMonths:0,color:'var(--re)'},
+  {rank:'D',label:'Tracker',xp:500,entries:15,streak:0,posMonths:0,color:'var(--rd)'},
+  {rank:'C',label:'Aware',xp:1500,entries:50,streak:7,posMonths:0,color:'var(--rc)'},
+  {rank:'B',label:'Disciplined',xp:4000,entries:150,streak:21,posMonths:1,color:'var(--rb)'},
+  {rank:'A',label:'Operator',xp:10000,entries:300,streak:30,posMonths:2,color:'var(--ra)'},
+  {rank:'S',label:'Sovereign',xp:25000,entries:500,streak:60,posMonths:3,color:'var(--rs)'},
+  {rank:'SS',label:'Architect',xp:99999,entries:0,streak:0,posMonths:0,color:'var(--rss)'},
+  {rank:'SSS',label:'Absolute',xp:99999,entries:0,streak:0,posMonths:0,color:'var(--rsss)'},
+];
+const ECATS=[
+  {e:'🚌',n:'Transport'},{e:'🍔',n:'Food'},{e:'🛒',n:'Shopping'},{e:'📱',n:'Data'},
+  {e:'⛪',n:'Church'},{e:'📚',n:'Education'},{e:'💊',n:'Health'},{e:'🏠',n:'Housing'},
+  {e:'🎮',n:'Fun'},{e:'👕',n:'Clothes'},{e:'🎁',n:'Gifts'},{e:'⚡',n:'Utilities'},
+  {e:'💻',n:'Tech'},{e:'✂️',n:'Personal'},{e:'📦',n:'Other'},
+];
+const ICATS=[
+  {e:'💼',n:'Work'},{e:'🎨',n:'Art'},{e:'💻',n:'Projects'},{e:'🎁',n:'Gift'},
+  {e:'📚',n:'Scholarship'},{e:'💰',n:'Savings'},{e:'👨\u200d👩\u200d👧',n:'Family'},{e:'📈',n:'Investment'},{e:'🏆',n:'Awards'},{e:'📦',n:'Other'},
+];
+const DEFAULT_ACCOUNTS=[
+  {id:'mp_personal',name:'Moniepoint Personal',number:'5502049130',color:'#2244ff'},
+  {id:'palmpay',name:'Palmpay',number:'8085318908',color:'#00c896'},
+  {id:'mp_business',name:'Moniepoint Business',number:'6352918197',color:'#f97316'},
+  {id:'first_bank_card',name:'First Bank Card',number:'Card / external bank',color:'#a78bfa'},
+  {id:'cash',name:'Cash Wallet',number:'Physical cash',color:'#eab308'},
+];
+const DEFAULT_SAVINGS=[
+  {id:'sav_mum',name:'Save For Mum',parentId:'mp_personal'},
+  {id:'sav_teens',name:'Teenagers Dept',parentId:'mp_personal'},
+  {id:'sav_personal',name:'Personal Savings',parentId:'mp_personal'},
+  {id:'sav_pastor',name:'Pastor Clinton M.',parentId:'mp_personal'},
+  {id:'sav_sayt',name:'Save As You Transact',parentId:'mp_personal'},
+  {id:'pp_cashbox',name:'PalmPay CashBox',parentId:'palmpay'},
+  {id:'pp_smartearn',name:'PalmPay SmartEarn',parentId:'palmpay'},
+  {id:'pp_mutual',name:'PalmPay Mutual Funds',parentId:'palmpay'},
+];
+
+// ══ PRELOADED CURATED DATA: DC EDITABLE V11 — SUBSCRIPTION DUE DATES + FIRST BANK CARD PATCH ══
+const PRELOADED = {
+  "transactions": [
+    {
+      "id": 2026051701,
+      "type": "transfer",
+      "amount": 2100,
+      "date": "2026-05-17T14:58:26",
+      "note": "Cash prize for brother routed through your Moniepoint Personal. Not your income; held/received on brother’s behalf.",
+      "category": {
+        "e": "🔄",
+        "n": "Brother Cash Prize"
+      },
+      "fromAccountId": "external",
+      "toAccountId": "mp_personal",
+      "accountId": "mp_personal"
+    },
+    {
+      "id": 2026051302,
+      "type": "transfer",
+      "amount": 20000,
+      "date": "2026-05-13T09:32:05",
+      "note": "PalmPay CashBox Auto Save after ₦20k Dad repayment deposit; savings movement, not expense.",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "pp_cashbox",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026051301,
+      "type": "transfer",
+      "amount": 20000,
+      "date": "2026-05-13T09:31:49",
+      "note": "Dad loan repayment deposit via POS/IDARA OTOBONG JEREMIAH into PalmPay. This is repayment of Dad loan, not new income.",
+      "category": {
+        "e": "💸",
+        "n": "Loan Repayment"
+      },
+      "fromAccountId": "external",
+      "toAccountId": "palmpay",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026051303,
+      "type": "transfer",
+      "amount": 10000,
+      "date": "2026-05-13T09:31:30",
+      "note": "Dad loan repayment — cash retained physically after Dad gave ₦30k cash. ₦20k was deposited through POS/IDARA; ₦10k stayed as cash.",
+      "category": {
+        "e": "💸",
+        "n": "Loan Repayment"
+      },
+      "fromAccountId": "external",
+      "toAccountId": "cash",
+      "accountId": "cash"
+    },
+    {
+      "id": 2026051201,
+      "type": "expense",
+      "amount": 210.75,
+      "date": "2026-05-12T09:17:16",
+      "note": "Transportation + VAT",
+      "category": {
+        "e": "🚌",
+        "n": "Transport"
+      },
+      "accountId": "mp_personal"
+    },
+    {
+      "id": 2026051109,
+      "type": "transfer",
+      "amount": 105,
+      "date": "2026-05-11T22:05:45",
+      "note": "Business Save As You Transact auto-save on Bamboo transfer",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "mp_business",
+      "toAccountId": "sav_business_sayt",
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026051107,
+      "type": "transfer",
+      "amount": 2100,
+      "date": "2026-05-11T22:05:43",
+      "note": "Moniepoint Business → Bamboo investment via Flutterwave / Sterling Bank",
+      "category": {
+        "e": "📈",
+        "n": "Investment"
+      },
+      "fromAccountId": "mp_business",
+      "toAccountId": "bamboo_investment",
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026051108,
+      "type": "expense",
+      "amount": 21.5,
+      "date": "2026-05-11T22:05:43",
+      "note": "Bank charges on Bamboo transfer: ₦20 charge + ₦1.50 VAT",
+      "category": {
+        "e": "🏦",
+        "n": "Fees"
+      },
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026051106,
+      "type": "transfer",
+      "amount": 2250,
+      "date": "2026-05-11T22:03:41",
+      "note": "50% partial withdrawal from DeeCee Funds Target Savings into Moniepoint Business",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "sav_deecee_funds",
+      "toAccountId": "mp_business",
+      "accountId": "sav_deecee_funds"
+    },
+    {
+      "id": 2026051104,
+      "type": "expense",
+      "amount": 60.75,
+      "date": "2026-05-11T10:53:20",
+      "note": "Bank charges on Dad loan transfer",
+      "category": {
+        "e": "🏦",
+        "n": "Fees"
+      },
+      "accountId": "mp_personal"
+    },
+    {
+      "id": 2026051103,
+      "type": "loan-given",
+      "amount": 30000,
+      "date": "2026-05-11T10:53:20",
+      "note": "Loan sent to Dad — TRUE LOAN TOTAL = ₦30,000 only. Funded by ₦27,500 PalmPay transfer + about ₦3,000 Teens savings withdrawal. Repaid May 13 via ₦20k POS/IDARA deposit + ₦10k cash retained.",
+      "category": {
+        "e": "💸",
+        "n": "Loan"
+      },
+      "accountId": "mp_personal",
+      "loanPerson": "Dad / CLINTON ONYEMAECHI MBAH",
+      "repayStatus": "repaid"
+    },
+    {
+      "id": 2026051102,
+      "type": "transfer",
+      "amount": 3000,
+      "date": "2026-05-11T10:52:31",
+      "note": "Teenagers Department savings withdrawal used to complete Dad transfer",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "sav_teens",
+      "toAccountId": "mp_personal",
+      "accountId": "sav_teens"
+    },
+    {
+      "id": 2026051101,
+      "type": "transfer",
+      "amount": 27500,
+      "date": "2026-05-11T10:51:28",
+      "note": "PalmPay → Moniepoint Personal; routed toward Dad loan",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "mp_personal",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026050901,
+      "type": "transfer",
+      "amount": 2100,
+      "date": "2026-05-09T18:06:28",
+      "note": "POS cash withdrawal via OBOT BLESSING GODWIN",
+      "category": {
+        "e": "💵",
+        "n": "Cash"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "cash",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026050902,
+      "type": "expense",
+      "amount": 1000,
+      "date": "2026-05-09T17:46:32",
+      "note": "Snacks via OBOT BLESSING GODWIN",
+      "category": {
+        "e": "🍔",
+        "n": "Food"
+      },
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026050801,
+      "type": "expense",
+      "amount": 700,
+      "date": "2026-05-08T11:43:57",
+      "note": "Snacks paid to PRAISE UMA UMA",
+      "category": {
+        "e": "🍔",
+        "n": "Food"
+      },
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026050703,
+      "type": "expense",
+      "amount": 500,
+      "date": "2026-05-07T20:44:01",
+      "note": "Youth convention uniform",
+      "category": {
+        "e": "👕",
+        "n": "Clothes"
+      },
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026050702,
+      "type": "transfer",
+      "amount": 2100,
+      "date": "2026-05-07T20:44:01",
+      "note": "Cash obtained through EMMANUEL EKE MBAKA because POS was unavailable",
+      "category": {
+        "e": "💵",
+        "n": "Cash"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "cash",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026050701,
+      "type": "expense",
+      "amount": 5000,
+      "date": "2026-05-07T10:11:53",
+      "note": "Youth Department contribution",
+      "category": {
+        "e": "⛪",
+        "n": "Church"
+      },
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026050602,
+      "type": "expense",
+      "amount": 2600,
+      "date": "2026-05-06T11:33:56",
+      "note": "POS purchase after PalmPay → personal transfer; needs final label",
+      "category": {
+        "e": "📦",
+        "n": "Other"
+      },
+      "accountId": "mp_personal"
+    },
+    {
+      "id": 2026050601,
+      "type": "transfer",
+      "amount": 3000,
+      "date": "2026-05-06T11:31:18",
+      "note": "PalmPay → Moniepoint Personal",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "mp_personal",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026050403,
+      "type": "expense",
+      "amount": 71.5,
+      "date": "2026-05-04T10:47:23",
+      "note": "Bank charges on May 4 Moniepoint Business transfer to Dad: ₦20 charge + ₦1.50 VAT + ₦50 stamp duty",
+      "category": {
+        "e": "🏦",
+        "n": "Fees"
+      },
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026050402,
+      "type": "expense",
+      "amount": 10000,
+      "date": "2026-05-04T10:47:23",
+      "note": "Spiritual seed / giving paid to Pastor Clinton M. This is NOT Dad loan and NOT family support.",
+      "category": {
+        "e": "⛪",
+        "n": "Spiritual Seed"
+      },
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026050401,
+      "type": "loan-given",
+      "amount": 20000,
+      "date": "2026-05-04T10:45:18",
+      "note": "Loan to Mum for market items; unpaid as of update",
+      "category": {
+        "e": "💸",
+        "n": "Loan"
+      },
+      "accountId": "palmpay",
+      "loanPerson": "Mum / OKORONKWO JOYCE ERIMMA",
+      "repayStatus": "pending"
+    },
+    {
+      "id": 2026050302,
+      "type": "income",
+      "amount": 18,
+      "date": "2026-05-03T12:00:26",
+      "note": "Moniepoint Business cashout/reward credit",
+      "category": {
+        "e": "🏆",
+        "n": "Rewards"
+      },
+      "accountId": "mp_business"
+    },
+    {
+      "id": 202605039901,
+      "type": "transfer",
+      "amount": 10100,
+      "date": "2026-05-03T11:57:09",
+      "note": "Confirmed PalmPay → Moniepoint Business transfer from Moniepoint Business statement. This funds the May 4 Spiritual Seed and is not spending by itself.",
+      "category": {
+        "e": "🔄",
+        "n": "Internal Transfer"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "mp_business",
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026050301,
+      "type": "expense",
+      "amount": 51,
+      "date": "2026-05-03T09:14:53",
+      "note": "Small Google Play charge. Likely verification/minor purchase; needs confirmation.",
+      "category": {
+        "e": "🔄",
+        "n": "Google Play"
+      },
+      "accountId": "mp_personal"
+    },
+    {
+      "id": 2026043004,
+      "type": "expense",
+      "amount": 5000,
+      "date": "2026-04-30T08:45:12",
+      "note": "Transportation transfer to CLINTON ONYEMAECHI MBAH; verify if this was true transport or family routing",
+      "category": {
+        "e": "🚌",
+        "n": "Transport"
+      },
+      "accountId": "mp_personal"
+    },
+    {
+      "id": 2026043003,
+      "type": "transfer",
+      "amount": 2500,
+      "date": "2026-04-30T08:42:20",
+      "note": "PalmPay → Moniepoint Personal; PDF-confirmed despite memory as business",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "mp_personal",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026043002,
+      "type": "expense",
+      "amount": 20060.75,
+      "date": "2026-04-30T06:17:35",
+      "note": "Tithe sent to RHEMA KINGDOM MINISTRY INTERNATIONAL + charges",
+      "category": {
+        "e": "⛪",
+        "n": "Church"
+      },
+      "accountId": "mp_personal"
+    },
+    {
+      "id": 2026043001,
+      "type": "transfer",
+      "amount": 20000,
+      "date": "2026-04-30T06:16:52",
+      "note": "Tithe holding withdrawal from Pastor Clinton savings",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "sav_pastor",
+      "toAccountId": "mp_personal",
+      "accountId": "sav_pastor"
+    },
+    {
+      "id": 2026042901,
+      "type": "expense",
+      "amount": 18000,
+      "date": "2026-04-29T18:52:59",
+      "note": "New laptop battery from SIMON GEORGE",
+      "category": {
+        "e": "💻",
+        "n": "Tech"
+      },
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026042808,
+      "type": "transfer",
+      "amount": 20000,
+      "date": "2026-04-28T16:12:44",
+      "note": "Tithe holding: Moniepoint Personal → Pastor Clinton savings",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "mp_personal",
+      "toAccountId": "sav_pastor",
+      "accountId": "mp_personal"
+    },
+    {
+      "id": 2026042807,
+      "type": "transfer",
+      "amount": 20000,
+      "date": "2026-04-28T16:09:36",
+      "note": "PalmPay → Moniepoint Personal; tithe routing",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "mp_personal",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026042806,
+      "type": "transfer",
+      "amount": 121200,
+      "date": "2026-04-28T12:54:39",
+      "note": "CashBox → SmartEarn allocations: ₦40,400 × 3",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "pp_cashbox",
+      "toAccountId": "pp_smartearn",
+      "accountId": "pp_cashbox"
+    },
+    {
+      "id": 2026042805,
+      "type": "transfer",
+      "amount": 5075,
+      "date": "2026-04-28T12:42:48",
+      "note": "PalmPay mutual funds / shares purchase",
+      "category": {
+        "e": "📈",
+        "n": "Investment"
+      },
+      "fromAccountId": "pp_cashbox",
+      "toAccountId": "pp_mutual",
+      "accountId": "pp_cashbox"
+    },
+    {
+      "id": 2026042802,
+      "type": "transfer",
+      "amount": 200000,
+      "date": "2026-04-28T12:32:36",
+      "note": "PalmPay auto-saved full ₦200k to CashBox for interest",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "pp_cashbox",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026042801,
+      "type": "income",
+      "amount": 200000,
+      "date": "2026-04-28T12:32:22",
+      "note": "Aunt/relative money received from NNAMDI CHUKWUEBUKA ONU",
+      "category": {
+        "e": "👨‍👩‍👧",
+        "n": "Family"
+      },
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026042302,
+      "type": "subscription",
+      "amount": 5500,
+      "date": "2026-04-23T14:59:32",
+      "note": "Google Play charge matched to Canva Pro subscription funding. Confirmed by narration: Canva Pro subscription.",
+      "category": {
+        "e": "🔄",
+        "n": "Canva Pro"
+      },
+      "accountId": "mp_personal",
+      "subName": "Canva Pro",
+      "subCycle": "monthly"
+    },
+    {
+      "id": 2026042301,
+      "type": "transfer",
+      "amount": 6000,
+      "date": "2026-04-23T14:56:50",
+      "note": "PalmPay → Moniepoint Personal funding tagged Canva Pro subscription. Internal funding, not income.",
+      "category": {
+        "e": "🔄",
+        "n": "Transfer"
+      },
+      "fromAccountId": "palmpay",
+      "toAccountId": "mp_personal",
+      "accountId": "palmpay"
+    },
+    {
+      "id": 2026042303,
+      "type": "subscription",
+      "amount": 3850,
+      "date": "2026-04-23T14:24:02",
+      "note": "Google Play charge confirmed as Gemini/AI subscription.",
+      "category": {
+        "e": "🔄",
+        "n": "Gemini"
+      },
+      "accountId": "mp_personal",
+      "subName": "Gemini",
+      "subCycle": "monthly"
+    },
+    {
+      "id": 2026041605,
+      "type": "transfer",
+      "amount": 5,
+      "date": "2026-04-16T17:31:23",
+      "note": "Business Save As You Transact auto-save on data purchase",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "mp_business",
+      "toAccountId": "sav_business_sayt",
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026041604,
+      "type": "expense",
+      "amount": 100,
+      "date": "2026-04-16T17:31:12",
+      "note": "Moniepoint Business data purchase to MTN 09161797879",
+      "category": {
+        "e": "📱",
+        "n": "Data"
+      },
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026041603,
+      "type": "transfer",
+      "amount": 65,
+      "date": "2026-04-16T17:30:56",
+      "note": "Withdrawal from Business Save As You Transact",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "sav_business_sayt",
+      "toAccountId": "mp_business",
+      "accountId": "sav_business_sayt"
+    },
+    {
+      "id": 2026041602,
+      "type": "transfer",
+      "amount": 10,
+      "date": "2026-04-16T12:45:01",
+      "note": "Business Save As You Transact auto-save on data purchase",
+      "category": {
+        "e": "💰",
+        "n": "Savings"
+      },
+      "fromAccountId": "mp_business",
+      "toAccountId": "sav_business_sayt",
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026041601,
+      "type": "expense",
+      "amount": 200,
+      "date": "2026-04-16T12:44:57",
+      "note": "Moniepoint Business data purchase to MTN 09161797879",
+      "category": {
+        "e": "📱",
+        "n": "Data"
+      },
+      "accountId": "mp_business"
+    },
+    {
+      "id": 2026021701,
+      "type": "transfer",
+      "amount": 270.56,
+      "date": "2026-02-17T00:00:00",
+      "note": "Opening balance for Moniepoint Business statement period 17 Feb–18 May 2026. Balance adjustment, not income.",
+      "category": {
+        "e": "🏦",
+        "n": "Opening Balance"
+      },
+      "fromAccountId": "external",
+      "toAccountId": "mp_business",
+      "accountId": "mp_business"
+    },
+    {
+      "id": 202602179901,
+      "type": "transfer",
+      "amount": 5347.37,
+      "date": "2026-02-17T00:00:00",
+      "note": "Moniepoint Personal statement reconciliation adjustment. Added after comparing v6/v7 against the 17 Feb–18 May statement so Personal balance matches the actual closing balance ₦2,114.12. Not income, not spending.",
+      "category": {
+        "e": "🏦",
+        "n": "Reconciliation"
+      },
+      "fromAccountId": "external",
+      "toAccountId": "mp_personal",
+      "accountId": "mp_personal"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "mp_personal",
+      "name": "Moniepoint Personal",
+      "number": "5502049130",
+      "color": "#2244ff"
+    },
+    {
+      "id": "palmpay",
+      "name": "Palmpay",
+      "number": "8085318908",
+      "color": "#00c896"
+    },
+    {
+      "id": "mp_business",
+      "name": "Moniepoint Business",
+      "number": "6352918197",
+      "color": "#f97316"
+    },
+    {
+      "id": "cash",
+      "name": "Cash Wallet",
+      "number": "Physical cash",
+      "color": "#eab308"
+    }
+  ],
+  "savingsAccounts": [
+    {
+      "id": "sav_mum",
+      "name": "Save For Mum",
+      "parentId": "mp_personal"
+    },
+    {
+      "id": "sav_teens",
+      "name": "Teenagers Dept",
+      "parentId": "mp_personal"
+    },
+    {
+      "id": "sav_personal",
+      "name": "Personal Savings",
+      "parentId": "mp_personal"
+    },
+    {
+      "id": "sav_pastor",
+      "name": "Pastor Clinton M.",
+      "parentId": "mp_personal"
+    },
+    {
+      "id": "sav_sayt",
+      "name": "Save As You Transact",
+      "parentId": "mp_personal"
+    },
+    {
+      "id": "pp_cashbox",
+      "name": "PalmPay CashBox",
+      "parentId": "palmpay"
+    },
+    {
+      "id": "pp_smartearn",
+      "name": "PalmPay SmartEarn",
+      "parentId": "palmpay"
+    },
+    {
+      "id": "pp_mutual",
+      "name": "PalmPay Mutual Funds",
+      "parentId": "palmpay"
+    },
+    {
+      "id": "sav_business_sayt",
+      "name": "Business Save As You Transact",
+      "parentId": "mp_business"
+    },
+    {
+      "id": "sav_deecee_funds",
+      "name": "DeeCee Funds Target Savings",
+      "parentId": "mp_business"
+    },
+    {
+      "id": "bamboo_investment",
+      "name": "Bamboo Investment",
+      "parentId": "mp_business"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "sub_canva_pro",
+      "name": "Canva Pro",
+      "amount": 5500,
+      "currency": "NGN",
+      "cycle": "monthly",
+      "startDate": "2026-04-23",
+      "accountId": "mp_personal",
+      "status": "active"
+    },
+    {
+      "id": "sub_google_play_possible_gemini",
+      "name": "Gemini",
+      "amount": 3850,
+      "currency": "NGN",
+      "cycle": "monthly",
+      "startDate": "2026-04-23",
+      "accountId": "mp_personal",
+      "status": "active"
+    },
+    {
+      "id": "sub_emergent_firstbank",
+      "name": "Emergent",
+      "amount": 1,
+      "currency": "USD",
+      "cycle": "monthly",
+      "startDate": "2026-05-16",
+      "accountId": "first_bank_card",
+      "status": "active",
+      "note": "Charged at $1/month via First Bank card."
+    },
+    {
+      "id": "sub_charge_equity_plus_free_offer",
+      "name": "Charge Equity Plus / free offer",
+      "amount": 0,
+      "currency": "NGN",
+      "cycle": "monthly",
+      "startDate": "2026-05-16",
+      "accountId": "first_bank_card",
+      "status": "active",
+      "note": "Free offer; only card verification/authorization charge was logged."
+    },
+    {
+      "id": "sub_chatgpt_plus_firstbank",
+      "name": "ChatGPT Plus",
+      "amount": 31500,
+      "currency": "NGN",
+      "cycle": "monthly",
+      "startDate": "2026-06-13",
+      "accountId": "first_bank_card",
+      "status": "active",
+      "note": "Currently free at ₦0 until Jun 13, 2026; expected billing ₦31,500/month including VAT."
+    }
+  ],
+  "budgets": {},
+  "xp": 480,
+  "rank": "E",
+  "streak": 0,
+  "lastLogDate": null,
+  "totalLogged": 48,
+  "disciplineScore": 100,
+  "lastActivityDate": "Mon May 18 2026"
+};
+
+// ══ STATE ══
+let S={
+  transactions:[],accounts:[...DEFAULT_ACCOUNTS],savingsAccounts:[...DEFAULT_SAVINGS],
+  subscriptions:[],budgets:{},
+  xp:0,rank:'E',streak:0,lastLogDate:null,totalLogged:0,disciplineScore:100,lastActivityDate:null,
+};
+let curScreen='home',selectedAccId='all';
+let editTxId=null;
+let txGesture={id:null,startX:0,startY:0,dx:0,timer:null,long:false,moved:false};
+let eType='expense',eAmt='0',eCat=null,eDate=new Date();
+let eAccId='mp_personal',eTrfFrom='mp_personal',eTrfTo='sav_personal';
+let eRepayStatus='pending',eSubCycle='monthly',accPickerTarget='account';
+let activeLoanId=null,addSavParentId=null,editSubId=null;
+let subCurrency='NGN',subCycle='monthly',subStatus='active',subAccId='mp_personal';
+
+
+// ══ CURATED CORRECTIONS V5 ══
+// These override earlier classifications that were structurally wrong:
+// - May 13 ₦20k IDARA/POS inflow is Dad loan repayment, not income.
+// - Dad's actual loan is ₦30k only and is now marked repaid.
+// - May 4 ₦10k was a spiritual seed/giving, not Dad loan/family support.
+// - Moniepoint Business opening balance is a balance adjustment, not income.
+// - Emmanuel ₦2,100 is brother cash prize routed through your Moniepoint Personal, not income.
+// - Apr 23 Google Play charges are captured as confirmed Canva Pro and Gemini subscriptions.
+const CURATED_CORRECTION_IDS=new Set([2026021701, 2026042301, 2026042302, 2026042303, 2026042304, 2026050301, 2026051601, 2026050402, 2026051103, 2026051301, 2026051302, 2026051303, 2026051701]);
+const CURATED_CORRECTIONS=[
+  {
+    "id": 2026021701,
+    "type": "transfer",
+    "amount": 270.56,
+    "date": "2026-02-17T00:00:00",
+    "note": "Opening balance for Moniepoint Business statement period 17 Feb–18 May 2026. Balance adjustment, not income.",
+    "category": {
+      "e": "🏦",
+      "n": "Opening Balance"
+    },
+    "fromAccountId": "external",
+    "toAccountId": "mp_business",
+    "accountId": "mp_business"
+  },
+  {
+    "id": 2026042301,
+    "type": "transfer",
+    "amount": 6000,
+    "date": "2026-04-23T14:56:50",
+    "note": "PalmPay → Moniepoint Personal funding tagged Canva Pro subscription. Internal funding, not income.",
+    "category": {
+      "e": "🔄",
+      "n": "Transfer"
+    },
+    "fromAccountId": "palmpay",
+    "toAccountId": "mp_personal",
+    "accountId": "palmpay"
+  },
+  {
+    "id": 2026042302,
+    "type": "subscription",
+    "amount": 5500,
+    "date": "2026-04-23T14:59:32",
+    "note": "Google Play charge matched to Canva Pro subscription funding. Confirmed by narration: Canva Pro subscription.",
+    "category": {
+      "e": "🔄",
+      "n": "Canva Pro"
+    },
+    "accountId": "mp_personal",
+    "subName": "Canva Pro",
+    "subCycle": "monthly"
+  },
+  {
+    "id": 2026042303,
+    "type": "subscription",
+    "amount": 3850,
+    "date": "2026-04-23T14:24:02",
+    "note": "Google Play charge confirmed as Gemini/AI subscription.",
+    "category": {
+      "e": "🔄",
+      "n": "Gemini"
+    },
+    "accountId": "mp_personal",
+    "subName": "Gemini",
+    "subCycle": "monthly"
+  },
+  {
+    "id": 2026050301,
+    "type": "expense",
+    "amount": 51,
+    "date": "2026-05-03T09:14:53",
+    "note": "Small Google Play charge. Likely verification/minor purchase; needs confirmation.",
+    "category": {
+      "e": "🔄",
+      "n": "Google Play"
+    },
+    "accountId": "mp_personal"
+  },
+
+  {
+    "id": 2026051601,
+    "type": "expense",
+    "amount": 51,
+    "date": "2026-05-16T23:20:00",
+    "note": "First Bank card verification/authorization charge for Charge Equity Plus free-offer subscription. Approx date/time from user recall; editable.",
+    "category": {
+      "e": "🔄",
+      "n": "Subscription Verification"
+    },
+    "accountId": "first_bank_card"
+  },
+  {
+    "id": 2026051303,
+    "type": "transfer",
+    "amount": 10000,
+    "date": "2026-05-13T09:31:30",
+    "note": "Dad loan repayment — cash retained physically after Dad gave ₦30k cash. ₦20k was deposited through POS/IDARA; ₦10k stayed as cash.",
+    "category": {
+      "e": "💸",
+      "n": "Loan Repayment"
+    },
+    "fromAccountId": "external",
+    "toAccountId": "cash",
+    "accountId": "cash"
+  },
+  {
+    "id": 2026051302,
+    "type": "transfer",
+    "amount": 20000,
+    "date": "2026-05-13T09:32:05",
+    "note": "PalmPay CashBox Auto Save after ₦20k Dad repayment deposit; savings movement, not expense.",
+    "category": {
+      "e": "💰",
+      "n": "Savings"
+    },
+    "fromAccountId": "palmpay",
+    "toAccountId": "pp_cashbox",
+    "accountId": "palmpay"
+  },
+  {
+    "id": 2026051301,
+    "type": "transfer",
+    "amount": 20000,
+    "date": "2026-05-13T09:31:49",
+    "note": "Dad loan repayment deposit via POS/IDARA OTOBONG JEREMIAH into PalmPay. This is repayment of Dad loan, not new income.",
+    "category": {
+      "e": "💸",
+      "n": "Loan Repayment"
+    },
+    "fromAccountId": "external",
+    "toAccountId": "palmpay",
+    "accountId": "palmpay"
+  },
+  {
+    "id": 2026051103,
+    "type": "loan-given",
+    "amount": 30000,
+    "date": "2026-05-11T10:53:20",
+    "note": "Loan sent to Dad — TRUE LOAN TOTAL = ₦30,000 only. Funded by ₦27,500 PalmPay transfer + about ₦3,000 Teens savings withdrawal. Repaid May 13 via ₦20k POS/IDARA deposit + ₦10k cash retained.",
+    "category": {
+      "e": "💸",
+      "n": "Loan"
+    },
+    "accountId": "mp_personal",
+    "loanPerson": "Dad / CLINTON ONYEMAECHI MBAH",
+    "repayStatus": "repaid"
+  },
+  {
+    "id": 2026050402,
+    "type": "expense",
+    "amount": 10000,
+    "date": "2026-05-04T10:47:23",
+    "note": "Spiritual seed / giving paid to Pastor Clinton M. This is NOT Dad loan and NOT family support.",
+    "category": {
+      "e": "⛪",
+      "n": "Spiritual Seed"
+    },
+    "accountId": "mp_business"
+  },
+  {
+    "id": 2026051701,
+    "type": "transfer",
+    "amount": 2100,
+    "date": "2026-05-17T14:58:26",
+    "note": "Cash prize for brother routed through your Moniepoint Personal. Not your income; held/received on brother’s behalf.",
+    "category": {
+      "e": "🔄",
+      "n": "Brother Cash Prize"
+    },
+    "fromAccountId": "external",
+    "toAccountId": "mp_personal",
+    "accountId": "mp_personal"
+  }
+];
+function applyCuratedCorrections(state){
+  state=normalizeState(state);
+  state.transactions=(state.transactions||[]).filter(t=>!CURATED_CORRECTION_IDS.has(Number(t.id)));
+  CURATED_CORRECTIONS.forEach(t=>state.transactions.push({...t,date:new Date(t.date)}));
+  state.transactions.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  state.totalLogged=state.transactions.length;
+  state.xp=Math.max(state.xp||0,state.totalLogged*10);
+  return state;
+}
+
+function ensureFirstBankAndSubscriptions(state){
+  state=normalizeState(state);
+  if(!state.accounts.some(a=>a.id==='first_bank_card')){
+    state.accounts.push({id:'first_bank_card',name:'First Bank Card',number:'Card / external bank',color:'#a78bfa'});
+  }
+  const ensureSub=(sub)=>{
+    const list=state.subscriptions||[];
+    const i=list.findIndex(s=>s.id===sub.id);
+    if(i>=0)list[i]={...list[i],...sub};
+    else list.push(sub);
+    state.subscriptions=list;
+  };
+  ensureSub({id:'sub_canva_pro',name:'Canva Pro',amount:5500,currency:'NGN',cycle:'monthly',startDate:'2026-04-23',accountId:'mp_personal',status:'active'});
+  ensureSub({id:'sub_google_play_possible_gemini',name:'Gemini',amount:3850,currency:'NGN',cycle:'monthly',startDate:'2026-04-23',accountId:'mp_personal',status:'active'});
+  ensureSub({id:'sub_emergent_firstbank',name:'Emergent',amount:1,currency:'USD',cycle:'monthly',startDate:'2026-05-16',accountId:'first_bank_card',status:'active',note:'Charged at $1/month via First Bank card.'});
+  ensureSub({id:'sub_charge_equity_plus_free_offer',name:'Charge Equity Plus / free offer',amount:0,currency:'NGN',cycle:'monthly',startDate:'2026-05-16',accountId:'first_bank_card',status:'active',note:'Free offer; only card verification/authorization charge was logged.'});
+  ensureSub({id:'sub_chatgpt_plus_firstbank',name:'ChatGPT Plus',amount:31500,currency:'NGN',cycle:'monthly',startDate:'2026-06-13',accountId:'first_bank_card',status:'active',note:'Currently free at ₦0 until Jun 13, 2026; expected billing ₦31,500/month including VAT.'});
+  if(!state.transactions.some(t=>Number(t.id)===2026051601)){
+    state.transactions.push({id:2026051601,type:'expense',amount:51,date:new Date('2026-05-16T23:20:00'),note:'First Bank card verification/authorization charge for Charge Equity Plus free-offer subscription. Approx date/time from user recall; editable.',category:{e:'🔄',n:'Subscription Verification'},accountId:'first_bank_card'});
+  }
+  state.transactions.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  return state;
+}
+
+// ══ STORAGE ══
+const STORAGE_KEY='ldg6_dc_editable_logs_v11_subscriptions';
+const LEGACY_KEYS=['ldg6_dc_reconciled_v9_editable_logs','ldg6'];
+function txKey(t){
+  const d=t.date?new Date(t.date).toISOString().slice(0,16):'';
+  return [t.id||'',t.type||'',t.amount||0,d,(t.note||''),(t.accountId||''),(t.fromAccountId||''),(t.toAccountId||'')].join('|');
+}
+function normalizeState(p){
+  p=p||{};
+  p.transactions=(p.transactions||[]).map(t=>({...t,date:new Date(t.date)}));
+  p.budgets=p.budgets||{};
+  p.accounts=p.accounts||[...DEFAULT_ACCOUNTS];
+  p.savingsAccounts=p.savingsAccounts||[...DEFAULT_SAVINGS];
+  p.subscriptions=p.subscriptions||[];
+  return p;
+}
+function mergeStates(base, incoming){
+  base=normalizeState(base); incoming=normalizeState(incoming);
+  const seen=new Set(base.transactions.map(txKey));
+  incoming.transactions.forEach(t=>{const k=txKey(t); if(!seen.has(k)){base.transactions.push(t); seen.add(k);}});
+  const accIds=new Set(base.accounts.map(a=>a.id));
+  incoming.accounts.forEach(a=>{if(!accIds.has(a.id)){base.accounts.push(a); accIds.add(a.id);}});
+  const savIds=new Set(base.savingsAccounts.map(a=>a.id));
+  incoming.savingsAccounts.forEach(a=>{if(!savIds.has(a.id)){base.savingsAccounts.push(a); savIds.add(a.id);}});
+  const subIds=new Set((base.subscriptions||[]).map(s=>s.id));
+  (incoming.subscriptions||[]).forEach(s=>{if(!subIds.has(s.id)){base.subscriptions.push(s); subIds.add(s.id);}});
+  base.budgets={...(incoming.budgets||{}),...(base.budgets||{})};
+  base.transactions.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  base.totalLogged=base.transactions.length;
+  base.xp=Math.max(base.xp||0, incoming.xp||0, base.totalLogged*10);
+  base.rank=base.rank||incoming.rank||'E';
+  base.streak=Math.max(base.streak||0,incoming.streak||0);
+  base.disciplineScore=base.disciplineScore??incoming.disciplineScore??100;
+  base.lastActivityDate=base.lastActivityDate||incoming.lastActivityDate||null;
+  return base;
+}
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(S));}catch(e){}window._ld=JSON.stringify(S);}
+function load(){
+  try{
+    let r=null;try{r=localStorage.getItem(STORAGE_KEY);}catch(e){}
+    if(!r)r=window._ld;
+    if(r){S=ensureFirstBankAndSubscriptions(normalizeState({...S,...JSON.parse(r)}));save();return;}
+    let merged=normalizeState({...S,...(typeof PRELOADED!=='undefined'?PRELOADED:{})});
+    // Migrate only manual entries from the original base ledger if your browser still has them.
+    LEGACY_KEYS.forEach(k=>{
+      try{const raw=localStorage.getItem(k); if(raw) merged=mergeStates(merged,JSON.parse(raw));}catch(e){}
+    });
+    S=ensureFirstBankAndSubscriptions(normalizeState(merged));save();
+  }catch(e){}
+}
+
+// ══ THEME ══
+function initTheme(){let t='dark';try{t=localStorage.getItem('ldg_theme')||'dark';}catch(e){}document.documentElement.setAttribute('data-theme',t);updateThemeIcons();}
+function toggleTheme(){const cur=document.documentElement.getAttribute('data-theme');const next=cur==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',next);try{localStorage.setItem('ldg_theme',next);}catch(e){}updateThemeIcons();}
+function updateThemeIcons(){const isDark=document.documentElement.getAttribute('data-theme')==='dark';document.querySelectorAll('.icon-btn').forEach(b=>{if(b.getAttribute('onclick')==='toggleTheme()')b.textContent=isDark?'☀️':'🌙';});}
+
+// ══ NAVIGATION ══
+function navigate(sc){
+  document.getElementById('screen-'+curScreen).classList.remove('active');
+  document.getElementById('nav-'+curScreen)?.classList.remove('active');
+  curScreen=sc;
+  document.getElementById('screen-'+sc).classList.add('active');
+  document.getElementById('nav-'+sc)?.classList.add('active');
+  if(sc==='analysis')renderAnalysis();
+  if(sc==='log'){renderLogChips();filterTx('');document.getElementById('search-input').value='';}
+  if(sc==='accounts')renderAccountsScreen();
+  if(sc==='profile')renderProfile();
+}
+
+// ══ ACCOUNT HELPERS ══
+function getAllAccountOptions(){
+  return [
+    ...S.accounts.map(a=>({id:a.id,name:a.name,num:a.number,color:a.color,type:'main'})),
+    ...S.savingsAccounts.map(s=>{const parent=S.accounts.find(a=>a.id===s.parentId);return {id:s.id,name:s.name,num:parent?parent.name:'',color:parent?parent.color:'#888',type:'savings'};}),
+  ];
+}
+function getAccName(id){
+  const a=S.accounts.find(x=>x.id===id);if(a)return a.name;
+  const s=S.savingsAccounts.find(x=>x.id===id);if(s)return s.name;
+  if(id==='external')return 'External';
+  return id||'Unknown';
+}
+function getAccColor(id){
+  const a=S.accounts.find(x=>x.id===id);if(a)return a.color;
+  const s=S.savingsAccounts.find(x=>x.id===id);if(s){const p=S.accounts.find(a=>a.id===s.parentId);return p?p.color:'#888';}
+  return '#888';
+}
+function getAccountBalance(accountId){
+  return S.transactions.reduce((sum,t)=>{
+    if(t.type==='transfer'){
+      if(t.fromAccountId===accountId)return sum-t.amount;
+      if(t.toAccountId===accountId)return sum+t.amount;
+      return sum;
+    }
+    if(t.accountId!==accountId)return sum;
+    if(t.type==='income')return sum+t.amount;
+    if(t.type==='expense'||t.type==='loan-given'||t.type==='subscription')return sum-t.amount;
+    if(t.type==='loan-received')return sum+t.amount;
+    return sum;
+  },0);
+}
+function getNetWorth(){
+  const allIds=[...S.accounts.map(a=>a.id),...S.savingsAccounts.map(s=>s.id)];
+  return allIds.reduce((sum,id)=>sum+getAccountBalance(id),0);
+}
+
+// ══ ACCOUNT FILTERING ══
+function txMatchesAccount(t,accountId){
+  if(accountId==='all')return true;
+  return t.accountId===accountId||t.fromAccountId===accountId||t.toAccountId===accountId;
+}
+function getAccountFilteredTx(txs,accountId=selectedAccId){
+  return txs.filter(t=>txMatchesAccount(t,accountId));
+}
+function renderAccountChips(targetId,onClickFn='selectHomeAcc'){
+  const el=document.getElementById(targetId);
+  if(!el)return;
+  const opts=[{id:'all',name:'All Accounts',color:'var(--acc)'},...S.accounts.map(a=>({id:a.id,name:a.name,color:a.color}))];
+  el.innerHTML=opts.map(o=>`<div class="acc-chip${selectedAccId===o.id?' on':''}" style="${selectedAccId===o.id?`background:${o.color}`:''}" onclick="${onClickFn}('${o.id}')">${o.id==='all'?'All':o.name.replace('Moniepoint ','MP ')}</div>`).join('');
+}
+function selectLedgerAcc(id){
+  selectedAccId=id;
+  renderHomeChips();
+  renderLogChips();
+  if(curScreen==='home')renderHome();
+  if(curScreen==='log')filterTx(document.getElementById('search-input')?.value||'');
+}
+function renderLogChips(){renderAccountChips('log-acc-chips','selectLedgerAcc');}
+
+// ══ HOME BALANCE ══
+function renderHomeChips(){renderAccountChips('home-acc-chips','selectLedgerAcc');}
+function selectHomeAcc(id){selectLedgerAcc(id);}
+function renderHome(){
+  applyDecay();renderHomeChips();
+  const now=new Date(),mo=now.getMonth(),yr=now.getFullYear();
+  let inc=0,exp=0,trf=0;
+  const txs=S.transactions.filter(t=>{
+    const d=new Date(t.date);
+    if(d.getMonth()!==mo||d.getFullYear()!==yr)return false;
+    if(selectedAccId==='all')return true;
+    return t.accountId===selectedAccId||t.fromAccountId===selectedAccId||t.toAccountId===selectedAccId;
+  });
+  txs.forEach(t=>{
+    if(t.type==='income')inc+=t.amount;
+    else if(t.type==='expense'||t.type==='subscription'||t.type==='loan-given')exp+=t.amount;
+    else if(t.type==='transfer')trf+=t.amount;
+  });
+  const net=selectedAccId==='all'?getNetWorth():getAccountBalance(selectedAccId);
+  const balEl=document.getElementById('main-balance');
+  balEl.textContent='₦'+fmt(Math.abs(net));
+  balEl.className='bal-amount '+(net>0?'pos':net<0?'neg':'zer');
+  document.getElementById('home-bal-lbl').textContent=selectedAccId==='all'?'NET WORTH':'AVAILABLE BALANCE';
+  document.getElementById('bal-period').textContent=now.toLocaleString('en',{month:'long',year:'numeric'})+(selectedAccId!=='all'?' · '+getAccName(selectedAccId):'');
+  document.getElementById('total-income').textContent='₦'+fmtS(inc);
+  document.getElementById('total-expense').textContent='₦'+fmtS(exp);
+  document.getElementById('total-trf').textContent='₦'+fmtS(trf);
+  // rank
+  const ri=getRank(),idx=RANKS.indexOf(ri);const nx=RANKS[idx+1];
+  const isSpecial=['SS','SSS'].includes(S.rank);
+  const xpToNx=nx&&!['SS','SSS'].includes(nx.rank)?nx.xp-ri.xp:100;
+  const pct=isSpecial?100:nx&&!['SS','SSS'].includes(nx.rank)?Math.min(100,((S.xp-ri.xp)/xpToNx)*100):100;
+  document.getElementById('xp-fill').style.width=pct+'%';
+  document.getElementById('m4').textContent=S.xp.toLocaleString()+(nx&&!['SS','SSS'].includes(nx.rank)?'/'+nx.xp.toLocaleString():'')+' XP';
+  const disc=Math.round(S.disciplineScore);
+  document.getElementById('disc-score').textContent=disc;
+  document.getElementById('disc-fill').style.width=disc+'%';
+  document.getElementById('disc-fill').style.background=disc>60?'linear-gradient(90deg,var(--xp),var(--xp2))':disc>30?'linear-gradient(90deg,#f97316,#fbbf24)':'linear-gradient(90deg,var(--exp),#ff8a65)';
+  document.getElementById('streak-val').textContent='🔥 '+S.streak;
+  document.getElementById('m1').className='xp-mi'+(S.totalLogged>=15?' on':'');
+  document.getElementById('m2').className='xp-mi'+(S.streak>=7?' on':'');
+  document.getElementById('m3').className='xp-mi'+(idx>=1?' on':'');
+  ['rank-badge','rank-badge-2'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='RANK '+S.rank;el.style.color=ri.color;el.style.borderColor=ri.color;}});
+  renderLoansCard();
+  renderSubscriptionsCard();
+  renderTxList(document.getElementById('tx-list'),getAccountFilteredTx(S.transactions).slice(0,20));
+}
+function renderLoansCard(){
+  const loans=S.transactions.filter(t=>t.type==='loan-given'&&t.repayStatus!=='repaid');
+  const el=document.getElementById('loans-card');
+  if(!loans.length){el.innerHTML='';return;}
+  el.innerHTML=`<div style="margin:0 13px 11px;background:var(--sf);border:1px solid var(--bd);border-radius:13px;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px 6px"><span style="font-family:'Space Mono',monospace;font-size:8px;color:var(--tx3);letter-spacing:.15em">OUTSTANDING LOANS</span><span style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em;color:var(--loan)">₦${fmtS(loans.reduce((s,t)=>s+t.amount,0))}</span></div>
+    ${loans.map(l=>`<div class="commit-row" onclick="openLoanStatus(${l.id})"><div class="commit-ico lg">💸</div><div class="commit-info"><div class="commit-name">${l.loanPerson}</div><div class="commit-meta">${dlbl(new Date(l.date))}</div></div><div style="display:flex;align-items:center;gap:6px"><span class="status-badge ${l.repayStatus||'pending'}">${(l.repayStatus||'pending').toUpperCase()}</span><span class="commit-amt loan">₦${fmtS(l.amount)}</span></div></div>`).join('')}
+  </div>`;
+}
+
+
+function renderSubscriptionsCard(){
+  const el=document.getElementById('subs-card');
+  if(!el)return;
+  const active=(S.subscriptions||[]).filter(s=>(s.status||'active')!=='cancelled');
+  if(!active.length){el.innerHTML='';return;}
+  const monthly=active.reduce((sum,s)=>{
+    const amt=Number(s.amount)||0;
+    if(s.currency==='USD')return sum; // keep USD separate from naira total
+    if(s.cycle==='weekly')return sum+(amt*4);
+    if(s.cycle==='yearly')return sum+(amt/12);
+    return sum+amt;
+  },0);
+  const monthlyUsd=active.reduce((sum,s)=>{
+    const amt=Number(s.amount)||0;
+    if(s.currency!=='USD')return sum;
+    if(s.cycle==='weekly')return sum+(amt*4);
+    if(s.cycle==='yearly')return sum+(amt/12);
+    return sum+amt;
+  },0);
+  const now=new Date();
+  const ordered=[...active].sort((a,b)=>{
+    const na=getNextBilling(a), nb=getNextBilling(b);
+    return (na?na.getTime():Infinity)-(nb?nb.getTime():Infinity);
+  });
+  el.innerHTML=`<div class="sub-home-card">
+    <div class="sub-home-head"><span class="sub-home-title">ACTIVE SUBSCRIPTIONS</span><span class="sub-home-total">₦${fmtS(monthly)}/mo${monthlyUsd?` + $${fmtS(monthlyUsd)}/mo`:''}</span></div>
+    ${ordered.map(sub=>{
+      const next=getNextBilling(sub);
+      const days=next?Math.ceil((next-now)/86400000):null;
+      const urgent=days!==null&&days<=7?'style="color:var(--exp)"':days!==null&&days<=14?'style="color:var(--loan)"':'';
+      const amt=(sub.currency==='USD'?'$':'₦')+fmtS(Number(sub.amount)||0);
+      return `<div class="sub-home-row" onclick="editSub('${sub.id}')"><div class="sub-home-ico">🔄</div><div class="sub-home-info"><div class="sub-home-name">${sub.name}</div><div class="sub-home-meta">${sub.cycle} · ${getAccName(sub.accountId)}${sub.note?` · ${sub.note}`:''}</div></div><div><div class="sub-home-amt">${amt}</div><div class="sub-home-next" ${urgent}>Next: ${next?dlbl(next):'—'}</div></div></div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ══ TX LIST ══
+function renderTxList(el,txs){
+  if(!txs.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No Entries</div><div class="empty-sub">Nothing to show here yet.</div></div>';return;}
+  const grp={};txs.forEach(tx=>{const k=new Date(tx.date).toDateString();if(!grp[k])grp[k]=[];grp[k].push(tx);});
+  el.innerHTML='<div class="tx-hint">Tap to edit · swipe right to edit · swipe left / long-press to delete</div>'+Object.entries(grp).map(([ds,items])=>`<div><div class="tx-date-hdr">${gdlbl(new Date(ds))}</div>${items.map(tx=>{
+    const isTrf=tx.type==='transfer',isLG=tx.type==='loan-given',isLR=tx.type==='loan-received',isSub=tx.type==='subscription';
+    const icoC=isTrf?'transfer':isLG||isLR?'loan-given':isSub?'subscription':tx.type;
+    const amtC=isTrf?'transfer':isLG?'loan-given':isLR?'loan-received':isSub?'subscription':tx.type;
+    const pfx=tx.type==='income'?'+':isLG?'↗':isLR?'↙':isTrf?'⇄':isSub?'':'−';
+    const subInfo=isTrf?` · ${getAccName(tx.fromAccountId)} → ${getAccName(tx.toAccountId)}`:isLG||isLR?` · ${tx.loanPerson||''}`:isSub?` · ${tx.subCycle||''}`:tx.accountId?` · ${getAccName(tx.accountId)}`:'';
+    const name=isSub?tx.subName||tx.category?.n:isTrf?'Transfer':tx.note||tx.category?.n||'Entry';
+    return `<div class="tx-swipe-wrap" data-id="${tx.id}" onpointerdown="txPointerDown(event,${tx.id})" onpointermove="txPointerMove(event,${tx.id})" onpointerup="txPointerUp(event,${tx.id})" onpointercancel="txPointerCancel(event,${tx.id})">
+      <div class="tx-action edit">EDIT</div><div class="tx-action delete">DELETE</div>
+      <div class="tx-item" id="tx-item-${tx.id}">
+        <div class="tx-ico ${icoC}">${tx.category?.e||'📦'}</div>
+        <div class="tx-info"><div class="tx-name">${name}</div><div class="tx-cat">${(tx.category?.n||'').toUpperCase()}${subInfo}</div></div>
+        <div class="tx-amt ${amtC}">${pfx}₦${fmt(tx.amount)}</div>
+      </div>
+    </div>`;
+  }).join('')}</div>`).join('');
+}
+function resetTxSlide(id){const item=document.getElementById('tx-item-'+id);const wrap=item?.closest('.tx-swipe-wrap');if(item){item.style.transform='translateX(0)';}if(wrap)wrap.classList.remove('dragging');}
+function txPointerDown(ev,id){
+  const item=document.getElementById('tx-item-'+id);const wrap=item?.closest('.tx-swipe-wrap');
+  if(!item)return;
+  txGesture={id,startX:ev.clientX,startY:ev.clientY,dx:0,timer:null,long:false,moved:false};
+  wrap?.classList.add('dragging');
+  try{ev.currentTarget.setPointerCapture(ev.pointerId);}catch(e){}
+  txGesture.timer=setTimeout(()=>{txGesture.long=true;resetTxSlide(id);delTx(id);},750);
+}
+function txPointerMove(ev,id){
+  if(txGesture.id!==id)return;
+  const dx=ev.clientX-txGesture.startX,dy=ev.clientY-txGesture.startY;
+  txGesture.dx=dx;
+  if(Math.abs(dx)>8||Math.abs(dy)>8){txGesture.moved=true;clearTimeout(txGesture.timer);}
+  if(Math.abs(dx)>Math.abs(dy)){ev.preventDefault();const item=document.getElementById('tx-item-'+id);if(item){const lim=Math.max(-96,Math.min(96,dx));item.style.transform=`translateX(${lim}px)`;}}
+}
+function txPointerUp(ev,id){
+  if(txGesture.id!==id)return;
+  clearTimeout(txGesture.timer);
+  const dx=txGesture.dx;
+  const long=txGesture.long;
+  resetTxSlide(id);
+  txGesture={id:null,startX:0,startY:0,dx:0,timer:null,long:false,moved:false};
+  if(long)return;
+  if(dx>70){openEditTx(id);return;}
+  if(dx<-70){delTx(id);return;}
+  if(Math.abs(dx)<10){openEditTx(id);}
+}
+function txPointerCancel(ev,id){clearTimeout(txGesture.timer);resetTxSlide(id);txGesture={id:null,startX:0,startY:0,dx:0,timer:null,long:false,moved:false};}
+function delTx(id){
+  if(!confirm('Delete this entry?'))return;
+  S.transactions=S.transactions.filter(t=>String(t.id)!==String(id));
+  S.totalLogged=Math.max(0,S.totalLogged-1);S.xp=Math.max(0,S.xp-5);
+  save();renderHome();if(curScreen==='log')filterTx(document.getElementById('search-input').value);
+  toast('Entry deleted','-5 XP');
+}
+// ══ SEARCH ══
+function filterTx(q){
+  renderLogChips();
+  const ql=(q||'').toLowerCase().trim();
+  const scoped=getAccountFilteredTx(S.transactions);
+  const filtered=ql?scoped.filter(t=>{
+    const n=(t.note||'').toLowerCase(),c=(t.category?.n||'').toLowerCase();
+    const sn=(t.subName||'').toLowerCase(),lp=(t.loanPerson||'').toLowerCase();
+    const an=getAccName(t.accountId||'').toLowerCase();
+    const fn=getAccName(t.fromAccountId||'').toLowerCase(),tn=getAccName(t.toAccountId||'').toLowerCase();
+    return n.includes(ql)||c.includes(ql)||sn.includes(ql)||lp.includes(ql)||an.includes(ql)||fn.includes(ql)||tn.includes(ql)||String(t.amount).includes(ql);
+  }):scoped;
+  const el=document.getElementById('search-count');
+  const scopeLabel=selectedAccId==='all'?'All accounts':getAccName(selectedAccId);
+  el.textContent=(ql?filtered.length+' result'+(filtered.length!==1?'s':'')+` for '${q}'`:`${filtered.length} entr${filtered.length===1?'y':'ies'}`)+' · '+scopeLabel;
+  renderTxList(document.getElementById('all-tx-list'),filtered);
+}
+
+// ══ ACCOUNTS SCREEN ══
+function renderAccountsScreen(){
+  const nw=getNetWorth();
+  const nwEl=document.getElementById('nw-amount');
+  nwEl.textContent='₦'+fmt(Math.abs(nw));
+  nwEl.className='nw-amt '+(nw>0?'pos':nw<0?'neg':'zer');
+  document.getElementById('nw-sub').textContent=`across ${S.accounts.length} accounts & ${S.savingsAccounts.length} savings pockets`;
+  // Render accounts
+  const el=document.getElementById('accounts-list');
+  el.innerHTML=S.accounts.map(acc=>{
+    const bal=getAccountBalance(acc.id);
+    const savPockets=S.savingsAccounts.filter(s=>s.parentId===acc.id);
+    return `<div class="acc-card">
+      <div class="acc-card-hdr" onclick="toggleAccExpand('${acc.id}')">
+        <div class="acc-dot" style="background:${acc.color}"></div>
+        <div style="flex:1"><div class="acc-card-name">${acc.name}</div><div class="acc-card-num">${acc.number}</div></div>
+        <div class="acc-card-bal" style="color:${bal>=0?'var(--inc)':'var(--exp)'}">₦${fmtS(Math.abs(bal))}</div>
+        <div class="acc-card-arr" id="arr-${acc.id}">›</div>
+      </div>
+      <div class="acc-savings" id="sav-${acc.id}">
+        ${savPockets.map(s=>{
+          const sb=getAccountBalance(s.id);
+          return `<div class="sav-row">
+            <div class="sav-dot" style="background:${acc.color}"></div>
+            <div class="sav-name">${s.name}</div>
+            <div class="sav-bal" style="color:${sb>=0?'var(--inc)':'var(--exp)'}">₦${fmtS(Math.abs(sb))}</div>
+            <div class="sav-del" onclick="deleteSavPocket('${s.id}')">🗑️</div>
+          </div>`;
+        }).join('')}
+        <div class="add-sav-btn" onclick="openAddSav('${acc.id}')">+ Add savings pocket</div>
+      </div>
+    </div>`;
+  }).join('');
+  renderSubRegistry();
+}
+function toggleAccExpand(id){
+  const sav=document.getElementById('sav-'+id);
+  const arr=document.getElementById('arr-'+id);
+  const open=sav.classList.toggle('show');
+  arr.classList.toggle('open',open);
+}
+function openAddSav(parentId){
+  addSavParentId=parentId;
+  const acc=S.accounts.find(a=>a.id===parentId);
+  document.getElementById('new-sav-name').value='';
+  document.getElementById('new-sav-parent').textContent=acc?acc.name:parentId;
+  open2('addsav');
+}
+function confirmAddSav(){
+  const name=document.getElementById('new-sav-name').value.trim();
+  if(!name){toast('Enter a pocket name','');return;}
+  const id='sav_'+Date.now();
+  S.savingsAccounts.push({id,name,parentId:addSavParentId});
+  save();renderAccountsScreen();close2('addsav');toast(name+' created','');
+}
+function deleteSavPocket(id){
+  const s=S.savingsAccounts.find(x=>x.id===id);
+  if(!s)return;
+  if(!confirm(`Delete "${s.name}"? This won't delete its transactions.`))return;
+  S.savingsAccounts=S.savingsAccounts.filter(x=>x.id!==id);
+  save();renderAccountsScreen();
+}
+function closeAddSav(){close2('addsav');}
+
+// ══ SUBSCRIPTIONS REGISTRY ══
+function renderSubRegistry(){
+  const el=document.getElementById('sub-registry');
+  if(!S.subscriptions.length){el.innerHTML='<div class="chart-empty" style="padding:14px;color:var(--tx3);font-family:Space Mono,monospace;font-size:9px">No subscriptions yet — tap Add</div>';return;}
+  const now=new Date();
+  el.innerHTML=S.subscriptions.map(sub=>{
+    const next=getNextBilling(sub);
+    const nextStr=next?dlbl(next):'—';
+    const daysAway=next?Math.ceil((next-now)/86400000):null;
+    const urgency=daysAway!==null&&daysAway<=7?'var(--exp)':daysAway!==null&&daysAway<=14?'var(--loan)':'var(--tx3)';
+    return `<div class="sub-reg-item" onclick="editSub('${sub.id}')">
+      <div class="sub-reg-ico">🔄</div>
+      <div class="sub-reg-info">
+        <div class="sub-reg-name">${sub.name}</div>
+        <div class="sub-reg-meta">${sub.cycle} · ${getAccName(sub.accountId)}${sub.note?` · ${sub.note}`:''}</div>
+        <div class="sub-status ${sub.status||'active'}">${(sub.status||'active').toUpperCase()}</div>
+      </div>
+      <div class="sub-reg-right">
+        <div class="sub-reg-amt">${sub.currency==='USD'?'$':'₦'}${fmtS(sub.amount)}</div>
+        <div class="sub-reg-next" style="color:${urgency}">Next: ${nextStr}${daysAway!==null&&daysAway<=7?' ⚡':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function getNextBilling(sub){
+  if(!sub.startDate)return null;
+  const start=new Date(sub.startDate);const now=new Date();now.setHours(0,0,0,0);
+  let next=new Date(start);
+  while(next<=now){
+    if(sub.cycle==='weekly')next.setDate(next.getDate()+7);
+    else if(sub.cycle==='monthly')next.setMonth(next.getMonth()+1);
+    else next.setFullYear(next.getFullYear()+1);
+  }
+  return next;
+}
+function openAddSub(){
+  editSubId=null;
+  document.getElementById('addsub-title').textContent='Add Subscription';
+  document.getElementById('sub-svc-name').value='';
+  document.getElementById('sub-svc-amt').value='';
+  document.getElementById('sub-svc-date').value=new Date().toISOString().split('T')[0];
+  subCurrency='NGN';subCycle='monthly';subStatus='active';
+  subAccId=S.accounts[0]?.id||'mp_personal';
+  document.querySelectorAll('#sub-currency-row .cycle-chip').forEach((c,i)=>c.classList.toggle('sel',i===0));
+  document.querySelectorAll('#sub-svc-cycle .cycle-chip').forEach((c,i)=>c.classList.toggle('sel',i===1));
+  document.querySelectorAll('#sub-status-row .cycle-chip').forEach((c,i)=>c.classList.toggle('sel',i===0));
+  renderSubAccList();
+  open2('addsub');
+}
+function editSub(id){
+  editSubId=id;
+  const sub=S.subscriptions.find(s=>s.id===id);if(!sub)return;
+  document.getElementById('addsub-title').textContent='Edit Subscription';
+  document.getElementById('sub-svc-name').value=sub.name||'';
+  document.getElementById('sub-svc-amt').value=sub.amount||'';
+  document.getElementById('sub-svc-date').value=sub.startDate||'';
+  subCurrency=sub.currency||'NGN';subCycle=sub.cycle||'monthly';subStatus=sub.status||'active';subAccId=sub.accountId||S.accounts[0]?.id;
+  document.querySelectorAll('#sub-currency-row .cycle-chip').forEach(c=>c.classList.toggle('sel',c.textContent===subCurrency));
+  document.querySelectorAll('#sub-svc-cycle .cycle-chip').forEach(c=>c.classList.toggle('sel',c.textContent.toLowerCase()===subCycle));
+  document.querySelectorAll('#sub-status-row .cycle-chip').forEach(c=>c.classList.toggle('sel',c.textContent.toLowerCase()===subStatus));
+  renderSubAccList();
+  open2('addsub');
+}
+function renderSubAccList(){
+  const el=document.getElementById('sub-acc-list');
+  el.innerHTML=S.accounts.map(a=>`<div class="acc-select-item${subAccId===a.id?' sel':''}" onclick="selectSubAcc('${a.id}')">
+    <div class="acc-select-dot" style="background:${a.color}"></div>
+    <div class="acc-select-name">${a.name}</div>
+    <div class="acc-select-num">${a.number}</div>
+  </div>`).join('');
+}
+function selectSubAcc(id){subAccId=id;renderSubAccList();}
+function selSubCur(el,v){subCurrency=v;document.querySelectorAll('#sub-currency-row .cycle-chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+function selSubCycle(el,v){subCycle=v;document.querySelectorAll('#sub-svc-cycle .cycle-chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+function selSubStatus(el,v){subStatus=v;document.querySelectorAll('#sub-status-row .cycle-chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+function confirmAddSub(){
+  const name=document.getElementById('sub-svc-name').value.trim();
+  const amt=parseFloat(document.getElementById('sub-svc-amt').value);
+  const startDate=document.getElementById('sub-svc-date').value;
+  if(!name){toast('Enter a service name','');return;}
+  if(!amt||amt<=0){toast('Enter an amount','');return;}
+  const sub={id:editSubId||('sub_'+Date.now()),name,amount:amt,currency:subCurrency,cycle:subCycle,startDate,accountId:subAccId,status:subStatus};
+  if(editSubId){S.subscriptions=S.subscriptions.map(s=>s.id===editSubId?sub:s);}
+  else{S.subscriptions.push(sub);}
+  save();renderSubRegistry();close2('addsub');toast((editSubId?'Updated: ':'Added: ')+name,'');
+}
+function closeAddSub(){close2('addsub');}
+
+// ══ ENTRY SHEET ══
+const TYPE_COLORS={expense:'var(--exp)',income:'var(--inc)',transfer:'var(--trf)','loan-given':'var(--loan)','loan-received':'var(--exp)',subscription:'var(--sub)'};
+const TYPE_LABELS={expense:'LOG EXPENSE',income:'LOG INCOME',transfer:'LOG TRANSFER','loan-given':'LOG LOAN GIVEN','loan-received':'LOG BORROWED',subscription:'LOG SUBSCRIPTION'};
+const TYPE_CHIPS={expense:'ae',income:'ai',transfer:'at','loan-given':'al','loan-received':'alr',subscription:'as'};
+const SAVE_CLS={expense:'em',income:'im',transfer:'tm','loan-given':'lm','loan-received':'em',subscription:'sm'};
+
+function openEntry(pre){
+  editTxId=null;
+  eAmt='0';eCat=null;eDate=pre?new Date(pre):new Date();eRepayStatus='pending';eSubCycle='monthly';
+  document.getElementById('amt-display').textContent='0';
+  document.getElementById('cat-display').textContent='Pick one';document.getElementById('cat-display').className='field-val ph';
+  document.getElementById('note-input').value='';
+  document.getElementById('loan-person').value='';document.getElementById('sub-name').value='';
+  const dl=dlbl(eDate);
+  document.getElementById('date-display').textContent=dl;document.getElementById('date-display-trf').textContent=dl;
+  document.getElementById('acc-display').textContent=getAccName(eAccId);
+  document.getElementById('trf-from-display').textContent=getAccName(eTrfFrom);
+  document.getElementById('trf-to-display').textContent=getAccName(eTrfTo);
+  document.querySelectorAll('#cycle-row .cycle-chip').forEach((c,i)=>c.classList.toggle('sel',i===1));
+  document.querySelectorAll('#repay-row .cycle-chip').forEach((c,i)=>c.classList.toggle('sel',i===0));
+  setType('expense');open2('entry');document.getElementById('fab').classList.add('open');
+}
+function closeEntry(){close2('entry');document.getElementById('fab').classList.remove('open');}
+function setType(t){
+  eType=t;
+  ['expense','income','transfer','loan-given','loan-received','subscription'].forEach(id=>{const el=document.getElementById('chip-'+id);if(el)el.className='type-chip'+(t===id?' '+TYPE_CHIPS[id]:'');});
+  document.getElementById('amt-display').style.color=TYPE_COLORS[t];
+  document.getElementById('save-btn').textContent=TYPE_LABELS[t];
+  document.getElementById('save-btn').className='save-btn '+SAVE_CLS[t];
+  const isTrf=t==='transfer',isLoan=t==='loan-given'||t==='loan-received',isSub=t==='subscription';
+  document.getElementById('std-fields').style.display=isTrf?'none':'block';
+  document.getElementById('trf-fields').className='extra-fields'+(isTrf?' show':'');
+  document.getElementById('loan-fields').className='extra-fields'+(isLoan?' show':'');
+  document.getElementById('sub-fields').className='extra-fields'+(isSub?' show':'');
+}
+function selRepay(el,v){eRepayStatus=v;document.querySelectorAll('#repay-row .cycle-chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+function selCycle(el,v){eSubCycle=v;document.querySelectorAll('#cycle-row .cycle-chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+function numpad(k){
+  if(k==='del')eAmt=eAmt.slice(0,-1)||'0';
+  else if(k==='.'){if(!eAmt.includes('.'))eAmt+='.';}
+  else{if(eAmt==='0')eAmt=k;else if((eAmt.split('.')[1]||'').length>=2)return;else eAmt+=k;if(eAmt.length>11)return;}
+  document.getElementById('amt-display').textContent=eAmt;
+}
+function saveEntry(){
+  const amt=parseFloat(eAmt);
+  if(!amt||amt<=0){toast('Enter an amount','');return;}
+  const isTrf=eType==='transfer',isSub=eType==='subscription',isLoan=eType==='loan-given'||eType==='loan-received';
+  if(!isTrf&&!isSub&&!eCat){toast('Pick a category','');return;}
+  const tx={id:Date.now(),type:eType,amount:amt,date:new Date(eDate),note:document.getElementById('note-input').value.trim()};
+  if(isTrf){
+    tx.fromAccountId=eTrfFrom;tx.toAccountId=eTrfTo;tx.accountId=eTrfFrom;
+    tx.category={e:'🔄',n:'Transfer'};
+  } else if(isSub){
+    const nm=document.getElementById('sub-name').value.trim()||'Subscription';
+    tx.subName=nm;tx.subCycle=eSubCycle;tx.accountId=eAccId;tx.category={e:'🔄',n:nm};
+  } else {
+    tx.category=eCat;tx.accountId=eAccId;
+    if(isLoan){tx.loanPerson=document.getElementById('loan-person').value.trim()||'Unknown';tx.repayStatus=eRepayStatus;}
+  }
+  if(editTxId!==null){
+    tx.id=editTxId;
+    S.transactions=S.transactions.map(old=>String(old.id)===String(editTxId)?tx:old).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    editTxId=null;
+    save();renderHome();if(curScreen==='log')filterTx(document.getElementById('search-input').value);closeEntry();toast('Entry updated','✓');return;
+  }
+  S.transactions.unshift(tx);S.totalLogged++;S.lastActivityDate=new Date().toDateString();
+  updateStreak();
+  let xp=10;
+  if(S.streak>=30)xp+=15;else if(S.streak>=14)xp+=12;else if(S.streak>=7)xp+=8;else if(S.streak>=3)xp+=5;
+  if(S.totalLogged%50===0)xp+=50;else if(S.totalLogged%10===0)xp+=15;
+  S.xp+=xp;S.disciplineScore=Math.min(100,S.disciplineScore+5);
+  checkRank();checkSS();checkSSS();save();renderHome();closeEntry();
+  const lbl=isTrf?`⇄ ₦${fmtS(amt)} transferred`:isSub?`🔄 ${tx.subName} logged`:isLoan?(eType==='loan-given'?`↗ Loan to ${tx.loanPerson}`:'↙ Borrowed')+' logged':(eType==='income'?'↑ ':'↓ ')+'₦'+fmtS(amt)+' logged';
+  toast(lbl,isTrf?'':'+'+xp+' XP');
+  if(!isTrf)xpPop('+'+xp+' XP');
+}
+function openEditTx(id){
+  const tx=S.transactions.find(t=>String(t.id)===String(id));
+  if(!tx)return;
+  editTxId=tx.id;
+  eType=tx.type||'expense';
+  eAmt=String(tx.amount||0);
+  eCat=tx.category||null;
+  eDate=new Date(tx.date||new Date());
+  eAccId=tx.accountId||'mp_personal';
+  eTrfFrom=tx.fromAccountId||eAccId||'mp_personal';
+  eTrfTo=tx.toAccountId||'sav_personal';
+  eRepayStatus=tx.repayStatus||'pending';
+  eSubCycle=tx.subCycle||'monthly';
+  document.getElementById('amt-display').textContent=eAmt;
+  const dl=dlbl(eDate);
+  document.getElementById('date-display').textContent=dl;document.getElementById('date-display-trf').textContent=dl;
+  document.getElementById('note-input').value=tx.note||'';
+  document.getElementById('acc-display').textContent=getAccName(eAccId);
+  document.getElementById('trf-from-display').textContent=getAccName(eTrfFrom);
+  document.getElementById('trf-to-display').textContent=getAccName(eTrfTo);
+  if(eCat){document.getElementById('cat-display').textContent=(eCat.e||'')+' '+(eCat.n||'');document.getElementById('cat-display').className='field-val';}
+  else{document.getElementById('cat-display').textContent='Pick one';document.getElementById('cat-display').className='field-val ph';}
+  document.getElementById('loan-person').value=tx.loanPerson||'';
+  document.getElementById('sub-name').value=tx.subName||tx.category?.n||'';
+  document.querySelectorAll('#cycle-row .cycle-chip').forEach(c=>c.classList.toggle('sel',c.textContent.toLowerCase()===eSubCycle));
+  document.querySelectorAll('#repay-row .cycle-chip').forEach(c=>c.classList.toggle('sel',c.textContent.toLowerCase()===eRepayStatus));
+  setType(eType);
+  document.getElementById('save-btn').textContent='UPDATE ENTRY';
+  open2('entry');document.getElementById('fab').classList.add('open');
+}
+
+function openRecovery(){openEntry();setTimeout(()=>toast('Tap DATE to go back up to 90 days',''),350);}
+
+// ══ ACCOUNT PICKER ══
+function openAccPicker(target){
+  accPickerTarget=target;
+  const titles={account:'Select Account',from:'Transfer From',to:'Transfer To'};
+  document.getElementById('acc-sheet-title').textContent=titles[target]||'Select Account';
+  const opts=getAllAccountOptions();
+  const currentId=target==='from'?eTrfFrom:target==='to'?eTrfTo:eAccId;
+  document.getElementById('acc-body').innerHTML='<div class="acc-select-list">'+opts.map(o=>`
+    <div class="acc-select-item${o.id===currentId?' sel':''}" onclick="pickAcc('${o.id}')">
+      <div class="acc-select-dot" style="background:${o.color}"></div>
+      <div style="flex:1"><div class="acc-select-name">${o.name}${o.type==='savings'?' (Savings)':''}</div><div class="acc-select-num">${o.num}</div></div>
+    </div>`).join('')+'</div>';
+  open2('acc');
+}
+function pickAcc(id){
+  if(accPickerTarget==='from'){eTrfFrom=id;document.getElementById('trf-from-display').textContent=getAccName(id);}
+  else if(accPickerTarget==='to'){eTrfTo=id;document.getElementById('trf-to-display').textContent=getAccName(id);}
+  else{eAccId=id;document.getElementById('acc-display').textContent=getAccName(id);}
+  closeAccPicker();
+}
+function closeAccPicker(){close2('acc');}
+
+// ══ CAT PICKER ══
+function openCat(){
+  const cats=eType==='income'?ICATS:ECATS;
+  document.getElementById('cat-body').innerHTML='<div class="cat-grid">'+cats.map(c=>`<div class="cat-item${eCat?.n===c.n?' sel':''}" onclick="selCat('${c.e}','${c.n}')"><div class="cat-emoji">${c.e}</div><div class="cat-name">${c.n.toUpperCase()}</div></div>`).join('')+'</div>';
+  open2('cat');
+}
+function selCat(e,n){eCat={e,n};const d=document.getElementById('cat-display');d.textContent=e+' '+n;d.className='field-val';closeCat();}
+function closeCat(){close2('cat');}
+
+// ══ DATE PICKER ══
+function openDatePicker(){
+  const sel=eDate.toDateString();let html='';
+  for(let i=0;i<9;i++){const d=new Date();d.setDate(d.getDate()-i);const day=i===0?'Today':i===1?'Yesterday':d.toLocaleDateString('en',{weekday:'short'});html+=`<div class="date-chip${d.toDateString()===sel?' sel':''}" onclick="selDate('${d.toISOString()}')"><div class="chip-day">${day}</div><div class="chip-date">${d.getDate()} ${d.toLocaleDateString('en',{month:'short'})}</div></div>`;}
+  document.getElementById('quick-dates').innerHTML=html;
+  const today=new Date().toISOString().split('T')[0];
+  const ci=document.getElementById('custom-date');ci.max=today;ci.min='2025-01-01';ci.value=eDate.toISOString().split('T')[0];
+  open2('date');
+}
+function selDate(iso){eDate=new Date(iso);const l=dlbl(eDate);document.getElementById('date-display').textContent=l;document.getElementById('date-display-trf').textContent=l;closeDate();}
+function setCustomDate(v){if(!v)return;const p=v.split('-');eDate=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]),12,0,0);const l=dlbl(eDate);document.getElementById('date-display').textContent=l;document.getElementById('date-display-trf').textContent=l;closeDate();}
+function closeDate(){close2('date');}
+
+// ══ LOAN STATUS ══
+function openLoanStatus(id){
+  activeLoanId=id;const tx=S.transactions.find(t=>t.id===id);if(!tx)return;
+  document.getElementById('loan-status-info').innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">💸</span><div><div style="font-size:13px;font-weight:500">₦${fmt(tx.amount)} → ${tx.loanPerson}</div><div style="font-size:9px;color:var(--tx3);font-family:Space Mono,monospace;margin-top:2px">${dlbl(new Date(tx.date))} · ${(tx.repayStatus||'pending').toUpperCase()}</div></div></div>`;
+  open2('loan-status');
+}
+function pickLoanStatus(status){const tx=S.transactions.find(t=>t.id===activeLoanId);if(tx){tx.repayStatus=status;save();renderHome();}close2('loan-status');toast('Loan status updated','');}
+function closeLoanStatus(){close2('loan-status');}
+
+// ══ ANALYSIS ══
+function renderAnalysis(){
+  const now=new Date(),mo=now.getMonth(),yr=now.getFullYear();
+  const mth=S.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===mo&&d.getFullYear()===yr;});
+  const inc=mth.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const exp=mth.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const ratio=inc>0?Math.round(((inc-exp)/inc)*100):0;
+  document.getElementById('save-ratio').textContent=Math.max(0,ratio)+'%';
+  document.getElementById('save-ratio').style.color=ratio>=0?'var(--inc)':'var(--exp)';
+  document.getElementById('avg-day').textContent='₦'+fmtS(exp/Math.max(1,now.getDate()));
+  const nw=getNetWorth();
+  const atEl=document.getElementById('alltime-net');atEl.textContent='₦'+fmt(Math.abs(nw));atEl.className='stat-val '+(nw>=0?'iv':'ev');
+  document.getElementById('alltime-sub').textContent=S.totalLogged+' entries · net worth';
+  renderCashflowChart();
+  if(S.disciplineScore<50){
+    document.getElementById('cat-breakdown').innerHTML='<div class="chart-empty" style="color:var(--exp)">DISCIPLINE TOO LOW — restore above 50 to unlock analysis</div>';
+    document.getElementById('donut-circle').setAttribute('stroke-dasharray','0 251');
+    document.getElementById('donut-pct').textContent='—';
+    renderBudgets();return;
+  }
+  const ct={};mth.filter(t=>t.type==='expense').forEach(t=>{ct[t.category?.n||'Other']=(ct[t.category?.n||'Other']||0)+t.amount;});
+  const sorted=Object.entries(ct).sort((a,b)=>b[1]-a[1]);
+  const pct=inc>0?Math.min(100,(exp/inc)*100):0;
+  const circ=2*Math.PI*40;
+  document.getElementById('donut-circle').setAttribute('stroke-dasharray',`${(pct/100)*circ} ${circ}`);
+  document.getElementById('donut-pct').textContent=Math.round(pct)+'%';
+  const cmap=ECATS.reduce((m,c)=>{m[c.n]=c.e;return m;},{});
+  document.getElementById('cat-breakdown').innerHTML=sorted.length?sorted.map(([name,amt])=>{const p=sorted[0][1]>0?(amt/sorted[0][1])*100:0;return `<div class="cat-bar"><div class="cat-bar-ico">${cmap[name]||'📦'}</div><div class="cat-bar-info"><div class="cat-bar-name">${name}</div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:${p}%;background:var(--exp)"></div></div></div><div class="cat-bar-amt">₦${fmtS(amt)}</div></div>`;}).join(''):'<div class="chart-empty">Log expenses to see breakdown</div>';
+  renderBudgets();
+}
+function renderCashflowChart(){
+  const now=new Date();const months=[];
+  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const txs=S.transactions.filter(t=>{const td=new Date(t.date);return td.getMonth()===d.getMonth()&&td.getFullYear()===d.getFullYear();});months.push({label:d.toLocaleDateString('en',{month:'short'}),income:txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),expense:txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)});}
+  const maxVal=Math.max(...months.map(m=>Math.max(m.income,m.expense)),1);
+  const W=300,H=100,BW=16,GAP=4;const groupW=BW*2+GAP;const spacing=(W-months.length*groupW)/(months.length+1);
+  let bars='',labels='',guides='';
+  [0.5,1].forEach(f=>{const y=H*(1-f);guides+=`<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="var(--bd)" stroke-width="1"/><text x="2" y="${y-3}" font-size="7" fill="var(--tx3)" font-family="Space Mono">₦${fmtS(maxVal*f)}</text>`;});
+  months.forEach((m,i)=>{const x=spacing+i*(groupW+spacing);const incH=Math.max(2,(m.income/maxVal)*H);const expH=Math.max(2,(m.expense/maxVal)*H);bars+=`<rect x="${x}" y="${H-incH}" width="${BW}" height="${incH}" fill="var(--inc)" opacity=".8" rx="3"/><rect x="${x+BW+GAP}" y="${H-expH}" width="${BW}" height="${expH}" fill="var(--exp)" opacity=".8" rx="3"/>`;labels+=`<text x="${x+BW+GAP/2}" y="${H+14}" text-anchor="middle" font-size="7" fill="var(--tx3)" font-family="Space Mono">${m.label}</text>`;});
+  const hasData=months.some(m=>m.income>0||m.expense>0);
+  document.getElementById('cashflow-chart').innerHTML=hasData?`<svg viewBox="0 0 ${W} ${H+20}" width="100%" preserveAspectRatio="xMidYMid meet">${guides}${bars}${labels}</svg>`:'<div class="chart-empty">Log transactions to see cashflow</div>';
+}
+function renderBudgets(){
+  const now=new Date(),mo=now.getMonth(),yr=now.getFullYear();
+  const mth=S.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===mo&&d.getFullYear()===yr&&t.type==='expense';});
+  const spend={};mth.forEach(t=>{const k=t.category?.n||'Other';spend[k]=(spend[k]||0)+t.amount;});
+  const cats=[...new Set([...Object.keys(S.budgets),...Object.keys(spend)])];
+  const cmap=ECATS.reduce((m,c)=>{m[c.n]=c.e;return m;},{});
+  const bd=document.getElementById('budget-section');
+  if(!cats.length){bd.innerHTML='<div class="chart-empty" style="padding:12px;color:var(--tx3);font-family:Space Mono,monospace;font-size:9px">No spending or budgets yet</div>';return;}
+  bd.innerHTML=cats.map(name=>{const spent=spend[name]||0,limit=S.budgets[name];const pct=limit?Math.min(110,(spent/limit)*100):0;const color=pct>=100?'var(--exp)':pct>=80?'var(--loan)':'var(--inc)';return `<div class="budget-bar-item"><div class="budget-bar-ico">${cmap[name]||'📦'}</div><div class="budget-bar-info"><div class="budget-bar-name">${name}</div>${limit?`<div class="budget-bar-track"><div class="budget-bar-fill" style="width:${Math.min(100,pct)}%;background:${color}"></div></div><div class="budget-bar-meta">₦${fmtS(spent)} / ₦${fmtS(limit)} · ${Math.round(pct)}%${pct>=100?' ⚠️':pct>=80?' ⚡':''}</div>`:`<div class="budget-bar-meta">₦${fmtS(spent)} · no limit</div>`}</div></div>`;}).join('');
+}
+function openBudgetSheet(){
+  document.getElementById('budget-list').innerHTML=ECATS.map(c=>`<div class="budget-input-item"><div style="font-size:17px;width:22px;text-align:center">${c.e}</div><div style="font-size:13px;font-weight:500;flex:1">${c.n}</div><input type="number" class="budget-num-input" id="bgt-${c.n}" value="${S.budgets[c.n]||''}" placeholder="No limit" min="0"></div>`).join('');
+  open2('budget');
+}
+function saveBudgets(){ECATS.forEach(c=>{const v=parseFloat(document.getElementById('bgt-'+c.n).value);if(v&&v>0)S.budgets[c.n]=v;else delete S.budgets[c.n];});save();if(curScreen==='analysis')renderAnalysis();close2('budget');toast('Budgets saved','✓');}
+function closeBudgetSheet(){close2('budget');}
+
+// ══ PROFILE ══
+function renderProfile(){
+  const ri=getRank(),idx=RANKS.indexOf(ri);const nx=RANKS[idx+1];const isSpecial=['SS','SSS'].includes(S.rank);
+  const xpToNx=nx&&!['SS','SSS'].includes(nx.rank)?nx.xp-ri.xp:100;
+  const pct=isSpecial?100:nx&&!['SS','SSS'].includes(nx.rank)?Math.min(100,((S.xp-ri.xp)/xpToNx)*100):100;
+  const c=document.getElementById('prof-circle');
+  c.textContent=S.rank;c.style.color=ri.color;c.style.borderColor=ri.color;c.style.boxShadow=S.rank==='SSS'?'0 0 22px rgba(224,224,255,.5)':'0 0 14px '+ri.color+'44';
+  document.getElementById('prof-sub').textContent='Rank '+S.rank+' — '+ri.label;
+  document.getElementById('prof-xp').textContent=S.xp.toLocaleString()+' XP';
+  document.getElementById('prof-xp-fill').style.width=pct+'%';
+  function gateLabel(r){if(r.rank==='SS')return '60-day streak · 500 entries · 3 positive months';if(r.rank==='SSS')return '365-day streak · 1000 entries · 6 positive months · 20% savings · Discipline ≥ 60';const p=[];p.push(r.xp.toLocaleString()+' XP');if(r.entries)p.push(r.entries+' entries');if(r.streak)p.push(r.streak+'-day streak');if(r.posMonths)p.push(r.posMonths+' positive month'+(r.posMonths>1?'s':''));return p.join(' · ');}
+  document.getElementById('rank-list').innerHTML=RANKS.map(r=>{const isGated=['SS','SSS'].includes(r.rank);const un=meetsGate(r)||(r.rank==='SS'&&S.rank==='SS')||(r.rank==='SSS'&&S.rank==='SSS');const cur=S.rank===r.rank;return `<div class="rank-row${(!un&&!cur)?' locked':''}"><div class="rank-sm" style="color:${r.color};border-color:${un||cur?r.color:'var(--bd)'}">${r.rank}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${r.label}${cur?' ← YOU':''}</div><div style="font-size:8px;color:var(--tx3);font-family:Space Mono,monospace;margin-top:2px;line-height:1.5">${gateLabel(r)}</div></div>${(un||cur)?'<span style="color:var(--inc);font-size:13px">✓</span>':isGated?'<span style="font-size:10px">🔒</span>':'<span style="color:var(--tx3);font-size:10px">🔒</span>'}</div>`;}).join('');
+}
+
+// ══ RANK LOGIC ══
+function countPosMos(n){const now=new Date();let c=0;for(let i=1;i<=n;i++){const m=new Date(now.getFullYear(),now.getMonth()-i,1);const txs=S.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m.getMonth()&&d.getFullYear()===m.getFullYear();});const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);if(inc>exp)c++;}return c;}
+function meetsGate(r){if(r.rank==='E')return true;if(['SS','SSS'].includes(r.rank))return false;return S.xp>=r.xp&&S.totalLogged>=r.entries&&S.streak>=r.streak&&(r.posMonths===0||countPosMos(r.posMonths)>=r.posMonths);}
+function getRank(){if(S.rank==='SSS')return RANKS.find(r=>r.rank==='SSS');if(S.rank==='SS')return RANKS.find(r=>r.rank==='SS');let cur=RANKS[0];for(const r of RANKS){if(['SS','SSS'].includes(r.rank))continue;if(meetsGate(r))cur=r;}return cur;}
+function checkRank(){const nr=getRank().rank;if(nr!==S.rank&&!['SS','SSS'].includes(S.rank)){S.rank=nr;setTimeout(()=>toast('🎖️ RANK UP → '+nr+'!','+RANK'),600);}}
+function checkSS(){if(S.rank!=='S')return;if(S.streak>=60&&S.totalLogged>=500&&countPosMos(3)>=3){S.rank='SS';setTimeout(()=>toast('🔥 SS RANK — ARCHITECT!','LEGENDARY'),700);}}
+function checkSSS(){if(S.rank!=='SS')return;const pm=countPosMos(6);const last6=S.transactions.filter(t=>{const d=new Date(t.date),n=new Date();return d>=new Date(n.getFullYear(),n.getMonth()-6,1);});const l6i=last6.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),l6e=last6.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);const ratio=l6i>0?(l6i-l6e)/l6i:0;if(S.streak>=365&&S.totalLogged>=1000&&pm>=6&&ratio>=0.2&&S.disciplineScore>=60){S.rank='SSS';setTimeout(()=>toast('👑 SSS — ABSOLUTE!','MYTHIC'),700);}}
+function updateStreak(){const today=new Date().toDateString();if(S.lastLogDate===today)return;const yd=new Date();yd.setDate(yd.getDate()-1);S.streak=S.lastLogDate===yd.toDateString()?S.streak+1:1;S.lastLogDate=today;}
+function applyDecay(){
+  if(!S.lastActivityDate)return;
+  const days=Math.floor((new Date()-new Date(S.lastActivityDate))/86400000);
+  if(days<=1)return;
+  S.disciplineScore=Math.max(0,S.disciplineScore-Math.min(S.disciplineScore,(days-1)*2));
+  if(S.disciplineScore<70){document.getElementById('decay-box').classList.add('show');document.getElementById('decay-txt').textContent=days+'d inactive — discipline at '+Math.round(S.disciplineScore)+'/100';}
+}
+
+// ══ TOAST / XP POP ══
+let tt;
+function toast(msg,xp){document.getElementById('toast-msg').textContent=msg;document.getElementById('toast-xp').textContent=xp;const t=document.getElementById('toast');t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400);}
+function xpPop(txt){const el=document.createElement('div');el.className='xp-pop';el.textContent=txt;el.style.cssText='left:50%;top:45%;transform:translateX(-50%)';document.body.appendChild(el);requestAnimationFrame(()=>{el.classList.add('go');setTimeout(()=>el.remove(),1100);});}
+
+// ══ DATA ══
+function exportData(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ledger_'+Date.now()+'.json';a.click();}
+function clearData(){if(!confirm('Clear ALL data?'))return;S={transactions:[],accounts:[...DEFAULT_ACCOUNTS],savingsAccounts:[...DEFAULT_SAVINGS],subscriptions:[],budgets:{},xp:0,rank:'E',streak:0,lastLogDate:null,totalLogged:0,disciplineScore:100,lastActivityDate:null};document.getElementById('decay-box').classList.remove('show');save();renderHome();navigate('home');}
+
+// ══ SHEET HELPERS ══
+function open2(id){document.getElementById(id+'-overlay').classList.add('open');document.getElementById(id+'-sheet').classList.add('open');}
+function close2(id){document.getElementById(id+'-overlay').classList.remove('open');document.getElementById(id+'-sheet').classList.remove('open');}
+
+// ══ FORMAT ══
+function fmt(n){if(!n&&n!==0)return'0';return Number(n).toLocaleString('en-NG',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function fmtS(n){if(!n)return'0';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'K';return Math.round(n).toLocaleString();}
+function dlbl(d){const td=new Date().toDateString(),yd=new Date();yd.setDate(yd.getDate()-1);if(d.toDateString()===td)return'Today';if(d.toDateString()===yd.toDateString())return'Yesterday';return d.toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'});}
+function gdlbl(d){const td=new Date().toDateString(),yd=new Date();yd.setDate(yd.getDate()-1);if(d.toDateString()===td)return'TODAY';if(d.toDateString()===yd.toDateString())return'YESTERDAY';return d.toLocaleDateString('en-NG',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();}
+
+// ══ INIT ══
+load();initTheme();renderHome();
+</script>
+</body>
+</html>

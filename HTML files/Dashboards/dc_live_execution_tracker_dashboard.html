@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DC Live Execution Tracker — Opportunity Compression</title>
+<style>
+:root{
+  --navy:#081E3A;--navy2:#0E2A4F;--blue:#1E5AA8;--blue2:#2F80ED;--sky:#EAF4FF;--sky2:#F7FBFF;
+  --white:#FFFFFF;--ink:#102033;--muted:#64748B;--line:#CFE0F5;--ok:#16794C;--okBg:#E7F7EF;
+  --warn:#B7791F;--warnBg:#FFF4DB;--bad:#B42318;--badBg:#FEEBE8;--violet:#5B4FD6;--violetBg:#EFEEFF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--sky);color:var(--ink);line-height:1.35}
+header{background:linear-gradient(135deg,var(--navy),#123B70);color:white;padding:18px 22px;border-bottom:4px solid var(--blue2);position:sticky;top:0;z-index:50}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font-size:22px;letter-spacing:.4px}.subtitle{font-size:12px;color:#BFD9FF;margin-top:3px}
+.pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:7px 10px;border-radius:999px;font-size:12px;color:#EAF4FF}
+.main{max-width:1240px;margin:0 auto;padding:18px}
+.grid{display:grid;gap:14px}.grid-4{grid-template-columns:repeat(4,1fr)}.grid-3{grid-template-columns:repeat(3,1fr)}.grid-2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--white);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 20px rgba(11,31,58,.06);overflow:hidden;margin-bottom:14px}
+.card-h{padding:12px 14px;background:var(--sky2);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-title{font-weight:900;color:var(--navy);font-size:14px}.card-sub{font-size:11px;color:var(--muted);margin-top:2px}.card-b{padding:14px}
+.stat{padding:14px;border-radius:13px;background:var(--white);border:1px solid var(--line)}
+.stat .num{font-size:26px;font-weight:900;color:var(--blue)}.stat .label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:800;margin-top:2px}.stat .note{font-size:11px;color:var(--muted);margin-top:5px}
+button{border:none;background:var(--blue);color:white;padding:9px 12px;border-radius:9px;cursor:pointer;font-weight:800;font-size:12px}
+button:hover{background:var(--navy)}.btn-light{background:var(--sky);color:var(--blue);border:1px solid var(--line)}.btn-bad{background:var(--bad)}.btn-small{padding:5px 8px;font-size:11px;border-radius:7px}
+input,select,textarea{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;font:inherit;font-size:13px;background:#fff;color:var(--ink);outline:none}
+textarea{min-height:78px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(47,128,237,.12)}
+label{display:block;font-size:10px;font-weight:900;color:var(--muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:5px}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.form-row{margin-bottom:10px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.tab{background:#fff;color:var(--blue);border:1px solid var(--line)}.tab.active{background:var(--blue);color:white}.pane{display:none}.pane.active{display:block}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.b-ok{background:var(--okBg);color:var(--ok)}.b-warn{background:var(--warnBg);color:var(--warn)}.b-bad{background:var(--badBg);color:var(--bad)}.b-blue{background:var(--sky);color:var(--blue)}.b-violet{background:var(--violetBg);color:var(--violet)}
+.item{border:1px solid var(--line);border-radius:12px;background:#fff;padding:11px;margin-bottom:9px}
+.item-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.item-title{font-weight:900;color:var(--navy)}
+.item-meta{font-size:11px;color:var(--muted);margin-top:3px}.item-desc{font-size:12px;color:#334155;margin-top:8px;white-space:pre-wrap}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.check{display:flex;align-items:flex-start;gap:8px}.check input{width:auto;margin-top:3px}.done .item-title{text-decoration:line-through;color:var(--muted)}.done{opacity:.68}
+.progress{height:9px;background:var(--sky);border-radius:999px;overflow:hidden}.bar{height:100%;background:linear-gradient(90deg,var(--blue2),var(--navy));border-radius:999px;transition:.3s}
+.month-card{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;cursor:pointer}.month-card.active{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(47,128,237,.1)}
+.month-name{font-weight:900;color:var(--navy)}.month-focus{font-size:11px;color:var(--muted);margin-top:3px}.month-stats{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.timeline{border-left:3px solid var(--line);padding-left:12px}.log{position:relative;margin-bottom:12px}.log:before{content:"";position:absolute;left:-19px;top:3px;width:10px;height:10px;background:var(--blue2);border-radius:50%;border:2px solid #fff}
+.log-date{font-size:11px;color:var(--muted);font-weight:900}.log-text{font-size:13px;margin-top:3px;white-space:pre-wrap}.small{font-size:11px;color:var(--muted)}
+.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}.table th{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);background:var(--sky2)}
+.asset-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.asset-filter select{max-width:220px}
+footer{padding:18px;color:var(--muted);text-align:center;font-size:11px}
+@media(max-width:900px){.grid-4,.grid-3,.grid-2,.form-grid{grid-template-columns:1fr}.main{padding:12px}header{padding:14px}.stat .num{font-size:22px}.item-top{flex-direction:column}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <div>
+      <h1>DC Live Execution Tracker</h1>
+      <div class="subtitle">Year plan → monthly plans → weekly execution → 2–3 day updates → asset factory.</div>
+    </div>
+    <div class="pill" id="todayPill">Today</div>
+  </div>
+</header>
+<main class="main">
+  <section class="grid grid-4" id="stats"></section>
+
+  <div class="tabs">
+    <button class="tab active" onclick="openTab('command', this)">Command</button>
+    <button class="tab" onclick="openTab('assets', this)">Asset Factory</button>
+    <button class="tab" onclick="openTab('year', this)">Year Plan</button>
+    <button class="tab" onclick="openTab('month', this)">Monthly Tasks</button>
+    <button class="tab" onclick="openTab('week', this)">Weekly Tracker</button>
+    <button class="tab" onclick="openTab('updates', this)">2–3 Day Updates</button>
+    <button class="tab" onclick="openTab('tools', this)">Tools & ROI</button>
+    <button class="tab" onclick="openTab('settings', this)">Export / Import</button>
+  </div>
+
+  <section id="command" class="pane active">
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Current Season Command</div><div class="card-sub">This keeps you from stretching thin.</div></div></div>
+        <div class="card-b">
+          <div class="form-row"><label>Season Name</label><input id="seasonName"/></div>
+          <div class="form-row"><label>Main Rule</label><textarea id="mainRule"></textarea></div>
+          <div class="form-grid">
+            <div><label>Primary Cash Engine</label><input id="cashEngine"/></div>
+            <div><label>Leverage Engine</label><input id="leverageEngine"/></div>
+            <div><label>Update Rhythm</label><input id="updateRhythm"/></div>
+          </div>
+          <div class="actions"><button onclick="saveCommand()">Save Command</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Non-Negotiables</div><div class="card-sub">Protect these when the week gets chaotic.</div></div></div>
+        <div class="card-b" id="nonNegList"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div><div class="card-title">Live Priority Stack</div><div class="card-sub">Order matters. Tool urgency must not outrank money proof.</div></div></div>
+      <div class="card-b" id="priorityStack"></div>
+    </div>
+  </section>
+
+  <section id="assets" class="pane">
+    <div class="card">
+      <div class="card-h">
+        <div><div class="card-title">Canva Pro / Content Asset Factory</div><div class="card-sub">Detailed assets to create before subscriptions expire. These are not vague tasks.</div></div>
+        <button onclick="addCustomAsset()">+ Custom Asset</button>
+      </div>
+      <div class="card-b">
+        <div class="asset-filter">
+          <select id="assetCategoryFilter" onchange="renderAll()"><option>All Categories</option></select>
+          <select id="assetStatusFilter" onchange="renderAll()"><option>All Status</option><option>Open</option><option>Done</option><option>Overdue</option></select>
+          <select id="assetToolFilter" onchange="renderAll()"><option>All Tools</option><option>Canva Pro</option><option>ChatGPT / Codex</option><option>Claude / Gemini</option><option>Vercel / GitHub</option><option>Manual</option></select>
+        </div>
+        <div id="assetList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="year" class="pane">
+    <div class="card">
+      <div class="card-h"><div><div class="card-title">Year Plan</div><div class="card-sub">Monthly focus, milestone, and deadline map.</div></div></div>
+      <div class="card-b"><div class="grid grid-3" id="monthGrid"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div><div class="card-title">Add / Edit Month</div><div class="card-sub">Use this when the context changes.</div></div></div>
+      <div class="card-b">
+        <div class="form-grid">
+          <div><label>Month</label><select id="mName"></select></div>
+          <div><label>Primary Focus</label><input id="mFocus" placeholder="e.g. Dominique sales activation"/></div>
+          <div><label>Main Deadline</label><input id="mDeadline" type="date"/></div>
+        </div>
+        <div class="form-row" style="margin-top:10px"><label>Milestone / Target</label><textarea id="mTarget" placeholder="What must be true by the end of this month?"></textarea></div>
+        <div class="actions"><button onclick="saveMonthPlan()">Save Month Plan</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="month" class="pane">
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Monthly Task Input</div><div class="card-sub">Tasks tied to month, engine, deadline, and proof standard.</div></div></div>
+        <div class="card-b">
+          <div class="form-grid">
+            <div><label>Month</label><select id="taskMonth"></select></div>
+            <div><label>Engine</label><select id="taskEngine"><option>Dominique Creations</option><option>DeeCadence</option><option>Dee_Cistem</option><option>Arcadia</option><option>Academics</option><option>Finance</option><option>Health</option><option>Faith</option><option>Writing</option></select></div>
+            <div><label>Deadline</label><input id="taskDeadline" type="date"/></div>
+          </div>
+          <div class="form-row" style="margin-top:10px"><label>Task</label><input id="taskTitle" placeholder="Specific task, not vague intention"/></div>
+          <div class="form-row"><label>Details / Success Criteria</label><textarea id="taskDetails" placeholder="What does done look like?"></textarea></div>
+          <div class="actions"><button onclick="addTask()">+ Add Task</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Month View</div><div class="card-sub">Filter tasks by month, engine, and status.</div></div></div>
+        <div class="card-b">
+          <div class="form-grid">
+            <div><label>Filter Month</label><select id="filterMonth" onchange="renderAll()"></select></div>
+            <div><label>Filter Engine</label><select id="filterEngine" onchange="renderAll()"><option>All</option><option>Dominique Creations</option><option>DeeCadence</option><option>Dee_Cistem</option><option>Arcadia</option><option>Academics</option><option>Finance</option><option>Health</option><option>Faith</option><option>Writing</option></select></div>
+            <div><label>Filter Status</label><select id="filterStatus" onchange="renderAll()"><option>All</option><option>Open</option><option>Done</option><option>Overdue</option></select></div>
+          </div>
+          <div id="taskList" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="week" class="pane">
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Weekly Execution Entry</div><div class="card-sub">One week. Few priorities. Hard evidence.</div></div></div>
+        <div class="card-b">
+          <div class="form-grid">
+            <div><label>Week Starting</label><input id="wStart" type="date"/></div>
+            <div><label>Primary Goal</label><input id="wGoal" placeholder="Main proof target"/></div>
+            <div><label>Status</label><select id="wStatus"><option>Active</option><option>Closed</option><option>Paused</option></select></div>
+          </div>
+          <div class="form-row" style="margin-top:10px"><label>Top 3 Priorities</label><textarea id="wPriorities" placeholder="1. ...&#10;2. ...&#10;3. ..."></textarea></div>
+          <div class="form-row"><label>Scoreboard Targets</label><textarea id="wTargets" placeholder="Revenue target, posts, DMs, coding demo, study hours, etc."></textarea></div>
+          <div class="actions"><button onclick="saveWeek()">Save Week</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Weekly Scoreboards</div><div class="card-sub">Evidence, not mood.</div></div></div>
+        <div class="card-b" id="weekList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="updates" class="pane">
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">2–3 Day Context Update</div><div class="card-sub">This replaces scattered screenshots.</div></div></div>
+        <div class="card-b">
+          <div class="form-grid">
+            <div><label>Date</label><input id="uDate" type="date"/></div>
+            <div><label>Energy</label><select id="uEnergy"><option>High</option><option>Medium</option><option>Low</option></select></div>
+            <div><label>Update Type</label><select id="uType"><option>Execution</option><option>Money</option><option>Opportunity</option><option>Problem</option><option>Correction</option><option>Win</option></select></div>
+          </div>
+          <div class="form-row" style="margin-top:10px"><label>What happened?</label><textarea id="uHappened" placeholder="Facts only. What changed?"></textarea></div>
+          <div class="form-row"><label>Decision / Next Action</label><textarea id="uDecision" placeholder="What should happen because of this?"></textarea></div>
+          <div class="form-row"><label>Evidence Link / Screenshot Note</label><input id="uEvidence" placeholder="Optional: filename, link, screenshot note"/></div>
+          <div class="actions"><button onclick="addUpdate()">+ Add Update</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Update Timeline</div><div class="card-sub">This becomes your decision memory.</div></div></div>
+        <div class="card-b"><div class="timeline" id="updateList"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tools" class="pane">
+    <div class="card">
+      <div class="card-h"><div><div class="card-title">Tools & ROI Map</div><div class="card-sub">Temporary tools must produce permanent assets.</div></div></div>
+      <div class="card-b"><table class="table" id="toolTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div><div class="card-title">Add Tool / Subscription</div><div class="card-sub">Track expiry, role, and required output.</div></div></div>
+      <div class="card-b">
+        <div class="form-grid">
+          <div><label>Tool</label><input id="toolName" placeholder="Canva Pro, ChatGPT Plus, Gemini, etc."/></div>
+          <div><label>Expiry / Review Date</label><input id="toolDate" type="date"/></div>
+          <div><label>Status</label><select id="toolStatus"><option>Active</option><option>Expiring Soon</option><option>Cut</option><option>Renew If ROI</option></select></div>
+        </div>
+        <div class="form-row" style="margin-top:10px"><label>Required Output</label><textarea id="toolOutput" placeholder="What must this tool produce before expiry?"></textarea></div>
+        <div class="actions"><button onclick="saveTool()">Save Tool</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="settings" class="pane">
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Export Backup</div><div class="card-sub">Do this weekly. Local dashboards can be lost.</div></div></div>
+        <div class="card-b">
+          <button onclick="exportData()">Export JSON Backup</button>
+          <p class="small" style="margin-top:10px">Save the downloaded file somewhere safe. This dashboard stores data in your browser localStorage.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><div class="card-title">Import Backup</div><div class="card-sub">Restore a previous JSON export.</div></div></div>
+        <div class="card-b">
+          <input type="file" id="importFile" accept="application/json"/>
+          <div class="actions"><button onclick="importData()">Import JSON</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>DC Live Execution Tracker · Blue/white command dashboard · Local-first.</footer>
+<script>
+const LS='dc_live_tracker_v2';
+const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const currentMonth=months[new Date().getMonth()];
+let state=JSON.parse(localStorage.getItem(LS)||'null')||defaultState();
+
+function defaultState(){
+ return {
+  command:{
+    seasonName:'Opportunity Compression Season',
+    mainRule:'Convert temporary access into durable assets. Dominique Creations sells. DeeCadence/Arcadia validate. Everything else waits.',
+    cashEngine:'Dominique Creations',
+    leverageEngine:'DeeCadence / Dee_Cistem / Arcadia',
+    updateRhythm:'Every 2–3 days'
+  },
+  nonNeg:[
+    'One proof asset every 72 hours',
+    'Track money when it moves',
+    'Do not buy tools without a direct output target',
+    'Do not build full software before demand signal',
+    'Protect sleep/energy enough to think clearly'
+  ],
+  priority:[
+    'Dominique Creations sales machine',
+    'Canva Pro asset factory before expiry',
+    'DeeCadence / Dee_Cistem validation only',
+    'Arcadia smallest useful demo',
+    'Hackathon/opportunity pipeline',
+    'Writing folder maintenance only'
+  ],
+  months: months.map(m=>({month:m,focus:m===currentMonth?'Subscription sprint + Dominique activation':'',deadline:'',target:m===currentMonth?'Storefront ready, Canva assets exported, DM system active, first ad test prepared, and one software validation lane preserved without stealing focus.':''})),
+  tasks: seedTasks(),
+  assets: seedAssets(),
+  weeks:[],
+  updates:[],
+  tools:[
+    {id:1,name:'Canva Pro',date:'2026-05-21',status:'Expiring Soon',output:'Create and export portfolio posts, process posts, package education posts, booking posts, ad creatives, CTA images, package menu PDF, inquiry form PDF, vendor pitch PDF, and mockup bank.'},
+    {id:2,name:'ChatGPT Plus / Codex',date:'2026-05-21',status:'Active',output:'Use for scripts, strategy, app specs, copy, code skeletons, debugging, and conversion systems. No giant architecture.'},
+    {id:3,name:'Gemini / Claude',date:'2026-05-28',status:'Active',output:'Use for long-context synthesis, copy refinement, AI video/script tests, and structured summaries only when tied to assets or sales.'},
+    {id:4,name:'Emergent',date:'',status:'Renew If ROI',output:'Use only with frozen spec. Build one exact MVP, not exploratory experiments.'},
+    {id:5,name:'Vercel / GitHub',date:'',status:'Active',output:'Host lightweight web demos and preserve code without depending on local VS Code performance.'}
+  ]
+ }
+}
+function seedTasks(){
+ return [
+  {id:101,month:currentMonth,engine:'Dominique Creations',title:'Prepare profile and storefront for paid traffic',details:'Bio, highlights, pinned work, package path, CTA, WhatsApp/order path. Done means a stranger can understand what you sell and how to inquire.',deadline:'2026-05-20',done:false},
+  {id:102,month:currentMonth,engine:'Dominique Creations',title:'Export Canva asset batch before Pro expires',details:'All high-value Canva assets exported as PNG/PDF, named cleanly, and backed up.',deadline:'2026-05-21',done:false},
+  {id:103,month:currentMonth,engine:'Dominique Creations',title:'Prepare first ad test and lead response system',details:'5 ad creatives, 2 captions, inquiry script, package recommendation script, payment-before-work close.',deadline:'2026-05-22',done:false},
+  {id:104,month:currentMonth,engine:'DeeCadence',title:'Freeze DeeCadence MVP scope',details:'Keep it as attention rehabilitation: Focus Debt, Attention Score, Today/Schedule/Insights, no extra features unless validated.',deadline:'2026-05-24',done:false},
+  {id:105,month:currentMonth,engine:'Arcadia',title:'Define Arcadia v0.1 as simple study planner only',details:'No full AI system. Inputs: course, deadline, available time, fatigue, difficulty, session length, breaks. Output: realistic plan.',deadline:'2026-05-25',done:false}
+ ]
+}
+function seedAssets(){
+ const d='2026-05-21';
+ const arr=[
+  ['Portfolio Post 01','Canva Portfolio Posts','Canva Pro','Create a close-up carousel of Black & Gold Luxury wedding/program design. Goal: visual authority. Caption angle: “The moment guests hold this, the event already feels intentional.”',d],
+  ['Portfolio Post 02','Canva Portfolio Posts','Canva Pro','Create full-view carousel of Black & Gold Luxury suite/mockup. Goal: show complete design system, not isolated beauty.',d],
+  ['Portfolio Post 03','Canva Portfolio Posts','Canva Pro','Burgundy Elegant program close-up. Emphasize texture, monogram pattern, premium finish, ceremony feel.',d],
+  ['Portfolio Post 04','Canva Portfolio Posts','Canva Pro','Burgundy Elegant full suite mockup. Show how invitation/program/signage can feel coordinated.',d],
+  ['Portfolio Post 05','Canva Portfolio Posts','Canva Pro','Ivory Minimal concept. Clean, premium, calm. For couples who dislike visual noise.',d],
+  ['Portfolio Post 06','Canva Portfolio Posts','Canva Pro','Royal Blue & Silver concept. Target: formal, regal, church/luxury wedding mood.',d],
+  ['Portfolio Post 07','Canva Portfolio Posts','Canva Pro','Floral Romantic concept. Target: soft, feminine, garden, spring, bridal emotional appeal.',d],
+  ['Portfolio Post 08','Canva Portfolio Posts','Canva Pro','Botanical Green concept. Target: natural, classy, earth-tone, outdoor/event aesthetic.',d],
+  ['Portfolio Post 09','Canva Portfolio Posts','Canva Pro','Modern Typography concept. Target: clean diaspora wedding with editorial style.',d],
+  ['Portfolio Post 10','Canva Portfolio Posts','Canva Pro','Before/after redesign sample. Show ordinary program vs Dominique Creations upgrade.',d],
+  ['Portfolio Post 11','Canva Portfolio Posts','Canva Pro','Mockup wall: 4 styles in one carousel. Goal: range, taste, confidence.',d],
+  ['Portfolio Post 12','Canva Portfolio Posts','Canva Pro','Signature detail post: monogram, paper texture, gold accents, spacing, hierarchy. Goal: explain premium visually.',d],
+
+  ['Process Post 01','Process Posts','Canva Pro','“From wedding colors to full stationery identity.” Show steps: intake → moodboard → draft → revision → final delivery.',d],
+  ['Process Post 02','Process Posts','Canva Pro','“What I need before designing your program.” Names, date, venue, colors, order of service, bridal party list, photos, deadline.',d],
+  ['Process Post 03','Process Posts','Canva Pro','“Why your ceremony program should match your wedding identity.” Educate without sounding desperate.',d],
+  ['Process Post 04','Process Posts','Canva Pro','“How revisions work.” Explain revision rounds, feedback clarity, timeline protection, extra revision policy.',d],
+  ['Process Post 05','Process Posts','Canva Pro','“Print-ready vs digital version.” Explain export quality, 300 DPI, PDF, WhatsApp-friendly version.',d],
+  ['Process Post 06','Process Posts','Canva Pro','“Why rushed wedding design costs more.” Position rush fee as capacity protection, not punishment.',d],
+
+  ['Package Education 01','Package Education Posts','Canva Pro','Explain Coordinated Suite — $149. Who it is for, what it includes, why it is the clean entry point.',d],
+  ['Package Education 02','Package Education Posts','Canva Pro','Explain Identity Collection — $349. Position as the serious couple option: program + signage + thank-you/stickers etc.',d],
+  ['Package Education 03','Package Education Posts','Canva Pro','Explain Brand Experience — $650. Position as full event identity: table numbers, social graphics, QR integration, complete system.',d],
+
+  ['Booking Post 01','How Booking Works Posts','Canva Pro','“How to book your wedding stationery.” Steps: DM/WhatsApp → answer questions → package recommendation → deposit → design starts.',d],
+  ['Booking Post 02','How Booking Works Posts','Canva Pro','“Payment confirms your slot.” Calm premium explanation: design work begins after deposit/payment is confirmed.',d],
+  ['Booking Post 03','How Booking Works Posts','Canva Pro','“Timeline guide.” When to book: 4–8 weeks before event ideal, rush delivery available with fee.',d],
+
+  ['Ad Creative 01','Ad Creatives','Canva Pro','Black & Gold Luxury close-up with direct CTA: “Planning a Nigerian/diaspora wedding? Get a coordinated ceremony program.”',d],
+  ['Ad Creative 02','Ad Creatives','Canva Pro','Burgundy Elegant mockup with CTA: “Your wedding deserves stationery that feels intentional.”',d],
+  ['Ad Creative 03','Ad Creatives','Canva Pro','Package comparison graphic: Coordinated Suite vs Identity Collection vs Brand Experience.',d],
+  ['Ad Creative 04','Ad Creatives','Canva Pro','Problem-angle ad: “Your event visuals should not look last-minute.”',d],
+  ['Ad Creative 05','Ad Creatives','Canva Pro','Sample-first ad: “DM COLLECTION and I’ll recommend the right stationery package.”',d],
+
+  ['CTA Image 01','CTA Images','Canva Pro','Simple premium CTA: “DM PROGRAM to start your wedding stationery.” Use blue/white or black/gold version.',d],
+  ['CTA Image 02','CTA Images','Canva Pro','Vendor CTA: “Wedding planners & photographers: partner with Dominique Creations for coordinated event stationery.”',d],
+  ['CTA Image 03','CTA Images','Canva Pro','Inquiry CTA: “Send your wedding date, colors, and preferred style — I’ll guide you to the right package.”',d],
+
+  ['Package Menu PDF','PDF Assets','Canva Pro','One-page polished PDF showing packages, prices, includes, add-ons, timeline, payment rule, and contact CTA.',d],
+  ['Inquiry Form PDF','PDF Assets','Canva Pro','Client intake PDF: names, wedding date, venue, colors, package, order of service, bridal party, notes, deadline.',d],
+  ['Wedding Planner / Vendor Pitch PDF','PDF Assets','Canva Pro','One-page partner pitch: what Dominique Creations does, referral benefit, sample visuals, process, contact.',d],
+  ['Mockup Bank','Mockup Bank','Canva Pro','Export reusable mockups/backgrounds for future posts: program flatlays, invitation mockups, signage mockups, carousel backgrounds.',d],
+
+  ['Dominique DM Script Set','Sales System','ChatGPT / Codex','Prepare first response, qualification questions, package recommendation, payment close, silence follow-up, delivery message.', '2026-05-22'],
+  ['Lead Tracker Sheet','Sales System','Manual','Create simple lead tracker: name, source, package interest, wedding date, quote sent, follow-up date, payment status.', '2026-05-22'],
+  ['Arcadia v0.1 Spec','Software Validation','ChatGPT / Codex','One-page spec only. Study planner module. No full architecture. Ready for Codex build later.', '2026-05-25'],
+  ['DeeCadence MVP Freeze','Software Validation','ChatGPT / Codex','Define MVP: Focus Debt, Attention Score, Today tab, Schedule tab, Insights tab. Cut payment/admin until core works.', '2026-05-24']
+ ];
+ return arr.map((x,i)=>({id:200+i,title:x[0],category:x[1],tool:x[2],details:x[3],deadline:x[4],done:false}));
+}
+function save(){localStorage.setItem(LS,JSON.stringify(state));renderAll()}
+function $(id){return document.getElementById(id)}
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function openTab(id, el){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));if(el)el.classList.add('active');$(id).classList.add('active')}
+function daysLeft(date){if(!date)return '—';return Math.ceil((new Date(date+'T23:59:59')-new Date())/86400000)}
+function statusBadge(done, deadline){if(done)return '<span class="badge b-ok">Done</span>';let d=daysLeft(deadline);if(d==='—')return '<span class="badge b-blue">Open</span>';if(d<0)return '<span class="badge b-bad">Overdue</span>';if(d<=3)return '<span class="badge b-warn">Due Soon</span>';return '<span class="badge b-blue">Open</span>'}
+function initSelects(){
+ ['mName','taskMonth'].forEach(id=>{$(id).innerHTML=months.map(m=>`<option>${m}</option>`).join('')});
+ $('filterMonth').innerHTML='<option>All</option>'+months.map(m=>`<option>${m}</option>`).join('');
+ $('mName').value=currentMonth;$('taskMonth').value=currentMonth;$('filterMonth').value=currentMonth;
+ $('uDate').value=todayISO();$('wStart').value=todayISO();
+ const cats=[...new Set(state.assets.map(a=>a.category))];
+ $('assetCategoryFilter').innerHTML='<option>All Categories</option>'+cats.map(c=>`<option>${c}</option>`).join('');
+}
+function renderCommand(){
+ let c=state.command;$('seasonName').value=c.seasonName;$('mainRule').value=c.mainRule;$('cashEngine').value=c.cashEngine;$('leverageEngine').value=c.leverageEngine;$('updateRhythm').value=c.updateRhythm;
+ $('nonNegList').innerHTML=state.nonNeg.map((x,i)=>`<div class="item"><div class="item-title">${i+1}. ${x}</div></div>`).join('');
+ $('priorityStack').innerHTML=state.priority.map((x,i)=>`<div class="item"><div class="item-top"><div><div class="item-title">${i+1}. ${x}</div><div class="item-meta">Priority ${i+1}</div></div>${i<2?'<span class="badge b-bad">Protect</span>':'<span class="badge b-blue">Secondary</span>'}</div></div>`).join('');
+}
+function saveCommand(){state.command={seasonName:$('seasonName').value,mainRule:$('mainRule').value,cashEngine:$('cashEngine').value,leverageEngine:$('leverageEngine').value,updateRhythm:$('updateRhythm').value};save()}
+function renderAssets(){
+ let cat=$('assetCategoryFilter').value, stat=$('assetStatusFilter').value, tool=$('assetToolFilter').value;
+ let arr=state.assets.filter(a=>cat==='All Categories'||a.category===cat).filter(a=>tool==='All Tools'||a.tool===tool).filter(a=>{
+   if(stat==='All Status')return true;
+   if(stat==='Done')return a.done;
+   if(stat==='Open')return !a.done && (daysLeft(a.deadline)==='—'||daysLeft(a.deadline)>=0);
+   if(stat==='Overdue')return !a.done && daysLeft(a.deadline)<0;
+ });
+ $('assetList').innerHTML=arr.length?arr.map(a=>`<div class="item ${a.done?'done':''}">
+   <div class="item-top"><div class="check"><input type="checkbox" ${a.done?'checked':''} onchange="toggleAsset(${a.id})"><div><div class="item-title">${a.title}</div><div class="item-meta">${a.category} · ${a.tool} · Deadline: ${a.deadline||'none'} · Days left: ${daysLeft(a.deadline)}</div></div></div>${statusBadge(a.done,a.deadline)}</div>
+   <div class="item-desc">${a.details}</div>
+   <div class="actions"><button class="btn-small btn-bad" onclick="deleteAsset(${a.id})">Delete</button></div>
+ </div>`).join(''):'<div class="small">No assets match this filter.</div>'
+}
+function toggleAsset(id){let a=state.assets.find(x=>x.id===id);a.done=!a.done;save()}
+function deleteAsset(id){state.assets=state.assets.filter(x=>x.id!==id);save()}
+function addCustomAsset(){
+ const title=prompt('Asset title?'); if(!title)return;
+ const category=prompt('Category?', 'Custom Asset')||'Custom Asset';
+ const tool=prompt('Tool?', 'Canva Pro')||'Manual';
+ const details=prompt('Details / success criteria?', '')||'';
+ const deadline=prompt('Deadline YYYY-MM-DD?', '')||'';
+ state.assets.push({id:Date.now(),title,category,tool,details,deadline,done:false});initSelects();save()
+}
+function saveMonthPlan(){let m=$('mName').value;let obj=state.months.find(x=>x.month===m);obj.focus=$('mFocus').value;obj.deadline=$('mDeadline').value;obj.target=$('mTarget').value;save()}
+function renderMonths(){
+ const cur=currentMonth;
+ $('monthGrid').innerHTML=state.months.map(m=>{let related=state.tasks.filter(t=>t.month===m.month);let done=related.filter(t=>t.done).length;let pct=related.length?Math.round(done/related.length*100):0;let dl=daysLeft(m.deadline);return `<div class="month-card ${m.month===cur?'active':''}" onclick="loadMonth('${m.month}')"><div class="month-name">${m.month}</div><div class="month-focus">${m.focus||'No focus set yet.'}</div><div class="progress" style="margin-top:8px"><div class="bar" style="width:${pct}%"></div></div><div class="month-stats"><span class="badge b-blue">${done}/${related.length} tasks</span><span class="badge ${dl!=='—'&&dl<7?'b-warn':'b-violet'}">Deadline: ${dl} days</span></div>${m.target?`<div class="item-desc">${m.target}</div>`:''}</div>`}).join('')
+}
+function loadMonth(month){let m=state.months.find(x=>x.month===month);$('mName').value=m.month;$('mFocus').value=m.focus;$('mDeadline').value=m.deadline;$('mTarget').value=m.target}
+function addTask(){let t={id:Date.now(),month:$('taskMonth').value,engine:$('taskEngine').value,title:$('taskTitle').value.trim(),details:$('taskDetails').value.trim(),deadline:$('taskDeadline').value,done:false};if(!t.title)return;state.tasks.push(t);$('taskTitle').value='';$('taskDetails').value='';$('taskDeadline').value='';save()}
+function toggleTask(id){let t=state.tasks.find(x=>x.id===id);t.done=!t.done;save()}
+function deleteTask(id){state.tasks=state.tasks.filter(x=>x.id!==id);save()}
+function renderTasks(){
+ let fm=$('filterMonth').value,fe=$('filterEngine').value,fs=$('filterStatus').value;
+ let arr=state.tasks.filter(t=>fm==='All'||t.month===fm).filter(t=>fe==='All'||t.engine===fe).filter(t=>{if(fs==='All')return true;if(fs==='Done')return t.done;if(fs==='Open')return !t.done&&(daysLeft(t.deadline)==='—'||daysLeft(t.deadline)>=0);if(fs==='Overdue')return !t.done&&daysLeft(t.deadline)<0});
+ $('taskList').innerHTML=arr.length?arr.sort((a,b)=>(a.deadline||'9999').localeCompare(b.deadline||'9999')).map(t=>`<div class="item ${t.done?'done':''}"><div class="item-top"><div class="check"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})"><div><div class="item-title">${t.title}</div><div class="item-meta">${t.month} · ${t.engine} · Deadline: ${t.deadline||'none'} · Days left: ${daysLeft(t.deadline)}</div></div></div>${statusBadge(t.done,t.deadline)}</div>${t.details?`<div class="item-desc">${t.details}</div>`:''}<div class="actions"><button class="btn-small btn-bad" onclick="deleteTask(${t.id})">Delete</button></div></div>`).join(''):'<div class="small">No tasks match this filter.</div>'
+}
+function saveWeek(){let w={id:Date.now(),start:$('wStart').value,goal:$('wGoal').value,priorities:$('wPriorities').value,targets:$('wTargets').value,status:$('wStatus').value};if(!w.goal)return;state.weeks.push(w);$('wGoal').value='';$('wPriorities').value='';$('wTargets').value='';save()}
+function renderWeeks(){$('weekList').innerHTML=state.weeks.length?state.weeks.slice().reverse().map(w=>`<div class="item"><div class="item-top"><div><div class="item-title">${w.goal}</div><div class="item-meta">Week starting ${w.start}</div></div><span class="badge b-blue">${w.status}</span></div><div class="item-desc"><b>Top 3:</b>\n${w.priorities}\n\n<b>Targets:</b>\n${w.targets}</div></div>`).join(''):'<div class="small">No weekly scoreboards yet.</div>'}
+function addUpdate(){let u={id:Date.now(),date:$('uDate').value,type:$('uType').value,energy:$('uEnergy').value,happened:$('uHappened').value,decision:$('uDecision').value,evidence:$('uEvidence').value};if(!u.happened)return;state.updates.push(u);$('uHappened').value='';$('uDecision').value='';$('uEvidence').value='';save()}
+function renderUpdates(){$('updateList').innerHTML=state.updates.length?state.updates.slice().reverse().map(u=>`<div class="log"><div class="log-date">${u.date} · ${u.type} · Energy: ${u.energy}</div><div class="log-text"><b>What happened:</b> ${u.happened}\n<b>Decision:</b> ${u.decision}${u.evidence?`\n<b>Evidence:</b> ${u.evidence}`:''}</div></div>`).join(''):'<div class="small">No updates yet. Add one every 2–3 days.</div>'}
+function saveTool(){let x={id:Date.now(),name:$('toolName').value,date:$('toolDate').value,status:$('toolStatus').value,output:$('toolOutput').value};if(!x.name)return;state.tools.push(x);$('toolName').value='';$('toolDate').value='';$('toolOutput').value='';save()}
+function deleteTool(id){state.tools=state.tools.filter(x=>x.id!==id);save()}
+function renderTools(){$('toolTable').innerHTML='<tr><th>Tool</th><th>Review</th><th>Status</th><th>Required Output</th><th></th></tr>'+state.tools.map(t=>`<tr><td><b>${t.name}</b></td><td>${t.date||'—'}<br><span class="small">${daysLeft(t.date)} days</span></td><td><span class="badge b-blue">${t.status}</span></td><td>${t.output}</td><td><button class="btn-small btn-bad" onclick="deleteTool(${t.id})">Delete</button></td></tr>`).join('')}
+function renderStats(){let totalTasks=state.tasks.length,doneTasks=state.tasks.filter(t=>t.done).length;let totalAssets=state.assets.length,doneAssets=state.assets.filter(a=>a.done).length;let over=[...state.tasks,...state.assets].filter(x=>!x.done&&daysLeft(x.deadline)<0).length;let updates=state.updates.length;$('stats').innerHTML=`<div class="stat"><div class="num">${doneTasks}/${totalTasks}</div><div class="label">Tasks Complete</div><div class="note">Execution evidence</div></div><div class="stat"><div class="num">${doneAssets}/${totalAssets}</div><div class="label">Assets Exported</div><div class="note">Durable output</div></div><div class="stat"><div class="num">${over}</div><div class="label">Overdue</div><div class="note">Fix or cut quickly</div></div><div class="stat"><div class="num">${updates}</div><div class="label">Context Updates</div><div class="note">Every 2–3 days</div></div>`}
+function exportData(){let blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dc-live-execution-tracker-backup.json';a.click()}
+function importData(){let f=$('importFile').files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);localStorage.setItem(LS,JSON.stringify(state));initSelects();renderAll();alert('Backup imported.')}catch(e){alert('Invalid JSON file')}};r.readAsText(f)}
+function renderAll(){$('todayPill').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'});renderStats();renderCommand();renderAssets();renderMonths();renderTasks();renderWeeks();renderUpdates();renderTools()}
+initSelects();renderAll();
+</script>
+</body>
+</html>

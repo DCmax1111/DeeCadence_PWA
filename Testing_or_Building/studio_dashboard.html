@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dominique Creations · Studio Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --navy:#0D1B2A;--navy2:#152336;--blue:#1E3A5F;--blue2:#2E5490;--blue3:#3B6FBF;
+  --sky:#D6E4F7;--sky2:#EEF4FC;--gold:#C9A84C;--gold2:#E0BF6A;--gold3:#F5EDD0;
+  --gold4:#FAF6ED;--charcoal:#1A1A1A;--dark:#1E2D3D;--mid:#5A7A99;--rule:#C8D8EC;
+  --white:#FFFFFF;--ok:#2E7D52;--ok2:#E6F4EE;--warn:#D4860A;--warn2:#FEF3E2;
+  --danger:#C0392B;--danger2:#FDECEA;--light:#EEF4FB;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Montserrat',sans-serif;background:var(--light);color:var(--dark);min-height:100vh;}
+
+/* HEADER */
+.hdr{background:var(--navy);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:300;}
+.hdr-brand .name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--white);letter-spacing:3px;text-transform:uppercase;}
+.hdr-brand .sub{font-size:8px;color:var(--gold2);letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
+.hdr-stats{display:flex;gap:20px;align-items:center;}
+.hdr-stat{text-align:right;}
+.hdr-stat .v{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--gold2);line-height:1;}
+.hdr-stat .k{font-size:7px;color:var(--mid);letter-spacing:2px;text-transform:uppercase;}
+
+/* NAV TABS */
+.nav{background:var(--navy2);display:flex;padding:0 32px;border-bottom:2px solid var(--gold);overflow-x:auto;}
+.nav-tab{padding:13px 18px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:none;background:none;cursor:pointer;color:var(--mid);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;font-family:'Montserrat',sans-serif;white-space:nowrap;}
+.nav-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.nav-tab:hover:not(.active){color:var(--sky);}
+.tab-pane{display:none;padding:28px 32px;}
+.tab-pane.active{display:block;}
+
+/* CARDS */
+.card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.card-head{padding:13px 18px;background:var(--navy);display:flex;align-items:center;justify-content:space-between;}
+.card-head-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);}
+.card-head-sub{font-size:8px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+.card-body{padding:16px 18px;}
+
+/* REVENUE */
+.rev-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+.rev-stat{background:var(--light);border-radius:7px;padding:12px 10px;text-align:center;}
+.rev-stat .v{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--dark);line-height:1;}
+.rev-stat .v.gold{color:var(--gold);}
+.rev-stat .v.ok{color:var(--ok);}
+.rev-stat .v.warn{color:var(--warn);}
+.rev-stat .k{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-top:3px;}
+.prog-wrap{background:var(--sky);border-radius:100px;height:8px;margin-bottom:8px;overflow:hidden;}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--blue3),var(--gold));border-radius:100px;transition:width .7s cubic-bezier(.4,0,.2,1);}
+.rev-row{display:flex;gap:8px;margin-bottom:10px;}
+.rev-input{flex:1;border:1.5px solid var(--rule);border-radius:5px;padding:9px 12px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:600;color:var(--dark);background:var(--light);outline:none;transition:border-color .2s;}
+.rev-input:focus{border-color:var(--blue3);}
+.rev-input::placeholder{color:#A0B8D0;font-weight:400;font-size:11px;}
+.rev-select{border:1.5px solid var(--rule);border-radius:5px;padding:9px 10px;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--dark);background:var(--light);outline:none;}
+.btn{border:none;border-radius:5px;padding:9px 16px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:'Montserrat',sans-serif;transition:all .2s;}
+.btn-gold{background:var(--gold);color:var(--navy);}
+.btn-gold:hover{background:var(--gold2);}
+.btn-blue{background:var(--blue);color:white;}
+.btn-blue:hover{background:var(--blue2);}
+.btn-sm{padding:5px 10px;font-size:8px;}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid #f5c6cb;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;font-family:'Montserrat',sans-serif;}
+.btn-danger:hover{background:var(--danger2);}
+.entries{max-height:160px;overflow-y:auto;margin-top:6px;}
+.entry{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--sky2);border-radius:4px;margin-bottom:4px;font-size:11px;}
+.entry .amt{font-weight:700;color:var(--ok);}
+.entry .src{font-size:9px;color:var(--mid);background:var(--sky);padding:2px 6px;border-radius:8px;}
+.no-e{font-size:10px;color:#A0B8D0;text-align:center;padding:12px;font-style:italic;}
+
+/* STYLE TRACKER */
+.styles-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.style-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;}
+.style-head{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;}
+.style-name{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:700;color:var(--white);}
+.style-pct{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--gold2);}
+.style-prog{height:4px;background:rgba(255,255,255,0.2);}
+.style-prog-bar{height:100%;background:var(--gold);transition:width .5s ease;}
+.style-body{padding:12px 14px;}
+.piece-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--sky2);cursor:pointer;border-radius:3px;transition:background .15s;}
+.piece-row:last-child{border-bottom:none;}
+.piece-row:hover{background:var(--sky2);}
+.ptick{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--rule);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;background:white;}
+.ptick.on{background:var(--ok);border-color:var(--ok);}
+.ptick.on::after{content:'✓';font-size:8px;color:white;font-weight:700;}
+.piece-label{font-size:10px;color:var(--dark);flex:1;}
+.piece-label.done{text-decoration:line-through;color:#A0B8D0;}
+.piece-pkg{font-size:8px;color:var(--mid);background:var(--sky2);padding:1px 5px;border-radius:8px;white-space:nowrap;}
+
+/* PROJECTS */
+.proj-toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.proj-form{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:18px;margin-bottom:16px;display:none;}
+.proj-form.open{display:block;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-label{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);}
+.form-input{border:1.5px solid var(--rule);border-radius:5px;padding:8px 11px;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--dark);background:var(--light);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--blue3);}
+.proj-list{}
+.proj-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-bottom:12px;}
+.proj-head{padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+.proj-names{flex:1;}
+.proj-client{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:700;color:var(--dark);}
+.proj-pkg{font-size:9px;color:var(--mid);letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
+.proj-meta{display:flex;gap:8px;align-items:center;}
+.badge{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:10px;}
+.b-new{background:var(--sky2);color:var(--blue2);}
+.b-progress{background:var(--warn2);color:var(--warn);}
+.b-revision{background:#FEF3E2;color:#D4860A;}
+.b-delivered{background:var(--ok2);color:var(--ok);}
+.b-paid{background:#E8F5E9;color:#2E7D32;}
+.b-overdue{background:var(--danger2);color:var(--danger);}
+.days-badge{font-size:10px;font-weight:700;color:var(--white);background:var(--blue);padding:4px 10px;border-radius:12px;}
+.days-badge.warn{background:var(--warn);}
+.days-badge.danger{background:var(--danger);}
+.days-badge.ok{background:var(--ok);}
+.proj-body{display:none;border-top:1px solid var(--rule);padding:14px 16px;}
+.proj-body.open{display:block;}
+.proj-info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.proj-info-box{background:var(--light);border-radius:6px;padding:9px 11px;}
+.proj-info-label{font-size:7.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-bottom:3px;}
+.proj-info-val{font-size:11px;font-weight:600;color:var(--dark);}
+.proj-checklist{}
+.proj-check-section{margin-bottom:10px;}
+.proj-check-title{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;padding:5px 8px;background:var(--navy);border-radius:4px;}
+.proj-task{display:flex;align-items:flex-start;gap:8px;padding:5px 4px;border-bottom:1px solid var(--sky2);cursor:pointer;border-radius:3px;transition:background .15s;}
+.proj-task:last-child{border-bottom:none;}
+.proj-task:hover{background:var(--sky2);}
+.proj-progress{margin-bottom:10px;}
+.proj-prog-wrap{background:var(--sky);border-radius:100px;height:6px;overflow:hidden;margin-top:4px;}
+.proj-prog-bar{height:100%;background:linear-gradient(90deg,var(--blue3),var(--gold));border-radius:100px;transition:width .5s ease;}
+.proj-prog-text{font-size:9px;color:var(--mid);font-weight:600;margin-top:3px;}
+.proj-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--rule);}
+.status-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.status-btn{padding:5px 12px;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:12px;border:1.5px solid var(--rule);cursor:pointer;color:var(--mid);background:var(--white);transition:all .2s;font-family:'Montserrat',sans-serif;}
+.status-btn.active-s{background:var(--navy);color:var(--gold2);border-color:var(--navy);}
+
+/* INSIGHTS */
+.insights-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;}
+.insight-box{background:var(--white);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;}
+.insight-val{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:700;color:var(--gold);line-height:1;}
+.insight-label{font-size:9px;color:var(--mid);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;}
+.insight-sub{font-size:10px;color:var(--dark);margin-top:6px;}
+.source-bar{margin-bottom:8px;}
+.source-label{display:flex;justify-content:space-between;font-size:10px;color:var(--dark);margin-bottom:3px;}
+.source-track{background:var(--sky);border-radius:100px;height:6px;overflow:hidden;}
+.source-fill{height:100%;background:linear-gradient(90deg,var(--blue3),var(--gold));border-radius:100px;}
+
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(13,27,42,.6);z-index:500;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--white);border-radius:12px;padding:24px;width:90%;max-width:520px;max-height:85vh;overflow-y:auto;border-top:4px solid var(--gold);}
+.modal h3{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--dark);margin-bottom:16px;}
+.modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;}
+
+/* UTIL */
+.section-label{font-size:8px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+.divider{height:1px;background:var(--rule);margin:16px 0;}
+.empty{text-align:center;padding:30px;font-size:11px;color:#A0B8D0;font-style:italic;}
+@media(max-width:800px){.styles-grid{grid-template-columns:1fr;}.form-grid{grid-template-columns:1fr 1fr;}.insights-grid{grid-template-columns:1fr 1fr;}.proj-info-grid{grid-template-columns:1fr 1fr;}.rev-grid{grid-template-columns:1fr 1fr;}.tab-pane{padding:18px 16px;}.hdr{padding:14px 16px;}.nav{padding:0 16px;}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="name">Dominique Creations</div>
+    <div class="sub">Studio Dashboard</div>
+  </div>
+  <div class="hdr-stats">
+    <div class="hdr-stat">
+      <div class="v" id="hdrEarned">$0</div>
+      <div class="k">Total Earned</div>
+    </div>
+    <div class="hdr-stat">
+      <div class="v" id="hdrDays">—</div>
+      <div class="k">Days Active</div>
+    </div>
+    <div class="hdr-stat">
+      <div class="v" id="hdrProjects">0</div>
+      <div class="k">Projects</div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-tab active" onclick="switchTab('revenue')">💰 Revenue</button>
+  <button class="nav-tab" onclick="switchTab('styles')">🎨 Style Tracker</button>
+  <button class="nav-tab" onclick="switchTab('projects')">📁 Projects</button>
+  <button class="nav-tab" onclick="switchTab('insights')">📊 Insights</button>
+</div>
+
+<!-- ══ REVENUE TAB ══ -->
+<div id="tab-revenue" class="tab-pane active">
+  <div class="card">
+    <div class="card-head">
+      <div><div class="card-head-title">Revenue Tracker</div><div class="card-head-sub">Log every payment received</div></div>
+    </div>
+    <div class="card-body">
+      <div class="rev-grid">
+        <div class="rev-stat"><div class="v gold" id="rTotalEarned">$0</div><div class="k">Total Earned</div></div>
+        <div class="rev-stat"><div class="v warn" id="rPending">$0</div><div class="k">Pending (Deposits Out)</div></div>
+        <div class="rev-stat"><div class="v ok" id="rThisMonth">$0</div><div class="k">This Month</div></div>
+        <div class="rev-stat"><div class="v" id="rCount">0</div><div class="k">Transactions</div></div>
+      </div>
+      <div class="prog-wrap"><div class="prog-bar" id="revProgBar" style="width:0%"></div></div>
+      <div style="font-size:9px;color:var(--mid);margin-bottom:12px;" id="revProgText">$0 of $1,000 monthly target</div>
+      <div class="rev-row">
+        <input class="rev-input" id="revAmt" type="number" placeholder="Amount ($)" min="0" step="0.01"/>
+        <input class="rev-input" id="revClient" type="text" placeholder="Client name"/>
+        <select class="rev-select" id="revSource">
+          <option value="Instagram DM">Instagram DM</option>
+          <option value="Referral">Referral</option>
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="Walk-in">Walk-in</option>
+          <option value="Other">Other</option>
+        </select>
+        <select class="rev-select" id="revType">
+          <option value="Deposit (50%)">Deposit 50%</option>
+          <option value="Full Payment">Full Payment</option>
+          <option value="Balance">Balance</option>
+        </select>
+        <button class="btn btn-gold" onclick="addRevenue()">+ Log</button>
+      </div>
+      <div class="entries" id="revEntries"><div class="no-e">No payments logged yet.</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div><div class="card-head-title">Monthly Target</div><div class="card-head-sub">Set and track your income goal</div></div>
+    </div>
+    <div class="card-body">
+      <div class="rev-row">
+        <input class="rev-input" id="targetInput" type="number" placeholder="Monthly target ($)" min="0"/>
+        <button class="btn btn-blue" onclick="setTarget()">Set Target</button>
+      </div>
+      <div style="font-size:11px;color:var(--mid);margin-top:6px;">Current target: <strong id="targetDisplay">$1,000</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STYLE TRACKER TAB ══ -->
+<div id="tab-styles" class="tab-pane">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="section-label">Portfolio Completion Tracker</div>
+    <button class="btn btn-gold btn-sm" onclick="openAddStyle()">+ Add Style</button>
+  </div>
+  <div class="styles-grid" id="stylesGrid"></div>
+</div>
+
+<!-- ══ PROJECTS TAB ══ -->
+<div id="tab-projects" class="tab-pane">
+  <div class="proj-toolbar">
+    <button class="btn btn-gold" onclick="toggleProjForm()">+ New Project</button>
+    <select class="rev-select" id="projFilter" onchange="renderProjects()">
+      <option value="all">All Projects</option>
+      <option value="New">New</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Revision">Revision</option>
+      <option value="Delivered">Delivered</option>
+      <option value="Paid in Full">Paid in Full</option>
+    </select>
+  </div>
+
+  <div class="proj-form" id="projForm">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--dark);margin-bottom:14px;">New Project</div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Client Name(s)</label><input class="form-input" id="pClient" placeholder="e.g. Mary & Kingsley"/></div>
+      <div class="form-group"><label class="form-label">Package</label>
+        <select class="form-input" id="pPackage">
+          <option>Signature Program — $49</option>
+          <option>Coordinated Suite — $149</option>
+          <option>Identity Collection — $349</option>
+          <option>Brand Experience — $650</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Wedding Date</label><input class="form-input" type="date" id="pWeddingDate"/></div>
+      <div class="form-group"><label class="form-label">Delivery Deadline</label><input class="form-input" type="date" id="pDeadline"/></div>
+      <div class="form-group"><label class="form-label">Design Style</label>
+        <select class="form-input" id="pStyle">
+          <option>Burgundy Elegant</option>
+          <option>Ivory Minimal</option>
+          <option>Black & Gold Luxury</option>
+          <option>Royal Blue & Silver</option>
+          <option>Floral Romantic</option>
+          <option>Botanical Green</option>
+          <option>Modern Typography</option>
+          <option>Custom</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Source</label>
+        <select class="form-input" id="pSource">
+          <option>Instagram DM</option>
+          <option>Referral — Photographer</option>
+          <option>Referral — Planner</option>
+          <option>Referral — Client</option>
+          <option>WhatsApp</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Wedding Colours</label><input class="form-input" id="pColours" placeholder="e.g. Burgundy & Gold"/></div>
+      <div class="form-group"><label class="form-label">Deposit Amount ($)</label><input class="form-input" type="number" id="pDeposit" placeholder="e.g. 24.50"/></div>
+      <div class="form-group"><label class="form-label">Total Amount ($)</label><input class="form-input" type="number" id="pTotal" placeholder="e.g. 49"/></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Notes</label><input class="form-input" id="pNotes" placeholder="Any special requests or notes..."/></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-gold" onclick="saveProject()">Save Project</button>
+      <button class="btn btn-blue" onclick="toggleProjForm()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="proj-list" id="projList"></div>
+</div>
+
+<!-- ══ INSIGHTS TAB ══ -->
+<div id="tab-insights" class="tab-pane">
+  <div class="insights-grid" id="insightsGrid"></div>
+  <div class="card">
+    <div class="card-head"><div class="card-head-title">Revenue by Source</div></div>
+    <div class="card-body" id="sourceChart"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-head-title">Package Popularity</div></div>
+    <div class="card-body" id="pkgChart"></div>
+  </div>
+</div>
+
+<!-- ADD STYLE MODAL -->
+<div class="modal-overlay" id="styleModal">
+  <div class="modal">
+    <h3>Add New Style</h3>
+    <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Style Name</label><input class="form-input" id="newStyleName" placeholder="e.g. Floral Romantic"/></div>
+    <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Header Colour (hex)</label><input class="form-input" id="newStyleColor" placeholder="#4A0E1A" value="#1E3A5F"/></div>
+    <div class="modal-actions">
+      <button class="btn btn-blue" onclick="closeStyleModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="addStyle()">Add Style</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let revenue   = JSON.parse(localStorage.getItem('dc2_revenue')  || '[]');
+let projects  = JSON.parse(localStorage.getItem('dc2_projects') || '[]');
+let styles    = JSON.parse(localStorage.getItem('dc2_styles')   || 'null') || getDefaultStyles();
+let styleTicks= JSON.parse(localStorage.getItem('dc2_sticks')   || '{}');
+let projTicks = JSON.parse(localStorage.getItem('dc2_pticks')   || '{}');
+let projStatus= JSON.parse(localStorage.getItem('dc2_pstatus')  || '{}');
+let target    = parseFloat(localStorage.getItem('dc2_target')   || '1000');
+let openProjs = [];
+const START_DATE = new Date('2025-03-14');
+
+// ── DEFAULT STYLES ─────────────────────────────────────────────────────────
+function getDefaultStyles() {
+  return [
+    { id:'s1', name:'Burgundy Elegant', color:'#4A0E1A', pieces:[
+      {id:'p1',label:'Invitation Card',pkg:'P1+'},
+      {id:'p2',label:'Ceremony Program (4-panel)',pkg:'P1'},
+      {id:'p3',label:'Ceremony Program (6-panel)',pkg:'P1'},
+      {id:'p4',label:'Welcome Sign',pkg:'P3+'},
+      {id:'p5',label:'Seating Plan',pkg:'P3+'},
+      {id:'p6',label:'Table Numbers',pkg:'P4'},
+      {id:'p7',label:'Sticker Design',pkg:'P3+'},
+      {id:'p8',label:'Thank-You Card',pkg:'P3+'},
+      {id:'p9',label:'Social Media Graphics',pkg:'P4'},
+      {id:'p10',label:'QR Code Integration',pkg:'P4'},
+    ]},
+    { id:'s2', name:'Ivory Minimal', color:'#1E3A5F', pieces:[
+      {id:'p1',label:'Invitation Card',pkg:'P1+'},
+      {id:'p2',label:'Ceremony Program (4-panel)',pkg:'P1'},
+      {id:'p3',label:'Ceremony Program (6-panel)',pkg:'P1'},
+      {id:'p4',label:'Welcome Sign',pkg:'P3+'},
+      {id:'p5',label:'Seating Plan',pkg:'P3+'},
+      {id:'p6',label:'Table Numbers',pkg:'P4'},
+      {id:'p7',label:'Sticker Design',pkg:'P3+'},
+      {id:'p8',label:'Thank-You Card',pkg:'P3+'},
+      {id:'p9',label:'Social Media Graphics',pkg:'P4'},
+      {id:'p10',label:'QR Code Integration',pkg:'P4'},
+    ]},
+    { id:'s3', name:'Black & Gold Luxury', color:'#1A1A1A', pieces:[
+      {id:'p1',label:'Invitation Card',pkg:'P1+'},
+      {id:'p2',label:'Ceremony Program (4-panel)',pkg:'P1'},
+      {id:'p3',label:'Ceremony Program (6-panel)',pkg:'P1'},
+      {id:'p4',label:'Welcome Sign',pkg:'P3+'},
+      {id:'p5',label:'Seating Plan',pkg:'P3+'},
+      {id:'p6',label:'Table Numbers',pkg:'P4'},
+      {id:'p7',label:'Sticker Design',pkg:'P3+'},
+      {id:'p8',label:'Thank-You Card',pkg:'P3+'},
+      {id:'p9',label:'Social Media Graphics',pkg:'P4'},
+      {id:'p10',label:'QR Code Integration',pkg:'P4'},
+    ]},
+    { id:'s4', name:'Royal Blue & Silver', color:'#0D1B2A', pieces:[
+      {id:'p1',label:'Invitation Card',pkg:'P1+'},
+      {id:'p2',label:'Ceremony Program (4-panel)',pkg:'P1'},
+      {id:'p3',label:'Ceremony Program (6-panel)',pkg:'P1'},
+      {id:'p4',label:'Welcome Sign',pkg:'P3+'},
+      {id:'p5',label:'Seating Plan',pkg:'P3+'},
+      {id:'p6',label:'Table Numbers',pkg:'P4'},
+      {id:'p7',label:'Sticker Design',pkg:'P3+'},
+      {id:'p8',label:'Thank-You Card',pkg:'P3+'},
+      {id:'p9',label:'Social Media Graphics',pkg:'P4'},
+      {id:'p10',label:'QR Code Integration',pkg:'P4'},
+    ]},
+    { id:'s5', name:'Floral Romantic', color:'#6B1525', pieces:[
+      {id:'p1',label:'Invitation Card',pkg:'P1+'},
+      {id:'p2',label:'Ceremony Program (4-panel)',pkg:'P1'},
+      {id:'p3',label:'Ceremony Program (6-panel)',pkg:'P1'},
+      {id:'p4',label:'Welcome Sign',pkg:'P3+'},
+      {id:'p5',label:'Seating Plan',pkg:'P3+'},
+      {id:'p6',label:'Table Numbers',pkg:'P4'},
+      {id:'p7',label:'Sticker Design',pkg:'P3+'},
+      {id:'p8',label:'Thank-You Card',pkg:'P3+'},
+      {id:'p9',label:'Social Media Graphics',pkg:'P4'},
+      {id:'p10',label:'QR Code Integration',pkg:'P4'},
+    ]},
+    { id:'s6', name:'Botanical Green', color:'#1A3A2A', pieces:[
+      {id:'p1',label:'Invitation Card',pkg:'P1+'},
+      {id:'p2',label:'Ceremony Program (4-panel)',pkg:'P1'},
+      {id:'p3',label:'Ceremony Program (6-panel)',pkg:'P1'},
+      {id:'p4',label:'Welcome Sign',pkg:'P3+'},
+      {id:'p5',label:'Seating Plan',pkg:'P3+'},
+      {id:'p6',label:'Table Numbers',pkg:'P4'},
+      {id:'p7',label:'Sticker Design',pkg:'P3+'},
+      {id:'p8',label:'Thank-You Card',pkg:'P3+'},
+      {id:'p9',label:'Social Media Graphics',pkg:'P4'},
+      {id:'p10',label:'QR Code Integration',pkg:'P4'},
+    ]},
+    { id:'s7', name:'Modern Typography', color:'#2E2E2E', pieces:[
+      {id:'p1',label:'Invitation Card',pkg:'P1+'},
+      {id:'p2',label:'Ceremony Program (4-panel)',pkg:'P1'},
+      {id:'p3',label:'Ceremony Program (6-panel)',pkg:'P1'},
+      {id:'p4',label:'Welcome Sign',pkg:'P3+'},
+      {id:'p5',label:'Seating Plan',pkg:'P3+'},
+      {id:'p6',label:'Table Numbers',pkg:'P4'},
+      {id:'p7',label:'Sticker Design',pkg:'P3+'},
+      {id:'p8',label:'Thank-You Card',pkg:'P3+'},
+      {id:'p9',label:'Social Media Graphics',pkg:'P4'},
+      {id:'p10',label:'QR Code Integration',pkg:'P4'},
+    ]},
+  ];
+}
+
+// ── PROJECT CHECKLIST ITEMS ────────────────────────────────────────────────
+function getProjChecklist(pkg) {
+  const base = [
+    {id:'c1',s:'📋 Client Intake',label:'Collect all client details — names, date, colours, style, venue'},
+    {id:'c2',s:'📋 Client Intake',label:'Confirm package and total amount'},
+    {id:'c3',s:'📋 Client Intake',label:'Receive and confirm 50% deposit'},
+    {id:'c4',s:'🎨 Design',label:'Create first draft'},
+    {id:'c5',s:'🎨 Design',label:'Internal review — check for typos'},
+    {id:'c6',s:'🎨 Design',label:'Internal review — check alignment & consistency'},
+    {id:'c7',s:'🎨 Design',label:'Send first draft to client'},
+    {id:'c8',s:'🎨 Design',label:'Receive and apply revision notes'},
+    {id:'c9',s:'🎨 Design',label:'Final approval received from client'},
+    {id:'c10',s:'📦 Delivery',label:'Export print-ready PDF (300 DPI)'},
+    {id:'c11',s:'📦 Delivery',label:'Export digital sharing version'},
+    {id:'c12',s:'📦 Delivery',label:'Final proofread before sending'},
+    {id:'c13',s:'📦 Delivery',label:'Send files to client'},
+    {id:'c14',s:'📦 Delivery',label:'Confirm client received and is happy'},
+    {id:'c15',s:'💰 Payment',label:'Collect remaining 50% balance'},
+    {id:'c16',s:'⭐ After',label:'Request testimonial'},
+    {id:'c17',s:'⭐ After',label:'Request referral or offer referral discount'},
+  ];
+  if (pkg.includes('349') || pkg.includes('650')) {
+    base.splice(9,0,
+      {id:'cx1',s:'🎨 Design',label:'Welcome sign design'},
+      {id:'cx2',s:'🎨 Design',label:'Seating plan design'},
+      {id:'cx3',s:'🎨 Design',label:'Sticker design'},
+      {id:'cx4',s:'🎨 Design',label:'Thank-you card design'},
+    );
+  }
+  if (pkg.includes('650')) {
+    base.splice(13,0,
+      {id:'cx5',s:'🎨 Design',label:'Table numbers design'},
+      {id:'cx6',s:'🎨 Design',label:'Social media graphics (square + story)'},
+      {id:'cx7',s:'🎨 Design',label:'QR Code integration setup'},
+    );
+  }
+  return base;
+}
+
+// ── NAV ────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='insights') renderInsights();
+}
+
+// ── REVENUE ────────────────────────────────────────────────────────────────
+function addRevenue() {
+  const amt=parseFloat(document.getElementById('revAmt').value);
+  const client=document.getElementById('revClient').value.trim()||'Unknown';
+  const source=document.getElementById('revSource').value;
+  const type=document.getElementById('revType').value;
+  if(!amt||amt<=0) return;
+  revenue.push({id:Date.now(),amt,client,source,type,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})});
+  localStorage.setItem('dc2_revenue',JSON.stringify(revenue));
+  document.getElementById('revAmt').value='';
+  document.getElementById('revClient').value='';
+  renderRevenue(); updateHeader();
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('revAmt').addEventListener('keydown',e=>{if(e.key==='Enter')addRevenue();});
+});
+
+function delRevenue(id) {
+  revenue=revenue.filter(r=>r.id!==id);
+  localStorage.setItem('dc2_revenue',JSON.stringify(revenue));
+  renderRevenue(); updateHeader();
+}
+
+function setTarget() {
+  const v=parseFloat(document.getElementById('targetInput').value);
+  if(!v||v<=0) return;
+  target=v; localStorage.setItem('dc2_target',v);
+  document.getElementById('targetInput').value='';
+  renderRevenue();
+}
+
+function renderRevenue() {
+  const total=revenue.reduce((s,r)=>s+r.amt,0);
+  const now=new Date(); const thisMonth=revenue.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,r)=>s+r.amt,0);
+  const pending=projects.filter(p=>projStatus[p.id]!=='Paid in Full').reduce((s,p)=>s+(p.total-(p.deposit||0)),0);
+  const pct=Math.min(100,(thisMonth/target)*100);
+  document.getElementById('rTotalEarned').textContent='$'+total.toLocaleString('en-US',{minimumFractionDigits:2});
+  document.getElementById('rPending').textContent='$'+pending.toLocaleString('en-US',{minimumFractionDigits:2});
+  document.getElementById('rThisMonth').textContent='$'+thisMonth.toLocaleString('en-US',{minimumFractionDigits:2});
+  document.getElementById('rCount').textContent=revenue.length;
+  document.getElementById('revProgBar').style.width=pct+'%';
+  document.getElementById('revProgText').textContent=`$${thisMonth.toFixed(2)} of $${target.toLocaleString()} monthly target — ${Math.round(pct)}%`;
+  document.getElementById('targetDisplay').textContent='$'+target.toLocaleString();
+  const el=document.getElementById('revEntries');
+  if(!revenue.length){el.innerHTML='<div class="no-e">No payments logged yet.</div>';return;}
+  el.innerHTML=[...revenue].reverse().map(r=>`
+    <div class="entry">
+      <span>${r.date} · <b>${r.client}</b></span>
+      <span class="src">${r.source}</span>
+      <span class="src" style="background:var(--ok2);color:var(--ok);">${r.type}</span>
+      <span class="amt">+$${r.amt.toLocaleString('en-US',{minimumFractionDigits:2})}</span>
+      <button class="btn-danger" onclick="delRevenue(${r.id})">×</button>
+    </div>`).join('');
+}
+
+// ── HEADER UPDATE ──────────────────────────────────────────────────────────
+function updateHeader() {
+  const total=revenue.reduce((s,r)=>s+r.amt,0);
+  document.getElementById('hdrEarned').textContent='$'+total.toLocaleString('en-US',{minimumFractionDigits:2});
+  const days=Math.floor((new Date()-START_DATE)/86400000);
+  document.getElementById('hdrDays').textContent=days;
+  document.getElementById('hdrProjects').textContent=projects.length;
+}
+
+// ── STYLES ─────────────────────────────────────────────────────────────────
+function renderStyles() {
+  const grid=document.getElementById('stylesGrid');
+  grid.innerHTML=styles.map(style=>{
+    const done=style.pieces.filter(p=>styleTicks[style.id+'_'+p.id]).length;
+    const pct=Math.round((done/style.pieces.length)*100);
+    return `<div class="style-card">
+      <div class="style-head" style="background:${style.color};">
+        <div>
+          <div class="style-name">${style.name}</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;">${done}/${style.pieces.length} pieces complete</div>
+        </div>
+        <div class="style-pct">${pct}%</div>
+      </div>
+      <div class="style-prog"><div class="style-prog-bar" style="width:${pct}%;background:${style.color};"></div></div>
+      <div class="style-body">
+        ${style.pieces.map(p=>{
+          const key=style.id+'_'+p.id;
+          const chk=styleTicks[key]||false;
+          return `<div class="piece-row" onclick="togglePiece('${key}')">
+            <div class="ptick ${chk?'on':''}"></div>
+            <span class="piece-label ${chk?'done':''}">${p.label}</span>
+            <span class="piece-pkg">${p.pkg}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function togglePiece(key) {
+  styleTicks[key]=!styleTicks[key];
+  localStorage.setItem('dc2_sticks',JSON.stringify(styleTicks));
+  renderStyles();
+}
+
+function openAddStyle(){document.getElementById('styleModal').classList.add('open');}
+function closeStyleModal(){document.getElementById('styleModal').classList.remove('open');}
+
+function addStyle() {
+  const name=document.getElementById('newStyleName').value.trim();
+  const color=document.getElementById('newStyleColor').value.trim()||'#1E3A5F';
+  if(!name) return;
+  const id='s'+Date.now();
+  const pieces=[
+    {id:'p1',label:'Invitation Card',pkg:'P1+'},
+    {id:'p2',label:'Ceremony Program (4-panel)',pkg:'P1'},
+    {id:'p3',label:'Ceremony Program (6-panel)',pkg:'P1'},
+    {id:'p4',label:'Welcome Sign',pkg:'P3+'},
+    {id:'p5',label:'Seating Plan',pkg:'P3+'},
+    {id:'p6',label:'Table Numbers',pkg:'P4'},
+    {id:'p7',label:'Sticker Design',pkg:'P3+'},
+    {id:'p8',label:'Thank-You Card',pkg:'P3+'},
+    {id:'p9',label:'Social Media Graphics',pkg:'P4'},
+    {id:'p10',label:'QR Code Integration',pkg:'P4'},
+  ];
+  styles.push({id,name,color,pieces});
+  localStorage.setItem('dc2_styles',JSON.stringify(styles));
+  closeStyleModal();
+  document.getElementById('newStyleName').value='';
+  renderStyles();
+}
+
+// ── PROJECTS ───────────────────────────────────────────────────────────────
+function toggleProjForm(){
+  const f=document.getElementById('projForm');
+  f.classList.toggle('open');
+}
+
+function saveProject() {
+  const client=document.getElementById('pClient').value.trim();
+  if(!client){alert('Please enter a client name.');return;}
+  const proj={
+    id:Date.now(),
+    client,
+    package:document.getElementById('pPackage').value,
+    style:document.getElementById('pStyle').value,
+    source:document.getElementById('pSource').value,
+    colours:document.getElementById('pColours').value,
+    weddingDate:document.getElementById('pWeddingDate').value,
+    deadline:document.getElementById('pDeadline').value,
+    deposit:parseFloat(document.getElementById('pDeposit').value)||0,
+    total:parseFloat(document.getElementById('pTotal').value)||0,
+    notes:document.getElementById('pNotes').value,
+    createdAt:new Date().toISOString(),
+  };
+  projects.push(proj);
+  projStatus[proj.id]='New';
+  localStorage.setItem('dc2_projects',JSON.stringify(projects));
+  localStorage.setItem('dc2_pstatus',JSON.stringify(projStatus));
+  toggleProjForm();
+  ['pClient','pColours','pDeposit','pTotal','pNotes'].forEach(id=>document.getElementById(id).value='');
+  ['pWeddingDate','pDeadline'].forEach(id=>document.getElementById(id).value='');
+  renderProjects(); updateHeader();
+}
+
+function deleteProject(id) {
+  if(!confirm('Delete this project?')) return;
+  projects=projects.filter(p=>p.id!==id);
+  delete projStatus[id]; delete projTicks[id];
+  localStorage.setItem('dc2_projects',JSON.stringify(projects));
+  localStorage.setItem('dc2_pstatus',JSON.stringify(projStatus));
+  localStorage.setItem('dc2_pticks',JSON.stringify(projTicks));
+  renderProjects(); updateHeader();
+}
+
+function toggleProjTask(pid,tid) {
+  if(!projTicks[pid]) projTicks[pid]={};
+  projTicks[pid][tid]=!projTicks[pid][tid];
+  localStorage.setItem('dc2_pticks',JSON.stringify(projTicks));
+  renderProjects();
+}
+
+function setProjectStatus(pid,status) {
+  projStatus[pid]=status;
+  localStorage.setItem('dc2_pstatus',JSON.stringify(projStatus));
+  renderProjects();
+}
+
+function daysUntil(dateStr) {
+  if(!dateStr) return null;
+  const diff=Math.ceil((new Date(dateStr)-new Date())/86400000);
+  return diff;
+}
+
+function renderProjects() {
+  const filter=document.getElementById('projFilter').value;
+  const list=document.getElementById('projList');
+  let filtered=projects.filter(p=>filter==='all'||projStatus[p.id]===filter);
+  if(!filtered.length){list.innerHTML='<div class="empty">No projects yet. Click "+ New Project" to add one.</div>';return;}
+  const statusBadge={'New':'b-new','In Progress':'b-progress','Revision':'b-revision','Delivered':'b-delivered','Paid in Full':'b-paid'};
+  list.innerHTML=filtered.map(proj=>{
+    const status=projStatus[proj.id]||'New';
+    const days=daysUntil(proj.deadline);
+    const daysCls=days===null?'':days<0?'danger':days<=3?'warn':'ok';
+    const daysTxt=days===null?'No deadline':days<0?`${Math.abs(days)}d overdue`:days===0?'Due today':`${days}d left`;
+    const checklist=getProjChecklist(proj.package);
+    const ticks=projTicks[proj.id]||{};
+    const done=checklist.filter(c=>ticks[c.id]).length;
+    const pct=Math.round((done/checklist.length)*100);
+    const isOpen=openProjs.includes(proj.id);
+    const sections=[...new Set(checklist.map(c=>c.s))];
+    return `<div class="proj-card">
+      <div class="proj-head" onclick="toggleProj(${proj.id})">
+        <div class="proj-names">
+          <div class="proj-client">${proj.client}</div>
+          <div class="proj-pkg">${proj.package} · ${proj.style} · ${proj.source}</div>
+        </div>
+        <div class="proj-meta">
+          <span class="badge ${statusBadge[status]||'b-new'}">${status}</span>
+          <span class="days-badge ${daysCls}">${daysTxt}</span>
+          <span style="font-size:11px;color:var(--gold);font-weight:700;">${pct}%</span>
+        </div>
+      </div>
+      <div class="proj-body ${isOpen?'open':''}">
+        <div class="proj-info-grid">
+          <div class="proj-info-box"><div class="proj-info-label">Wedding Date</div><div class="proj-info-val">${proj.weddingDate||'—'}</div></div>
+          <div class="proj-info-box"><div class="proj-info-label">Deadline</div><div class="proj-info-val">${proj.deadline||'—'}</div></div>
+          <div class="proj-info-box"><div class="proj-info-label">Colours</div><div class="proj-info-val">${proj.colours||'—'}</div></div>
+          <div class="proj-info-box"><div class="proj-info-label">Deposit Received</div><div class="proj-info-val" style="color:var(--ok);">$${proj.deposit.toFixed(2)}</div></div>
+          <div class="proj-info-box"><div class="proj-info-label">Balance Due</div><div class="proj-info-val" style="color:var(--warn);">$${(proj.total-proj.deposit).toFixed(2)}</div></div>
+          <div class="proj-info-box"><div class="proj-info-label">Total Value</div><div class="proj-info-val">$${proj.total.toFixed(2)}</div></div>
+          ${proj.notes?`<div class="proj-info-box" style="grid-column:1/-1"><div class="proj-info-label">Notes</div><div class="proj-info-val">${proj.notes}</div></div>`:''}
+        </div>
+        <div class="proj-progress">
+          <div style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);">Project Progress</div>
+          <div class="proj-prog-wrap"><div class="proj-prog-bar" style="width:${pct}%"></div></div>
+          <div class="proj-prog-text">${done} of ${checklist.length} tasks complete</div>
+        </div>
+        <div style="font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-bottom:8px;">Status</div>
+        <div class="status-row">
+          ${['New','In Progress','Revision','Delivered','Paid in Full'].map(s=>`<button class="status-btn ${status===s?'active-s':''}" onclick="setProjectStatus(${proj.id},'${s}')">${s}</button>`).join('')}
+        </div>
+        <div class="proj-checklist">
+          ${sections.map(sec=>`
+            <div class="proj-check-section">
+              <div class="proj-check-title">${sec}</div>
+              ${checklist.filter(c=>c.s===sec).map(c=>{
+                const chk=ticks[c.id]||false;
+                return `<div class="proj-task" onclick="toggleProjTask(${proj.id},'${c.id}')">
+                  <div class="ptick ${chk?'on':''}"></div>
+                  <span class="piece-label ${chk?'done':''}">${c.label}</span>
+                </div>`;
+              }).join('')}
+            </div>`).join('')}
+        </div>
+        <div class="proj-actions">
+          <button class="btn btn-danger" onclick="deleteProject(${proj.id})">Delete Project</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleProj(id) {
+  const i=openProjs.indexOf(id);
+  if(i>-1) openProjs.splice(i,1); else openProjs.push(id);
+  renderProjects();
+}
+
+// ── INSIGHTS ───────────────────────────────────────────────────────────────
+function renderInsights() {
+  const total=revenue.reduce((s,r)=>s+r.amt,0);
+  const avgPkg=projects.length?projects.reduce((s,p)=>s+p.total,0)/projects.length:0;
+  const completed=projects.filter(p=>projStatus[p.id]==='Paid in Full').length;
+  const days=Math.floor((new Date()-START_DATE)/86400000);
+
+  document.getElementById('insightsGrid').innerHTML=`
+    <div class="insight-box"><div class="insight-val">$${total.toFixed(2)}</div><div class="insight-label">Total Revenue</div><div class="insight-sub">All time</div></div>
+    <div class="insight-box"><div class="insight-val">${projects.length}</div><div class="insight-label">Total Projects</div><div class="insight-sub">${completed} completed & paid</div></div>
+    <div class="insight-box"><div class="insight-val">$${avgPkg.toFixed(0)}</div><div class="insight-label">Avg Project Value</div><div class="insight-sub">Across all packages</div></div>
+    <div class="insight-box"><div class="insight-val">${days}</div><div class="insight-label">Days Active</div><div class="insight-sub">Since March 14, 2025</div></div>
+    <div class="insight-box"><div class="insight-val">${revenue.length}</div><div class="insight-label">Transactions</div><div class="insight-sub">Deposits + balances</div></div>
+    <div class="insight-box"><div class="insight-val">$${days>0?(total/days).toFixed(2):'0'}</div><div class="insight-label">Revenue / Day</div><div class="insight-sub">All time average</div></div>`;
+
+  // Source breakdown
+  const sources={};
+  revenue.forEach(r=>{sources[r.source]=(sources[r.source]||0)+r.amt;});
+  const maxS=Math.max(...Object.values(sources),1);
+  document.getElementById('sourceChart').innerHTML=Object.keys(sources).length?
+    Object.entries(sources).sort((a,b)=>b[1]-a[1]).map(([src,amt])=>`
+      <div class="source-bar">
+        <div class="source-label"><span>${src}</span><span><b>$${amt.toFixed(2)}</b></span></div>
+        <div class="source-track"><div class="source-fill" style="width:${(amt/maxS)*100}%"></div></div>
+      </div>`).join('')
+    :'<div class="no-e">No revenue data yet.</div>';
+
+  // Package breakdown
+  const pkgs={};
+  projects.forEach(p=>{const k=p.package.split('—')[0].trim();pkgs[k]=(pkgs[k]||0)+1;});
+  const maxP=Math.max(...Object.values(pkgs),1);
+  document.getElementById('pkgChart').innerHTML=Object.keys(pkgs).length?
+    Object.entries(pkgs).sort((a,b)=>b[1]-a[1]).map(([pkg,cnt])=>`
+      <div class="source-bar">
+        <div class="source-label"><span>${pkg}</span><span><b>${cnt} project${cnt>1?'s':''}</b></span></div>
+        <div class="source-track"><div class="source-fill" style="width:${(cnt/maxP)*100}%"></div></div>
+      </div>`).join('')
+    :'<div class="no-e">No project data yet.</div>';
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+// Pre-tick already completed pieces for Burgundy and Ivory
+if(!localStorage.getItem('dc2_sticks')) {
+  // Burgundy — invitation ✓ and program ✓
+  styleTicks['s1_p1']=true; styleTicks['s1_p2']=true;
+  // Ivory — invitation ✓
+  styleTicks['s2_p1']=true;
+  // Black & Gold — invitation ✓
+  styleTicks['s3_p1']=true;
+  localStorage.setItem('dc2_sticks',JSON.stringify(styleTicks));
+}
+
+renderRevenue();
+renderStyles();
+renderProjects();
+updateHeader();
+</script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0C0D14">
+<title>Dee_Cistem — v5.1 (Payment Ready)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+:root{
+  --premium-heading:'Sora',sans-serif;
+  --bg:#0C0D14;--bg-light:#F5F5F5;
+  --bg2:#11131D;--bg2-light:#F2F2F2;
+  --surface:#161B27;--surface-light:#FFFFFF;
+  --card:#1C1E2C;--card-light:#FFFFFF;
+  --card2:#1F2535;--card2-light:#F8FAFC;
+  --border:#2A2D42;--border-light:#D9D9D9;
+  --accent:#4F8EF7;--accent-light:#2563EB;
+  --fin:#2DD4A0;--spirit:#F5B942;--mind:#9B7FFA;
+  --energy:#5BA4F5;--know:#2DD4A0;--dex:#F472B6;--dc:#38BDF8;
+  --ok:#22C55E;--warn:#F59E0B;--err:#F87171;--gold:#FBBF24;
+  --t1:#F0F2FF;--t1-light:#1a1a1a;
+  --t2:#9BA3C4;--t2-light:#666;
+  --t3:#4A5070;--t3-light:#555555;
+  --t4:#252B3B;
+  --r:14px;--rs:8px;--rl:20px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --shadow-accent:0 4px 20px rgba(79,142,247,.25);
+}
+
+/* ── Base Styles ── */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:'Sora', sans-serif;
+  min-height:100vh;max-width:430px;margin:0 auto;
+  padding-bottom:100px;
+  transition:background 0.3s, color 0.3s;
+  overflow-x:hidden;
+}
+
+/* ── Animations ── */
+.screen { display: none; animation: routeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+.screen.active { display: block; }
+@keyframes routeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Components ── */
+.header{
+  background:linear-gradient(180deg,var(--card) 0%,var(--bg) 100%);
+  padding:20px 20px 16px; display:flex; justify-content:space-between; align-items:center;
+  border-bottom:1px solid var(--border); position:sticky; top:0; z-index:20; backdrop-filter:blur(10px);
+}
+.header h1{ font-size:20px; font-weight:800; color:var(--accent); letter-spacing:2px; font-family:'Montserrat', sans-serif; }
+.card{ background:var(--card); border-radius:14px; padding:18px; margin-bottom:12px; border:1px solid var(--border); }
+.btn{
+  width:100%; padding:15px; border:none; border-radius:12px; font-size:14px; font-weight:700;
+  cursor:pointer; transition:all 0.15s; letter-spacing:0.3px; font-family:'Sora', sans-serif;
+}
+.btn-primary{ background:linear-gradient(135deg,#4F8EF7,#3B6FD4); color:white; box-shadow:0 4px 12px rgba(79,142,247,0.3); }
+.field{
+  width:100%; background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:14px; color:var(--t1); font-size:15px; margin-bottom:10px; outline:none; font-family:'Sora', sans-serif;
+}
+
+/* ── Paywall Modal Styles ── */
+.pay-modal {
+  position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:1000;
+  display:none; align-items:flex-end; justify-content:center;
+  backdrop-filter:blur(12px);
+}
+.pay-sheet {
+  background:var(--bg2); border-radius:24px 24px 0 0; padding:32px 24px 48px;
+  width:100%; max-width:430px; border-top:1px solid var(--border);
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.bank-option {
+  display:flex; align-items:center; gap:12px; padding:16px;
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  margin-bottom:10px; cursor:pointer; transition:0.2s;
+}
+.bank-option:active { transform:scale(0.98); border-color:var(--accent); }
+.bank-option.selected { border-color:var(--accent); background:rgba(79,142,247,0.08); }
+
+/* ── Toasts ── */
+#toastContainer { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:2000; display:flex; flex-direction:column; gap:8px; width:90%; max-width:380px; }
+.toast { padding:12px 16px; border-radius:12px; font-size:13px; font-weight:600; text-align:center; color:#fff; animation:toastIn 0.3s ease-out; box-shadow:var(--shadow); }
+@keyframes toastIn { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+.toast.ok { background:var(--ok); color:#000; }
+.toast.err { background:var(--err); }
+
+/* ── Desktop Sidebar ── */
+@media (min-width: 1200px) {
+  body { max-width:100%; display:grid; grid-template-columns:260px 1fr; height:100vh; padding-bottom:0; overflow:hidden; }
+  .sidebar { display:flex !important; flex-direction:column; background:var(--bg2); border-right:1px solid var(--border); padding:32px 20px; gap:8px; }
+  .main-content { overflow-y:auto; padding:40px; }
+  .sidebar-btn { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; border:none; background:none; color:var(--t2); cursor:pointer; font-size:14px; font-weight:600; transition:.15s; font-family:'Sora'; text-align:left; }
+  .sidebar-btn:hover { background:rgba(79,142,247,0.08); color:var(--accent); }
+  .sidebar-btn.active { background:rgba(79,142,247,0.12); color:var(--accent); }
+}
+</style>
+</head>
+<body>
+
+<div id="toastContainer"></div>
+
+<!-- ── Desktop Sidebar ── -->
+<div class="sidebar" style="display:none">
+  <div style="font-family:'Montserrat'; font-size:18px; font-weight:800; color:var(--accent); letter-spacing:2px; margin-bottom:32px">DEE_CISTEM</div>
+  <button class="sidebar-btn active" onclick="show('home')">🏠 Dashboard</button>
+  <button class="sidebar-btn" onclick="show('financial')">💰 Financial</button>
+  <button class="sidebar-btn" onclick="show('focus')">🎯 AI Focus Debt</button>
+  <button class="sidebar-btn" onclick="show('settings')">⚙️ Settings</button>
+  <div style="flex:1"></div>
+  <button class="sidebar-btn" onclick="openPaywall()">⭐ Upgrade Pro</button>
+</div>
+
+<div class="main-content">
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="header">
+      <h1>DEE_CISTEM</h1>
+      <button class="btn" style="width:auto; padding:8px 12px; background:var(--accent); color:#fff; font-size:11px" onclick="openPaywall()">PRO</button>
+    </div>
+    <div style="padding:24px 20px 16px">
+      <div class="card" onclick="shareRank()">
+        <div style="font-size:10px; letter-spacing:2px; color:var(--t2); margin-bottom:6px">OVERALL RANK</div>
+        <div style="font-size:22px; font-weight:800; color:var(--accent); font-family:'Montserrat'" id="displayRank">Rank E · Score 1</div>
+      </div>
+      <div class="card" style="background:linear-gradient(135deg, rgba(79,142,247,0.08), rgba(155,127,250,0.08))">
+        <div style="font-size:11px; font-weight:800; color:var(--mind); margin-bottom:8px">AI INSIGHTS</div>
+        <div id="aiInsights" style="font-size:13px; color:var(--t2); line-height:1.5">Log more data to unlock personalized AI growth insights.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS (Payment Config) -->
+  <div id="settings" class="screen">
+    <div class="header">
+      <button class="btn" onclick="show('home')" style="width:auto; padding:8px; background:none; color:var(--t2)">← Back</button>
+      <h1 style="font-size:18px">Settings</h1>
+    </div>
+    <div style="padding:16px">
+      <div class="card">
+        <h3 style="margin-bottom:12px">Payment Settings (Admin)</h3>
+        <p style="font-size:12px; color:var(--t3); margin-bottom:16px">Configure your receiving accounts for Cleva, Moniepoint, and PalmPay.</p>
+        
+        <label style="font-size:11px; color:var(--t2)">CLEVA ACCOUNT</label>
+        <input class="field" id="cfgCleva" placeholder="Bank Name · Account Number" value="Cleva · 1234567890">
+        
+        <label style="font-size:11px; color:var(--t2)">MONIEPOINT ACCOUNT</label>
+        <input class="field" id="cfgMonie" placeholder="Bank Name · Account Number" value="Moniepoint · 0987654321">
+        
+        <label style="font-size:11px; color:var(--t2)">PALMPAY ACCOUNT</label>
+        <input class="field" id="cfgPalm" placeholder="Bank Name · Account Number" value="PalmPay · 1122334455">
+        
+        <button class="btn btn-primary" onclick="savePaymentConfig()">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Paywall Modal (Dynamic Bank Transfer) ── -->
+<div id="payModal" class="pay-modal" onclick="closePaywall()">
+  <div class="pay-sheet" onclick="event.stopPropagation()">
+    <div style="width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px"></div>
+    <h2 style="font-family:'Montserrat'; font-size:22px; margin-bottom:8px">Unlock Full Access</h2>
+    <p style="font-size:13px; color:var(--t2); margin-bottom:24px">Choose your preferred bank for the ₦1,000 / 24hr Pass.</p>
+    
+    <div class="bank-option" onclick="selectBank('cleva')">
+      <div style="font-size:20px">🏦</div>
+      <div style="flex:1">
+        <div style="font-weight:700; font-size:14px">Cleva / USD</div>
+        <div style="font-size:11px; color:var(--t2)" id="labelCleva">Cleva · 1234567890</div>
+      </div>
+      <div style="font-family:'Montserrat'; font-weight:800; color:var(--accent)">₦1,000</div>
+    </div>
+
+    <div class="bank-option" onclick="selectBank('monie')">
+      <div style="font-size:20px">🏦</div>
+      <div style="flex:1">
+        <div style="font-weight:700; font-size:14px">Moniepoint</div>
+        <div style="font-size:11px; color:var(--t2)" id="labelMonie">Moniepoint · 0987654321</div>
+      </div>
+      <div style="font-family:'Montserrat'; font-weight:800; color:var(--accent)">₦1,000</div>
+    </div>
+
+    <div class="bank-option" onclick="selectBank('palm')">
+      <div style="font-size:20px">🏦</div>
+      <div style="flex:1">
+        <div style="font-weight:700; font-size:14px">PalmPay</div>
+        <div style="font-size:11px; color:var(--t2)" id="labelPalm">PalmPay · 1122334455</div>
+      </div>
+      <div style="font-family:'Montserrat'; font-weight:800; color:var(--accent)">₦1,000</div>
+    </div>
+
+    <div id="transferInstructions" style="display:none; margin-top:20px; padding:16px; background:rgba(45,212,160,0.08); border:1px solid var(--fin); border-radius:12px">
+      <div style="font-size:12px; color:var(--fin); font-weight:700; margin-bottom:8px">STEP 2: VERIFY TRANSFER</div>
+      <p style="font-size:12px; color:var(--t2); margin-bottom:12px">Once you've made the transfer, paste the transaction reference or upload the receipt.</p>
+      <input class="field" id="payRef" placeholder="Transaction Reference / Session ID">
+      <button class="btn" style="background:var(--fin); color:#000" onclick="verifyPayment()">I've Paid — Activate Pro</button>
+    </div>
+
+    <div style="text-align:center; margin-top:20px">
+      <button class="btn" style="background:none; color:var(--t3); font-size:12px" onclick="closePaywall()">Maybe later</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── State ── */
+let CONFIG = {
+  cleva: localStorage.getItem('dc_pay_cleva') || 'Cleva · 1234567890',
+  monie: localStorage.getItem('dc_pay_monie') || 'Moniepoint · 0987654321',
+  palm: localStorage.getItem('dc_pay_palm') || 'PalmPay · 1122334455'
+};
+
+/* ── Navigation ── */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function toast(msg, type='info') {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerText = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+/* ── Payment Logic ── */
+function openPaywall() {
+  document.getElementById('labelCleva').innerText = CONFIG.cleva;
+  document.getElementById('labelMonie').innerText = CONFIG.monie;
+  document.getElementById('labelPalm').innerText = CONFIG.palm;
+  document.getElementById('payModal').style.display = 'flex';
+}
+
+function closePaywall() {
+  document.getElementById('payModal').style.display = 'none';
+  document.getElementById('transferInstructions').style.display = 'none';
+}
+
+function selectBank(bank) {
+  const details = CONFIG[bank];
+  navigator.clipboard.writeText(details.split(' · ')[1] || details);
+  toast("Account number copied to clipboard!", "ok");
+  document.getElementById('transferInstructions').style.display = 'block';
+  document.getElementById('transferInstructions').scrollIntoView({ behavior: 'smooth' });
+}
+
+function verifyPayment() {
+  const ref = document.getElementById('payRef').value.trim();
+  if (!ref) return toast("Please enter a transaction reference", "err");
+  
+  toast("Verifying transfer... (this takes 1-2 mins)", "info");
+  
+  // Simulation: In production, this would hit a Supabase function or Webhook
+  setTimeout(() => {
+    toast("Payment received! Welcome to Pro.", "ok");
+    localStorage.setItem('dc_is_pro', 'true');
+    closePaywall();
+  }, 2000);
+}
+
+/* ── Admin Config ── */
+function savePaymentConfig() {
+  CONFIG.cleva = document.getElementById('cfgCleva').value;
+  CONFIG.monie = document.getElementById('cfgMonie').value;
+  CONFIG.palm = document.getElementById('cfgPalm').value;
+  
+  localStorage.setItem('dc_pay_cleva', CONFIG.cleva);
+  localStorage.setItem('dc_pay_monie', CONFIG.monie);
+  localStorage.setItem('dc_pay_palm', CONFIG.palm);
+  
+  toast("Payment accounts updated!", "ok");
+}
+
+/* ── Init ── */
+window.onload = () => {
+  document.getElementById('cfgCleva').value = CONFIG.cleva;
+  document.getElementById('cfgMonie').value = CONFIG.monie;
+  document.getElementById('cfgPalm').value = CONFIG.palm;
+};
+</script>
+</body>
+</html>

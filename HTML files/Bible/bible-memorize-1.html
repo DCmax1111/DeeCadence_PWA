@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOGOS — Bible Memory · THE SYSTEM</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Spectral:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/*
+ ═══════════════════════════════════════════════════════════════
+  LOGOS — BIBLE MEMORY MODULE
+  Part of: THE SYSTEM — Knowledge Pillar
+  Theme:   THE SYSTEM dark palette
+  ─────────────────────────────────────────────────────────────
+  SQLite Schema (Knowledge Module — Kivy/Python side):
+  ─────────────────────────────────────────────────────────────
+  logos_verses (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    reference   TEXT NOT NULL UNIQUE,
+    text        TEXT NOT NULL,
+    translation TEXT DEFAULT 'KJV',
+    date_added  TEXT,
+    created_at  TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+
+  logos_reviews (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    verse_id     INTEGER REFERENCES logos_verses(id),
+    ease_factor  REAL DEFAULT 2.5,
+    interval     INTEGER DEFAULT 0,
+    repetitions  INTEGER DEFAULT 0,
+    next_review  TEXT,
+    last_score   INTEGER DEFAULT 0,
+    date         TEXT,
+    created_at   TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+
+  logos_sessions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    verses_reviewed INTEGER DEFAULT 0,
+    avg_score       REAL DEFAULT 0,
+    duration        INTEGER DEFAULT 0,
+    date            TEXT,
+    created_at      TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+
+  logos_streak (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    count      INTEGER DEFAULT 0,
+    last_date  TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+  ─────────────────────────────────────────────────────────────
+  localStorage mirrors these exactly for the web build.
+  Android Kivy port: replace localStorage calls with SQLite
+  queries 1:1. All keys map to column names directly.
+  ─────────────────────────────────────────────────────────────
+  Discipline payload exposed via: window.LOGOS.getDisciplinePayload()
+  THE SYSTEM Knowledge module calls this after each session.
+ ═══════════════════════════════════════════════════════════════
+*/
+
+  /* ── THE SYSTEM PALETTE ─────────────────────────────── */
+  :root {
+    /* Core */
+    --sys-bg:        #0A0E1A;
+    --sys-surface:   #0F1628;
+    --sys-surface2:  #151D35;
+    --sys-surface3:  #1C2642;
+    --sys-border:    #1E2D50;
+    --sys-border2:   #253460;
+
+    /* Accent — violet */
+    --sys-accent:    #7C3AED;
+    --sys-accent2:   #8B5CF6;
+    --sys-accent3:   #A78BFA;
+    --sys-accent-dim:#4C1D95;
+    --sys-accent-bg: rgba(124,58,237,0.1);
+    --sys-accent-bg2:rgba(124,58,237,0.18);
+
+    /* Text */
+    --sys-text:      #E2E8F0;
+    --sys-text2:     #94A3B8;
+    --sys-text3:     #64748B;
+    --sys-white:     #FFFFFF;
+
+    /* Scripture text — stays warm for readability */
+    --scripture:     #F1F5F9;
+    --scripture-dim: #CBD5E1;
+
+    /* Feedback */
+    --sys-green:     #10B981;
+    --sys-green-bg:  rgba(16,185,129,0.08);
+    --sys-red:       #EF4444;
+    --sys-red-bg:    rgba(239,68,68,0.08);
+    --sys-amber:     #F59E0B;
+    --sys-amber-bg:  rgba(245,158,11,0.08);
+
+    --shadow:        rgba(0,0,0,0.4);
+    --shadow-lg:     rgba(0,0,0,0.6);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Spectral', Georgia, serif;
+    background: var(--sys-bg);
+    color: var(--sys-text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle starfield texture */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.03) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.018'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 1;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  .app-header {
+    background: var(--sys-surface);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--sys-border2);
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 24px var(--shadow);
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .sys-breadcrumb {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.18em;
+    color: var(--sys-text3); text-transform: uppercase;
+  }
+  .sys-breadcrumb span { color: var(--sys-accent3); }
+  .app-logo {
+    font-family: 'Cinzel', serif; font-size: 1.4rem; letter-spacing: 0.18em;
+    color: var(--sys-accent2);
+    border-left: 1px solid var(--sys-border2); padding-left: 16px;
+  }
+  .app-logo sub { font-size: 0.5rem; color: var(--sys-text3); letter-spacing: 0.1em; vertical-align: super; font-style: italic; }
+  .header-nav { display: flex; gap: 6px; }
+  .nav-btn {
+    font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em;
+    padding: 7px 16px; border: 1px solid var(--sys-border2);
+    background: transparent; color: var(--sys-text2);
+    cursor: pointer; transition: all 0.2s; text-transform: uppercase; border-radius: 2px;
+  }
+  .nav-btn:hover { border-color: var(--sys-accent); color: var(--sys-accent3); background: var(--sys-accent-bg); }
+  .nav-btn.active { background: var(--sys-accent); border-color: var(--sys-accent); color: var(--sys-white); }
+
+  /* Streak pill in header */
+  .streak-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--sys-accent-bg); border: 1px solid var(--sys-accent-dim);
+    padding: 5px 12px; border-radius: 20px;
+    font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.08em;
+    color: var(--sys-accent3);
+  }
+  .streak-flame { font-size: 0.9rem; }
+
+  /* ── LAYOUT ─────────────────────────────────────────── */
+  .app-body { display: flex; min-height: calc(100vh - 61px); position: relative; z-index: 1; }
+
+  /* ── SIDEBAR ─────────────────────────────────────────── */
+  .sidebar {
+    width: 265px; background: var(--sys-surface);
+    padding: 20px 0; flex-shrink: 0;
+    border-right: 1px solid var(--sys-border);
+    overflow-y: auto; max-height: calc(100vh - 61px);
+    position: sticky; top: 61px;
+  }
+  .sidebar-section {
+    padding: 0 18px 16px;
+    border-bottom: 1px solid var(--sys-border);
+    margin-bottom: 16px;
+  }
+  .sidebar-label {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.2em;
+    color: var(--sys-accent3); text-transform: uppercase; margin-bottom: 10px;
+  }
+  .stage-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; cursor: pointer; border-radius: 3px;
+    transition: background 0.15s; margin-bottom: 2px;
+    border: 1px solid transparent;
+  }
+  .stage-item:hover { background: var(--sys-accent-bg); border-color: var(--sys-border2); }
+  .stage-item.active { background: var(--sys-accent-bg2); border-color: var(--sys-accent-dim); }
+  .stage-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .stage-name { font-family: 'Spectral', serif; font-size: 0.82rem; color: var(--sys-text); flex: 1; }
+  .stage-count { font-size: 0.68rem; color: var(--sys-text3); font-style: italic; }
+
+  .stat-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .stat-box {
+    flex: 1; background: var(--sys-surface2);
+    border: 1px solid var(--sys-border); padding: 9px 6px;
+    text-align: center; border-radius: 3px;
+  }
+  .stat-val { font-family: 'Cinzel', serif; font-size: 1.15rem; color: var(--sys-accent2); }
+  .stat-lbl { font-size: 0.56rem; color: var(--sys-text3); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+
+  .due-item {
+    font-size: 0.72rem; color: var(--sys-text2); padding: 5px 10px;
+    cursor: pointer; transition: background 0.15s;
+    border-left: 2px solid transparent; border-radius: 0 2px 2px 0;
+  }
+  .due-item:hover { background: var(--sys-accent-bg); border-left-color: var(--sys-accent2); }
+  .due-item .ref { font-family: 'Cinzel', serif; font-size: 0.62rem; color: var(--sys-accent3); display: block; }
+
+  /* ── CONTENT ─────────────────────────────────────────── */
+  .content { flex: 1; padding: 32px 40px; max-width: 920px; }
+
+  /* ── MEMORY CARD ─────────────────────────────────────── */
+  .memory-card {
+    background: var(--sys-surface);
+    border: 1px solid var(--sys-border);
+    border-top: 3px solid var(--sys-accent);
+    padding: 40px 52px;
+    box-shadow: 0 8px 40px var(--shadow), 0 0 0 1px rgba(124,58,237,0.06);
+    margin-bottom: 24px;
+    animation: cardIn 0.35s ease;
+    position: relative;
+  }
+  /* Subtle accent glow on card top edge */
+  .memory-card::before {
+    content: '';
+    position: absolute; top: -1px; left: 10%; right: 10%; height: 1px;
+    background: linear-gradient(to right, transparent, var(--sys-accent2), transparent);
+    opacity: 0.4;
+  }
+  @keyframes cardIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+  .card-meta {
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.15em;
+    color: var(--sys-accent3); text-transform: uppercase;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
+  }
+  .card-meta::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(to right, var(--sys-border2), transparent);
+  }
+  .card-stage-badge {
+    padding: 2px 8px; border: 1px solid var(--sys-accent-dim);
+    font-size: 0.58rem; color: var(--sys-accent3); border-radius: 2px;
+  }
+
+  /* Context — Elaborative Interrogation */
+  .context-box {
+    background: var(--sys-surface2); border-left: 3px solid var(--sys-accent);
+    padding: 10px 14px; margin-bottom: 22px; font-size: 0.78rem;
+    color: var(--sys-text2); font-style: italic; line-height: 1.7;
+    border-radius: 0 3px 3px 0;
+  }
+  .context-box strong {
+    font-style: normal; color: var(--sys-accent3);
+    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.12em;
+    display: block; margin-bottom: 5px; text-transform: uppercase;
+  }
+
+  /* Scripture text — warm on dark for readability */
+  .verse-text {
+    font-family: 'IM Fell English', serif; font-size: 1.28rem;
+    line-height: 2.3; color: var(--scripture);
+    margin-bottom: 10px; min-height: 60px; letter-spacing: 0.01em;
+  }
+  .verse-ref {
+    font-family: 'Cinzel', serif; font-size: 0.7rem; color: var(--sys-accent3);
+    letter-spacing: 0.12em; text-align: right; margin-bottom: 24px; font-style: italic;
+  }
+
+  /* ── CLOZE BLANKS ────────────────────────────────────── */
+  /* Dark bars visible against the dark card — using accent surface */
+  .cloze-blank-inline {
+    display: inline-block;
+    background: var(--sys-bg);
+    color: transparent;
+    border: 1px solid var(--sys-border2);
+    border-radius: 3px; padding: 1px 5px; min-width: 2em;
+    font-family: 'IM Fell English', serif; font-size: 1.28rem;
+    line-height: 2.3; vertical-align: baseline;
+    cursor: default; transition: background 0.35s, color 0.35s, border-color 0.35s;
+    user-select: none; letter-spacing: 0.01em;
+  }
+  .cloze-blank-inline.shown {
+    background: transparent; border-color: transparent;
+    color: var(--sys-green); font-weight: 600;
+  }
+  .cloze-blank-inline.missed {
+    background: var(--sys-red-bg); border-color: rgba(239,68,68,0.3);
+    color: var(--sys-red);
+  }
+
+  /* ── ANSWER INPUTS ───────────────────────────────────── */
+  .answer-area { margin: 22px 0 14px; }
+  .answer-label {
+    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--sys-accent3); margin-bottom: 10px;
+  }
+  .blanks-grid { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-bottom: 14px; }
+  .blank-wrap { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .blank-num {
+    font-size: 0.54rem; color: var(--sys-text3);
+    font-family: 'Cinzel', serif; letter-spacing: 0.08em;
+  }
+  .blank-input {
+    font-family: 'IM Fell English', serif; font-size: 0.95rem;
+    padding: 7px 10px; border: 1px solid var(--sys-border);
+    background: var(--sys-surface2); color: var(--scripture);
+    outline: none; width: 126px; transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: center; border-radius: 2px;
+  }
+  .blank-input:focus {
+    border-color: var(--sys-accent); box-shadow: 0 0 0 2px var(--sys-accent-bg);
+  }
+  .blank-input.correct {
+    border-color: var(--sys-green); background: var(--sys-green-bg); color: var(--sys-green);
+  }
+  .blank-input.wrong {
+    border-color: var(--sys-red); background: var(--sys-red-bg); color: var(--sys-red);
+  }
+
+  /* ── BUTTONS ─────────────────────────────────────────── */
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .btn {
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.12em;
+    padding: 10px 22px; border: 1px solid; cursor: pointer;
+    text-transform: uppercase; transition: all 0.18s; border-radius: 2px;
+  }
+  .btn-primary {
+    background: var(--sys-accent); color: var(--sys-white); border-color: var(--sys-accent);
+  }
+  .btn-primary:hover { background: var(--sys-accent2); border-color: var(--sys-accent2); }
+  .btn-outline {
+    background: transparent; color: var(--sys-text2); border-color: var(--sys-border);
+  }
+  .btn-outline:hover { border-color: var(--sys-accent); color: var(--sys-accent3); background: var(--sys-accent-bg); }
+  .btn-reveal {
+    background: transparent; color: var(--sys-text3); border-color: var(--sys-border);
+  }
+  .btn-reveal:hover { border-color: var(--sys-accent); color: var(--sys-accent3); background: var(--sys-accent-bg); }
+  .btn-sm { padding: 7px 14px; font-size: 0.62rem; }
+
+  /* ── SRS RATING BUTTONS ──────────────────────────────── */
+  .srs-wrap { margin-top: 22px; border-top: 1px solid var(--sys-border); padding-top: 18px; }
+  .srs-label-row {
+    font-family: 'Cinzel', serif; font-size: 0.57rem; color: var(--sys-text3);
+    letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 10px; text-align: center;
+  }
+  .srs-row { display: flex; gap: 8px; }
+  .srs-btn {
+    flex: 1; padding: 11px 6px; font-family: 'Cinzel', serif; font-size: 0.62rem;
+    letter-spacing: 0.1em; border: 1px solid; cursor: pointer; text-align: center;
+    text-transform: uppercase; transition: all 0.18s; border-radius: 2px;
+  }
+  .srs-again { color: var(--sys-red); border-color: rgba(239,68,68,0.4); background: transparent; }
+  .srs-again:hover { background: var(--sys-red); color: var(--sys-white); border-color: var(--sys-red); }
+  .srs-hard { color: var(--sys-amber); border-color: rgba(245,158,11,0.4); background: transparent; }
+  .srs-hard:hover { background: var(--sys-amber); color: var(--sys-bg); border-color: var(--sys-amber); }
+  .srs-good { color: var(--sys-green); border-color: rgba(16,185,129,0.4); background: transparent; }
+  .srs-good:hover { background: var(--sys-green); color: var(--sys-white); border-color: var(--sys-green); }
+  .srs-easy { color: var(--sys-accent2); border-color: rgba(124,58,237,0.4); background: transparent; }
+  .srs-easy:hover { background: var(--sys-accent); color: var(--sys-white); border-color: var(--sys-accent); }
+  .srs-sublabel {
+    display: block; font-size: 0.52rem; color: var(--sys-text3);
+    margin-top: 3px; font-family: 'Spectral', serif; font-style: italic;
+    text-transform: none; letter-spacing: 0;
+  }
+
+  /* ── FEEDBACK ────────────────────────────────────────── */
+  .feedback-box {
+    padding: 12px 16px; margin: 12px 0; font-size: 0.84rem; line-height: 1.6;
+    animation: fadeIn 0.25s ease; font-family: 'Spectral', serif; border-radius: 2px;
+  }
+  .fb-correct { background: var(--sys-green-bg); border-left: 3px solid var(--sys-green); color: #6ee7b7; }
+  .fb-partial { background: var(--sys-accent-bg); border-left: 3px solid var(--sys-accent); color: var(--sys-accent3); }
+  .fb-wrong { background: var(--sys-red-bg); border-left: 3px solid var(--sys-red); color: #fca5a5; }
+  @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+  /* Verse reveal box — on dark bg */
+  .verse-reveal-box {
+    background: var(--sys-surface2); border: 1px solid var(--sys-border);
+    border-left: 3px solid var(--sys-accent); padding: 18px 22px; margin: 14px 0;
+    animation: fadeIn 0.3s ease; border-radius: 0 3px 3px 0;
+  }
+  .vr-label {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.16em;
+    color: var(--sys-accent3); text-transform: uppercase; margin-bottom: 8px;
+  }
+  .vr-text { font-family: 'IM Fell English', serif; font-size: 1.05rem; line-height: 1.95; color: var(--scripture); }
+
+  /* ── PROGRESS ────────────────────────────────────────── */
+  .progress-label {
+    font-family: 'Cinzel', serif; font-size: 0.6rem; color: var(--sys-text3);
+    letter-spacing: 0.1em; margin-bottom: 6px; display: flex; justify-content: space-between;
+  }
+  .progress-wrap {
+    background: var(--sys-surface3); height: 3px; margin-bottom: 28px;
+    border-radius: 2px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(to right, var(--sys-accent-dim), var(--sys-accent2));
+    transition: width 0.5s ease; border-radius: 2px;
+  }
+
+  /* ── SESSION HEADER ──────────────────────────────────── */
+  .session-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+  .session-title {
+    font-family: 'Cinzel', serif; font-size: 1.15rem; color: var(--sys-text);
+    letter-spacing: 0.08em;
+  }
+  .session-subtitle {
+    font-family: 'Spectral', serif; font-style: italic;
+    font-size: 0.82rem; color: var(--sys-text3); margin-top: 3px;
+  }
+  .mode-chip {
+    padding: 4px 12px; border: 1px solid; font-family: 'Cinzel', serif;
+    font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; margin-left: auto;
+    border-radius: 2px;
+  }
+  .chip-new { color: var(--sys-accent2); border-color: var(--sys-accent-dim); background: var(--sys-accent-bg); }
+  .chip-review { color: var(--sys-accent3); border-color: var(--sys-border2); }
+
+  /* ── DASHBOARD ───────────────────────────────────────── */
+  .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+  .dash-card {
+    background: var(--sys-surface); padding: 20px 18px;
+    border: 1px solid var(--sys-border); border-top: 2px solid var(--sys-accent);
+    text-align: center; border-radius: 3px;
+  }
+  .dash-val { font-family: 'Cinzel', serif; font-size: 2rem; color: var(--sys-accent2); line-height: 1; }
+  .dash-label { font-size: 0.66rem; color: var(--sys-text3); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; }
+  .dash-sub { font-size: 0.62rem; color: var(--sys-text3); font-style: italic; margin-top: 3px; }
+
+  .stage-progress-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid var(--sys-border);
+  }
+  .sp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .sp-name { font-family: 'Cinzel', serif; font-size: 0.76rem; color: var(--sys-text); flex: 1; }
+  .sp-bar-wrap { width: 150px; height: 5px; background: var(--sys-surface3); border-radius: 3px; overflow: hidden; }
+  .sp-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .sp-pct { font-size: 0.68rem; color: var(--sys-text2); min-width: 34px; text-align: right; }
+  .sp-count { font-size: 0.66rem; color: var(--sys-text3); min-width: 90px; text-align: right; font-style: italic; }
+
+  /* Next session CTA */
+  .next-card {
+    background: var(--sys-surface);
+    border: 1px solid var(--sys-border);
+    border-left: 3px solid var(--sys-accent);
+    padding: 26px 30px; margin-top: 20px;
+    display: flex; align-items: center; gap: 22px;
+    border-radius: 3px; position: relative; overflow: hidden;
+  }
+  .next-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--sys-accent-bg) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .next-icon { font-size: 1.8rem; color: var(--sys-accent3); flex-shrink: 0; }
+  .next-title { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--sys-accent2); letter-spacing: 0.06em; }
+  .next-desc { font-size: 0.78rem; color: var(--sys-text3); margin-top: 4px; font-style: italic; }
+  .next-btn {
+    margin-left: auto; flex-shrink: 0; font-family: 'Cinzel', serif; font-size: 0.68rem;
+    letter-spacing: 0.14em; padding: 12px 26px; background: var(--sys-accent);
+    color: var(--sys-white); border: none; cursor: pointer; text-transform: uppercase;
+    transition: background 0.18s; font-weight: 600; border-radius: 2px; position: relative; z-index: 1;
+  }
+  .next-btn:hover { background: var(--sys-accent2); }
+
+  /* ── SESSION LOG PANEL ───────────────────────────────── */
+  .session-log-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 14px; border-bottom: 1px solid var(--sys-border);
+    font-size: 0.76rem;
+  }
+  .slog-date { font-family: 'Cinzel', serif; font-size: 0.62rem; color: var(--sys-accent3); min-width: 100px; }
+  .slog-verses { color: var(--sys-text2); min-width: 80px; }
+  .slog-score { min-width: 60px; }
+  .slog-dur { color: var(--sys-text3); font-style: italic; margin-left: auto; }
+  .score-bar { height: 4px; border-radius: 2px; background: var(--sys-surface3); width: 60px; margin-top: 3px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 2px; background: var(--sys-accent); transition: width 0.4s; }
+
+  /* Science badges */
+  .science-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 20px; }
+  .sci-badge {
+    font-size: 0.56rem; font-family: 'Cinzel', serif; letter-spacing: 0.07em;
+    padding: 4px 10px; border: 1px solid var(--sys-border2); color: var(--sys-text3);
+    text-transform: uppercase; border-radius: 2px;
+  }
+
+  /* Discipline payload preview */
+  .discipline-box {
+    background: var(--sys-surface2); border: 1px solid var(--sys-border);
+    border-left: 2px solid var(--sys-accent-dim);
+    padding: 14px 18px; margin-top: 20px; border-radius: 0 3px 3px 0;
+  }
+  .discipline-label {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.16em;
+    color: var(--sys-accent3); text-transform: uppercase; margin-bottom: 8px;
+  }
+  .discipline-code { font-family: monospace; font-size: 0.72rem; color: var(--sys-text2); line-height: 1.8; }
+
+  .ornament { text-align: center; color: var(--sys-accent); font-size: 1rem; margin: 16px 0; opacity: 0.3; letter-spacing: 0.4em; }
+  .hint { font-size: 0.7rem; color: var(--sys-text3); font-style: italic; margin-top: 10px; line-height: 1.55; }
+  .browse-row { border-bottom: 1px solid var(--sys-border); padding: 13px 0; display: flex; gap: 16px; align-items: flex-start; }
+
+  /* Scrollbar */
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-track { background: var(--sys-surface); }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--sys-accent-dim); border-radius: 2px; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--sys-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--sys-border2); border-radius: 2px; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .content { padding: 20px 16px; }
+    .memory-card { padding: 26px 20px; }
+    .dash-grid { grid-template-columns: 1fr 1fr; }
+    .sp-bar-wrap { width: 80px; }
+    .next-card { flex-wrap: wrap; }
+    .next-btn { margin-left: 0; }
+    .blank-input { width: 106px; }
+    .streak-pill { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────── -->
+<header class="app-header">
+  <div class="header-left">
+    <div class="sys-breadcrumb">THE SYSTEM <span>/ Knowledge / </span>LOGOS</div>
+    <div class="app-logo">LOGOS <sub>KJV</sub></div>
+  </div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showView('study')">Study</button>
+    <button class="nav-btn" onclick="showView('log')">Sessions</button>
+    <button class="nav-btn" onclick="showView('browse')">Browse</button>
+  </nav>
+  <div class="streak-pill" id="header-streak">
+    <span class="streak-flame">🔥</span>
+    <span id="streak-num">0</span> day streak
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- ── SIDEBAR ──────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Stages</div>
+      <div class="stage-item active" id="si-words" onclick="selectStage('words',this)">
+        <div class="stage-dot" style="background:var(--sys-accent2)"></div>
+        <div class="stage-name">Words of Jesus</div>
+        <div class="stage-count" id="wj-count">—</div>
+      </div>
+      <div class="stage-item" id="si-nt" onclick="selectStage('nt',this)">
+        <div class="stage-dot" style="background:var(--sys-accent3)"></div>
+        <div class="stage-name">New Testament</div>
+        <div class="stage-count" id="nt-count">—</div>
+      </div>
+      <div class="stage-item" id="si-ot" onclick="selectStage('ot',this)">
+        <div class="stage-dot" style="background:var(--sys-text3)"></div>
+        <div class="stage-name">Old Testament</div>
+        <div class="stage-count" id="ot-count">locked</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Today</div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-val" id="sb-due">0</div><div class="stat-lbl">Due</div></div>
+        <div class="stat-box"><div class="stat-val" id="sb-new">0</div><div class="stat-lbl">New</div></div>
+        <div class="stat-box"><div class="stat-val" id="sb-streak">0</div><div class="stat-lbl">Streak</div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Due Now</div>
+      <div id="due-list"></div>
+    </div>
+
+    <!-- Discipline export for THE SYSTEM -->
+    <div style="padding:0 18px 16px;">
+      <div class="sidebar-label">System Link</div>
+      <button class="btn btn-outline btn-sm" style="width:100%;font-size:0.58rem;" onclick="showView('log')">
+        View Session Log →
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── CONTENT ───────────────────────────────────── -->
+  <main class="content" id="main-content"></main>
+</div>
+
+<script>
+/*
+ ═══════════════════════════════════════════════════════════════
+  LOGOS — BIBLE MEMORY MODULE
+  Build: THE SYSTEM Integration Edition
+  ─────────────────────────────────────────────────────────────
+  MVC Pattern: build-once, update-selectively
+  ─ Model:   localStorage mirrors SQLite schema exactly
+  ─ View:    render() dispatches to view-specific renderers
+  ─ Control: event handlers call model → then render()
+
+  SM-2 Algorithm: PRESERVED EXACTLY as per specification
+  60% Deep Cloze: PRESERVED. Primacy/Recency guard active.
+  Streak: feeds into THE SYSTEM discipline tracking via
+          window.LOGOS.getDisciplinePayload()
+ ═══════════════════════════════════════════════════════════════
+*/
+
+// ══════════════════════════════════════════════════════
+//  VERSE DATA — KJV
+// ══════════════════════════════════════════════════════
+const JESUS_VERSES = [
+  {ref:"Matthew 4:4",text:"It is written, Man shall not live by bread alone, but by every word that proceedeth out of the mouth of God.",context:"Jesus quoting Scripture to Satan during his 40-day fast in the wilderness. The first temptation: turn stones to bread."},
+  {ref:"Matthew 4:7",text:"It is written again, Thou shalt not tempt the Lord thy God.",context:"Jesus rebuking Satan's second temptation — to jump from the temple pinnacle and be caught by angels."},
+  {ref:"Matthew 4:10",text:"Get thee hence, Satan: for it is written, Thou shalt worship the Lord thy God, and him only shalt thou serve.",context:"The final wilderness temptation: Satan offers all earthly kingdoms in exchange for worship."},
+  {ref:"Matthew 4:17",text:"Repent: for the kingdom of heaven is at hand.",context:"Jesus' very first public proclamation after returning from the wilderness. The opening word of his ministry."},
+  {ref:"Matthew 5:3",text:"Blessed are the poor in spirit: for theirs is the kingdom of heaven.",context:"First Beatitude. The Sermon on the Mount — opening with humility. Poverty of spirit means knowing your need of God."},
+  {ref:"Matthew 5:4",text:"Blessed are they that mourn: for they shall be comforted.",context:"Second Beatitude. Those who grieve over sin and suffering are promised divine comfort."},
+  {ref:"Matthew 5:5",text:"Blessed are the meek: for they shall inherit the earth.",context:"Third Beatitude. Meekness is not weakness — it is strength under control, surrendered to God."},
+  {ref:"Matthew 5:6",text:"Blessed are they which do hunger and thirst after righteousness: for they shall be filled.",context:"Fourth Beatitude. A spiritual appetite as intense and urgent as physical starvation."},
+  {ref:"Matthew 5:7",text:"Blessed are the merciful: for they shall obtain mercy.",context:"Fifth Beatitude. The principle of receiving what you give — mercy flows back to the merciful."},
+  {ref:"Matthew 5:8",text:"Blessed are the pure in heart: for they shall see God.",context:"Sixth Beatitude. Inner purity — not ritual cleanliness — is the condition for beholding God."},
+  {ref:"Matthew 5:9",text:"Blessed are the peacemakers: for they shall be called the children of God.",context:"Seventh Beatitude. Active peacemakers bear God's family name."},
+  {ref:"Matthew 5:10",text:"Blessed are they which are persecuted for righteousness' sake: for theirs is the kingdom of heaven.",context:"Eighth Beatitude. Same reward as the first — those who suffer for what is right receive the kingdom."},
+  {ref:"Matthew 5:14",text:"Ye are the light of the world. A city that is set on an hill cannot be hid.",context:"Jesus describing his disciples' calling — not to shine for themselves but to be unmistakably visible."},
+  {ref:"Matthew 5:16",text:"Let your light so shine before men, that they may see your good works, and glorify your Father which is in heaven.",context:"The purpose of good works: not self-glorification but pointing others toward the Father."},
+  {ref:"Matthew 5:44",text:"Love your enemies, bless them that curse you, do good to them that hate you, and pray for them which despitefully use you, and persecute you.",context:"The most radical command of the Sermon — love directed precisely at those who oppose you."},
+  {ref:"Matthew 6:9",text:"After this manner therefore pray ye: Our Father which art in heaven, Hallowed be thy name.",context:"The Lord's Prayer, first line. Jesus teaching his disciples how to pray — beginning with God's holiness, not our needs."},
+  {ref:"Matthew 6:10",text:"Thy kingdom come. Thy will be done in earth, as it is in heaven.",context:"Lord's Prayer: aligning earthly reality with heavenly reality. A prayer of complete surrender."},
+  {ref:"Matthew 6:11",text:"Give us this day our daily bread.",context:"Lord's Prayer: daily dependence. The word 'daily' occurs nowhere else in ancient Greek — possibly coined for this prayer."},
+  {ref:"Matthew 6:12",text:"And forgive us our debts, as we forgive our debtors.",context:"Lord's Prayer: forgiveness is conditional on extending forgiveness. A serious and sobering clause."},
+  {ref:"Matthew 6:13",text:"And lead us not into temptation, but deliver us from evil: For thine is the kingdom, and the power, and the glory, for ever. Amen.",context:"Lord's Prayer: closing doxology. Returning glory to God — where the prayer began."},
+  {ref:"Matthew 6:33",text:"But seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you.",context:"The single great priority principle — after 30 verses on anxiety about food, clothing, and tomorrow."},
+  {ref:"Matthew 7:7",text:"Ask, and it shall be given you; seek, and ye shall find; knock, and it shall be opened unto you.",context:"Three verbs, each more intense than the last. A promise about persistent, earnest prayer."},
+  {ref:"Matthew 7:12",text:"Therefore all things whatsoever ye would that men should do to you, do ye even so to them: for this is the law and the prophets.",context:"The Golden Rule — Jesus' summary of the entire moral law in a single sentence."},
+  {ref:"Matthew 11:28",text:"Come unto me, all ye that labour and are heavy laden, and I will give you rest.",context:"Perhaps the most comforting invitation in Scripture. Jesus speaking to the exhausted and burdened."},
+  {ref:"Matthew 11:29",text:"Take my yoke upon you, and learn of me; for I am meek and lowly in heart: and ye shall find rest unto your souls.",context:"The yoke metaphor: a yoke joins two — one experienced, one learning. Jesus carries the heavy end."},
+  {ref:"Matthew 16:24",text:"If any man will come after me, let him deny himself, and take up his cross, and follow me.",context:"The cost of discipleship — spoken immediately after Peter confessed Jesus as Christ. No softening."},
+  {ref:"Matthew 22:37",text:"Thou shalt love the Lord thy God with all thy heart, and with all thy soul, and with all thy mind.",context:"Jesus quoting Deuteronomy 6:5 — the Great Commandment. Entire being directed to God."},
+  {ref:"Matthew 22:39",text:"Thou shalt love thy neighbour as thyself.",context:"The Second Great Commandment. These two contain the whole law and the prophets."},
+  {ref:"Matthew 28:19",text:"Go ye therefore, and teach all nations, baptizing them in the name of the Father, and of the Son, and of the Holy Ghost.",context:"The Great Commission. Jesus' final command before ascending — a global mandate."},
+  {ref:"Matthew 28:20",text:"Teaching them to observe all things whatsoever I have commanded you: and, lo, I am with you alway, even unto the end of the world. Amen.",context:"The Great Commission's promise — the mission is never done alone. His presence accompanies the command."},
+  {ref:"Mark 10:27",text:"With men it is impossible, but not with God: for with God all things are possible.",context:"After the rich young ruler walked away — Jesus telling his disciples what salvation truly requires."},
+  {ref:"Luke 21:33",text:"Heaven and earth shall pass away: but my words shall not pass away.",context:"Olivet Discourse — prophesying about the end of the age, then anchoring all in the permanence of his words."},
+  {ref:"John 3:3",text:"Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.",context:"Said to Nicodemus, a Pharisee who came to Jesus by night. The doctrine of regeneration."},
+  {ref:"John 3:16",text:"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",context:"The most cited verse in Scripture. Jesus explaining the divine motive behind the incarnation to Nicodemus."},
+  {ref:"John 6:35",text:"I am the bread of life: he that cometh to me shall never hunger; and he that believeth on me shall never thirst.",context:"First of the seven 'I AM' statements in John. Spoken after feeding 5,000 — physical bread to spiritual sustenance."},
+  {ref:"John 8:12",text:"I am the light of the world: he that followeth me shall not walk in darkness, but shall have the light of life.",context:"Second 'I AM' statement. Spoken at the treasury of the temple during the Feast of Tabernacles."},
+  {ref:"John 8:32",text:"And ye shall know the truth, and the truth shall make you free.",context:"The freedom Jesus offers is from the slavery of sin, not political oppression."},
+  {ref:"John 10:10",text:"I am come that they might have life, and that they might have it more abundantly.",context:"Jesus contrasting himself with thieves. His purpose is abundance of life."},
+  {ref:"John 10:11",text:"I am the good shepherd: the good shepherd giveth his life for the sheep.",context:"Fourth 'I AM' statement. The defining quality: self-sacrifice, not self-preservation."},
+  {ref:"John 11:25",text:"I am the resurrection, and the life: he that believeth in me, though he were dead, yet shall he live.",context:"Fifth 'I AM' statement. Said to Martha at Lazarus' tomb, moments before raising him from the dead."},
+  {ref:"John 13:34",text:"A new commandment I give unto you, That ye love one another; as I have loved you, that ye also love one another.",context:"The Upper Room, the night before the crucifixion. A new standard: not 'as yourself' but 'as I have loved you.'"},
+  {ref:"John 13:35",text:"By this shall all men know that ye are my disciples, if ye have love one to another.",context:"Love is the badge of discipleship — visible to the watching world."},
+  {ref:"John 14:1",text:"Let not your heart be troubled: ye believe in God, believe also in me.",context:"Opening of the Farewell Discourse. Jesus comforting disciples distressed that he is leaving."},
+  {ref:"John 14:6",text:"I am the way, the truth, and the life: no man cometh unto the Father, but by me.",context:"Sixth 'I AM' statement. The most exclusive claim in Scripture — all three nouns belong to him."},
+  {ref:"John 14:15",text:"If ye love me, keep my commandments.",context:"Love and obedience are inseparable — the test of genuine love is faithfulness."},
+  {ref:"John 14:27",text:"Peace I leave with you, my peace I give unto you: not as the world giveth, give I unto you. Let not your heart be troubled, neither let it be afraid.",context:"Jesus' legacy gift: a peace qualitatively different from anything the world provides."},
+  {ref:"John 15:5",text:"I am the vine, ye are the branches: He that abideth in me, and I in him, the same bringeth forth much fruit: for without me ye can do nothing.",context:"Seventh 'I AM' statement. The branch cannot produce fruit by its own effort — only by abiding."},
+  {ref:"John 15:12",text:"This is my commandment, That ye love one another, as I have loved you.",context:"The commandment repeated — framed as his commandment, singular and defining."},
+  {ref:"John 15:13",text:"Greater love hath no man than this, that a man lay down his life for his friends.",context:"The highest possible definition of love — and Jesus demonstrates it the very next day."},
+  {ref:"John 16:33",text:"These things I have spoken unto you, that in me ye might have peace. In the world ye shall have tribulation: but be of good cheer; I have overcome the world.",context:"Final line of the Farewell Discourse. Tribulation promised; but so is the One who has conquered it."},
+];
+
+const NT_VERSES = [
+  {ref:"Romans 1:16",text:"For I am not ashamed of the gospel of Christ: for it is the power of God unto salvation to every one that believeth; to the Jew first, and also to the Greek.",context:"Paul opening his theological masterpiece — personal confession before systematic argument."},
+  {ref:"Romans 3:23",text:"For all have sinned, and come short of the glory of God.",context:"The universal diagnosis. No exceptions by ethnicity, morality, or religious pedigree."},
+  {ref:"Romans 5:8",text:"But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.",context:"The timing makes it remarkable — not after we improved, but while still in rebellion."},
+  {ref:"Romans 6:23",text:"For the wages of sin is death; but the gift of God is eternal life through Jesus Christ our Lord.",context:"Two roads: sin earns death (wages — deserved); grace gives life (gift — undeserved)."},
+  {ref:"Romans 8:28",text:"And we know that all things work together for good to them that love God, to them who are the called according to his purpose.",context:"Said in the context of suffering — the 'all things' includes the painful ones."},
+  {ref:"Romans 10:9",text:"That if thou shalt confess with thy mouth the Lord Jesus, and shalt believe in thine heart that God hath raised him from the dead, thou shalt be saved.",context:"The minimal and sufficient conditions for salvation stated plainly."},
+  {ref:"Romans 12:2",text:"And be not conformed to this world: but be ye transformed by the renewing of your mind, that ye may prove what is that good, and acceptable, and perfect, will of God.",context:"'conformed' (passive, external pressure) vs 'transformed' (metamorphoo — internal, Spirit-driven change)."},
+  {ref:"1 Corinthians 13:4",text:"Charity suffereth long, and is kind; charity envieth not; charity vaunteth not itself, is not puffed up.",context:"The Love Chapter — Paul defining love by a list of verbs, not feelings."},
+  {ref:"1 Corinthians 13:13",text:"And now abideth faith, hope, charity, these three; but the greatest of these is charity.",context:"The three eternal virtues — charity is greatest because it is the nature of God himself."},
+  {ref:"Galatians 5:22",text:"But the fruit of the Spirit is love, joy, peace, longsuffering, gentleness, goodness, faith.",context:"Nine graces listed as a single fruit — not produced by effort but by abiding in the Spirit."},
+  {ref:"Ephesians 2:8",text:"For by grace are ye saved through faith; and that not of yourselves: it is the gift of God.",context:"Grace + faith, neither originating in us — both are gifts. Salvation is entirely divine initiative."},
+  {ref:"Philippians 4:7",text:"And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus.",context:"Peace that guards — military metaphor: a sentinel standing watch over the heart."},
+  {ref:"Philippians 4:13",text:"I can do all things through Christ which strengtheneth me.",context:"Written from prison. 'All things' = the contentment Paul just described, not unlimited achievement."},
+  {ref:"2 Timothy 3:16",text:"All scripture is given by inspiration of God, and is profitable for doctrine, for reproof, for correction, for instruction in righteousness.",context:"The foundational doctrine of Scripture's divine origin. 'Inspiration' means God-breathed."},
+  {ref:"Hebrews 11:1",text:"Now faith is the substance of things hoped for, the evidence of things not seen.",context:"The definition of faith — not blind belief but confident assurance grounded in God's character."},
+  {ref:"James 1:5",text:"If any of you lack wisdom, let him ask of God, that giveth to all men liberally, and upbraideth not; and it shall be given him.",context:"God does not scold you for not knowing. He gives wisdom generously to all who sincerely ask."},
+  {ref:"1 Peter 5:7",text:"Casting all your care upon him; for he careth for you.",context:"'Casting' is one deliberate action — a complete transfer of your anxieties onto him."},
+  {ref:"1 John 1:9",text:"If we confess our sins, he is faithful and just to forgive us our sins, and to cleanse us from all unrighteousness.",context:"Written to believers — ongoing confession, ongoing cleansing."},
+  {ref:"Revelation 3:20",text:"Behold, I stand at the door, and knock: if any man hear my voice, and open the door, I will come in to him, and will sup with him, and he with me.",context:"Spoken to the lukewarm church of Laodicea — Christ outside the very church that bears his name."},
+];
+
+const OT_VERSES = [
+  {ref:"Genesis 1:1",text:"In the beginning God created the heaven and the earth.",context:"The opening declaration of Scripture — God precedes everything; creation is his act, not an accident."},
+  {ref:"Psalm 23:1",text:"The LORD is my shepherd; I shall not want.",context:"David's personal declaration — not 'a shepherd' but 'my shepherd.' The relationship is intimate."},
+  {ref:"Psalm 23:4",text:"Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me.",context:"The Psalm's turning point — from green pastures to the valley. Presence conquers fear where escape cannot."},
+  {ref:"Psalm 119:105",text:"Thy word is a lamp unto my feet, and a light unto my path.",context:"From the longest chapter in the Bible — 176 verses entirely devoted to the glory of God's Word."},
+  {ref:"Proverbs 3:5",text:"Trust in the LORD with all thine heart; and lean not unto thine own understanding.",context:"The foundational proverb — whole-hearted trust set against the human tendency toward self-reliance."},
+  {ref:"Proverbs 3:6",text:"In all thy ways acknowledge him, and he shall direct thy paths.",context:"'All thy ways' — every decision. The promise of guidance is tied to total acknowledgment."},
+  {ref:"Isaiah 40:31",text:"But they that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint.",context:"Three speeds of life: soaring, running, walking. Supernatural strength promised for all three."},
+  {ref:"Jeremiah 29:11",text:"For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end.",context:"Written to Israelites in Babylonian exile — 70 years of captivity ahead, yet this promise stands."},
+];
+
+// ══════════════════════════════════════════════════════
+//  STORAGE KEYS — mirror SQLite table names exactly
+//  Android Kivy port: replace these calls with SQLite
+// ══════════════════════════════════════════════════════
+const KEYS = {
+  INTRO:    'logos_intro_schedule_v2',   // verse introduction schedule
+  REVIEWS:  'logos_reviews_v2',          // logos_reviews table
+  SESSIONS: 'logos_sessions_v2',         // logos_sessions table
+  STREAK:   'logos_streak_v2',           // logos_streak table
+};
+const DAY = 86400000;
+
+// ── INTRO SCHEDULE ────────────────────────────────────
+// logos_verses table equivalent — controls when each verse
+// is first introduced (date_added in SQLite terms)
+function initSchedule() {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(KEYS.INTRO)) || {}; } catch {}
+  if (Object.keys(s).length > 0) return s;
+  const now = Date.now();
+  JESUS_VERSES.forEach((v,i) => { s[v.ref] = now + Math.floor(i/9)*DAY; });
+  NT_VERSES.forEach((v,i)    => { s[v.ref] = now + (3 + Math.floor(i/4))*DAY; });
+  OT_VERSES.forEach((v,i)    => { s[v.ref] = now + (8 + i)*DAY; });
+  localStorage.setItem(KEYS.INTRO, JSON.stringify(s));
+  return s;
+}
+function getSchedule() { try { return JSON.parse(localStorage.getItem(KEYS.INTRO))||{}; } catch { return {}; } }
+function isIntroduced(ref) { const s=getSchedule(); return s[ref] && Date.now()>=s[ref]; }
+
+// ══════════════════════════════════════════════════════
+//  SM-2 ALGORITHM — PRESERVED EXACTLY
+//  Mirrors: logos_reviews table
+//  Fields: ease_factor, interval, repetitions, next_review
+// ══════════════════════════════════════════════════════
+function loadReviews() { try { return JSON.parse(localStorage.getItem(KEYS.REVIEWS))||{}; } catch { return {}; } }
+function saveReviews(db) { localStorage.setItem(KEYS.REVIEWS, JSON.stringify(db)); }
+
+function getCard(ref) {
+  const db = loadReviews();
+  // Default mirrors logos_reviews column defaults exactly
+  return db[ref] || {
+    ref,
+    ease_factor:  2.5,   // SM-2: initial ease factor
+    interval:     0,     // SM-2: current interval in days
+    repetitions:  0,     // SM-2: successful reviews count
+    next_review:  0,     // Unix ms timestamp
+    last_score:   0,     // 0-3 rating from last session
+    lapses:       0,     // times reset to 0
+  };
+}
+
+function saveCard(card) {
+  const db = loadReviews();
+  db[card.ref] = card;
+  saveReviews(db);
+}
+
+/**
+ * SM-2 Scheduling — core algorithm, untouched.
+ * rating: 0=Again, 1=Hard, 2=Good, 3=Easy
+ * Mirrors SuperMemo SM-2 exactly.
+ */
+function scheduleCard(card, rating) {
+  let { ease_factor, interval, repetitions, lapses=0 } = card;
+
+  if (rating === 0) {
+    // Failed — reset
+    lapses++;
+    interval = 1;
+    repetitions = 0;
+  } else {
+    // Successful — apply SM-2
+    if (repetitions === 0)      interval = 1;
+    else if (repetitions === 1) interval = 6;
+    else                        interval = Math.round(interval * ease_factor);
+
+    // Hard modifier: reduce interval
+    if (rating === 1) interval = Math.max(1, Math.round(interval * 0.6));
+    // Easy modifier: boost interval
+    if (rating === 3) interval = Math.round(interval * 1.3);
+
+    // Update ease factor (SM-2 formula)
+    ease_factor = Math.max(
+      1.3,
+      ease_factor + (0.1 - (3 - rating) * (0.08 + (3 - rating) * 0.02))
+    );
+    repetitions++;
+  }
+
+  card.ease_factor  = ease_factor;
+  card.interval     = interval;
+  card.repetitions  = repetitions;
+  card.lapses       = lapses;
+  card.last_score   = rating;
+  card.next_review  = Date.now() + interval * DAY;
+  card.date         = new Date().toISOString().split('T')[0];
+
+  saveCard(card);
+}
+
+function ivPreview(card, rating) {
+  // Compute next interval without mutating — for display
+  let { ease_factor, interval, repetitions } = card;
+  if (rating === 0) return '<1d';
+  if (repetitions === 0) return '1d';
+  if (repetitions === 1) return '6d';
+  let iv = Math.round(interval * ease_factor);
+  if (rating === 1) iv = Math.max(1, Math.round(iv * 0.6));
+  if (rating === 3) iv = Math.round(iv * 1.3);
+  return iv + 'd';
+}
+
+// ── DUE / NEW QUERIES ─────────────────────────────────
+function getDue(verses) {
+  const now = Date.now();
+  return verses.filter(v => {
+    const c = getCard(v.ref);
+    return isIntroduced(v.ref) && c.repetitions > 0 && c.next_review <= now;
+  });
+}
+function getNew(verses) {
+  return verses.filter(v => isIntroduced(v.ref) && getCard(v.ref).repetitions === 0);
+}
+
+// ══════════════════════════════════════════════════════
+//  SESSION TRACKING — logos_sessions table
+// ══════════════════════════════════════════════════════
+function loadSessions() { try { return JSON.parse(localStorage.getItem(KEYS.SESSIONS))||[]; } catch { return []; } }
+function saveSessions(s) { localStorage.setItem(KEYS.SESSIONS, JSON.stringify(s)); }
+
+/**
+ * Record a completed session.
+ * Mirrors: INSERT INTO logos_sessions
+ *          (verses_reviewed, avg_score, duration, date)
+ */
+function recordSession(versesReviewed, avgScore, durationMs) {
+  const sessions = loadSessions();
+  sessions.unshift({
+    id:              sessions.length + 1,
+    verses_reviewed: versesReviewed,
+    avg_score:       Math.round(avgScore * 100) / 100,
+    duration:        Math.round(durationMs / 1000), // store in seconds
+    date:            new Date().toISOString().split('T')[0],
+    created_at:      new Date().toISOString(),
+  });
+  // Keep last 90 sessions
+  saveSessions(sessions.slice(0, 90));
+}
+
+// ── STREAK — logos_streak table ───────────────────────
+function loadStreak() { try { return JSON.parse(localStorage.getItem(KEYS.STREAK))||{count:0,lastDate:null}; } catch { return {count:0,lastDate:null}; } }
+function saveStreak(s) { localStorage.setItem(KEYS.STREAK, JSON.stringify(s)); }
+
+function updateStreak() {
+  const streak = loadStreak();
+  const today  = new Date().toDateString();
+  if (streak.lastDate !== today) {
+    const yesterday = new Date(Date.now() - DAY).toDateString();
+    streak.count = streak.lastDate === yesterday ? streak.count + 1 : 1;
+    streak.lastDate = today;
+    saveStreak(streak);
+  }
+  return streak;
+}
+
+// ══════════════════════════════════════════════════════
+//  THE SYSTEM DISCIPLINE PAYLOAD
+//  Called by Knowledge module after each session.
+//  window.LOGOS.getDisciplinePayload()
+//
+//  Returns data shape that THE SYSTEM's discipline
+//  tracker can consume directly:
+//  {
+//    module:         'logos',
+//    pillar:         'spirit',          // also contributes to Spirit
+//    streak:         { count, lastDate },
+//    today:          { versesReviewed, avgScore, sessionsCompleted },
+//    total:          { versesMature, versesLearning, versesTotal },
+//    lastSession:    { verses_reviewed, avg_score, duration, date }
+//  }
+// ══════════════════════════════════════════════════════
+window.LOGOS = {
+  getDisciplinePayload() {
+    const db       = loadReviews();
+    const sessions = loadSessions();
+    const streak   = loadStreak();
+    const today    = new Date().toISOString().split('T')[0];
+    const allV     = [...JESUS_VERSES, ...NT_VERSES, ...OT_VERSES];
+
+    const todaySessions = sessions.filter(s => s.date === today);
+    const versesToday   = todaySessions.reduce((a,s) => a + s.verses_reviewed, 0);
+    const avgToday      = todaySessions.length
+      ? todaySessions.reduce((a,s) => a + s.avg_score, 0) / todaySessions.length
+      : 0;
+
+    return {
+      module:   'logos',
+      pillar:   'spirit',
+      streak: {
+        count:    streak.count,
+        lastDate: streak.lastDate,
+      },
+      today: {
+        versesReviewed:    versesToday,
+        avgScore:          Math.round(avgToday * 100) / 100,
+        sessionsCompleted: todaySessions.length,
+      },
+      total: {
+        versesMature:   allV.filter(v => db[v.ref] && db[v.ref].repetitions >= 4).length,
+        versesLearning: allV.filter(v => db[v.ref] && db[v.ref].repetitions >= 1 && db[v.ref].repetitions < 4).length,
+        versesTotal:    allV.length,
+      },
+      lastSession: sessions[0] || null,
+    };
+  }
+};
+
+// ══════════════════════════════════════════════════════
+//  60% DEEP CLOZE — PRESERVED EXACTLY
+//  Science: Primacy/Recency guard (first 2, last 2 words)
+//  Generation Effect: user generates ~60% of verse text
+// ══════════════════════════════════════════════════════
+const FW = new Set([
+  'the','a','an','and','or','but','for','nor','so','yet','of','in','on','at',
+  'to','by','is','are','was','were','be','been','being','have','has','had',
+  'do','does','did','will','would','could','should','may','might','shall',
+  'that','which','who','whom','whose','this','these','those','it','its',
+  'not','also','then','as','with','from','upon','unto','thee','thou','thy',
+  'ye','hath','doth','them','him','his','her','our','your','my','me','us',
+  'we','he','she','they','i','am','if','no','all','into',
+]);
+
+function buildCloze(text) {
+  const words  = text.split(' ');
+  const n      = words.length;
+  const blanks = {};
+  const target = Math.ceil(n * 0.60); // 60%
+
+  // Guard: first 2 and last 2 words are NEVER blanked (Primacy/Recency)
+  const middle = [];
+  for (let i = 2; i < n - 2; i++) middle.push(i);
+
+  // Priority 1: content words (highest cognitive load)
+  const content = middle.filter(i => {
+    const c = words[i].toLowerCase().replace(/[^a-z]/g, '');
+    return c.length > 2 && !FW.has(c);
+  });
+  content.forEach(i => { blanks[i] = words[i]; });
+
+  // Priority 2: fill remaining middle words to reach 60%
+  if (Object.keys(blanks).length < target) {
+    const rest   = middle.filter(i => !blanks[i]);
+    const needed = target - Object.keys(blanks).length;
+    shuffle(rest).slice(0, needed).forEach(i => { blanks[i] = words[i]; });
+  }
+
+  return { words, blanks };
+}
+
+function cw(w) { return w.toLowerCase().replace(/[^a-z']/g, ''); }
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ══════════════════════════════════════════════════════
+//  APPLICATION STATE
+//  Build-once, update-selectively pattern:
+//  S is the single source of truth for the view layer.
+//  Only render() reads S. Only handlers write S.
+// ══════════════════════════════════════════════════════
+const S = {
+  view:          'dashboard',
+  queue:         [],
+  idx:           0,
+  phase:         'question',   // question | revealed
+  cloze:         null,
+  userAnswers:   {},
+  score:         null,
+  sessionStart:  0,            // ms timestamp — for duration tracking
+  sessionScores: [],           // per-card scores in current session
+};
+
+function allByStage(stage) {
+  if (stage === 'words') return JESUS_VERSES;
+  if (stage === 'nt')    return [...JESUS_VERSES, ...NT_VERSES];
+  return [...JESUS_VERSES, ...NT_VERSES, ...OT_VERSES];
+}
+
+function buildQueue(stage) {
+  const v   = allByStage(stage);
+  const due = getDue(v);
+  const nw  = getNew(v);
+  shuffle(due); shuffle(nw);
+  // Max 10 reviews + 5 new per session (prevents cramming, respects sleep consolidation)
+  return shuffle([...due.slice(0, 10), ...nw.slice(0, 5)]);
+}
+
+// ══════════════════════════════════════════════════════
+//  VIEW CONTROLLER — build-once, update-selectively
+// ══════════════════════════════════════════════════════
+function showView(v) {
+  S.view = v;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.toLowerCase().startsWith(v.substring(0, 3))) b.classList.add('active');
+  });
+  render();
+}
+
+function selectStage(s, el) {
+  document.querySelectorAll('.stage-item').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  updateSidebar();
+}
+
+// ── SELECTIVE UPDATE: only re-renders changed region ──
+function render() {
+  const el = document.getElementById('main-content');
+  if      (S.view === 'dashboard') el.innerHTML = renderDash();
+  else if (S.view === 'study')     el.innerHTML = renderStudy();
+  else if (S.view === 'log')       el.innerHTML = renderLog();
+  else if (S.view === 'browse')    el.innerHTML = renderBrowse();
+  afterRender();
+  updateSidebar();
+}
+
+function updateSidebar() {
+  const wjD  = getDue(JESUS_VERSES).length + getNew(JESUS_VERSES).length;
+  const ntD  = getDue(NT_VERSES).length    + getNew(NT_VERSES).length;
+  const allD = getDue([...JESUS_VERSES, ...NT_VERSES]).length;
+  const allN = getNew([...JESUS_VERSES, ...NT_VERSES]).length;
+  const streak = loadStreak();
+
+  document.getElementById('sb-due').textContent    = allD;
+  document.getElementById('sb-new').textContent    = allN;
+  document.getElementById('sb-streak').textContent = streak.count;
+  document.getElementById('wj-count').textContent  = wjD + ' due';
+  document.getElementById('nt-count').textContent  = ntD + ' due';
+  document.getElementById('streak-num').textContent = streak.count;
+
+  const dl = document.getElementById('due-list');
+  const dList = getDue([...JESUS_VERSES, ...NT_VERSES]).slice(0, 5);
+  dl.innerHTML = dList.length
+    ? dList.map(v =>
+        `<div class="due-item" onclick="startVerse('${v.ref.replace(/'/g,"\\'")}')">
+          <span class="ref">${v.ref}</span>
+          ${v.text.substring(0, 36)}…
+        </div>`).join('')
+    : '<div style="padding:6px 10px;font-size:0.7rem;color:var(--sys-text3);font-style:italic;">Nothing due right now</div>';
+}
+
+// ── DASHBOARD ──────────────────────────────────────────
+function renderDash() {
+  const db      = loadReviews();
+  const wjL     = JESUS_VERSES.filter(v => db[v.ref] && db[v.ref].repetitions >= 1).length;
+  const ntL     = NT_VERSES.filter(v    => db[v.ref] && db[v.ref].repetitions >= 1).length;
+  const mature  = [...JESUS_VERSES,...NT_VERSES].filter(v => db[v.ref] && db[v.ref].repetitions >= 4).length;
+  const wjPct   = Math.round((wjL / JESUS_VERSES.length) * 100);
+  const ntPct   = Math.round((ntL / NT_VERSES.length) * 100);
+  const otUnlocked = wjPct >= 30;
+  const due     = getDue([...JESUS_VERSES,...NT_VERSES]).length;
+  const nw      = getNew([...JESUS_VERSES,...NT_VERSES]).length;
+  const streak  = loadStreak();
+  const sch     = getSchedule();
+  const tomorrow = Date.now() + DAY;
+  const comingTomorrow = [...JESUS_VERSES,...NT_VERSES].filter(v =>
+    sch[v.ref] && sch[v.ref] > Date.now() && sch[v.ref] <= tomorrow
+  ).length;
+
+  // Session stats for today
+  const sessions  = loadSessions();
+  const todayStr  = new Date().toISOString().split('T')[0];
+  const todaySess = sessions.filter(s => s.date === todayStr);
+  const todayVR   = todaySess.reduce((a,s) => a + s.verses_reviewed, 0);
+
+  return `
+    <div class="session-header">
+      <div>
+        <div class="session-title">Knowledge — LOGOS</div>
+        <div class="session-subtitle">KJV · Bible Memory · ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+      </div>
+    </div>
+
+    <div class="science-row">
+      <span class="sci-badge">⟳ SM-2 Spaced Repetition</span>
+      <span class="sci-badge">◻ 60% Deep Cloze</span>
+      <span class="sci-badge">⚑ Primacy / Recency Guard</span>
+      <span class="sci-badge">✦ Contextual Encoding</span>
+      <span class="sci-badge">◈ Generation Effect</span>
+      <span class="sci-badge">⧖ 7-Day Introduction</span>
+    </div>
+
+    <div class="dash-grid">
+      <div class="dash-card">
+        <div class="dash-val">${due + nw}</div>
+        <div class="dash-label">Due Today</div>
+        <div class="dash-sub">${due} reviews · ${nw} new</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-val">${wjL + ntL}</div>
+        <div class="dash-label">In System</div>
+        <div class="dash-sub">${mature} mature cards</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-val">${streak.count}</div>
+        <div class="dash-label">Streak</div>
+        <div class="dash-sub">${todayVR > 0 ? todayVR + ' reviewed today' : comingTomorrow + ' new tomorrow'}</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:28px;">
+      <div style="font-family:'Cinzel',serif;font-size:0.68rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--sys-accent3);margin-bottom:16px;">Stage Progress</div>
+
+      <div class="stage-progress-row">
+        <div class="sp-dot" style="background:var(--sys-accent2)"></div>
+        <div class="sp-name">Words of Jesus</div>
+        <div class="sp-bar-wrap"><div class="sp-bar-fill" style="width:${wjPct}%;background:var(--sys-accent2)"></div></div>
+        <div class="sp-pct">${wjPct}%</div>
+        <div class="sp-count">${wjL} / ${JESUS_VERSES.length} verses</div>
+      </div>
+
+      <div class="stage-progress-row">
+        <div class="sp-dot" style="background:var(--sys-accent3)"></div>
+        <div class="sp-name">New Testament</div>
+        <div class="sp-bar-wrap"><div class="sp-bar-fill" style="width:${ntPct}%;background:var(--sys-accent3)"></div></div>
+        <div class="sp-pct">${ntPct}%</div>
+        <div class="sp-count">${ntL} / ${NT_VERSES.length} verses</div>
+      </div>
+
+      <div class="stage-progress-row" style="opacity:${otUnlocked ? 1 : 0.4}">
+        <div class="sp-dot" style="background:var(--sys-text3)"></div>
+        <div class="sp-name">Old Testament
+          ${otUnlocked ? '' : '<span style="font-size:0.6rem;color:var(--sys-text3);font-style:italic;font-family:Spectral,serif;font-weight:300;"> — unlocks at 30% Words of Jesus</span>'}
+        </div>
+        <div class="sp-bar-wrap"><div class="sp-bar-fill" style="width:0%;background:var(--sys-text3)"></div></div>
+        <div class="sp-pct">—</div>
+        <div class="sp-count">0 / ${OT_VERSES.length} verses</div>
+      </div>
+    </div>
+
+    <div class="ornament">✦ ✦ ✦</div>
+
+    <div class="next-card">
+      <div class="next-icon">✝</div>
+      <div>
+        <div class="next-title">${due+nw > 0 ? `${due+nw} Card${due+nw>1?'s':''} Ready` : 'All caught up for today'}</div>
+        <div class="next-desc">${due+nw > 0
+          ? 'Complete your session to maintain SRS schedule — consistency is the mechanism'
+          : 'Return tomorrow. Sleep consolidation is working. ' + comingTomorrow + ' new verses unlock tomorrow.'
+        }</div>
+      </div>
+      <button class="next-btn" onclick="startSession('words')">Begin Study →</button>
+    </div>
+
+    <div class="discipline-box" style="margin-top:16px;">
+      <div class="discipline-label">THE SYSTEM — Discipline Payload Preview</div>
+      <div class="discipline-code" id="payload-preview">Loading…</div>
+    </div>`;
+}
+
+// ── STUDY ──────────────────────────────────────────────
+function renderStudy() {
+  if (!S.queue.length || S.idx >= S.queue.length) return renderComplete();
+  const verse = S.queue[S.idx];
+  const card  = getCard(verse.ref);
+  const pct   = Math.round((S.idx / S.queue.length) * 100);
+  return S.phase === 'question' ? renderQ(verse, card, pct) : renderR(verse, card, pct);
+}
+
+function renderQ(verse, card, pct) {
+  const { words, blanks } = S.cloze;
+  const bIdxs = Object.keys(blanks).map(Number).sort((a,b) => a-b);
+  const bNum  = {};
+  bIdxs.forEach((idx, i) => bNum[idx] = i + 1);
+  const isNew = card.repetitions === 0;
+
+  const verseHTML = words.map((w, i) => {
+    if (blanks[i] !== undefined) {
+      const dashes = '─'.repeat(Math.max(3, Math.ceil(w.replace(/[^a-z']/gi,'').length / 1.1)));
+      return `<span class="cloze-blank-inline" id="bl-${i}">${dashes}</span>`;
+    }
+    return `<span>${w}</span>`;
+  }).join(' ');
+
+  const inputsHTML = bIdxs.map((idx, i) => `
+    <div class="blank-wrap">
+      <div class="blank-num">#${i+1}</div>
+      <input class="blank-input" id="bf-${idx}" data-idx="${idx}"
+        placeholder="${i+1}…" autocomplete="off" spellcheck="false"
+        onkeydown="bfKey(event,${idx})" />
+    </div>`).join('');
+
+  return `
+    <div class="progress-label">
+      <span>Card ${S.idx+1} of ${S.queue.length}</span>
+      <span>${pct}%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>
+
+    <div class="session-header">
+      <div>
+        <div class="session-title">${isNew ? 'New Verse' : 'Review'}</div>
+        <div class="session-subtitle">
+          Fill in ${bIdxs.length} of ${words.length} words — 60% recall challenge
+        </div>
+      </div>
+      <div class="mode-chip ${isNew ? 'chip-new' : 'chip-review'}">
+        ${isNew ? 'First Encounter' : 'Deep Recall'}
+      </div>
+    </div>
+
+    <div class="memory-card">
+      <div class="card-meta">
+        <span>${verse.ref}</span>
+        <span class="card-stage-badge">KJV</span>
+      </div>
+
+      <div class="context-box">
+        <strong>Context</strong>
+        ${verse.context}
+      </div>
+
+      <div class="verse-text">${verseHTML}</div>
+      <div class="verse-ref">— ${verse.ref}</div>
+
+      <div class="answer-area">
+        <div class="answer-label">Fill the blanks in order — type each missing word</div>
+        <div class="blanks-grid">${inputsHTML}</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="checkAnswers()">Check My Answers</button>
+          <button class="btn btn-reveal btn-sm" onclick="revealAll()">Reveal Full Verse</button>
+        </div>
+        <p class="hint">
+          First 2 and last 2 words are shown as memory anchors. Tab moves between fields. Enter submits.
+        </p>
+      </div>
+    </div>`;
+}
+
+function renderR(verse, card, pct) {
+  const { words, blanks } = S.cloze;
+  const score = S.score;
+
+  const verseHTML = words.map((w, i) => {
+    if (blanks[i] !== undefined) {
+      const ua = S.userAnswers[i];
+      if (ua === undefined) return `<span class="cloze-blank-inline shown">${w}</span>`;
+      const match = cw(ua) === cw(w);
+      return `<span class="cloze-blank-inline ${match ? 'shown' : 'missed'}"
+        title="${match ? '✓ Correct' : `✗ You wrote: "${ua}"`}">${w}</span>`;
+    }
+    return `<span>${w}</span>`;
+  }).join(' ');
+
+  const fbClass = score.pct >= 80 ? 'fb-correct' : score.pct >= 50 ? 'fb-partial' : 'fb-wrong';
+  const fbMsg   = score.pct >= 80
+    ? `✓ Strong recall — ${score.correct} / ${score.total} words correct (${score.pct}%). Rate your confidence below.`
+    : score.pct >= 50
+    ? `${score.correct} / ${score.total} correct (${score.pct}%). Study the highlighted words before rating.`
+    : `${score.correct} / ${score.total} correct (${score.pct}%). Read the verse carefully — then press Again.`;
+
+  return `
+    <div class="progress-label">
+      <span>Card ${S.idx+1} of ${S.queue.length}</span>
+      <span>${pct}%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>
+
+    <div class="session-header">
+      <div>
+        <div class="session-title">Result</div>
+        <div class="session-subtitle">Study carefully, then rate your recall honestly</div>
+      </div>
+    </div>
+
+    <div class="memory-card">
+      <div class="card-meta"><span>${verse.ref}</span></div>
+
+      <div class="feedback-box ${fbClass}">${fbMsg}</div>
+
+      <div class="verse-reveal-box">
+        <div class="vr-label">Full Verse — <span style="color:var(--sys-green)">green</span> = correct · <span style="color:var(--sys-red)">red</span> = missed</div>
+        <div class="vr-text">${verseHTML}</div>
+      </div>
+      <div class="verse-ref" style="margin-top:10px;">— ${verse.ref}</div>
+
+      <div class="context-box" style="margin-top:14px;">
+        <strong>Why this verse matters</strong>
+        ${verse.context}
+      </div>
+
+      <div class="srs-wrap">
+        <div class="srs-label-row">How well did you know this? — Sets your next review date</div>
+        <div class="srs-row">
+          <button class="srs-btn srs-again" onclick="rate(0)">Again<span class="srs-sublabel">Tomorrow</span></button>
+          <button class="srs-btn srs-hard"  onclick="rate(1)">Hard<span class="srs-sublabel">+${ivPreview(card,1)}</span></button>
+          <button class="srs-btn srs-good"  onclick="rate(2)">Good<span class="srs-sublabel">+${ivPreview(card,2)}</span></button>
+          <button class="srs-btn srs-easy"  onclick="rate(3)">Easy<span class="srs-sublabel">+${ivPreview(card,3)}</span></button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderComplete() {
+  const streak = updateStreak();
+  // Record the session to logos_sessions
+  const versesReviewed = S.sessionScores.length;
+  const avgScore = versesReviewed
+    ? S.sessionScores.reduce((a,b) => a+b, 0) / versesReviewed
+    : 0;
+  const duration = Date.now() - S.sessionStart;
+  recordSession(versesReviewed, avgScore, duration);
+
+  const mins = Math.round(duration / 60000);
+  const payload = window.LOGOS.getDisciplinePayload();
+
+  return `
+    <div style="text-align:center;padding:60px 20px;animation:cardIn 0.4s ease;">
+      <div style="font-size:2.8rem;margin-bottom:16px;color:var(--sys-accent3)">✝</div>
+      <div style="font-family:'Cinzel',serif;font-size:1.65rem;color:var(--sys-accent2);margin-bottom:12px;letter-spacing:0.08em">Session Complete</div>
+      <div style="font-family:'IM Fell English',serif;font-style:italic;color:var(--sys-text2);font-size:1.05rem;margin-bottom:5px">
+        "Thy word have I hid in mine heart, that I might not sin against thee."
+      </div>
+      <div style="font-family:'Cinzel',serif;font-size:0.62rem;color:var(--sys-text3);letter-spacing:0.12em;margin-bottom:32px">— PSALM 119:11</div>
+
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px;">
+        <div class="dash-card" style="min-width:120px;">
+          <div class="dash-val">${versesReviewed}</div>
+          <div class="dash-label">Reviewed</div>
+        </div>
+        <div class="dash-card" style="min-width:120px;">
+          <div class="dash-val">${Math.round(avgScore * 33)}%</div>
+          <div class="dash-label">Avg Score</div>
+        </div>
+        <div class="dash-card" style="min-width:120px;">
+          <div class="dash-val">${streak.count}</div>
+          <div class="dash-label">Day Streak</div>
+        </div>
+        <div class="dash-card" style="min-width:120px;">
+          <div class="dash-val">${mins || '<1'}</div>
+          <div class="dash-label">Minutes</div>
+        </div>
+      </div>
+
+      <div style="font-size:0.82rem;color:var(--sys-text3);margin-bottom:28px;font-style:italic;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6;">
+        Your brain consolidates this during sleep tonight. Consistent daily review is the only mechanism that works.
+      </div>
+
+      <div class="discipline-box" style="text-align:left;max-width:480px;margin:0 auto 28px;">
+        <div class="discipline-label">Discipline payload — sent to THE SYSTEM</div>
+        <div class="discipline-code">${JSON.stringify(payload, null, 2).replace(/</g,'&lt;')}</div>
+      </div>
+
+      <div class="btn-row" style="justify-content:center;gap:14px;">
+        <button class="btn btn-primary" onclick="startSession('words')">Study More</button>
+        <button class="btn btn-outline" onclick="showView('dashboard')">Dashboard</button>
+      </div>
+    </div>`;
+}
+
+// ── SESSION LOG ────────────────────────────────────────
+function renderLog() {
+  const sessions = loadSessions();
+  const rows = sessions.length
+    ? sessions.map(s => `
+        <div class="session-log-row">
+          <div class="slog-date">${s.date}</div>
+          <div class="slog-verses">${s.verses_reviewed} verse${s.verses_reviewed!==1?'s':''}</div>
+          <div class="slog-score">
+            <div style="font-size:0.7rem;color:var(--sys-text2)">${Math.round(s.avg_score * 33)}%</div>
+            <div class="score-bar"><div class="score-fill" style="width:${Math.round(s.avg_score * 33)}%"></div></div>
+          </div>
+          <div class="slog-dur">${Math.round(s.duration/60)}m ${s.duration%60}s</div>
+        </div>`).join('')
+    : '<div style="padding:20px;color:var(--sys-text3);font-style:italic;font-size:0.82rem;">No sessions recorded yet. Complete your first study session.</div>';
+
+  const payload = window.LOGOS.getDisciplinePayload();
+
+  return `
+    <div class="session-header">
+      <div>
+        <div class="session-title">Session Log</div>
+        <div class="session-subtitle">logos_sessions · last ${sessions.length} entries</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="startSession('words')" style="margin-left:auto">New Session →</button>
+    </div>
+
+    <div style="background:var(--sys-surface);border:1px solid var(--sys-border);border-radius:3px;overflow:hidden;margin-bottom:24px;">
+      <div style="display:flex;gap:14px;padding:10px 14px;background:var(--sys-surface2);border-bottom:1px solid var(--sys-border);font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.12em;color:var(--sys-text3);text-transform:uppercase;">
+        <div style="min-width:100px">Date</div>
+        <div style="min-width:80px">Verses</div>
+        <div style="min-width:60px">Score</div>
+        <div style="margin-left:auto">Duration</div>
+      </div>
+      ${rows}
+    </div>
+
+    <div class="discipline-box">
+      <div class="discipline-label">THE SYSTEM Discipline Payload — window.LOGOS.getDisciplinePayload()</div>
+      <div class="discipline-code">${JSON.stringify(payload, null, 2).replace(/</g,'&lt;')}</div>
+    </div>`;
+}
+
+// ── BROWSE ─────────────────────────────────────────────
+function renderBrowse() {
+  const db     = loadReviews();
+  const verses = [...JESUS_VERSES, ...NT_VERSES];
+  return `
+    <div class="session-header">
+      <div>
+        <div class="session-title">Browse — logos_verses</div>
+        <div class="session-subtitle">All KJV verses · search by reference or text</div>
+      </div>
+    </div>
+    <input style="width:100%;font-family:'IM Fell English',serif;font-size:1rem;padding:10px 14px;
+      border:1px solid var(--sys-border);background:var(--sys-surface2);
+      color:var(--scripture);outline:none;margin-bottom:20px;border-radius:2px;"
+      id="browse-search" placeholder="Search references or text…" oninput="filterBrowse()"/>
+    <div id="browse-list">
+      ${verses.map(v => {
+        const c    = db[v.ref] || {};
+        const badge = c.repetitions >= 4 ? '✓ Mature'
+                    : c.repetitions >= 1  ? '~ Learning'
+                    : isIntroduced(v.ref) ? '· New'
+                    : '⏳ Soon';
+        const col  = c.repetitions >= 4 ? 'var(--sys-green)'
+                   : c.repetitions >= 1  ? 'var(--sys-accent3)'
+                   : isIntroduced(v.ref) ? 'var(--sys-text3)'
+                   : '#3a4060';
+        return `<div class="browse-row" data-text="${v.ref.toLowerCase()} ${v.text.toLowerCase()}">
+          <div style="min-width:130px;font-family:'Cinzel',serif;font-size:0.66rem;color:var(--sys-accent3);letter-spacing:0.08em">${v.ref}</div>
+          <div style="flex:1;font-family:'IM Fell English',serif;font-size:0.88rem;line-height:1.75;color:var(--scripture)">${v.text}</div>
+          <div style="min-width:70px;text-align:right;font-size:0.62rem;color:${col};font-style:italic">${badge}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+//  HANDLERS
+// ══════════════════════════════════════════════════════
+function afterRender() {
+  // Auto-focus first blank input
+  setTimeout(() => {
+    const f = document.querySelector('.blank-input');
+    if (f) f.focus();
+  }, 60);
+
+  // Render discipline payload preview on dashboard
+  const pp = document.getElementById('payload-preview');
+  if (pp) {
+    const payload = window.LOGOS.getDisciplinePayload();
+    pp.textContent = JSON.stringify(payload, null, 2);
+  }
+}
+
+function bfKey(e, idx) {
+  if (e.key === 'Enter') { e.preventDefault(); checkAnswers(); }
+}
+
+function startSession(stage) {
+  S.queue        = buildQueue(stage);
+  S.idx          = 0;
+  S.phase        = 'question';
+  S.score        = null;
+  S.sessionStart = Date.now();
+  S.sessionScores = [];
+  loadCloze();
+  showView('study');
+}
+
+function startVerse(ref) {
+  const all   = [...JESUS_VERSES, ...NT_VERSES, ...OT_VERSES];
+  const verse = all.find(v => v.ref === ref);
+  if (!verse) return;
+  S.queue        = [verse];
+  S.idx          = 0;
+  S.phase        = 'question';
+  S.score        = null;
+  S.sessionStart = Date.now();
+  S.sessionScores = [];
+  loadCloze();
+  showView('study');
+}
+
+function loadCloze() {
+  if (S.idx < S.queue.length) {
+    S.cloze       = buildCloze(S.queue[S.idx].text);
+    S.userAnswers = {};
+    S.score       = null;
+  }
+}
+
+function checkAnswers() {
+  const { words, blanks } = S.cloze;
+  const bIdxs = Object.keys(blanks).map(Number);
+  bIdxs.forEach(idx => {
+    const inp = document.getElementById(`bf-${idx}`);
+    S.userAnswers[idx] = inp ? inp.value.trim() : '';
+  });
+  let correct = 0;
+  bIdxs.forEach(idx => { if (cw(S.userAnswers[idx]) === cw(words[idx])) correct++; });
+  const total = bIdxs.length;
+  const pct   = Math.round((correct / total) * 100);
+  S.score = { correct, total, pct };
+  S.phase = 'revealed';
+  render();
+}
+
+function revealAll() {
+  S.userAnswers = {};
+  S.score = { correct: 0, total: Object.keys(S.cloze.blanks).length, pct: 0 };
+  S.phase = 'revealed';
+  render();
+}
+
+function rate(r) {
+  const verse = S.queue[S.idx];
+  const card  = getCard(verse.ref);
+  scheduleCard(card, r);
+  // Track score for session log (normalise 0-3 rating to 0-1)
+  S.sessionScores.push(r / 3);
+  S.idx++;
+  S.phase = 'question';
+  loadCloze();
+  render();
+}
+
+function filterBrowse() {
+  const q = (document.getElementById('browse-search')?.value || '').toLowerCase();
+  document.querySelectorAll('.browse-row').forEach(row => {
+    row.style.display = row.dataset.text.includes(q) ? 'flex' : 'none';
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT — build-once
+// ══════════════════════════════════════════════════════
+initSchedule();
+render();
+</script>
+</body>
+</html>

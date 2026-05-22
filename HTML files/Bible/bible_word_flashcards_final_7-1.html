@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Key Bible Words Flashcards</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --card-2: #1f2937;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --accent: #facc15;
+      --accent-2: #38bdf8;
+      --danger: #fb7185;
+      --good: #34d399;
+      --mid: #fbbf24;
+      --border: rgba(255, 255, 255, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1e293b 0%, var(--bg) 55%);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app { width: min(980px, 100%); }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      letter-spacing: -0.05em;
+    }
+
+    .title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .stat strong { color: var(--text); }
+
+    .card {
+      background: linear-gradient(160deg, rgba(17, 24, 39, 0.98), rgba(31, 41, 55, 0.96));
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+
+    .card-main {
+      padding: clamp(24px, 5vw, 48px);
+      text-align: center;
+    }
+
+    .label {
+      color: var(--accent-2);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      font-size: 0.78rem;
+      margin-bottom: 12px;
+    }
+
+    .word {
+      font-size: clamp(3rem, 12vw, 7rem);
+      font-weight: 900;
+      letter-spacing: -0.08em;
+      margin: 0;
+      text-transform: uppercase;
+      line-height: 0.92;
+    }
+
+    .instruction {
+      color: var(--muted);
+      margin: 18px auto 0;
+      max-width: 650px;
+      line-height: 1.6;
+      font-size: 1rem;
+    }
+
+    .timer-wrap {
+      margin: 26px auto 0;
+      max-width: 480px;
+    }
+
+    .timer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .timer {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--good), var(--accent));
+      transition: width 0.4s linear;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-weight: 800;
+      color: var(--text);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid var(--border);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,0.16);
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #111827;
+      border-color: transparent;
+    }
+
+    .primary:hover { background: #fde047; }
+
+    .panel {
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,0.16);
+      padding: 22px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .box {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+      min-height: 130px;
+    }
+
+    .box h3 {
+      margin: 0 0 12px;
+      color: var(--accent-2);
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .box ul {
+      margin: 0;
+      padding-left: 20px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+
+    .hidden-content { display: none; }
+    .show { display: block; }
+
+    .confidence {
+      padding: 18px 22px 24px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .weak { border-color: rgba(251,113,133,0.5); }
+    .mid { border-color: rgba(251,191,36,0.55); }
+    .strong { border-color: rgba(52,211,153,0.55); }
+
+    .word-list {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .chip {
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .chip.active {
+      background: rgba(250,204,21,0.15);
+      color: var(--accent);
+      border-color: rgba(250,204,21,0.55);
+      font-weight: 800;
+    }
+
+    .chip[data-status="weak"] { color: var(--danger); }
+    .chip[data-status="mid"] { color: var(--mid); }
+    .chip[data-status="strong"] { color: var(--good); }
+
+    .footer-note {
+      color: var(--muted);
+      text-align: center;
+      margin-top: 14px;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 760px) {
+      .panel { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="topbar">
+      <div class="title">
+        <h1>Bible Word Flashcards</h1>
+        <p>Random words. Fast recall. Hints only when your brain starts betraying you.</p>
+      </div>
+      <div class="stats">
+        <div class="stat">Card <strong id="cardNumber">1</strong>/<strong id="totalCards">7</strong></div>
+        <div class="stat">Mode: <strong id="modeLabel">Practice</strong></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-main">
+        <div class="label">Current Word</div>
+        <h2 class="word" id="wordDisplay">Youth</h2>
+        <p class="instruction" id="instruction">
+          First, try to say the 3 scripture references from memory. Then use Hint 1 for references, Hint 2 for keywords, and Reveal to confirm.
+        </p>
+
+        <div class="timer-wrap">
+          <div class="timer-row">
+            <span>Pressure timer</span>
+            <span class="timer" id="timer">30</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button class="primary" onclick="randomCard()">Random Word</button>
+          <button onclick="nextCard()">Next</button>
+          <button onclick="startTimer(30)">Start 30s</button>
+          <button onclick="resetTimer()">Reset Timer</button>
+          <button onclick="togglePanel('refs')">Hint 1: References</button>
+          <button onclick="togglePanel('keywords')">Hint 2: Keywords</button>
+          <button onclick="togglePanel('reveal')">Reveal</button>
+          <button onclick="hideAll()">Hide All</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="box">
+          <h3>Hint 1: References</h3>
+          <div id="refs" class="hidden-content"></div>
+        </div>
+        <div class="box">
+          <h3>Hint 2: Trigger Words</h3>
+          <div id="keywords" class="hidden-content"></div>
+        </div>
+        <div class="box">
+          <h3>Reveal</h3>
+          <div id="reveal" class="hidden-content"></div>
+        </div>
+      </div>
+
+      <div class="confidence">
+        <button class="weak" onclick="setConfidence('weak')">❌ Weak</button>
+        <button class="mid" onclick="setConfidence('mid')">⚠️ Mid</button>
+        <button class="strong" onclick="setConfidence('strong')">✅ Strong</button>
+      </div>
+    </section>
+
+    <section class="word-list" id="wordList"></section>
+    <p class="footer-note">Tip: Say the references aloud before clicking hints. Stage confidence comes from retrieval, not rereading.</p>
+  </main>
+
+  <script>
+    const cards = [
+      {
+        word: "Youth",
+        refs: ["1 Timothy 4:12", "Ecclesiastes 12:1", "Psalm 119:9"],
+        keywords: ["example in word/conduct/love/faith/purity", "remember your Creator", "young man cleanse his way"],
+        reveal: [
+          "1 Timothy 4:12 — Let no one despise your youth; be an example.",
+          "Ecclesiastes 12:1 — Remember now your Creator in the days of your youth.",
+          "Psalm 119:9 — A young man cleanses his way by taking heed according to God's word."
+        ]
+      },
+      {
+        word: "Faith",
+        refs: ["Hebrews 11:1", "Hebrews 11:6", "Romans 10:17"],
+        keywords: ["substance / evidence", "impossible to please Him", "faith comes by hearing"],
+        reveal: [
+          "Hebrews 11:1 — Faith is the substance of things hoped for, the evidence of things not seen.",
+          "Hebrews 11:6 — Without faith it is impossible to please Him.",
+          "Romans 10:17 — Faith comes by hearing, and hearing by the word of God."
+        ]
+      },
+      {
+        word: "Grace",
+        refs: ["Ephesians 2:8", "2 Corinthians 12:9", "Hebrews 4:16"],
+        keywords: ["saved by grace", "My grace is sufficient", "throne of grace"],
+        reveal: [
+          "Ephesians 2:8 — By grace you have been saved through faith.",
+          "2 Corinthians 12:9 — My grace is sufficient for you.",
+          "Hebrews 4:16 — Come boldly to the throne of grace."
+        ]
+      },
+      {
+        word: "Prayer",
+        refs: ["1 Thessalonians 5:17", "Jeremiah 33:3", "James 5:16"],
+        keywords: ["pray without ceasing", "call to Me", "effective fervent prayer"],
+        reveal: [
+          "1 Thessalonians 5:17 — Pray without ceasing.",
+          "Jeremiah 33:3 — Call to Me, and I will answer you.",
+          "James 5:16 — The effective, fervent prayer of a righteous man avails much."
+        ]
+      },
+      {
+        word: "Righteousness",
+        refs: ["Matthew 5:6", "Matthew 6:33", "2 Corinthians 5:21"],
+        keywords: ["hunger and thirst", "seek first", "righteousness of God"],
+        reveal: [
+          "Matthew 5:6 — Blessed are those who hunger and thirst for righteousness.",
+          "Matthew 6:33 — Seek first the kingdom of God and His righteousness.",
+          "2 Corinthians 5:21 — We become the righteousness of God in Him."
+        ]
+      },
+      {
+        word: "Mercy",
+        refs: ["Lamentations 3:22–23", "Matthew 5:7", "Hebrews 4:16"],
+        keywords: ["mercies new every morning", "merciful obtain mercy", "obtain mercy"],
+        reveal: [
+          "Lamentations 3:22–23 — His compassions fail not; they are new every morning.",
+          "Matthew 5:7 — Blessed are the merciful, for they shall obtain mercy.",
+          "Hebrews 4:16 — Obtain mercy and find grace to help in time of need."
+        ]
+      },
+      {
+        word: "Love",
+        refs: ["1 Corinthians 13:4–7", "John 13:34", "1 John 4:8"],
+        keywords: ["suffers long / kind", "love one another", "God is love"],
+        reveal: [
+          "1 Corinthians 13:4–7 — Love suffers long, is kind, and bears all things.",
+          "John 13:34 — Love one another as I have loved you.",
+          "1 John 4:8 — He who does not love does not know God, for God is love."
+        ]
+      }
+    ];
+
+    let currentIndex = 0;
+    let timerInterval = null;
+    let timeLeft = 30;
+    let timerMax = 30;
+    const confidence = JSON.parse(localStorage.getItem("bibleFlashcardConfidence") || "{}");
+
+    const wordDisplay = document.getElementById("wordDisplay");
+    const refs = document.getElementById("refs");
+    const keywords = document.getElementById("keywords");
+    const reveal = document.getElementById("reveal");
+    const wordList = document.getElementById("wordList");
+    const cardNumber = document.getElementById("cardNumber");
+    const totalCards = document.getElementById("totalCards");
+    const timer = document.getElementById("timer");
+    const progressBar = document.getElementById("progressBar");
+    const modeLabel = document.getElementById("modeLabel");
+
+    totalCards.textContent = cards.length;
+
+    function list(items) {
+      return `<ul>${items.map(item => `<li>${item}</li>`).join("")}</ul>`;
+    }
+
+    function renderCard() {
+      const card = cards[currentIndex];
+      wordDisplay.textContent = card.word;
+      refs.innerHTML = list(card.refs);
+      keywords.innerHTML = list(card.keywords);
+      reveal.innerHTML = list(card.reveal);
+      cardNumber.textContent = currentIndex + 1;
+      hideAll();
+      renderWordList();
+      resetTimer();
+    }
+
+    function renderWordList() {
+      wordList.innerHTML = cards.map((card, index) => {
+        const status = confidence[card.word] || "";
+        const active = index === currentIndex ? "active" : "";
+        return `<div class="chip ${active}" data-status="${status}" onclick="goToCard(${index})">${card.word}</div>`;
+      }).join("");
+    }
+
+    function togglePanel(id) {
+      document.getElementById(id).classList.toggle("show");
+    }
+
+    function hideAll() {
+      [refs, keywords, reveal].forEach(el => el.classList.remove("show"));
+    }
+
+    function nextCard() {
+      currentIndex = (currentIndex + 1) % cards.length;
+      modeLabel.textContent = "Practice";
+      renderCard();
+    }
+
+    function randomCard() {
+      let next = currentIndex;
+      while (cards.length > 1 && next === currentIndex) {
+        next = Math.floor(Math.random() * cards.length);
+      }
+      currentIndex = next;
+      modeLabel.textContent = "Random";
+      renderCard();
+    }
+
+    function goToCard(index) {
+      currentIndex = index;
+      modeLabel.textContent = "Manual";
+      renderCard();
+    }
+
+    function startTimer(seconds = 30) {
+      clearInterval(timerInterval);
+      timerMax = seconds;
+      timeLeft = seconds;
+      updateTimer();
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimer();
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          timer.textContent = "TIME";
+          progressBar.style.width = "0%";
+        }
+      }, 1000);
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timeLeft = timerMax;
+      updateTimer();
+    }
+
+    function updateTimer() {
+      timer.textContent = timeLeft;
+      const width = Math.max(0, (timeLeft / timerMax) * 100);
+      progressBar.style.width = width + "%";
+    }
+
+    function setConfidence(level) {
+      const word = cards[currentIndex].word;
+      confidence[word] = level;
+      localStorage.setItem("bibleFlashcardConfidence", JSON.stringify(confidence));
+      renderWordList();
+    }
+
+    document.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      if (key === "r") randomCard();
+      if (key === "n") nextCard();
+      if (key === "1") togglePanel("refs");
+      if (key === "2") togglePanel("keywords");
+      if (key === "3") togglePanel("reveal");
+      if (key === " ") {
+        event.preventDefault();
+        startTimer(30);
+      }
+      if (key === "h") hideAll();
+    });
+
+    renderCard();
+  </script>
+</body>
+</html>

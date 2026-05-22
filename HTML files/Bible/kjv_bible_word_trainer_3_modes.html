@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KJV Bible Word Trainer</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg2: #0f172a;
+      --card: rgba(15, 23, 42, 0.94);
+      --panel: rgba(30, 41, 59, 0.86);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --soft: rgba(255,255,255,.08);
+      --border: rgba(255,255,255,.13);
+      --accent: #facc15;
+      --accent2: #38bdf8;
+      --good: #34d399;
+      --mid: #fbbf24;
+      --bad: #fb7185;
+      --shadow: 0 22px 80px rgba(0,0,0,.38);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(56,189,248,.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(250,204,21,.13), transparent 28%),
+        linear-gradient(160deg, var(--bg), var(--bg2));
+      color: var(--text);
+      padding: 20px;
+    }
+
+    .app {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      letter-spacing: -0.06em;
+      line-height: .95;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 680px;
+      line-height: 1.55;
+    }
+
+    .pillbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .pill {
+      border: 1px solid var(--border);
+      background: var(--soft);
+      color: var(--muted);
+      padding: 9px 12px;
+      border-radius: 999px;
+      font-size: .9rem;
+    }
+
+    .pill strong { color: var(--text); }
+
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.13);
+    }
+
+    button.active {
+      background: var(--accent);
+      color: #111827;
+      border-color: transparent;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #111827;
+      border-color: transparent;
+    }
+
+    button.good { border-color: rgba(52,211,153,.45); }
+    button.mid { border-color: rgba(251,191,36,.45); }
+    button.bad { border-color: rgba(251,113,133,.45); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .sidebar, .main-card {
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      padding: 14px;
+      position: sticky;
+      top: 16px;
+    }
+
+    .side-title {
+      color: var(--accent2);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-size: .75rem;
+      font-weight: 900;
+      margin: 4px 8px 10px;
+    }
+
+    .word-chip {
+      width: 100%;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      padding: 11px 12px;
+      margin-bottom: 8px;
+      border-radius: 16px;
+      color: var(--muted);
+      background: rgba(255,255,255,.055);
+    }
+
+    .word-chip.active {
+      color: #111827;
+      background: var(--accent);
+      border-color: transparent;
+    }
+
+    .word-chip .mini {
+      font-size: .75rem;
+      opacity: .75;
+    }
+
+    .main-card {
+      min-height: 650px;
+    }
+
+    .section {
+      display: none;
+      padding: clamp(20px, 4vw, 42px);
+    }
+
+    .section.active { display: block; }
+
+    .word-title {
+      margin: 0;
+      font-size: clamp(3rem, 12vw, 7rem);
+      line-height: .88;
+      letter-spacing: -0.08em;
+      text-transform: uppercase;
+    }
+
+    .note {
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 14px 0 0;
+      max-width: 820px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin: 24px 0;
+    }
+
+    .learning-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .verse-card {
+      background: rgba(255,255,255,.065);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 16px;
+      min-height: 220px;
+    }
+
+    .verse-card h3 {
+      margin: 0 0 4px;
+      color: var(--accent);
+      font-size: 1rem;
+    }
+
+    .angle {
+      color: var(--accent2);
+      font-size: .78rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      margin-bottom: 10px;
+    }
+
+    .keywords {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.55;
+      margin: 0 0 12px;
+    }
+
+    .verse-text {
+      color: var(--text);
+      line-height: 1.68;
+      font-size: .98rem;
+      margin: 0;
+    }
+
+    mark {
+      background: rgba(250,204,21,.24);
+      color: var(--accent);
+      padding: 0 2px;
+      border-radius: 5px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .hint-panel {
+      display: none;
+      background: rgba(255,255,255,.065);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      margin: 12px 0;
+      line-height: 1.7;
+    }
+
+    .hint-panel.show { display: block; }
+
+    .practice-box {
+      background: rgba(255,255,255,.065);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px;
+      margin-top: 18px;
+    }
+
+    .practice-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .big-ref {
+      font-size: clamp(1.5rem, 4vw, 2.7rem);
+      margin: 8px 0 4px;
+      color: var(--accent);
+      letter-spacing: -0.04em;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 170px;
+      resize: vertical;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(2,6,23,.5);
+      color: var(--text);
+      padding: 16px;
+      font: inherit;
+      line-height: 1.6;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: rgba(56,189,248,.65);
+      box-shadow: 0 0 0 3px rgba(56,189,248,.12);
+    }
+
+    .result {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.055);
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .score {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--accent);
+    }
+
+    .flashcard {
+      margin: 30px auto 0;
+      max-width: 760px;
+      min-height: 360px;
+      border-radius: 30px;
+      border: 1px solid var(--border);
+      background:
+        radial-gradient(circle at top, rgba(250,204,21,.13), transparent 38%),
+        rgba(255,255,255,.065);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .flash-ref {
+      font-size: clamp(2.2rem, 8vw, 5rem);
+      font-weight: 950;
+      letter-spacing: -0.06em;
+      margin: 0;
+      color: var(--accent);
+    }
+
+    .flash-verse {
+      font-size: clamp(1.15rem, 3vw, 1.8rem);
+      line-height: 1.65;
+      margin: 0;
+    }
+
+    .flash-sub {
+      color: var(--muted);
+      margin-top: 16px;
+      font-size: .95rem;
+    }
+
+    .footer-line {
+      text-align: center;
+      color: var(--muted);
+      font-size: .85rem;
+      margin: 16px 0 0;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .learning-grid { grid-template-columns: 1fr; }
+      .mode-tabs { grid-template-columns: 1fr; }
+    }
+
+    @media (min-width: 901px) and (max-width: 1200px) {
+      .learning-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>KJV Bible Word Trainer</h1>
+        <p class="subtitle">Final convention words. Prioritized KJV verses where the key word appears directly whenever possible. Train in Learning, Practice, or Anki-style Flashcards mode.</p>
+      </div>
+      <div class="pillbar">
+        <div class="pill">Words: <strong id="wordCount">7</strong></div>
+        <div class="pill">Verses: <strong id="verseCount">35</strong></div>
+        <div class="pill">Mode: <strong id="currentModeLabel">Learning</strong></div>
+      </div>
+    </header>
+
+    <nav class="mode-tabs">
+      <button id="learningBtn" class="active" onclick="setMode('learning')">Learning</button>
+      <button id="practiceBtn" onclick="setMode('practice')">Practice</button>
+      <button id="flashcardsBtn" onclick="setMode('flashcards')">Flashcards</button>
+    </nav>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="side-title">Words</div>
+        <div id="wordButtons"></div>
+      </aside>
+
+      <section class="main-card">
+        <div id="learning" class="section active">
+          <p class="side-title">Learning Mode</p>
+          <h2 class="word-title" id="learnWord">Youth</h2>
+          <p class="note" id="learnNote"></p>
+          <div class="controls">
+            <button class="primary" onclick="randomWord()">Random Word</button>
+            <button onclick="nextWord()">Next Word</button>
+            <button onclick="toggleAllVerses()">Show / Hide Full Verses</button>
+          </div>
+          <div id="learningGrid" class="learning-grid"></div>
+        </div>
+
+        <div id="practice" class="section">
+          <p class="side-title">Practice Mode</p>
+          <h2 class="word-title" id="practiceWord">Youth</h2>
+          <p class="note">Type the verse from memory one scripture at a time. Use the reference hint only when stuck. The checker is forgiving with punctuation, but KJV wording still matters.</p>
+
+          <div class="practice-box">
+            <div class="practice-meta">
+              <div class="pill">Scripture <strong id="practiceNumber">1</strong>/5</div>
+              <div class="pill">Angle: <strong id="practiceAngle">Example</strong></div>
+              <div class="pill">Score: <strong id="practiceScore">—</strong></div>
+            </div>
+
+            <div class="big-ref" id="practiceRefHidden">Reference hidden</div>
+
+            <div class="controls">
+              <button onclick="togglePracticeRef()">Hint: Show Reference</button>
+              <button onclick="togglePracticeKeywords()">Hint: Keywords</button>
+              <button onclick="checkPractice()">Check</button>
+              <button onclick="revealPractice()">Reveal Exact KJV</button>
+              <button onclick="nextPracticeVerse()">Next Scripture</button>
+              <button onclick="resetPracticeInput()">Clear</button>
+            </div>
+
+            <div id="practiceKeywords" class="hint-panel"></div>
+            <textarea id="practiceInput" placeholder="Type the verse here from memory..."></textarea>
+            <div id="practiceResult" class="result">No check yet.</div>
+          </div>
+        </div>
+
+        <div id="flashcards" class="section">
+          <p class="side-title">Flashcards Mode</p>
+          <h2 class="word-title" id="flashWord">Youth</h2>
+          <p class="note">Anki-style: front shows the scripture reference. Click the card to flip and see the exact KJV verse. Use Next or Random to drill.</p>
+
+          <div class="controls">
+            <button class="primary" onclick="randomFlashcard()">Random Scripture</button>
+            <button onclick="nextFlashcard()">Next Scripture</button>
+            <button onclick="flipFlashcard()">Flip Card</button>
+          </div>
+
+          <div class="flashcard" onclick="flipFlashcard()">
+            <div id="flashFront">
+              <p class="flash-ref" id="flashRef">1 Timothy 4:12</p>
+              <p class="flash-sub">Click to reveal exact KJV verse</p>
+            </div>
+            <div id="flashBack" class="hidden">
+              <p class="flash-verse" id="flashVerse"></p>
+              <p class="flash-sub" id="flashAngle"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <p class="footer-line">Keyboard: L = Learning, P = Practice, F = Flashcards, R = Random, N = Next, Space = Flip in Flashcards.</p>
+  </main>
+
+  <script>
+    const cards = [
+  {
+    "word": "Youth",
+    "note": "Priority set: verses where “youth” appears directly, except one strong backup with “youthful.”",
+    "verses": [
+      {
+        "ref": "1 Timothy 4:12",
+        "angle": "Example",
+        "keywords": [
+          "despise thy youth",
+          "example",
+          "word",
+          "conversation",
+          "purity"
+        ],
+        "text": "Let no man despise thy youth; but be thou an example of the believers, in word, in conversation, in charity, in spirit, in faith, in purity."
+      },
+      {
+        "ref": "Ecclesiastes 12:1",
+        "angle": "Remember God Early",
+        "keywords": [
+          "remember",
+          "Creator",
+          "days of thy youth"
+        ],
+        "text": "Remember now thy Creator in the days of thy youth, while the evil days come not, nor the years draw nigh, when thou shalt say, I have no pleasure in them;"
+      },
+      {
+        "ref": "Ecclesiastes 11:9",
+        "angle": "Joy With Accountability",
+        "keywords": [
+          "rejoice",
+          "thy youth",
+          "judgment"
+        ],
+        "text": "Rejoice, O young man, in thy youth; and let thy heart cheer thee in the days of thy youth, and walk in the ways of thine heart, and in the sight of thine eyes: but know thou, that for all these things God will bring thee into judgment."
+      },
+      {
+        "ref": "Lamentations 3:27",
+        "angle": "Discipline",
+        "keywords": [
+          "bear the yoke",
+          "his youth"
+        ],
+        "text": "It is good for a man that he bear the yoke in his youth."
+      },
+      {
+        "ref": "Psalm 71:17",
+        "angle": "Taught From Youth",
+        "keywords": [
+          "taught me",
+          "from my youth",
+          "wondrous works"
+        ],
+        "text": "O God, thou hast taught me from my youth: and hitherto have I declared thy wondrous works."
+      }
+    ]
+  },
+  {
+    "word": "Faith",
+    "note": "All five contain “faith” directly and cover definition, necessity, source, lifestyle, and salvation.",
+    "verses": [
+      {
+        "ref": "Hebrews 11:1",
+        "angle": "Definition",
+        "keywords": [
+          "substance",
+          "hoped for",
+          "evidence",
+          "not seen"
+        ],
+        "text": "Now faith is the substance of things hoped for, the evidence of things not seen."
+      },
+      {
+        "ref": "Hebrews 11:6",
+        "angle": "Necessity",
+        "keywords": [
+          "without faith",
+          "impossible",
+          "please him",
+          "rewarder"
+        ],
+        "text": "But without faith it is impossible to please him: for he that cometh to God must believe that he is, and that he is a rewarder of them that diligently seek him."
+      },
+      {
+        "ref": "Romans 10:17",
+        "angle": "Source",
+        "keywords": [
+          "faith cometh",
+          "hearing",
+          "word of God"
+        ],
+        "text": "So then faith cometh by hearing, and hearing by the word of God."
+      },
+      {
+        "ref": "2 Corinthians 5:7",
+        "angle": "Lifestyle",
+        "keywords": [
+          "walk by faith",
+          "not by sight"
+        ],
+        "text": "(For we walk by faith, not by sight:)"
+      },
+      {
+        "ref": "Ephesians 2:8",
+        "angle": "Salvation",
+        "keywords": [
+          "grace",
+          "saved",
+          "through faith",
+          "gift"
+        ],
+        "text": "For by grace are ye saved through faith; and that not of yourselves: it is the gift of God:"
+      }
+    ]
+  },
+  {
+    "word": "Grace",
+    "note": "All five contain “grace” directly and cover salvation, strength, access, teaching, and dominion.",
+    "verses": [
+      {
+        "ref": "Ephesians 2:8–9",
+        "angle": "Salvation",
+        "keywords": [
+          "by grace",
+          "saved",
+          "through faith",
+          "not works"
+        ],
+        "text": "For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: Not of works, lest any man should boast."
+      },
+      {
+        "ref": "2 Corinthians 12:9",
+        "angle": "Strength In Weakness",
+        "keywords": [
+          "grace is sufficient",
+          "strength",
+          "weakness"
+        ],
+        "text": "And he said unto me, My grace is sufficient for thee: for my strength is made perfect in weakness. Most gladly therefore will I rather glory in my infirmities, that the power of Christ may rest upon me."
+      },
+      {
+        "ref": "Hebrews 4:16",
+        "angle": "Access",
+        "keywords": [
+          "throne of grace",
+          "obtain mercy",
+          "help"
+        ],
+        "text": "Let us therefore come boldly unto the throne of grace, that we may obtain mercy, and find grace to help in time of need."
+      },
+      {
+        "ref": "Titus 2:11–12",
+        "angle": "Teaching",
+        "keywords": [
+          "grace of God",
+          "bringeth salvation",
+          "teaching us"
+        ],
+        "text": "For the grace of God that bringeth salvation hath appeared to all men, Teaching us that, denying ungodliness and worldly lusts, we should live soberly, righteously, and godly, in this present world;"
+      },
+      {
+        "ref": "Romans 6:14",
+        "angle": "Dominion",
+        "keywords": [
+          "sin",
+          "dominion",
+          "under grace"
+        ],
+        "text": "For sin shall not have dominion over you: for ye are not under the law, but under grace."
+      }
+    ]
+  },
+  {
+    "word": "Prayer",
+    "note": "This set prioritizes “prayer” exactly, then uses “pray” only where the command is too strong to ignore.",
+    "verses": [
+      {
+        "ref": "Philippians 4:6–7",
+        "angle": "Peace",
+        "keywords": [
+          "prayer",
+          "supplication",
+          "thanksgiving",
+          "peace of God"
+        ],
+        "text": "Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God. And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus."
+      },
+      {
+        "ref": "James 5:15",
+        "angle": "Healing",
+        "keywords": [
+          "prayer of faith",
+          "sick",
+          "Lord shall raise him"
+        ],
+        "text": "And the prayer of faith shall save the sick, and the Lord shall raise him up; and if he have committed sins, they shall be forgiven him."
+      },
+      {
+        "ref": "James 5:16",
+        "angle": "Power",
+        "keywords": [
+          "pray one for another",
+          "effectual fervent prayer",
+          "availeth much"
+        ],
+        "text": "Confess your faults one to another, and pray one for another, that ye may be healed. The effectual fervent prayer of a righteous man availeth much."
+      },
+      {
+        "ref": "Colossians 4:2",
+        "angle": "Consistency",
+        "keywords": [
+          "continue in prayer",
+          "watch",
+          "thanksgiving"
+        ],
+        "text": "Continue in prayer, and watch in the same with thanksgiving;"
+      },
+      {
+        "ref": "1 Thessalonians 5:17",
+        "angle": "Command",
+        "keywords": [
+          "pray",
+          "without ceasing"
+        ],
+        "text": "Pray without ceasing."
+      }
+    ]
+  },
+  {
+    "word": "Righteousness",
+    "note": "All five contain “righteousness” directly and cover desire, priority, identity, faith, and practice.",
+    "verses": [
+      {
+        "ref": "Matthew 5:6",
+        "angle": "Desire",
+        "keywords": [
+          "hunger",
+          "thirst",
+          "righteousness",
+          "filled"
+        ],
+        "text": "Blessed are they which do hunger and thirst after righteousness: for they shall be filled."
+      },
+      {
+        "ref": "Matthew 6:33",
+        "angle": "Priority",
+        "keywords": [
+          "seek ye first",
+          "kingdom",
+          "righteousness"
+        ],
+        "text": "But seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you."
+      },
+      {
+        "ref": "2 Corinthians 5:21",
+        "angle": "Identity In Christ",
+        "keywords": [
+          "made sin",
+          "righteousness of God",
+          "in him"
+        ],
+        "text": "For he hath made him to be sin for us, who knew no sin; that we might be made the righteousness of God in him."
+      },
+      {
+        "ref": "Romans 3:22",
+        "angle": "By Faith",
+        "keywords": [
+          "righteousness of God",
+          "faith of Jesus Christ",
+          "believe"
+        ],
+        "text": "Even the righteousness of God which is by faith of Jesus Christ unto all and upon all them that believe: for there is no difference:"
+      },
+      {
+        "ref": "1 John 3:7",
+        "angle": "Practice",
+        "keywords": [
+          "doeth righteousness",
+          "is righteous"
+        ],
+        "text": "Little children, let no man deceive you: he that doeth righteousness is righteous, even as he is righteous."
+      }
+    ]
+  },
+  {
+    "word": "Mercy",
+    "note": "All five contain “mercy” or “mercies” directly and cover preservation, receiving mercy, access, God’s nature, and confidence.",
+    "verses": [
+      {
+        "ref": "Lamentations 3:22–23",
+        "angle": "Preservation",
+        "keywords": [
+          "LORD's mercies",
+          "not consumed",
+          "new every morning"
+        ],
+        "text": "It is of the LORD's mercies that we are not consumed, because his compassions fail not. They are new every morning: great is thy faithfulness."
+      },
+      {
+        "ref": "Matthew 5:7",
+        "angle": "Receiving Mercy",
+        "keywords": [
+          "merciful",
+          "obtain mercy"
+        ],
+        "text": "Blessed are the merciful: for they shall obtain mercy."
+      },
+      {
+        "ref": "Hebrews 4:16",
+        "angle": "Access",
+        "keywords": [
+          "obtain mercy",
+          "find grace",
+          "time of need"
+        ],
+        "text": "Let us therefore come boldly unto the throne of grace, that we may obtain mercy, and find grace to help in time of need."
+      },
+      {
+        "ref": "Micah 7:18",
+        "angle": "God’s Delight",
+        "keywords": [
+          "pardoneth",
+          "iniquity",
+          "delighteth in mercy"
+        ],
+        "text": "Who is a God like unto thee, that pardoneth iniquity, and passeth by the transgression of the remnant of his heritage? he retaineth not his anger for ever, because he delighteth in mercy."
+      },
+      {
+        "ref": "Psalm 103:8",
+        "angle": "God’s Nature",
+        "keywords": [
+          "merciful",
+          "gracious",
+          "slow to anger",
+          "plenteous in mercy"
+        ],
+        "text": "The LORD is merciful and gracious, slow to anger, and plenteous in mercy."
+      }
+    ]
+  },
+  {
+    "word": "Love",
+    "note": "This set prioritizes “love” exactly. KJV’s 1 Corinthians 13 uses “charity,” so it is not used as a main Love card here.",
+    "verses": [
+      {
+        "ref": "John 13:34–35",
+        "angle": "Command",
+        "keywords": [
+          "love one another",
+          "as I have loved you",
+          "disciples"
+        ],
+        "text": "A new commandment I give unto you, That ye love one another; as I have loved you, that ye also love one another. By this shall all men know that ye are my disciples, if ye have love one to another."
+      },
+      {
+        "ref": "1 John 4:8",
+        "angle": "God’s Nature",
+        "keywords": [
+          "loveth not",
+          "knoweth not God",
+          "God is love"
+        ],
+        "text": "He that loveth not knoweth not God; for God is love."
+      },
+      {
+        "ref": "1 John 4:7",
+        "angle": "Brotherly Love",
+        "keywords": [
+          "let us love",
+          "love is of God",
+          "born of God"
+        ],
+        "text": "Beloved, let us love one another: for love is of God; and every one that loveth is born of God, and knoweth God."
+      },
+      {
+        "ref": "1 John 4:18",
+        "angle": "No Fear",
+        "keywords": [
+          "no fear in love",
+          "perfect love",
+          "casteth out fear"
+        ],
+        "text": "There is no fear in love; but perfect love casteth out fear: because fear hath torment. He that feareth is not made perfect in love."
+      },
+      {
+        "ref": "Matthew 22:37–39",
+        "angle": "Great Commandment",
+        "keywords": [
+          "love the Lord",
+          "heart",
+          "soul",
+          "mind",
+          "neighbour"
+        ],
+        "text": "Jesus said unto him, Thou shalt love the Lord thy God with all thy heart, and with all thy soul, and with all thy mind. This is the first and great commandment. And the second is like unto it, Thou shalt love thy neighbour as thyself."
+      }
+    ]
+  }
+];
+
+    let currentWordIndex = 0;
+    let currentPracticeIndex = 0;
+    let flashDeck = [];
+    let currentFlashIndex = 0;
+    let flashFlipped = false;
+    let versesVisible = true;
+    let practiceRefShown = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    function normalize(text) {
+      return text
+        .toLowerCase()
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function similarity(a, b) {
+      const aw = normalize(a).split(" ").filter(Boolean);
+      const bw = normalize(b).split(" ").filter(Boolean);
+      if (!aw.length || !bw.length) return 0;
+      const bCounts = {};
+      bw.forEach(w => bCounts[w] = (bCounts[w] || 0) + 1);
+      let hits = 0;
+      aw.forEach(w => {
+        if (bCounts[w] > 0) {
+          hits++;
+          bCounts[w]--;
+        }
+      });
+      return Math.round((hits / bw.length) * 100);
+    }
+
+    function highlightWord(text, word) {
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\b(${escaped}|${escaped}s|${escaped}ful|${escaped}eth|${escaped}ed)\\b`, "gi");
+      return text.replace(re, "<mark>$1</mark>");
+    }
+
+    function currentCard() {
+      return cards[currentWordIndex];
+    }
+
+    function currentPracticeVerse() {
+      return currentCard().verses[currentPracticeIndex];
+    }
+
+    function buildFlashDeck() {
+      flashDeck = [];
+      cards.forEach((card, wi) => {
+        card.verses.forEach((verse, vi) => {
+          flashDeck.push({ wordIndex: wi, verseIndex: vi, word: card.word, ...verse });
+        });
+      });
+    }
+
+    function renderWordButtons() {
+      $("wordButtons").innerHTML = cards.map((card, index) => `
+        <button class="word-chip ${index === currentWordIndex ? "active" : ""}" onclick="selectWord(${index})">
+          <span>${card.word}</span>
+          <span class="mini">5</span>
+        </button>
+      `).join("");
+    }
+
+    function renderLearning() {
+      const card = currentCard();
+      $("learnWord").textContent = card.word;
+      $("learnNote").textContent = card.note;
+      $("learningGrid").innerHTML = card.verses.map((verse, i) => `
+        <article class="verse-card">
+          <h3>${i + 1}. ${verse.ref}</h3>
+          <div class="angle">${verse.angle}</div>
+          <p class="keywords"><strong>Triggers:</strong> ${verse.keywords.join(" • ")}</p>
+          <p class="verse-text ${versesVisible ? "" : "hidden"}">${highlightWord(verse.text, card.word)}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderPractice() {
+      const card = currentCard();
+      const verse = currentPracticeVerse();
+      $("practiceWord").textContent = card.word;
+      $("practiceNumber").textContent = currentPracticeIndex + 1;
+      $("practiceAngle").textContent = verse.angle;
+      $("practiceScore").textContent = "—";
+      $("practiceRefHidden").textContent = practiceRefShown ? verse.ref : "Reference hidden";
+      $("practiceKeywords").innerHTML = `<strong>Keywords:</strong> ${verse.keywords.join(" • ")}`;
+      $("practiceKeywords").classList.remove("show");
+      $("practiceResult").innerHTML = "No check yet.";
+      $("practiceInput").value = "";
+    }
+
+    function renderFlashcard() {
+      const item = flashDeck[currentFlashIndex];
+      $("flashWord").textContent = item.word;
+      $("flashRef").textContent = item.ref;
+      $("flashVerse").innerHTML = highlightWord(item.text, item.word);
+      $("flashAngle").textContent = `${item.word} • ${item.angle}`;
+      $("flashFront").classList.toggle("hidden", flashFlipped);
+      $("flashBack").classList.toggle("hidden", !flashFlipped);
+    }
+
+    function renderAll() {
+      renderWordButtons();
+      renderLearning();
+      renderPractice();
+      renderFlashcard();
+      $("wordCount").textContent = cards.length;
+      $("verseCount").textContent = cards.reduce((sum, card) => sum + card.verses.length, 0);
+    }
+
+    function selectWord(index) {
+      currentWordIndex = index;
+      currentPracticeIndex = 0;
+      practiceRefShown = false;
+      const firstFlashForWord = flashDeck.findIndex(item => item.wordIndex === index);
+      if (firstFlashForWord !== -1) currentFlashIndex = firstFlashForWord;
+      flashFlipped = false;
+      renderAll();
+    }
+
+    function nextWord() {
+      selectWord((currentWordIndex + 1) % cards.length);
+    }
+
+    function randomWord() {
+      let next = currentWordIndex;
+      while (cards.length > 1 && next === currentWordIndex) {
+        next = Math.floor(Math.random() * cards.length);
+      }
+      selectWord(next);
+    }
+
+    function setMode(mode) {
+      ["learning", "practice", "flashcards"].forEach(id => {
+        $(id).classList.toggle("active", id === mode);
+        $(id + "Btn").classList.toggle("active", id === mode);
+      });
+      $("currentModeLabel").textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+    }
+
+    function toggleAllVerses() {
+      versesVisible = !versesVisible;
+      renderLearning();
+    }
+
+    function togglePracticeRef() {
+      practiceRefShown = !practiceRefShown;
+      $("practiceRefHidden").textContent = practiceRefShown ? currentPracticeVerse().ref : "Reference hidden";
+    }
+
+    function togglePracticeKeywords() {
+      $("practiceKeywords").classList.toggle("show");
+    }
+
+    function checkPractice() {
+      const verse = currentPracticeVerse();
+      const input = $("practiceInput").value;
+      const score = similarity(input, verse.text);
+      $("practiceScore").textContent = score + "%";
+      let verdict = "Keep drilling.";
+      if (score >= 90) verdict = "Strong. That is close enough under pressure.";
+      else if (score >= 70) verdict = "Good skeleton, but tighten the wording.";
+      else if (score >= 45) verdict = "You remember fragments. Use keywords, then try again.";
+      else verdict = "Weak recall right now. Reveal, read once, hide, then type again.";
+      $("practiceResult").innerHTML = `<div class="score">${score}%</div><strong>${verdict}</strong>`;
+    }
+
+    function revealPractice() {
+      const verse = currentPracticeVerse();
+      $("practiceResult").innerHTML = `
+        <strong>${verse.ref}</strong><br>
+        <p class="verse-text">${highlightWord(verse.text, currentCard().word)}</p>
+      `;
+      practiceRefShown = true;
+      $("practiceRefHidden").textContent = verse.ref;
+    }
+
+    function nextPracticeVerse() {
+      currentPracticeIndex++;
+      if (currentPracticeIndex >= currentCard().verses.length) currentPracticeIndex = 0;
+      practiceRefShown = false;
+      renderPractice();
+    }
+
+    function resetPracticeInput() {
+      $("practiceInput").value = "";
+      $("practiceResult").innerHTML = "Cleared. Try again.";
+      $("practiceScore").textContent = "—";
+    }
+
+    function flipFlashcard() {
+      flashFlipped = !flashFlipped;
+      renderFlashcard();
+    }
+
+    function nextFlashcard() {
+      currentFlashIndex = (currentFlashIndex + 1) % flashDeck.length;
+      currentWordIndex = flashDeck[currentFlashIndex].wordIndex;
+      flashFlipped = false;
+      renderAll();
+    }
+
+    function randomFlashcard() {
+      let next = currentFlashIndex;
+      while (flashDeck.length > 1 && next === currentFlashIndex) {
+        next = Math.floor(Math.random() * flashDeck.length);
+      }
+      currentFlashIndex = next;
+      currentWordIndex = flashDeck[currentFlashIndex].wordIndex;
+      flashFlipped = false;
+      renderAll();
+    }
+
+    document.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      if (key === "l") setMode("learning");
+      if (key === "p") setMode("practice");
+      if (key === "f") setMode("flashcards");
+      if (key === "r") {
+        const activeMode = $("currentModeLabel").textContent.toLowerCase();
+        if (activeMode === "flashcards") randomFlashcard();
+        else randomWord();
+      }
+      if (key === "n") {
+        const activeMode = $("currentModeLabel").textContent.toLowerCase();
+        if (activeMode === "practice") nextPracticeVerse();
+        else if (activeMode === "flashcards") nextFlashcard();
+        else nextWord();
+      }
+      if (key === " " && $("flashcards").classList.contains("active")) {
+        event.preventDefault();
+        flipFlashcard();
+      }
+    });
+
+    buildFlashDeck();
+    renderAll();
+  </script>
+</body>
+</html>

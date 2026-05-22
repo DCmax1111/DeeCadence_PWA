@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard MVP | Subscription Plans</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #040814;
+      --surface: rgba(10, 20, 36, 0.95);
+      --surface-soft: rgba(14, 26, 47, 0.98);
+      --text: #f6f8fb;
+      --muted: #9cb3cc;
+      --accent: #6ae1ff;
+      --accent2: #f7c56b;
+      --border: rgba(255,255,255,0.1);
+      --radius: 28px;
+      --shadow: 0 30px 90px rgba(0,0,0,0.28);
+      --max-width: 1180px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100%; font-family: Inter, system-ui, sans-serif; background: radial-gradient(circle at top right, rgba(106,225,255,0.2), transparent 18%), linear-gradient(180deg, #081519 0%, #02070f 52%, #060613 100%); color: var(--text); }
+    .page { max-width: var(--max-width); margin: 0 auto; padding: 28px 24px 100px; }
+    a { color: var(--accent); }
+    .hero { padding: 38px; background: var(--surface); border: 1px solid var(--border); border-radius: 32px; box-shadow: var(--shadow); margin-bottom: 28px; }
+    .hero h1 { margin: 0 0 12px; font-size: clamp(2.4rem, 4vw, 3.8rem); }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.85; max-width: 720px; }
+    .section { display: grid; gap: 24px; }
+    .section .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; padding: 28px; }
+    .panel h2 { margin-top: 0; }
+    .panel p { margin: 0; color: var(--muted); line-height: 1.8; }
+    .plan-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); }
+    .plan { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 26px; padding: 24px; min-height: 360px; display: flex; flex-direction: column; justify-content: space-between; }
+    .plan h3 { margin: 0 0 10px; }
+    .plan-price { font-size: 2.05rem; margin: 12px 0; color: var(--accent2); }
+    .plan-meta { color: var(--muted); line-height: 1.7; margin-bottom: 16px; }
+    .features { list-style: none; padding: 0; margin: 0 0 22px; display: grid; gap: 12px; }
+    .features li { position: relative; padding-left: 24px; color: rgba(246,248,251,0.92); }
+    .features li::before { content: "•"; position: absolute; left: 0; color: var(--accent); font-size: 1.15rem; line-height: 1; top: 0; }
+    .button { margin-top: auto; display: inline-flex; padding: 14px 18px; border-radius: 999px; background: linear-gradient(135deg, rgba(106,225,255,0.22), rgba(247,197,107,0.2)); color: #fff; font-weight: 700; text-decoration: none; }
+    .badge { display: inline-flex; align-items: center; gap: 10px; background: rgba(106,225,255,0.12); color: var(--accent); padding: 10px 16px; border-radius: 999px; margin-bottom: 18px; }
+    .nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+    .nav a { background: rgba(106,225,255,0.12); padding: 12px 16px; border-radius: 999px; text-decoration: none; color: var(--text); }
+    .nav a:hover { background: rgba(106,225,255,0.22); }
+    @media (max-width: 760px) { .page { padding: 20px 18px 80px; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <span class="badge">MVP Demo</span>
+      <h1>Execution Tracker Dashboard MVP</h1>
+      <p>Create a mobile-ready planning dashboard that brings cash sprint status, task alignment, and tracking insights into one experience for small teams and creators.</p>
+    </header>
+
+    <section class="section">
+      <div class="panel">
+        <h2>Product thesis</h2>
+        <p>This dashboard is designed as the second high-value product in the portfolio: a daily execution hub with cash sprint planning, team progress, and KPI visuals that keep customers returning every day.</p>
+      </div>
+
+      <div class="plan-grid">
+        <article class="plan">
+          <div>
+            <h3>Launch</h3>
+            <div class="plan-price">$20<span style="font-size:0.62rem;color:var(--muted);">/month</span></div>
+            <p class="plan-meta">For individuals and small teams starting with structured planning.</p>
+            <ul class="features">
+              <li>Weekly sprint board</li>
+              <li>Cash sprint targets</li>
+              <li>Daily check-in cards</li>
+              <li>Mobile-ready UI</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Start free trial</a>
+        </article>
+
+        <article class="plan">
+          <div>
+            <h3>Scale</h3>
+            <div class="plan-price">$45<span style="font-size:0.62rem;color:var(--muted);">/month</span></div>
+            <p class="plan-meta">For growing teams that need performance metrics and shared visibility.</p>
+            <ul class="features">
+              <li>Team dashboards</li>
+              <li>Performance scorecards</li>
+              <li>Goal milestone tracking</li>
+              <li>Weekly recap emails</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Book a demo</a>
+        </article>
+
+        <article class="plan">
+          <div>
+            <h3>Enterprise</h3>
+            <div class="plan-price">$80<span style="font-size:0.62rem;color:var(--muted);">/month</span></div>
+            <p class="plan-meta">For agencies, studios, and operations leaders who need process governance and premium support.</p>
+            <ul class="features">
+              <li>Custom workflow templates</li>
+              <li>Priority onboarding</li>
+              <li>Multi-team workspaces</li>
+              <li>Dedicated success manager</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Request pricing</a>
+        </article>
+      </div>
+
+      <div class="panel">
+        <h2>Go-to-market positioning</h2>
+        <p>Position the dashboard as a high-use operational control center for creators, agencies, and small business operators. The built-in subscription tiers support recurring revenue while driving retention through daily task visibility and sprint accountability.</p>
+      </div>
+    </section>
+
+    <div class="nav">
+      <a href="index.html">Back to demo hub</a>
+      <a href="finance_mvp.html">Previous: Finance MVP</a>
+      <a href="education_mvp.html">Next: Education MVP</a>
+    </div>
+  </div>
+</body>
+</html>

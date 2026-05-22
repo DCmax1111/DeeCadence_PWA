@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>LEDGER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+/* ── ROOT DARK ── */
+:root {
+  --bg:#050508;--surface:#0c0c14;--surface2:#131320;--surface3:#1c1c2e;
+  --border:rgba(60,90,255,.09);--border2:rgba(80,110,255,.22);
+  --text:#e8e8f8;--text2:#6060a0;--text3:#30305a;
+  --card-bg:linear-gradient(135deg,#0c0c14 0%,#07091c 100%);
+  --grid:rgba(34,68,255,.025);
+  --topbar-bg:rgba(5,5,8,.92);
+  --income:#00e5a0;--income-dim:rgba(0,229,160,.1);
+  --expense:#ff4d6d;--expense-dim:rgba(255,77,109,.1);
+  --loan:#f5a623;--loan-dim:rgba(245,166,35,.1);
+  --sub:#a78bfa;--sub-dim:rgba(167,139,250,.1);
+  --xp:#4d8aff;--xp2:#7aaeff;--xp-dim:rgba(77,138,255,.13);
+  --accent:#2244ff;--accent2:#3d5eff;--aglow:rgba(34,68,255,.28);
+  --re:#555580;--rd:#4d8aff;--rc:#00c896;--rb:#a855f7;--ra:#f97316;--rs:#eab308;--rss:#ff2d6e;--rsss:#e0e0ff;
+}
+/* ── LIGHT THEME ── */
+[data-theme="light"] {
+  --bg:#f0f2ff;--surface:#ffffff;--surface2:#e8ecff;--surface3:#dce2ff;
+  --border:rgba(34,68,255,.1);--border2:rgba(34,68,255,.22);
+  --text:#08081a;--text2:#4040a0;--text3:#9090c0;
+  --card-bg:linear-gradient(135deg,#ffffff 0%,#dde5ff 100%);
+  --grid:rgba(34,68,255,.04);
+  --topbar-bg:rgba(240,242,255,.94);
+  --income:#00a870;--expense:#e0294a;
+  --income-dim:rgba(0,168,112,.1);--expense-dim:rgba(224,41,74,.1);
+  --xp:#2255dd;--xp2:#3366ff;--xp-dim:rgba(34,86,221,.12);
+  --accent:#1133dd;--accent2:#2244ee;--aglow:rgba(17,51,221,.22);
+  --re:#9090c0;--text3:#8888bb;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100%;overflow:hidden;overscroll-behavior:none;transition:background .3s,color .3s}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+#app::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;z-index:0}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease;transform:translateY(10px);z-index:1}
+.screen.active{opacity:1;pointer-events:all;transform:translateY(0)}
+
+/* ── TOPBAR ── */
+.topbar{padding:48px 16px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:linear-gradient(to bottom,var(--bg) 50%,transparent);position:relative;z-index:2}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.22em;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.theme-btn{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:background .2s}
+.theme-btn:active{opacity:.7}
+.rank-badge{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.1em;border:1px solid;transition:all .4s}
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:88px}
+.scroll-area::-webkit-scrollbar{display:none}
+
+/* ── BALANCE CARD ── */
+.bal-card{margin:0 13px 11px;background:var(--card-bg);border:1px solid var(--border2);border-radius:18px;padding:16px;position:relative;overflow:hidden;transition:background .3s}
+.bal-card::after{content:'';position:absolute;top:-50px;right:-50px;width:130px;height:130px;background:radial-gradient(circle,rgba(34,68,255,.13) 0%,transparent 70%);pointer-events:none}
+.bal-toggle-row{display:flex;gap:0;background:var(--surface2);border-radius:6px;padding:2px;margin-bottom:10px;width:fit-content;border:1px solid var(--border)}
+.bal-tog{font-family:'Space Mono',monospace;font-size:8px;padding:4px 10px;border-radius:4px;cursor:pointer;color:var(--text3);letter-spacing:.08em;transition:all .18s}
+.bal-tog.on{background:var(--accent);color:#fff}
+.bal-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:.16em;margin-bottom:3px}
+.bal-amount{font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:.04em;line-height:1;margin-bottom:1px;transition:color .3s}
+.bal-amount.pos{color:var(--income)}.bal-amount.neg{color:var(--expense)}.bal-amount.zer{color:var(--text)}
+.bal-sub{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:11px}
+.bal-row{display:flex;gap:8px}
+.bal-pill{flex:1;background:rgba(0,0,0,.18);border-radius:9px;padding:8px 10px;border:1px solid var(--border)}
+[data-theme="light"] .bal-pill{background:rgba(34,68,255,.05)}
+.bal-pill-lbl{font-size:8px;color:var(--text3);font-family:'Space Mono',monospace;letter-spacing:.09em;margin-bottom:2px}
+.bal-pill-val{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em}
+.iv{color:var(--income)}.ev{color:var(--expense)}
+
+/* ── DISCIPLINE CARD ── */
+.disc-card{margin:0 13px 11px;background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:12px 14px;transition:background .3s}
+.disc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.disc-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--xp);letter-spacing:.13em;margin-bottom:2px}
+.disc-score{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.06em;color:var(--xp2);line-height:1}
+.streak-val{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.04em;color:var(--xp2);text-align:right}
+.streak-sub{font-size:8px;color:var(--text3);font-family:'Space Mono',monospace;text-align:right}
+.track{height:4px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-bottom:6px}
+.fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.34,1.56,.64,1)}
+.disc-fill{background:linear-gradient(90deg,var(--xp),var(--xp2))}
+.xp-fill-bar{background:linear-gradient(90deg,var(--accent2),var(--xp2))}
+.xp-section-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--xp);letter-spacing:.13em;margin-bottom:4px;display:block}
+.xp-meta{display:flex;justify-content:space-between;margin-top:4px}
+.xp-mi{font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);transition:color .3s}
+.xp-mi.on{color:var(--xp2)}
+
+/* ── DECAY BOX ── */
+.decay-box{margin:0 13px 10px;background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.15);border-radius:9px;padding:9px 12px;display:none;align-items:center;gap:8px}
+.decay-box.show{display:flex}
+.decay-txt{font-size:10px;color:var(--expense);font-family:'Space Mono',monospace;line-height:1.4}
+
+/* ── COMMITMENTS ── */
+.commit-card{margin:0 13px 11px;background:var(--surface);border:1px solid var(--border);border-radius:13px;overflow:hidden;transition:background .3s}
+.commit-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 13px 7px}
+.commit-title{font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:.15em}
+.commit-burn{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em;color:var(--sub)}
+.commit-row{display:flex;align-items:center;gap:9px;padding:7px 13px;border-top:1px solid var(--border);cursor:pointer;transition:background .12s}
+.commit-row:active{background:var(--surface2)}
+.commit-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.commit-ico.lg{background:var(--loan-dim);border:1px solid rgba(245,166,35,.18)}
+.commit-ico.sb{background:var(--sub-dim);border:1px solid rgba(167,139,250,.18)}
+.commit-info{flex:1;min-width:0}
+.commit-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.commit-meta{font-size:8px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:1px}
+.commit-amt{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em}
+.commit-amt.loan{color:var(--loan)}.commit-amt.sub{color:var(--sub)}
+.status-badge{font-size:8px;font-family:'Space Mono',monospace;padding:2px 6px;border-radius:3px;letter-spacing:.06em;cursor:pointer;transition:opacity .15s}
+.status-badge:active{opacity:.7}
+.status-badge.pending{background:var(--loan-dim);color:var(--loan);border:1px solid rgba(245,166,35,.2)}
+.status-badge.partial{background:rgba(245,166,35,.06);color:var(--loan);border:1px solid rgba(245,166,35,.15)}
+.status-badge.repaid{background:var(--income-dim);color:var(--income);border:1px solid rgba(0,229,160,.2)}
+
+/* ── RECOVERY BANNER ── */
+.rec-banner{margin:0 13px 11px;background:linear-gradient(135deg,var(--xp-dim),rgba(34,68,255,.03));border:1px solid rgba(77,138,255,.18);border-radius:11px;padding:10px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .18s}
+.rec-banner:active{border-color:rgba(77,138,255,.38)}
+.rec-title{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:var(--xp2);letter-spacing:.09em;margin-bottom:1px}
+.rec-sub{font-size:10px;color:var(--text3)}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 13px;margin-bottom:5px}
+.sec-title{font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:.16em}
+.sec-action{font-size:10px;color:var(--xp2);cursor:pointer;font-family:'Space Mono',monospace}
+
+/* ── TX LIST ── */
+.tx-group{margin-bottom:2px}
+.tx-date-hdr{padding:6px 13px 3px;font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:.13em}
+.tx-item{display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;transition:background .12s;position:relative}
+.tx-item:active{background:var(--surface2)}
+.tx-item::after{content:'';position:absolute;bottom:0;left:13px;right:13px;height:1px;background:var(--border)}
+.tx-ico{width:35px;height:35px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.tx-ico.income{background:var(--income-dim);border:1px solid rgba(0,229,160,.14)}
+.tx-ico.expense{background:var(--expense-dim);border:1px solid rgba(255,77,109,.14)}
+.tx-ico.loan-given,.tx-ico.loan-received{background:var(--loan-dim);border:1px solid rgba(245,166,35,.14)}
+.tx-ico.subscription{background:var(--sub-dim);border:1px solid rgba(167,139,250,.14)}
+.tx-info{flex:1;min-width:0}
+.tx-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-cat{font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:1px}
+.tx-amt{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.04em;flex-shrink:0}
+.tx-amt.income{color:var(--income)}.tx-amt.expense{color:var(--expense)}
+.tx-amt.loan-given{color:var(--loan)}.tx-amt.loan-received{color:var(--expense)}.tx-amt.subscription{color:var(--sub)}
+.empty-state{text-align:center;padding:40px 20px}
+.empty-icon{font-size:28px;margin-bottom:9px;opacity:.4}
+.empty-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.1em;margin-bottom:5px;color:var(--text3)}
+.empty-sub{font-size:10px;color:var(--text3);line-height:1.6;font-family:'Space Mono',monospace}
+
+/* ── SEARCH BAR ── */
+.search-wrap{padding:0 13px 10px;flex-shrink:0}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
+.search-input::placeholder{color:var(--text3)}
+.search-input:focus{border-color:var(--xp)}
+.search-count{font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);padding:0 13px 6px;letter-spacing:.1em}
+
+/* ── CASHFLOW CHART ── */
+.chart-wrap{margin:0 13px 14px;background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:13px}
+.chart-legend{display:flex;gap:14px;margin-bottom:10px}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;margin-top:2px}
+.legend-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:.06em}
+.chart-empty{text-align:center;padding:20px;color:var(--text3);font-family:'Space Mono',monospace;font-size:9px}
+
+/* ── STATS GRID ── */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 13px;margin-bottom:12px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;transition:background .3s}
+.stat-card.wide{grid-column:span 2}
+.stat-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:.12em;margin-bottom:4px}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.04em}
+.stat-sub{font-size:9px;color:var(--text3);margin-top:2px}
+
+/* ── DONUT ── */
+.donut-wrap{position:relative;width:100px;height:100px;margin:0 auto 12px}
+.donut-svg{transform:rotate(-90deg)}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-pct{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.04em}
+.donut-lbl{font-size:8px;color:var(--text3);font-family:'Space Mono',monospace}
+.cat-bar{display:flex;align-items:center;gap:9px;padding:8px 13px}
+.cat-bar-ico{font-size:15px;width:19px;text-align:center}
+.cat-bar-info{flex:1}
+.cat-bar-name{font-size:12px;font-weight:500;margin-bottom:3px}
+.cat-bar-track{height:3px;background:var(--surface3);border-radius:99px;overflow:hidden}
+.cat-bar-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.cat-bar-amt{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em;color:var(--expense)}
+
+/* ── BUDGETS ── */
+.budget-bar-item{display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid var(--border)}
+.budget-bar-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.budget-bar-info{flex:1}
+.budget-bar-name{font-size:12px;font-weight:500;margin-bottom:3px}
+.budget-bar-track{height:3px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-bottom:3px}
+.budget-bar-fill{height:100%;border-radius:99px;transition:width .6s ease,background .3s}
+.budget-bar-meta{font-size:9px;color:var(--text3);font-family:'Space Mono',monospace}
+.budget-input-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.budget-input-ico{font-size:17px;width:22px;text-align:center;flex-shrink:0}
+.budget-input-name{font-size:13px;font-weight:500;flex:1}
+.budget-num-input{width:100px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'Space Mono',monospace;outline:none;text-align:right}
+.budget-num-input::placeholder{color:var(--text3)}
+.budget-num-input:focus{border-color:var(--xp)}
+
+/* ── NAV ── */
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;display:flex;background:var(--topbar-bg);backdrop-filter:blur(24px);border-top:1px solid var(--border2);padding:8px 0 24px;z-index:10;transition:background .3s}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;cursor:pointer;opacity:.32;transition:opacity .15s}
+.nav-item.active{opacity:1}
+.nav-icon{font-size:17px;line-height:1}
+.nav-label{font-size:8px;font-family:'Space Mono',monospace;color:var(--text2);letter-spacing:.07em}
+.nav-item.active .nav-label{color:var(--xp2)}
+
+/* ── FAB ── */
+.fab{position:absolute;bottom:70px;right:16px;width:50px;height:50px;border-radius:13px;background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:11;box-shadow:0 5px 18px var(--aglow);transition:transform .2s cubic-bezier(.34,1.56,.64,1);line-height:1}
+.fab:active{transform:scale(.91)}.fab.open{transform:rotate(45deg)}
+
+/* ── SHEETS ── */
+.sh-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:50;opacity:0;pointer-events:none;transition:opacity .24s}
+.sh-overlay.open{opacity:1;pointer-events:all}
+.sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:480px;background:var(--surface);border-radius:22px 22px 0 0;border-top:1px solid var(--border2);z-index:51;transition:transform .32s cubic-bezier(.32,.72,0,1),background .3s;max-height:95dvh;display:flex;flex-direction:column}
+.sheet.open{transform:translateX(-50%) translateY(0)}
+.sh-handle{width:30px;height:3px;background:var(--surface3);border-radius:99px;margin:9px auto 0;flex-shrink:0}
+.sh-hdr{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sh-title{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.1em}
+.sh-close{width:27px;height:27px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sh-body{padding:0 16px 36px;overflow-y:auto;flex:1}
+
+/* ── ENTRY FORM ── */
+.type-scroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px;padding-bottom:2px}
+.type-scroll::-webkit-scrollbar{display:none}
+.type-chip{flex-shrink:0;padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.08em;cursor:pointer;color:var(--text3);transition:all .16s;white-space:nowrap}
+.type-chip.ae{background:var(--expense-dim);color:var(--expense);border-color:rgba(255,77,109,.25)}
+.type-chip.ai{background:var(--income-dim);color:var(--income);border-color:rgba(0,229,160,.25)}
+.type-chip.al{background:var(--loan-dim);color:var(--loan);border-color:rgba(245,166,35,.25)}
+.type-chip.alr{background:var(--expense-dim);color:var(--expense);border-color:rgba(255,77,109,.25)}
+.type-chip.as{background:var(--sub-dim);color:var(--sub);border-color:rgba(167,139,250,.25)}
+.amt-display{text-align:center;margin-bottom:16px}
+.amt-cur{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--text3);vertical-align:middle;letter-spacing:.04em}
+.amt-num{font-family:'Bebas Neue',sans-serif;font-size:54px;letter-spacing:.04em;line-height:1;vertical-align:middle;transition:color .2s}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.num-btn{height:50px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;cursor:pointer;transition:all .1s;display:flex;align-items:center;justify-content:center}
+.num-btn:active{background:var(--surface3);transform:scale(.93)}
+.num-btn.del{color:var(--expense);font-family:'DM Sans',sans-serif;font-size:16px}
+.num-btn.zero{grid-column:span 2}
+.field-row{display:flex;gap:7px;margin-bottom:8px}
+.field{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;cursor:pointer;transition:border-color .14s}
+.field:active{border-color:var(--border2)}
+.field-lbl{font-family:'Space Mono',monospace;font-size:7px;color:var(--text3);letter-spacing:.12em;margin-bottom:2px}
+.field-val{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field-val.ph{color:var(--text3)}
+.field-input{background:transparent;border:none;outline:none;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;width:100%;color-scheme:dark}
+.field-input::placeholder{color:var(--text3)}
+.extra-fields{display:none;flex-direction:column;gap:8px;margin-bottom:8px}
+.extra-fields.show{display:flex}
+.cycle-row{display:flex;gap:6px;flex-wrap:wrap}
+.cycle-chip{padding:6px 11px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);cursor:pointer;transition:all .14s}
+.cycle-chip.sel{background:var(--xp-dim);color:var(--xp2);border-color:rgba(77,138,255,.3)}
+.save-btn{width:100%;padding:13px;border-radius:12px;border:none;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.12em;cursor:pointer;transition:all .16s;margin-top:4px}
+.save-btn:active{transform:scale(.97)}
+.save-btn.em{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;box-shadow:0 4px 14px var(--aglow)}
+.save-btn.im{background:var(--income);color:#000;box-shadow:0 4px 14px rgba(0,229,160,.2)}
+.save-btn.lm{background:var(--loan);color:#000;box-shadow:0 4px 14px rgba(245,166,35,.22)}
+.save-btn.sm{background:var(--sub);color:#fff;box-shadow:0 4px 14px rgba(167,139,250,.22)}
+
+/* ── CAT PICKER ── */
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.cat-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 5px;text-align:center;cursor:pointer;transition:all .13s}
+.cat-item:active,.cat-item.sel{border-color:var(--xp);background:var(--xp-dim)}
+.cat-emoji{font-size:20px;margin-bottom:4px}
+.cat-name{font-size:8px;color:var(--text2);font-family:'Space Mono',monospace;letter-spacing:.05em}
+
+/* ── DATE PICKER ── */
+.date-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.date-chip{padding:9px 6px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-family:'Space Mono',monospace;color:var(--text2);cursor:pointer;transition:all .13s;text-align:center;line-height:1.3}
+.date-chip .chip-day{font-size:8px;color:var(--text3);margin-bottom:2px}
+.date-chip .chip-date{font-size:12px;font-weight:700}
+.date-chip.sel{background:var(--xp-dim);border-color:var(--xp);color:var(--xp2)}
+.date-chip:active{transform:scale(.93)}
+.picker-lbl{font-family:'Space Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:.13em;margin-bottom:7px;display:block}
+
+/* ── LOAN STATUS SHEET ── */
+.status-option{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .15s;margin-bottom:8px}
+.status-option:active,.status-option.active{border-color:var(--xp);background:var(--xp-dim)}
+.status-option-icon{font-size:22px;width:30px;text-align:center}
+.status-option-name{font-size:14px;font-weight:500}
+.status-option-sub{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-top:1px}
+
+/* ── PROFILE ── */
+.prof-hdr{padding:12px 13px 8px;text-align:center}
+.prof-circle{width:66px;height:66px;border-radius:50%;background:var(--surface2);border:2px solid var(--xp);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;color:var(--xp2);transition:all .4s}
+.prof-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.12em;margin-bottom:2px}
+.prof-sub{font-size:10px;color:var(--text3);font-family:'Space Mono',monospace}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
+.set-row:active{background:var(--surface2)}
+.set-left{display:flex;align-items:center;gap:10px}
+.set-ico{width:31px;height:31px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px}
+.set-name{font-size:13px;font-weight:500}
+.set-sub{font-size:9px;color:var(--text3);margin-top:1px;font-family:'Space Mono',monospace}
+.set-arr{color:var(--text3);font-size:12px}
+.rank-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);transition:opacity .3s}
+.rank-row.locked{opacity:.25}
+.rank-sm{width:31px;height:31px;border-radius:50%;background:var(--surface2);border:2px solid;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.06em;flex-shrink:0}
+.ss-box{margin:0 13px 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;transition:background .3s}
+.ss-txt{font-family:'Space Mono',monospace;font-size:9px;color:var(--text2);line-height:1.75}
+
+/* ── TOAST / XP POP ── */
+.toast{position:fixed;top:54px;left:50%;transform:translateX(-50%) translateY(-14px);background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:8px 15px;display:flex;align-items:center;gap:8px;font-size:11px;z-index:100;opacity:0;transition:all .28s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast-xp{font-family:'Space Mono',monospace;font-size:9px;color:var(--xp2);font-weight:700}
+.xp-pop{position:fixed;pointer-events:none;z-index:200;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.1em;color:var(--xp2);opacity:0;transition:all .9s ease;text-shadow:0 0 10px var(--xp)}
+.xp-pop.go{opacity:1;transform:translateY(-55px) !important}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ HOME ══ -->
+<div class="screen active" id="screen-home">
+  <div class="topbar">
+    <span class="topbar-title">LEDGER</span>
+    <div class="topbar-right">
+      <div class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀️</div>
+      <span class="rank-badge" id="rank-badge">RANK E</span>
+    </div>
+  </div>
+  <div class="scroll-area">
+    <!-- Balance -->
+    <div class="bal-card">
+      <div class="bal-toggle-row">
+        <div class="bal-tog on" id="tog-month" onclick="setBalView('month')">Month</div>
+        <div class="bal-tog" id="tog-all" onclick="setBalView('all')">All Time</div>
+      </div>
+      <div class="bal-lbl">NET BALANCE</div>
+      <div class="bal-amount zer" id="main-balance">₦0</div>
+      <div class="bal-sub" id="bal-period">—</div>
+      <div class="bal-row">
+        <div class="bal-pill"><div class="bal-pill-lbl">INFLOW</div><div class="bal-pill-val iv" id="total-income">₦0</div></div>
+        <div class="bal-pill"><div class="bal-pill-lbl">OUTFLOW</div><div class="bal-pill-val ev" id="total-expense">₦0</div></div>
+      </div>
+    </div>
+    <!-- Discipline -->
+    <div class="disc-card">
+      <div class="disc-top">
+        <div><div class="disc-lbl">⚡ DISCIPLINE SCORE</div><div class="disc-score" id="disc-score">100</div></div>
+        <div><div class="streak-val" id="streak-val">🔥 0</div><div class="streak-sub">day streak</div></div>
+      </div>
+      <div class="track"><div class="fill disc-fill" id="disc-fill" style="width:100%"></div></div>
+      <div style="margin-top:8px">
+        <span class="xp-section-lbl">RANK XP</span>
+        <div class="track"><div class="fill xp-fill-bar" id="xp-fill" style="width:0%"></div></div>
+        <div class="xp-meta"><span class="xp-mi" id="m1">15 entries</span><span class="xp-mi" id="m2">7-day streak</span><span class="xp-mi" id="m3">rank up</span><span class="xp-mi" id="m4">0 XP</span></div>
+      </div>
+    </div>
+    <!-- Decay -->
+    <div class="decay-box" id="decay-box"><span style="font-size:16px">⚠️</span><span class="decay-txt" id="decay-txt">Discipline decaying</span></div>
+    <!-- Commitments -->
+    <div class="commit-card" id="commit-card" style="display:none">
+      <div class="commit-hdr"><span class="commit-title">COMMITMENTS</span><span class="commit-burn" id="commit-burn">₦0/mo</span></div>
+      <div id="commit-list"></div>
+    </div>
+    <!-- Recovery -->
+    <div class="rec-banner" onclick="openRecovery()">
+      <span style="font-size:18px">⏪</span>
+      <div><div class="rec-title">RECOVERY MODE</div><div class="rec-sub">Log past entries up to 90 days back</div></div>
+      <span style="color:var(--xp);font-size:15px;margin-left:auto">›</span>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">RECENT</span><span class="sec-action" onclick="navigate('log')">See all</span></div>
+    <div id="tx-list"></div>
+  </div>
+</div>
+
+<!-- ══ ANALYSIS ══ -->
+<div class="screen" id="screen-analysis">
+  <div class="topbar">
+    <span class="topbar-title">ANALYSIS</span>
+    <div class="topbar-right">
+      <div class="theme-btn" onclick="toggleTheme()">☀️</div>
+      <span class="rank-badge" id="rank-badge-2">RANK E</span>
+    </div>
+  </div>
+  <div class="scroll-area" style="padding-bottom:80px">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-lbl">SAVE RATIO</div><div class="stat-val iv" id="save-ratio">0%</div><div class="stat-sub">of income kept</div></div>
+      <div class="stat-card"><div class="stat-lbl">AVG / DAY</div><div class="stat-val ev" id="avg-day">₦0</div><div class="stat-sub">spent daily</div></div>
+      <div class="stat-card wide"><div class="stat-lbl">ALL TIME NET</div><div class="stat-val" id="alltime-net">₦0</div><div class="stat-sub" id="alltime-sub">0 entries logged</div></div>
+    </div>
+    <!-- Cashflow chart -->
+    <div class="sec-hdr" style="margin-bottom:8px"><span class="sec-title">6-MONTH CASHFLOW</span></div>
+    <div class="chart-wrap">
+      <div class="chart-legend">
+        <div style="display:flex;align-items:center;gap:5px"><div class="legend-dot" style="background:var(--income)"></div><span class="legend-lbl">INCOME</span></div>
+        <div style="display:flex;align-items:center;gap:5px"><div class="legend-dot" style="background:var(--expense)"></div><span class="legend-lbl">EXPENSE</span></div>
+      </div>
+      <div id="cashflow-chart"></div>
+    </div>
+    <!-- Expense breakdown -->
+    <div class="sec-hdr" style="margin-bottom:12px"><span class="sec-title">EXPENSE BREAKDOWN</span></div>
+    <div style="margin:0 13px 14px">
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--surface2)" stroke-width="13"/>
+          <circle id="donut-circle" cx="50" cy="50" r="40" fill="none" stroke="var(--expense)" stroke-width="13" stroke-dasharray="0 251" stroke-linecap="round" style="transition:stroke-dasharray .8s ease"/>
+        </svg>
+        <div class="donut-center"><div class="donut-pct ev" id="donut-pct">0%</div><div class="donut-lbl">SPENT</div></div>
+      </div>
+      <div id="cat-breakdown"><div class="chart-empty">Log expenses to see breakdown</div></div>
+    </div>
+    <!-- Budgets -->
+    <div class="sec-hdr"><span class="sec-title">BUDGETS</span><span class="sec-action" onclick="openBudgetSheet()">Edit</span></div>
+    <div id="budget-section" style="margin-bottom:12px"><div class="chart-empty" style="padding:12px;text-align:center;color:var(--text3);font-family:Space Mono,monospace;font-size:9px">No budgets set yet — tap Edit</div></div>
+  </div>
+</div>
+
+<!-- ══ LOG ══ -->
+<div class="screen" id="screen-log">
+  <div class="topbar">
+    <span class="topbar-title">ALL ENTRIES</span>
+    <div class="theme-btn" onclick="toggleTheme()">☀️</div>
+  </div>
+  <div class="search-wrap"><input class="search-input" id="search-input" placeholder="🔍  Search by name, category..." oninput="filterTx(this.value)"></div>
+  <div class="search-count" id="search-count"></div>
+  <div class="scroll-area" style="padding-bottom:80px;padding-top:0"><div id="all-tx-list"></div></div>
+</div>
+
+<!-- ══ RANK ══ -->
+<div class="screen" id="screen-profile">
+  <div class="topbar">
+    <span class="topbar-title">RANK</span>
+    <div class="theme-btn" onclick="toggleTheme()">☀️</div>
+  </div>
+  <div class="scroll-area" style="padding-bottom:80px">
+    <div class="prof-hdr">
+      <div class="prof-circle" id="prof-circle">E</div>
+      <div class="prof-name">DC</div>
+      <div class="prof-sub" id="prof-sub">Rank E — Initiate</div>
+    </div>
+    <div class="disc-card" style="margin:0 13px 12px">
+      <span class="xp-section-lbl">TOTAL RANK XP</span>
+      <div class="track" style="margin-top:4px"><div class="fill xp-fill-bar" id="prof-xp-fill" style="width:0%"></div></div>
+      <div style="text-align:right;margin-top:4px;font-family:'Space Mono',monospace;font-size:10px;color:var(--xp2)" id="prof-xp">0 XP</div>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">RANK PROGRESSION</span></div>
+    <div id="rank-list" style="padding:0 13px 13px"></div>
+    <div class="sec-hdr" style="margin-top:6px"><span class="sec-title">SPECIAL RANKS</span></div>
+    <div class="ss-box">
+      <div class="ss-txt">
+        <span style="color:var(--rss)">SS — ARCHITECT</span><br>
+        S Rank + 60-day streak + 500 entries + 3 positive months<br><br>
+        <span style="color:var(--rsss)">SSS — ABSOLUTE</span><br>
+        SS Rank + 365-day streak + 1000 entries + 6 positive months + 20% savings rate + Discipline ≥ 60<br><br>
+        <span style="color:var(--text3)">Ranks never decay. Discipline Score does.</span>
+      </div>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">DATA</span></div>
+    <div class="set-row" onclick="exportData()">
+      <div class="set-left"><div class="set-ico">📤</div><div><div class="set-name">Export to JSON</div><div class="set-sub">Download full transaction log</div></div></div>
+      <span class="set-arr">›</span>
+    </div>
+    <div class="set-row" onclick="clearData()">
+      <div class="set-left"><div class="set-ico">🗑️</div><div><div class="set-name">Clear all data</div><div class="set-sub">Reset everything — irreversible</div></div></div>
+      <span class="set-arr" style="color:var(--expense)">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="navigate('home')" id="nav-home"><div class="nav-icon">⚡</div><div class="nav-label">HOME</div></div>
+  <div class="nav-item" onclick="navigate('analysis')" id="nav-analysis"><div class="nav-icon">📊</div><div class="nav-label">ANALYSIS</div></div>
+  <div class="nav-item" onclick="navigate('log')" id="nav-log"><div class="nav-icon">📋</div><div class="nav-label">LOG</div></div>
+  <div class="nav-item" onclick="navigate('profile')" id="nav-profile"><div class="nav-icon">🎖️</div><div class="nav-label">RANK</div></div>
+</nav>
+<button class="fab" id="fab" onclick="openEntry()">+</button>
+
+<!-- ══ ENTRY SHEET ══ -->
+<div class="sh-overlay" id="entry-overlay" onclick="closeEntry()"></div>
+<div class="sheet" id="entry-sheet">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div class="sh-title">Log Entry</div><button class="sh-close" onclick="closeEntry()">×</button></div>
+  <div class="sh-body">
+    <div class="type-scroll">
+      <div class="type-chip ae" id="chip-expense" onclick="setType('expense')">EXPENSE</div>
+      <div class="type-chip" id="chip-income" onclick="setType('income')">INCOME</div>
+      <div class="type-chip" id="chip-loan-given" onclick="setType('loan-given')">LOAN GIVEN</div>
+      <div class="type-chip" id="chip-loan-received" onclick="setType('loan-received')">BORROWED</div>
+      <div class="type-chip" id="chip-subscription" onclick="setType('subscription')">SUBSCRIPTION</div>
+    </div>
+    <div class="amt-display"><span class="amt-cur">₦</span><span class="amt-num" id="amt-display" style="color:var(--expense)">0</span></div>
+    <div class="numpad">
+      <button class="num-btn" onclick="numpad('7')">7</button><button class="num-btn" onclick="numpad('8')">8</button><button class="num-btn" onclick="numpad('9')">9</button>
+      <button class="num-btn" onclick="numpad('4')">4</button><button class="num-btn" onclick="numpad('5')">5</button><button class="num-btn" onclick="numpad('6')">6</button>
+      <button class="num-btn" onclick="numpad('1')">1</button><button class="num-btn" onclick="numpad('2')">2</button><button class="num-btn" onclick="numpad('3')">3</button>
+      <button class="num-btn del" onclick="numpad('del')">⌫</button><button class="num-btn zero" onclick="numpad('0')">0</button><button class="num-btn" onclick="numpad('.')">.</button>
+    </div>
+    <div class="field-row" id="cat-date-row">
+      <div class="field" onclick="openCat()"><div class="field-lbl">CATEGORY</div><div class="field-val ph" id="cat-display">Pick one</div></div>
+      <div class="field" onclick="openDate()"><div class="field-lbl">DATE</div><div class="field-val" id="date-display">Today</div></div>
+    </div>
+    <div class="field" style="margin-bottom:8px">
+      <div class="field-lbl">NOTE (OPTIONAL)</div>
+      <input class="field-input" id="note-input" placeholder="What was this for?" maxlength="60">
+    </div>
+    <!-- Loan extra fields -->
+    <div class="extra-fields" id="loan-fields">
+      <div class="field"><div class="field-lbl">PERSON</div><input class="field-input" id="loan-person" placeholder="e.g. Mum, Tunde..." maxlength="40"></div>
+      <div class="field">
+        <div class="field-lbl">REPAYMENT STATUS</div>
+        <div class="cycle-row" id="repay-row" style="margin-top:4px">
+          <div class="cycle-chip sel" onclick="selRepay(this,'pending')">Pending</div>
+          <div class="cycle-chip" onclick="selRepay(this,'partial')">Partial</div>
+          <div class="cycle-chip" onclick="selRepay(this,'repaid')">Repaid</div>
+        </div>
+      </div>
+    </div>
+    <!-- Sub extra fields -->
+    <div class="extra-fields" id="sub-fields">
+      <div class="field"><div class="field-lbl">SERVICE NAME</div><input class="field-input" id="sub-name" placeholder="e.g. Gemini, Netflix..." maxlength="40"></div>
+      <div class="field">
+        <div class="field-lbl">BILLING CYCLE</div>
+        <div class="cycle-row" id="cycle-row" style="margin-top:4px">
+          <div class="cycle-chip" onclick="selCycle(this,'weekly')">Weekly</div>
+          <div class="cycle-chip sel" onclick="selCycle(this,'monthly')">Monthly</div>
+          <div class="cycle-chip" onclick="selCycle(this,'yearly')">Yearly</div>
+        </div>
+      </div>
+    </div>
+    <!-- Date only row for subscription -->
+    <div class="field-row" id="sub-date-row" style="display:none">
+      <div class="field" onclick="openDate()" style="flex:1"><div class="field-lbl">DATE</div><div class="field-val" id="date-display-sub">Today</div></div>
+    </div>
+    <button class="save-btn em" id="save-btn" onclick="saveEntry()">LOG EXPENSE</button>
+  </div>
+</div>
+
+<!-- ══ CATEGORY SHEET ══ -->
+<div class="sh-overlay" id="cat-overlay" onclick="closeCat()"></div>
+<div class="sheet" id="cat-sheet">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div class="sh-title">Category</div><button class="sh-close" onclick="closeCat()">×</button></div>
+  <div class="sh-body" id="cat-body"></div>
+</div>
+
+<!-- ══ DATE SHEET ══ -->
+<div class="sh-overlay" id="date-overlay" onclick="closeDate()"></div>
+<div class="sheet" id="date-sheet">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div class="sh-title">Select Date</div><button class="sh-close" onclick="closeDate()">×</button></div>
+  <div class="sh-body">
+    <span class="picker-lbl">QUICK SELECT</span>
+    <div class="date-grid" id="quick-dates"></div>
+    <span class="picker-lbl">CUSTOM (up to 90 days back)</span>
+    <div class="field"><div class="field-lbl">ANY DATE</div><input type="date" class="field-input" id="custom-date" onchange="setCustomDate(this.value)"></div>
+  </div>
+</div>
+
+<!-- ══ LOAN STATUS SHEET ══ -->
+<div class="sh-overlay" id="loan-status-overlay" onclick="closeLoanStatus()"></div>
+<div class="sheet" id="loan-status-sheet">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div class="sh-title">Update Loan</div><button class="sh-close" onclick="closeLoanStatus()">×</button></div>
+  <div class="sh-body">
+    <div id="loan-status-info" style="margin-bottom:16px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)"></div>
+    <span class="picker-lbl">REPAYMENT STATUS</span>
+    <div class="status-option" onclick="pickLoanStatus('pending')"><div class="status-option-icon">⏳</div><div><div class="status-option-name">Pending</div><div class="status-option-sub">Not yet repaid</div></div></div>
+    <div class="status-option" onclick="pickLoanStatus('partial')"><div class="status-option-icon">🔄</div><div><div class="status-option-name">Partial</div><div class="status-option-sub">Some returned</div></div></div>
+    <div class="status-option" onclick="pickLoanStatus('repaid')"><div class="status-option-icon">✅</div><div><div class="status-option-name">Repaid</div><div class="status-option-sub">Fully returned — removes from commitments</div></div></div>
+  </div>
+</div>
+
+<!-- ══ BUDGET SHEET ══ -->
+<div class="sh-overlay" id="budget-overlay" onclick="closeBudgetSheet()"></div>
+<div class="sheet" id="budget-sheet">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div class="sh-title">Set Budgets</div><button class="sh-close" onclick="closeBudgetSheet()">×</button></div>
+  <div class="sh-body">
+    <p style="font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:12px;line-height:1.7">Monthly limits per expense category.<br>Leave blank for no limit.</p>
+    <div id="budget-list"></div>
+    <button class="save-btn em" onclick="saveBudgets()" style="margin-top:12px">SAVE BUDGETS</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toast-msg">Logged!</span><span class="toast-xp" id="toast-xp">+10 XP</span></div>
+</div><!-- end #app -->
+
+<script>
+// ══ STATE ══
+let S={transactions:[],xp:0,rank:'E',streak:0,lastLogDate:null,totalLogged:0,disciplineScore:100,lastActivityDate:null,budgets:{}};
+let balView='month',activeLoanId=null,curScreen='home';
+let eType='expense',eAmt='0',eCat=null,eDate=new Date(),eRepayStatus='pending',eSubCycle='monthly';
+
+const RANKS=[
+  {rank:'E', label:'Initiate',    xp:0,     entries:0,   streak:0,  posMonths:0, color:'var(--re)'},
+  {rank:'D', label:'Tracker',     xp:500,   entries:15,  streak:0,  posMonths:0, color:'var(--rd)'},
+  {rank:'C', label:'Aware',       xp:1500,  entries:50,  streak:7,  posMonths:0, color:'var(--rc)'},
+  {rank:'B', label:'Disciplined', xp:4000,  entries:150, streak:21, posMonths:1, color:'var(--rb)'},
+  {rank:'A', label:'Operator',    xp:10000, entries:300, streak:30, posMonths:2, color:'var(--ra)'},
+  {rank:'S', label:'Sovereign',   xp:25000, entries:500, streak:60, posMonths:3, color:'var(--rs)'},
+  {rank:'SS', label:'Architect',  xp:99999, entries:0,   streak:0,  posMonths:0, color:'var(--rss)'},
+  {rank:'SSS',label:'Absolute',   xp:99999, entries:0,   streak:0,  posMonths:0, color:'var(--rsss)'},
+];
+const ECATS=[
+  {e:'🚌',n:'Transport'},{e:'🍔',n:'Food'},{e:'🛒',n:'Shopping'},{e:'📱',n:'Data'},
+  {e:'⛪',n:'Church'},{e:'📚',n:'Education'},{e:'💊',n:'Health'},{e:'🏠',n:'Housing'},
+  {e:'🎮',n:'Fun'},{e:'👕',n:'Clothes'},{e:'🎁',n:'Gifts'},{e:'⚡',n:'Utilities'},
+  {e:'💻',n:'Tech'},{e:'✂️',n:'Personal'},{e:'📦',n:'Other'},
+];
+const ICATS=[
+  {e:'💼',n:'Work'},{e:'🎨',n:'Art'},{e:'💻',n:'Projects'},{e:'🎁',n:'Gift'},
+  {e:'📚',n:'Scholarship'},{e:'💰',n:'Savings'},{e:'👨‍👩‍👧',n:'Family'},{e:'📈',n:'Investment'},{e:'🏆',n:'Awards'},{e:'📦',n:'Other'},
+];
+
+// ══ STORAGE ══
+function save(){try{localStorage.setItem('ldg5',JSON.stringify(S));}catch(e){}window._ld=JSON.stringify(S);}
+function load(){
+  try{
+    let r=null;try{r=localStorage.getItem('ldg5');}catch(e){}
+    if(!r)r=window._ld;
+    if(r){const p=JSON.parse(r);S={...S,...p};S.transactions=(S.transactions||[]).map(t=>({...t,date:new Date(t.date)}));S.budgets=S.budgets||{};}
+  }catch(e){}
+}
+
+// ══ THEME ══
+function initTheme(){
+  let t='dark';try{t=localStorage.getItem('ldg_theme')||'dark';}catch(e){}
+  document.documentElement.setAttribute('data-theme',t);
+  updateThemeIcons();
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme');
+  const next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  try{localStorage.setItem('ldg_theme',next);}catch(e){}
+  updateThemeIcons();
+}
+function updateThemeIcons(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.querySelectorAll('.theme-btn').forEach(b=>b.textContent=isDark?'☀️':'🌙');
+}
+
+// ══ NAV ══
+function navigate(sc){
+  document.getElementById('screen-'+curScreen).classList.remove('active');
+  document.getElementById('nav-'+curScreen)?.classList.remove('active');
+  curScreen=sc;
+  document.getElementById('screen-'+sc).classList.add('active');
+  document.getElementById('nav-'+sc)?.classList.add('active');
+  if(sc==='analysis')renderAnalysis();
+  if(sc==='log'){filterTx('');document.getElementById('search-input').value='';}
+  if(sc==='profile')renderProfile();
+}
+
+// ══ BALANCE VIEW ══
+let _bv='month';
+function setBalView(v){
+  _bv=v;
+  document.getElementById('tog-month').className='bal-tog'+(v==='month'?' on':'');
+  document.getElementById('tog-all').className='bal-tog'+(v==='all'?' on':'');
+  renderBalCard();
+}
+function renderBalCard(){
+  let inc=0,exp=0,sub='';
+  if(_bv==='all'){
+    inc=S.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    exp=S.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    sub='All time · '+S.totalLogged+' entries';
+  } else {
+    const now=new Date(),mo=now.getMonth(),yr=now.getFullYear();
+    const mth=S.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===mo&&d.getFullYear()===yr;});
+    inc=mth.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    exp=mth.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    sub=new Date().toLocaleString('en',{month:'long',year:'numeric'});
+  }
+  const net=inc-exp;
+  const b=document.getElementById('main-balance');
+  b.textContent='₦'+fmt(Math.abs(net));
+  b.className='bal-amount '+(net>0?'pos':net<0?'neg':'zer');
+  document.getElementById('bal-period').textContent=sub;
+  document.getElementById('total-income').textContent='₦'+fmtS(inc);
+  document.getElementById('total-expense').textContent='₦'+fmtS(exp);
+}
+
+// ══ ENTRY SHEET ══
+function openEntry(pre){
+  eAmt='0';eCat=null;eDate=pre?new Date(pre):new Date();eRepayStatus='pending';eSubCycle='monthly';
+  document.getElementById('amt-display').textContent='0';
+  document.getElementById('cat-display').textContent='Pick one';document.getElementById('cat-display').className='field-val ph';
+  document.getElementById('note-input').value='';
+  document.getElementById('loan-person').value='';document.getElementById('sub-name').value='';
+  document.getElementById('date-display').textContent=dlbl(eDate);
+  document.getElementById('date-display-sub').textContent=dlbl(eDate);
+  document.querySelectorAll('#cycle-row .cycle-chip').forEach((c,i)=>c.classList.toggle('sel',i===1));
+  document.querySelectorAll('#repay-row .cycle-chip').forEach((c,i)=>c.classList.toggle('sel',i===0));
+  setType('expense');open2('entry');document.getElementById('fab').classList.add('open');
+}
+function closeEntry(){close2('entry');document.getElementById('fab').classList.remove('open');}
+
+const TYPE_COLORS={expense:'var(--expense)',income:'var(--income)','loan-given':'var(--loan)','loan-received':'var(--expense)',subscription:'var(--sub)'};
+const TYPE_LABELS={expense:'LOG EXPENSE',income:'LOG INCOME','loan-given':'LOG LOAN GIVEN','loan-received':'LOG BORROWED',subscription:'LOG SUBSCRIPTION'};
+const TYPE_CHIPS={expense:'ae',income:'ai','loan-given':'al','loan-received':'alr',subscription:'as'};
+const SAVE_BTN_CLS={expense:'em',income:'im','loan-given':'lm','loan-received':'em',subscription:'sm'};
+
+function setType(t){
+  eType=t;
+  ['expense','income','loan-given','loan-received','subscription'].forEach(id=>{
+    const el=document.getElementById('chip-'+id);
+    if(el)el.className='type-chip'+(t===id?' '+TYPE_CHIPS[id]:'');
+  });
+  document.getElementById('amt-display').style.color=TYPE_COLORS[t];
+  document.getElementById('save-btn').textContent=TYPE_LABELS[t];
+  document.getElementById('save-btn').className='save-btn '+SAVE_BTN_CLS[t];
+  const isLoan=t==='loan-given'||t==='loan-received',isSub=t==='subscription';
+  document.getElementById('loan-fields').className='extra-fields'+(isLoan?' show':'');
+  document.getElementById('sub-fields').className='extra-fields'+(isSub?' show':'');
+  document.getElementById('cat-date-row').style.display=isSub?'none':'flex';
+  document.getElementById('sub-date-row').style.display=isSub?'flex':'none';
+}
+function selRepay(el,v){eRepayStatus=v;document.querySelectorAll('#repay-row .cycle-chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+function selCycle(el,v){eSubCycle=v;document.querySelectorAll('#cycle-row .cycle-chip').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+function numpad(k){
+  if(k==='del')eAmt=eAmt.slice(0,-1)||'0';
+  else if(k==='.'){if(!eAmt.includes('.'))eAmt+='.';}
+  else{if(eAmt==='0')eAmt=k;else if((eAmt.split('.')[1]||'').length>=2)return;else eAmt+=k;if(eAmt.length>11)return;}
+  document.getElementById('amt-display').textContent=eAmt;
+}
+function saveEntry(){
+  const amt=parseFloat(eAmt);
+  if(!amt||amt<=0){toast('Enter an amount','');return;}
+  const isSub=eType==='subscription',isLoan=eType==='loan-given'||eType==='loan-received';
+  if(!isSub&&!eCat){toast('Pick a category','');return;}
+  const tx={id:Date.now(),type:eType,amount:amt,category:isSub?{e:'🔄',n:'Subscription'}:eCat,note:document.getElementById('note-input').value.trim(),date:new Date(eDate)};
+  if(isLoan){tx.loanPerson=document.getElementById('loan-person').value.trim()||'Unknown';tx.repayStatus=eRepayStatus;}
+  if(isSub){const nm=document.getElementById('sub-name').value.trim()||'Subscription';tx.subName=nm;tx.subCycle=eSubCycle;tx.category={e:'🔄',n:nm};}
+  S.transactions.unshift(tx);S.totalLogged++;S.lastActivityDate=new Date().toDateString();
+  updateStreak();
+  let xp=10;
+  if(S.streak>=30)xp+=15;else if(S.streak>=14)xp+=12;else if(S.streak>=7)xp+=8;else if(S.streak>=3)xp+=5;
+  if(S.totalLogged%50===0)xp+=50;else if(S.totalLogged%10===0)xp+=15;
+  S.xp+=xp;S.disciplineScore=Math.min(100,S.disciplineScore+5);
+  checkRank();checkSS();checkSSS();save();renderHome();closeEntry();
+  const lbl=isSub?'🔄 '+(tx.subName)+' logged':isLoan?(eType==='loan-given'?'↗ Loan to '+tx.loanPerson:'↙ Borrowed logged'):(eType==='income'?'↑ ':'↓ ')+'₦'+fmtS(amt)+' logged';
+  toast(lbl,'+'+xp+' XP');xpPop('+'+xp+' XP');
+}
+
+// ══ CAT PICKER ══
+function openCat(){
+  const cats=eType==='income'?ICATS:ECATS;
+  document.getElementById('cat-body').innerHTML='<div class="cat-grid">'+cats.map(c=>`<div class="cat-item${eCat?.n===c.n?' sel':''}" onclick="selCat('${c.e}','${c.n}')"><div class="cat-emoji">${c.e}</div><div class="cat-name">${c.n.toUpperCase()}</div></div>`).join('')+'</div>';
+  open2('cat');
+}
+function selCat(e,n){eCat={e,n};const d=document.getElementById('cat-display');d.textContent=e+' '+n;d.className='field-val';closeCat();}
+function closeCat(){close2('cat');}
+
+// ══ DATE PICKER ══
+function openDate(){
+  const sel=eDate.toDateString();
+  let html='';
+  for(let i=0;i<9;i++){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const day=i===0?'Today':i===1?'Yesterday':d.toLocaleDateString('en',{weekday:'short'});
+    html+=`<div class="date-chip${d.toDateString()===sel?' sel':''}" onclick="selDate('${d.toISOString()}')"><div class="chip-day">${day}</div><div class="chip-date">${d.getDate()} ${d.toLocaleDateString('en',{month:'short'})}</div></div>`;
+  }
+  document.getElementById('quick-dates').innerHTML=html;
+  const today=new Date().toISOString().split('T')[0];
+  const min=new Date();min.setDate(min.getDate()-90);
+  const ci=document.getElementById('custom-date');
+  ci.max=today;ci.min=min.toISOString().split('T')[0];ci.value=eDate.toISOString().split('T')[0];
+  open2('date');
+}
+function selDate(iso){eDate=new Date(iso);const l=dlbl(eDate);document.getElementById('date-display').textContent=l;document.getElementById('date-display-sub').textContent=l;closeDate();}
+function setCustomDate(v){if(!v)return;const p=v.split('-');eDate=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]),12,0,0);const l=dlbl(eDate);document.getElementById('date-display').textContent=l;document.getElementById('date-display-sub').textContent=l;closeDate();}
+function closeDate(){close2('date');}
+
+// ══ LOAN STATUS UPDATE ══
+function openLoanStatus(id){
+  activeLoanId=id;
+  const tx=S.transactions.find(t=>t.id===id);if(!tx)return;
+  document.getElementById('loan-status-info').innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">💸</span><div><div style="font-size:13px;font-weight:500">₦${fmt(tx.amount)} → ${tx.loanPerson}</div><div style="font-size:9px;color:var(--text3);font-family:Space Mono,monospace;margin-top:2px">${dlbl(new Date(tx.date))} · ${(tx.repayStatus||'pending').toUpperCase()}</div></div></div>`;
+  open2('loan-status');
+}
+function pickLoanStatus(status){
+  const tx=S.transactions.find(t=>t.id===activeLoanId);
+  if(tx){tx.repayStatus=status;save();renderHome();}
+  close2('loan-status');toast('Loan status updated','');
+}
+function closeLoanStatus(){close2('loan-status');}
+
+// ══ BUDGET MANAGEMENT ══
+function openBudgetSheet(){
+  document.getElementById('budget-list').innerHTML=ECATS.map(c=>`
+    <div class="budget-input-item">
+      <div class="budget-input-ico">${c.e}</div>
+      <div class="budget-input-name">${c.n}</div>
+      <input type="number" class="budget-num-input" id="bgt-${c.n}" value="${S.budgets[c.n]||''}" placeholder="No limit" min="0">
+    </div>`).join('');
+  open2('budget');
+}
+function saveBudgets(){
+  ECATS.forEach(c=>{const v=parseFloat(document.getElementById('bgt-'+c.n).value);if(v&&v>0)S.budgets[c.n]=v;else delete S.budgets[c.n];});
+  save();if(curScreen==='analysis')renderAnalysis();close2('budget');toast('Budgets saved','✓');
+}
+function closeBudgetSheet(){close2('budget');}
+
+// ══ SEARCH ══
+function filterTx(q){
+  const query=q.toLowerCase().trim();
+  const filtered=query?S.transactions.filter(t=>{
+    const note=(t.note||'').toLowerCase(),cat=(t.category?.n||'').toLowerCase(),nm=(t.subName||'').toLowerCase(),person=(t.loanPerson||'').toLowerCase();
+    return note.includes(query)||cat.includes(query)||nm.includes(query)||person.includes(query)||String(t.amount).includes(query);
+  }):S.transactions;
+  const countEl=document.getElementById('search-count');
+  countEl.textContent=query?filtered.length+' result'+(filtered.length!==1?'s':'')+" for '"+q+"'":'';
+  renderTxList(document.getElementById('all-tx-list'),filtered);
+}
+
+// ══ RECOVERY ══
+function openRecovery(){openEntry();setTimeout(()=>toast('Tap DATE to go back up to 90 days',''),350);}
+
+// ══ DISCIPLINE DECAY ══
+function applyDecay(){
+  if(!S.lastActivityDate)return;
+  const days=Math.floor((new Date()-new Date(S.lastActivityDate))/86400000);
+  if(days<=1)return;
+  const decay=Math.min(S.disciplineScore,(days-1)*2);
+  S.disciplineScore=Math.max(0,S.disciplineScore-decay);
+  if(S.disciplineScore<70){
+    document.getElementById('decay-box').classList.add('show');
+    document.getElementById('decay-txt').textContent=days+'d inactive — discipline at '+Math.round(S.disciplineScore)+'/100';
+  }
+}
+
+// ══ RENDER HOME ══
+function renderHome(){
+  applyDecay();renderBalCard();
+  const ri=getRank(),idx=RANKS.indexOf(ri);
+  const nx=RANKS[idx+1];const isSpecial=['SS','SSS'].includes(S.rank);
+  const xpInRank=S.xp-ri.xp,xpToNx=nx&&!['SS','SSS'].includes(nx.rank)?nx.xp-ri.xp:100;
+  const pct=isSpecial?100:nx&&!['SS','SSS'].includes(nx.rank)?Math.min(100,(xpInRank/xpToNx)*100):100;
+  document.getElementById('xp-fill').style.width=pct+'%';
+  document.getElementById('m4').textContent=S.xp.toLocaleString()+(nx&&!['SS','SSS'].includes(nx.rank)?'/'+nx.xp.toLocaleString():'')+' XP';
+  const disc=Math.round(S.disciplineScore);
+  document.getElementById('disc-score').textContent=disc;
+  document.getElementById('disc-fill').style.width=disc+'%';
+  document.getElementById('disc-fill').style.background=disc>60?'linear-gradient(90deg,var(--xp),var(--xp2))':disc>30?'linear-gradient(90deg,#f97316,#fbbf24)':'linear-gradient(90deg,var(--expense),#ff8a65)';
+  document.getElementById('streak-val').textContent='🔥 '+S.streak;
+  document.getElementById('m1').className='xp-mi'+(S.totalLogged>=15?' on':'');
+  document.getElementById('m2').className='xp-mi'+(S.streak>=7?' on':'');
+  document.getElementById('m3').className='xp-mi'+(idx>=1?' on':'');
+  ['rank-badge','rank-badge-2'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='RANK '+S.rank;el.style.color=ri.color;el.style.borderColor=ri.color;}});
+  renderCommitments();
+  renderTxList(document.getElementById('tx-list'),S.transactions.slice(0,15));
+}
+
+function renderCommitments(){
+  const loans=S.transactions.filter(t=>t.type==='loan-given'&&t.repayStatus!=='repaid');
+  const subMap={};S.transactions.filter(t=>t.type==='subscription').forEach(s=>{const k=(s.subName||'sub').toLowerCase();if(!subMap[k])subMap[k]=s;});
+  const activeSubs=Object.values(subMap);
+  const card=document.getElementById('commit-card');
+  if(!loans.length&&!activeSubs.length){card.style.display='none';return;}
+  card.style.display='block';
+  const burn=activeSubs.reduce((sum,s)=>sum+(s.subCycle==='yearly'?s.amount/12:s.subCycle==='weekly'?s.amount*4.33:s.amount),0);
+  document.getElementById('commit-burn').textContent='₦'+fmtS(burn)+'/mo';
+  document.getElementById('commit-list').innerHTML=[
+    ...loans.map(l=>`<div class="commit-row" onclick="openLoanStatus(${l.id})"><div class="commit-ico lg">💸</div><div class="commit-info"><div class="commit-name">Loan → ${l.loanPerson}</div><div class="commit-meta">${dlbl(new Date(l.date))}</div></div><div style="display:flex;align-items:center;gap:6px"><span class="status-badge ${l.repayStatus||'pending'}">${(l.repayStatus||'pending').toUpperCase()}</span><span class="commit-amt loan">₦${fmtS(l.amount)}</span></div></div>`),
+    ...activeSubs.map(s=>`<div class="commit-row"><div class="commit-ico sb">🔄</div><div class="commit-info"><div class="commit-name">${s.subName}</div><div class="commit-meta">${s.subCycle}</div></div><span class="commit-amt sub">₦${fmtS(s.amount)}</span></div>`)
+  ].join('');
+}
+
+function renderTxList(el,txs){
+  if(!txs.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">No Entries</div><div class="empty-sub">Nothing to show here yet.</div></div>';return;}
+  const grp={};txs.forEach(tx=>{const k=new Date(tx.date).toDateString();if(!grp[k])grp[k]=[];grp[k].push(tx);});
+  el.innerHTML=Object.entries(grp).map(([ds,items])=>`<div class="tx-group"><div class="tx-date-hdr">${gdlbl(new Date(ds))}</div>${items.map(tx=>{
+    const isLG=tx.type==='loan-given',isLR=tx.type==='loan-received',isSub=tx.type==='subscription';
+    const icoC=isLG||isLR?'loan-given':isSub?'subscription':tx.type;
+    const amtC=isLG?'loan-given':isLR?'loan-received':isSub?'subscription':tx.type;
+    const pfx=tx.type==='income'?'+':isLG?'↗':isLR?'↙':isSub?'':'−';
+    const info=isLG||isLR?' · '+(tx.loanPerson||''):isSub?' · '+tx.subCycle:'';
+    return `<div class="tx-item" onclick="delTx(${tx.id})"><div class="tx-ico ${icoC}">${tx.category.e}</div><div class="tx-info"><div class="tx-name">${isSub?tx.subName||tx.category.n:tx.note||tx.category.n}</div><div class="tx-cat">${tx.category.n.toUpperCase()}${info}</div></div><div class="tx-amt ${amtC}">${pfx}₦${fmt(tx.amount)}</div></div>`;
+  }).join('')}</div>`).join('');
+}
+
+function delTx(id){
+  if(!confirm('Delete this entry? Costs 5 XP.'))return;
+  S.transactions=S.transactions.filter(t=>t.id!==id);
+  S.totalLogged=Math.max(0,S.totalLogged-1);S.xp=Math.max(0,S.xp-5);
+  save();renderHome();if(curScreen==='log')filterTx(document.getElementById('search-input').value);
+  toast('Entry deleted','-5 XP');
+}
+
+// ══ ANALYSIS ══
+function renderAnalysis(){
+  const now=new Date(),mo=now.getMonth(),yr=now.getFullYear();
+  const mth=S.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===mo&&d.getFullYear()===yr;});
+  const inc=mth.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const exp=mth.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const ratio=inc>0?Math.round(((inc-exp)/inc)*100):0;
+  document.getElementById('save-ratio').textContent=Math.max(0,ratio)+'%';
+  document.getElementById('save-ratio').style.color=ratio>=0?'var(--income)':'var(--expense)';
+  document.getElementById('avg-day').textContent='₦'+fmtS(exp/Math.max(1,now.getDate()));
+  const allInc=S.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const allExp=S.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const allNet=allInc-allExp;
+  const atEl=document.getElementById('alltime-net');atEl.textContent='₦'+fmt(Math.abs(allNet));atEl.className='stat-val '+(allNet>=0?'iv':'ev');
+  document.getElementById('alltime-sub').textContent=S.totalLogged+' entries logged';
+
+  // Cashflow chart
+  renderCashflowChart();
+
+  // Discipline gate
+  if(S.disciplineScore<50){
+    document.getElementById('cat-breakdown').innerHTML='<div style="text-align:center;padding:16px;color:var(--expense);font-family:Space Mono,monospace;font-size:9px;line-height:1.8">DISCIPLINE TOO LOW<br><span style="color:var(--text3)">Restore above 50 to unlock analysis.</span></div>';
+    document.getElementById('donut-circle').setAttribute('stroke-dasharray','0 251');
+    document.getElementById('donut-pct').textContent='—';
+    renderBudgets();return;
+  }
+
+  const ct={};mth.filter(t=>t.type==='expense').forEach(t=>{ct[t.category.n]=(ct[t.category.n]||0)+t.amount;});
+  const sorted=Object.entries(ct).sort((a,b)=>b[1]-a[1]);
+  const pct=inc>0?Math.min(100,(exp/inc)*100):0;
+  const circ=2*Math.PI*40;
+  document.getElementById('donut-circle').setAttribute('stroke-dasharray',`${(pct/100)*circ} ${circ}`);
+  document.getElementById('donut-pct').textContent=Math.round(pct)+'%';
+  const cmap=ECATS.reduce((m,c)=>{m[c.n]=c.e;return m;},{});
+  document.getElementById('cat-breakdown').innerHTML=sorted.length?sorted.map(([name,amt])=>{
+    const p=sorted[0][1]>0?(amt/sorted[0][1])*100:0;
+    return `<div class="cat-bar"><div class="cat-bar-ico">${cmap[name]||'📦'}</div><div class="cat-bar-info"><div class="cat-bar-name">${name}</div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:${p}%;background:var(--expense)"></div></div></div><div class="cat-bar-amt">₦${fmtS(amt)}</div></div>`;
+  }).join(''):'<div class="chart-empty">Log expenses to see breakdown</div>';
+  renderBudgets();
+}
+
+function renderCashflowChart(){
+  const now=new Date();
+  const months=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const txs=S.transactions.filter(t=>{const td=new Date(t.date);return td.getMonth()===d.getMonth()&&td.getFullYear()===d.getFullYear();});
+    months.push({label:d.toLocaleDateString('en',{month:'short'}),income:txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),expense:txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)});
+  }
+  const maxVal=Math.max(...months.map(m=>Math.max(m.income,m.expense)),1);
+  const W=320,H=110,BW=18,GAP=4;
+  const groupW=BW*2+GAP;const totalBars=months.length*groupW;const spacing=(W-totalBars)/(months.length+1);
+  let bars='',labels='',guides='';
+  [0.25,0.5,0.75,1].forEach(f=>{const y=H*(1-f);guides+=`<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;guides+=`<text x="0" y="${y-3}" font-size="7" fill="var(--text3)" font-family="Space Mono">₦${fmtS(maxVal*f)}</text>`;});
+  months.forEach((m,i)=>{
+    const x=spacing+i*(groupW+spacing);
+    const incH=Math.max(2,(m.income/maxVal)*H);const expH=Math.max(2,(m.expense/maxVal)*H);
+    bars+=`<rect x="${x}" y="${H-incH}" width="${BW}" height="${incH}" fill="var(--income)" opacity=".8" rx="3"/>`;
+    bars+=`<rect x="${x+BW+GAP}" y="${H-expH}" width="${BW}" height="${expH}" fill="var(--expense)" opacity=".8" rx="3"/>`;
+    labels+=`<text x="${x+BW+GAP/2}" y="${H+14}" text-anchor="middle" font-size="8" fill="var(--text3)" font-family="Space Mono">${m.label}</text>`;
+  });
+  const hasData=months.some(m=>m.income>0||m.expense>0);
+  document.getElementById('cashflow-chart').innerHTML=hasData?`<svg viewBox="0 0 ${W} ${H+20}" width="100%" preserveAspectRatio="xMidYMid meet">${guides}${bars}${labels}</svg>`:'<div class="chart-empty">Log transactions to see cashflow</div>';
+}
+
+function renderBudgets(){
+  const now=new Date(),mo=now.getMonth(),yr=now.getFullYear();
+  const mth=S.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===mo&&d.getFullYear()===yr&&t.type==='expense';});
+  const spend={};mth.forEach(t=>{spend[t.category.n]=(spend[t.category.n]||0)+t.amount;});
+  const cats=[...new Set([...Object.keys(S.budgets),...Object.keys(spend)])];
+  const cmap=ECATS.reduce((m,c)=>{m[c.n]=c.e;return m;},{});
+  const bd=document.getElementById('budget-section');
+  if(!cats.length){bd.innerHTML='<div class="chart-empty" style="padding:12px;text-align:center;font-family:Space Mono,monospace;font-size:9px;color:var(--text3)">No spending or budgets yet</div>';return;}
+  bd.innerHTML=cats.map(name=>{
+    const spent=spend[name]||0,limit=S.budgets[name];
+    const pct=limit?Math.min(110,(spent/limit)*100):0;
+    const color=pct>=100?'var(--expense)':pct>=80?'var(--loan)':'var(--income)';
+    return `<div class="budget-bar-item"><div class="budget-bar-ico">${cmap[name]||'📦'}</div><div class="budget-bar-info"><div class="budget-bar-name">${name}</div>${limit?`<div class="budget-bar-track"><div class="budget-bar-fill" style="width:${Math.min(100,pct)}%;background:${color}"></div></div><div class="budget-bar-meta">₦${fmtS(spent)} / ₦${fmtS(limit)} · ${Math.round(pct)}% ${pct>=100?'⚠️ OVER BUDGET':pct>=80?'⚡ NEAR LIMIT':''}</div>`:`<div class="budget-bar-meta">₦${fmtS(spent)} spent · no limit set</div>`}</div></div>`;
+  }).join('');
+}
+
+// ══ PROFILE ══
+function renderProfile(){
+  const ri=getRank(),idx=RANKS.indexOf(ri);
+  const nx=RANKS[idx+1];const isSpecial=['SS','SSS'].includes(S.rank);
+  const xpInRank=S.xp-ri.xp,xpToNx=nx&&!['SS','SSS'].includes(nx.rank)?nx.xp-ri.xp:100;
+  const pct=isSpecial?100:nx&&!['SS','SSS'].includes(nx.rank)?Math.min(100,(xpInRank/xpToNx)*100):100;
+  const c=document.getElementById('prof-circle');
+  c.textContent=S.rank;c.style.color=ri.color;c.style.borderColor=ri.color;c.style.boxShadow=S.rank==='SSS'?'0 0 22px rgba(224,224,255,.5)':'0 0 14px '+ri.color+'44';
+  document.getElementById('prof-sub').textContent='Rank '+S.rank+' — '+ri.label;
+  document.getElementById('prof-xp').textContent=S.xp.toLocaleString()+' XP';
+  document.getElementById('prof-xp-fill').style.width=pct+'%';
+  function gateLabel(r){
+    if(r.rank==='SS')return '60-day streak · 500 entries · 3 positive months';
+    if(r.rank==='SSS')return '365-day streak · 1000 entries · 6 positive months · 20% savings · Discipline ≥ 60';
+    const p=[];p.push(r.xp.toLocaleString()+' XP');if(r.entries)p.push(r.entries+' entries');if(r.streak)p.push(r.streak+'-day streak');if(r.posMonths)p.push(r.posMonths+' positive month'+(r.posMonths>1?'s':''));return p.join(' · ');
+  }
+  document.getElementById('rank-list').innerHTML=RANKS.map(r=>{
+    const isGated=['SS','SSS'].includes(r.rank),un=meetsGate(r)||(r.rank==='SS'&&S.rank==='SS')||(r.rank==='SSS'&&S.rank==='SSS'),cur=S.rank===r.rank;
+    return `<div class="rank-row${(!un&&!cur)?' locked':''}"><div class="rank-sm" style="color:${r.color};border-color:${un||cur?r.color:'var(--border)'}">${r.rank}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${r.label}${cur?' ← YOU':''}</div><div style="font-size:8px;color:var(--text3);font-family:Space Mono,monospace;margin-top:2px;line-height:1.5">${gateLabel(r)}</div></div>${(un||cur)?'<span style="color:var(--income);font-size:13px">✓</span>':isGated?'<span style="font-size:10px">🔒</span>':'<span style="color:var(--text3);font-size:10px">🔒</span>'}</div>`;
+  }).join('');
+}
+
+// ══ RANK LOGIC ══
+function countPosMos(n){
+  const now=new Date();let c=0;
+  for(let i=1;i<=n;i++){const m=new Date(now.getFullYear(),now.getMonth()-i,1);const txs=S.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m.getMonth()&&d.getFullYear()===m.getFullYear();});const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);if(inc>exp)c++;}return c;
+}
+function meetsGate(r){
+  if(r.rank==='E')return true;
+  if(['SS','SSS'].includes(r.rank))return false;
+  return S.xp>=r.xp&&S.totalLogged>=r.entries&&S.streak>=r.streak&&(r.posMonths===0||countPosMos(r.posMonths)>=r.posMonths);
+}
+function getRank(){
+  if(S.rank==='SSS')return RANKS.find(r=>r.rank==='SSS');
+  if(S.rank==='SS')return RANKS.find(r=>r.rank==='SS');
+  let cur=RANKS[0];for(const r of RANKS){if(['SS','SSS'].includes(r.rank))continue;if(meetsGate(r))cur=r;}return cur;
+}
+function checkRank(){
+  const nr=getRank().rank;
+  if(nr!==S.rank&&!['SS','SSS'].includes(S.rank)){S.rank=nr;setTimeout(()=>toast('🎖️ RANK UP → '+nr+'!','+RANK'),600);}
+}
+function checkSS(){
+  if(S.rank!=='S')return;
+  if(S.streak>=60&&S.totalLogged>=500&&countPosMos(3)>=3){S.rank='SS';setTimeout(()=>toast('🔥 SS RANK — ARCHITECT!','LEGENDARY'),700);}
+}
+function checkSSS(){
+  if(S.rank!=='SS')return;
+  const pm=countPosMos(6);
+  const last6=S.transactions.filter(t=>{const d=new Date(t.date),n=new Date();return d>=new Date(n.getFullYear(),n.getMonth()-6,1);});
+  const l6inc=last6.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),l6exp=last6.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const ratio=l6inc>0?(l6inc-l6exp)/l6inc:0;
+  if(S.streak>=365&&S.totalLogged>=1000&&pm>=6&&ratio>=0.2&&S.disciplineScore>=60){S.rank='SSS';setTimeout(()=>toast('👑 SSS — ABSOLUTE UNLOCKED!','MYTHIC'),700);}
+}
+function updateStreak(){
+  const today=new Date().toDateString();if(S.lastLogDate===today)return;
+  const yd=new Date();yd.setDate(yd.getDate()-1);
+  S.streak=S.lastLogDate===yd.toDateString()?S.streak+1:1;S.lastLogDate=today;
+}
+
+// ══ TOAST / XP POP ══
+let tt;
+function toast(msg,xp){
+  document.getElementById('toast-msg').textContent=msg;document.getElementById('toast-xp').textContent=xp;
+  const t=document.getElementById('toast');t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400);
+}
+function xpPop(txt){
+  const el=document.createElement('div');el.className='xp-pop';el.textContent=txt;el.style.cssText='left:50%;top:45%;transform:translateX(-50%)';
+  document.body.appendChild(el);requestAnimationFrame(()=>{el.classList.add('go');setTimeout(()=>el.remove(),1100);});
+}
+
+// ══ DATA ══
+function exportData(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ledger_'+Date.now()+'.json';a.click();}
+function clearData(){if(!confirm('Clear ALL data?'))return;S={transactions:[],xp:0,rank:'E',streak:0,lastLogDate:null,totalLogged:0,disciplineScore:100,lastActivityDate:null,budgets:{}};document.getElementById('decay-box').classList.remove('show');save();renderHome();navigate('home');}
+
+// ══ SHEET HELPERS ══
+function open2(id){document.getElementById(id+'-overlay').classList.add('open');document.getElementById(id+'-sheet').classList.add('open');}
+function close2(id){document.getElementById(id+'-overlay').classList.remove('open');document.getElementById(id+'-sheet').classList.remove('open');}
+
+// ══ FORMAT ══
+function fmt(n){if(!n&&n!==0)return'0';return Number(n).toLocaleString('en-NG',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function fmtS(n){if(!n)return'0';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1000)return(n/1000).toFixed(1)+'K';return Math.round(n).toLocaleString();}
+function dlbl(d){const td=new Date().toDateString(),yd=new Date();yd.setDate(yd.getDate()-1);if(d.toDateString()===td)return'Today';if(d.toDateString()===yd.toDateString())return'Yesterday';return d.toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'});}
+function gdlbl(d){const td=new Date().toDateString(),yd=new Date();yd.setDate(yd.getDate()-1);if(d.toDateString()===td)return'TODAY';if(d.toDateString()===yd.toDateString())return'YESTERDAY';return d.toLocaleDateString('en-NG',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();}
+
+// ══ INIT ══
+load();initTheme();renderHome();
+</script>
+</body>
+</html>

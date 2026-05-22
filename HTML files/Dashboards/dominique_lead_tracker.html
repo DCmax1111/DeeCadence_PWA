@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dominique Creations · Lead Tracker</title>
+<style>
+  :root {
+    --navy: #0D1B2A;
+    --navy2: #152336;
+    --blue: #1E3A5F;
+    --gold: #C9A84C;
+    --gold2: #E0BF6A;
+    --gold3: #F5EDD0;
+    --dark: #1E2D3D;
+    --mid: #5A7A99;
+    --rule: #C8D8EC;
+    --light: #EEF4FB;
+    --white: #FFFFFF;
+    --ok: #2E7D52;
+    --ok2: #E6F4EE;
+    --warn: #D4860A;
+    --warn2: #FEF3E2;
+    --danger: #C0392B;
+    --danger2: #FDECEA;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--light);
+    color: var(--dark);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy);
+    padding: 16px 24px;
+    border-bottom: 3px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .brand { display: flex; flex-direction: column; }
+  .brand-name {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .brand-sub {
+    font-size: 9px;
+    color: var(--gold2);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .stat { text-align: center; }
+  .stat-val {
+    font-family: Georgia, serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold2);
+    line-height: 1;
+  }
+  .stat-lbl {
+    font-size: 8px;
+    color: var(--mid);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .btn-gold  { background: var(--gold); color: var(--navy); }
+  .btn-gold:hover { background: var(--gold2); }
+  .btn-blue  { background: var(--blue); color: var(--gold2); }
+  .btn-blue:hover { background: #2E5490; }
+  .btn-ok    { background: var(--ok); color: #fff; }
+  .btn-ok:hover { background: #3a9e67; }
+  .btn-ghost { background: transparent; border: 1.5px solid #C8D8EC; color: var(--mid); }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-danger-sm {
+    background: transparent;
+    border: 1px solid #f5c6cb;
+    color: var(--danger);
+    font-size: 10px;
+    padding: 4px 9px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 700;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .btn-danger-sm:hover { background: var(--danger2); }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    background: var(--white);
+    border-bottom: 1px solid var(--rule);
+    padding: 10px 24px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filter-bar label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--mid);
+  }
+  .filter-bar input,
+  .filter-bar select {
+    border: 1.5px solid var(--rule);
+    border-radius: 5px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-family: inherit;
+    color: var(--dark);
+    background: var(--light);
+    outline: none;
+    transition: border-color 0.18s;
+  }
+  .filter-bar input:focus,
+  .filter-bar select:focus { border-color: var(--gold); }
+  #searchInput { min-width: 180px; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-section {
+    background: var(--white);
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .prog-item { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 100px; }
+  .prog-label { font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--mid); }
+  .prog-track { background: var(--light); border-radius: 100px; height: 6px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 100px; transition: width 0.4s ease; }
+  .prog-fill.gold  { background: linear-gradient(90deg, var(--blue), var(--gold)); }
+  .prog-fill.ok    { background: var(--ok); }
+  .prog-fill.warn  { background: var(--warn); }
+  .prog-count { font-size: 10px; color: var(--dark); font-weight: 600; margin-top: 1px; }
+
+  /* ── TABLE WRAPPER ── */
+  .table-wrap {
+    overflow-x: auto;
+    padding: 20px 24px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 1400px;
+    background: var(--white);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(30, 58, 95, 0.08);
+  }
+
+  /* ── TABLE HEAD ── */
+  thead tr {
+    background: var(--navy);
+  }
+  thead th {
+    padding: 11px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gold2);
+    text-align: left;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    user-select: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  thead th:hover { background: var(--blue); }
+  thead th:last-child { border-right: none; cursor: default; }
+  thead th.sort-asc::after  { content: ' ▲'; font-size: 8px; opacity: 0.7; }
+  thead th.sort-desc::after { content: ' ▼'; font-size: 8px; opacity: 0.7; }
+
+  /* ── TABLE BODY ── */
+  tbody tr {
+    border-bottom: 1px solid var(--rule);
+    transition: background 0.12s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #F7FAFD; }
+  tbody tr.warm-row { background: var(--warn2); }
+  tbody tr.warm-row:hover { background: #fef0d6; }
+  tbody tr.cold-row { background: #F0F5FB; }
+  tbody tr.dm-row  { background: var(--ok2); }
+  tbody tr.dm-row:hover { background: #d8eed7; }
+
+  tbody td {
+    padding: 7px 9px;
+    vertical-align: middle;
+    border-right: 1px solid var(--rule);
+    font-size: 11px;
+    color: var(--dark);
+  }
+  tbody td:last-child { border-right: none; }
+
+  /* Row number */
+  .row-num {
+    font-family: Georgia, serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    text-align: center;
+    min-width: 36px;
+  }
+
+  /* Inputs inside table */
+  .cell-input {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--dark);
+    width: 100%;
+    outline: none;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background 0.15s;
+    min-width: 80px;
+  }
+  .cell-input:focus {
+    background: var(--light);
+    box-shadow: 0 0 0 1.5px var(--gold);
+  }
+  .cell-input.wide  { min-width: 130px; }
+  .cell-input.narrow { min-width: 60px; }
+  .cell-input.url   { min-width: 110px; color: var(--blue); }
+
+  textarea.cell-input {
+    resize: vertical;
+    min-height: 38px;
+    line-height: 1.5;
+    min-width: 160px;
+  }
+
+  /* Select inside table */
+  .cell-select {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--dark);
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+    padding: 2px 2px;
+    min-width: 90px;
+  }
+  .cell-select:focus { background: var(--light); }
+
+  /* Checkboxes */
+  .chk-cell { text-align: center; }
+  .chk-wrap { display: flex; justify-content: center; align-items: center; }
+  input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--ok);
+    cursor: pointer;
+  }
+
+  /* Status badges */
+  .warm-badge {
+    display: inline-block;
+    background: var(--warn2);
+    color: var(--warn);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+  }
+  .cold-badge {
+    display: inline-block;
+    background: var(--light);
+    color: var(--mid);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+  }
+  .dmd-badge {
+    display: inline-block;
+    background: var(--ok2);
+    color: var(--ok);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--mid);
+    font-size: 13px;
+    font-style: italic;
+  }
+  .empty-state span {
+    font-family: Georgia, serif;
+    font-size: 32px;
+    display: block;
+    margin-bottom: 8px;
+    opacity: 0.4;
+  }
+
+  /* Toast notification */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--navy);
+    color: var(--gold2);
+    padding: 10px 18px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    border-left: 3px solid var(--gold);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s ease;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Footer */
+  footer {
+    padding: 14px 24px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--mid);
+    border-top: 1px solid var(--rule);
+    background: var(--white);
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    header { padding: 12px 14px; }
+    .header-stats { display: none; }
+    .filter-bar { padding: 8px 14px; }
+    .progress-section { padding: 10px 14px; }
+    .table-wrap { padding: 14px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <div class="brand-name">Dominique Creations</div>
+    <div class="brand-sub">Outreach Lead Tracker</div>
+  </div>
+  <div class="header-stats">
+    <div class="stat">
+      <div class="stat-val" id="statTotal">0</div>
+      <div class="stat-lbl">Total Leads</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statDMd" style="color:#3DAA6A;">0</div>
+      <div class="stat-lbl">DM'd</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statWarm" style="color:#E09030;">0</div>
+      <div class="stat-lbl">Warm</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statConv" style="color:var(--gold2);">0%</div>
+      <div class="stat-lbl">Conv. Rate</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-gold" onclick="addRow()">+ Add Row</button>
+    <button class="btn btn-ok" onclick="downloadCSV()">⬇ CSV</button>
+    <button class="btn btn-blue" onclick="saveLocal()">💾 Save</button>
+    <button class="btn btn-ghost" onclick="loadLocal()">📂 Load</button>
+    <button class="btn btn-ghost" onclick="clearTable()">🗑 Clear</button>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <label>Filter:</label>
+  <input type="text" id="searchInput" placeholder="Search handles, city, notes..." oninput="filterRows()"/>
+  <select id="filterDMd" onchange="filterRows()">
+    <option value="all">All — DM Status</option>
+    <option value="yes">DM'd ✓</option>
+    <option value="no">Not DM'd</option>
+  </select>
+  <select id="filterWarm" onchange="filterRows()">
+    <option value="all">All — Warmth</option>
+    <option value="warm">Warm 🔥</option>
+    <option value="cold">Cold ❄️</option>
+  </select>
+  <select id="filterTier" onchange="filterRows()">
+    <option value="all">All — Tiers</option>
+    <option value="High">High Tier</option>
+    <option value="Mid">Mid Tier</option>
+    <option value="Low">Low Tier</option>
+  </select>
+  <button class="btn btn-ghost" style="padding:5px 11px;font-size:10px;" onclick="clearFilters()">Clear Filters</button>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-section">
+  <div class="prog-item">
+    <div class="prog-label">Outreach Progress</div>
+    <div class="prog-track"><div class="prog-fill gold" id="progDM" style="width:0%"></div></div>
+    <div class="prog-count" id="progDMCount">0 / 0 DM'd</div>
+  </div>
+  <div class="prog-item">
+    <div class="prog-label">Warm Leads</div>
+    <div class="prog-track"><div class="prog-fill warn" id="progWarm" style="width:0%"></div></div>
+    <div class="prog-count" id="progWarmCount">0 warm leads</div>
+  </div>
+  <div class="prog-item">
+    <div class="prog-label">Posted (Content Shared)</div>
+    <div class="prog-track"><div class="prog-fill ok" id="progPosted" style="width:0%"></div></div>
+    <div class="prog-count" id="progPostedCount">0 posted</div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <table id="leadTable">
+    <thead>
+      <tr>
+        <th onclick="sortTable(0)" style="cursor:default;">#</th>
+        <th onclick="sortTable(1)">IG Handle</th>
+        <th onclick="sortTable(2)">City</th>
+        <th onclick="sortTable(3)">Aesthetic</th>
+        <th onclick="sortTable(4)">Recent-Work Detail</th>
+        <th onclick="sortTable(5)">Client Tier</th>
+        <th onclick="sortTable(6)">Followers</th>
+        <th onclick="sortTable(7)">Avg Likes</th>
+        <th onclick="sortTable(8)">Website</th>
+        <th class="chk-cell">Seen</th>
+        <th class="chk-cell">Liked</th>
+        <th class="chk-cell">DM'd</th>
+        <th class="chk-cell">Posted</th>
+        <th class="chk-cell">Warm</th>
+        <th class="chk-cell">Cold</th>
+        <th onclick="sortTable(15)">Notes</th>
+        <th style="cursor:default;">Remove</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <!-- Rows injected by JS -->
+    </tbody>
+  </table>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <span>✦</span>
+    No leads yet — click <strong>+ Add Row</strong> to start tracking your outreach.
+  </div>
+</div>
+
+<footer>
+  Dominique Creations · Lead Tracker · All data saved locally in your browser · Export CSV to back up ✦
+</footer>
+
+<div id="toast">Saved!</div>
+
+<script>
+'use strict';
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let rows = [];
+let sortCol = -1;
+let sortDir = 1;
+let rowIdCounter = 0;
+
+const TIERS = ['', 'High', 'Mid', 'Low'];
+
+// ── ROW TEMPLATE ──────────────────────────────────────────────────────────
+function createRow(data = {}) {
+  rowIdCounter++;
+  return {
+    id: rowIdCounter,
+    handle:    data.handle    || '',
+    city:      data.city      || '',
+    aesthetic: data.aesthetic || '',
+    recentWork:data.recentWork|| '',
+    tier:      data.tier      || '',
+    followers: data.followers || '',
+    avgLikes:  data.avgLikes  || '',
+    website:   data.website   || '',
+    seen:      data.seen      || false,
+    liked:     data.liked     || false,
+    dmd:       data.dmd       || false,
+    posted:    data.posted    || false,
+    warm:      data.warm      || false,
+    cold:      data.cold      || false,
+    notes:     data.notes     || '',
+  };
+}
+
+// ── ADD ROW ───────────────────────────────────────────────────────────────
+function addRow(data = {}) {
+  rows.push(createRow(data));
+  renderTable();
+  updateStats();
+  // Scroll to bottom of table
+  const wrap = document.querySelector('.table-wrap');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ── REMOVE ROW ────────────────────────────────────────────────────────────
+function removeRow(id) {
+  rows = rows.filter(r => r.id !== id);
+  renderTable();
+  updateStats();
+}
+
+// ── CLEAR TABLE ───────────────────────────────────────────────────────────
+function clearTable() {
+  if (rows.length === 0) return;
+  if (!confirm(`Clear all ${rows.length} rows? This cannot be undone.`)) return;
+  rows = [];
+  renderTable();
+  updateStats();
+  toast('Table cleared.');
+}
+
+// ── UPDATE ROW FIELD ──────────────────────────────────────────────────────
+function updateField(id, field, value) {
+  const row = rows.find(r => r.id === id);
+  if (!row) return;
+
+  // Mutual exclusion: warm/cold
+  if (field === 'warm' && value) row.cold = false;
+  if (field === 'cold' && value) row.warm = false;
+
+  row[field] = value;
+  updateStats();
+
+  // Re-render only the row highlight (class changes)
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  if (tr) applyRowClass(tr, row);
+
+  // Re-render cold/warm checkboxes if mutual exclusion fired
+  if (field === 'warm' || field === 'cold') {
+    const warmChk = tr.querySelector('[data-field="warm"]');
+    const coldChk = tr.querySelector('[data-field="cold"]');
+    if (warmChk) warmChk.checked = row.warm;
+    if (coldChk) coldChk.checked = row.cold;
+  }
+}
+
+function applyRowClass(tr, row) {
+  tr.classList.remove('warm-row', 'cold-row', 'dm-row');
+  if (row.warm) tr.classList.add('warm-row');
+  else if (row.cold) tr.classList.add('cold-row');
+  else if (row.dmd) tr.classList.add('dm-row');
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Apply current filter
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const dmdF   = document.getElementById('filterDMd').value;
+  const warmF  = document.getElementById('filterWarm').value;
+  const tierF  = document.getElementById('filterTier').value;
+
+  const visible = rows.filter(r => {
+    const text = [r.handle, r.city, r.aesthetic, r.recentWork, r.notes].join(' ').toLowerCase();
+    if (search && !text.includes(search)) return false;
+    if (dmdF === 'yes' && !r.dmd) return false;
+    if (dmdF === 'no'  && r.dmd)  return false;
+    if (warmF === 'warm' && !r.warm) return false;
+    if (warmF === 'cold' && !r.cold) return false;
+    if (tierF !== 'all' && r.tier !== tierF) return false;
+    return true;
+  });
+
+  tbody.innerHTML = visible.map((row, idx) => buildRowHTML(row, idx + 1)).join('');
+
+  // Attach event listeners
+  tbody.querySelectorAll('.cell-input, .cell-select').forEach(el => {
+    el.addEventListener('input', e => {
+      const id    = parseInt(e.target.closest('tr').dataset.id);
+      const field = e.target.dataset.field;
+      updateField(id, field, e.target.value);
+    });
+  });
+
+  tbody.querySelectorAll('input[type="checkbox"]').forEach(el => {
+    el.addEventListener('change', e => {
+      const id    = parseInt(e.target.closest('tr').dataset.id);
+      const field = e.target.dataset.field;
+      updateField(id, field, e.target.checked);
+    });
+  });
+}
+
+function buildRowHTML(row, displayNum) {
+  const rowClass = row.warm ? 'warm-row' : row.cold ? 'cold-row' : row.dmd ? 'dm-row' : '';
+
+  const chk = (field) =>
+    `<td class="chk-cell"><div class="chk-wrap">
+      <input type="checkbox" data-field="${field}" ${row[field] ? 'checked' : ''}/>
+    </div></td>`;
+
+  const inp = (field, cls = '') =>
+    `<input class="cell-input ${cls}" data-field="${field}" value="${esc(row[field])}" placeholder="—"/>`;
+
+  const tierSelect = `
+    <select class="cell-select" data-field="tier">
+      <option value="">—</option>
+      ${TIERS.filter(t => t).map(t =>
+        `<option value="${t}" ${row.tier === t ? 'selected' : ''}>${t}</option>`
+      ).join('')}
+    </select>`;
+
+  return `
+    <tr data-id="${row.id}" class="${rowClass}">
+      <td class="row-num">${displayNum}</td>
+      <td>${inp('handle', 'wide')}</td>
+      <td>${inp('city')}</td>
+      <td>${inp('aesthetic', 'wide')}</td>
+      <td>${inp('recentWork', 'wide')}</td>
+      <td>${tierSelect}</td>
+      <td>${inp('followers', 'narrow')}</td>
+      <td>${inp('avgLikes', 'narrow')}</td>
+      <td>${inp('website', 'url')}</td>
+      ${chk('seen')}
+      ${chk('liked')}
+      ${chk('dmd')}
+      ${chk('posted')}
+      ${chk('warm')}
+      ${chk('cold')}
+      <td><textarea class="cell-input" data-field="notes" placeholder="Notes...">${esc(row.notes)}</textarea></td>
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="btn-danger-sm" onclick="removeRow(${row.id})">Remove</button>
+      </td>
+    </tr>`;
+}
+
+function esc(val) {
+  if (!val) return '';
+  return String(val)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────
+function updateStats() {
+  const total  = rows.length;
+  const dmd    = rows.filter(r => r.dmd).length;
+  const warm   = rows.filter(r => r.warm).length;
+  const posted = rows.filter(r => r.posted).length;
+  const conv   = dmd > 0 ? Math.round((warm / dmd) * 100) : 0;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statDMd').textContent   = dmd;
+  document.getElementById('statWarm').textContent  = warm;
+  document.getElementById('statConv').textContent  = conv + '%';
+
+  const pct = (n, d) => d > 0 ? Math.min(100, Math.round((n / d) * 100)) : 0;
+
+  document.getElementById('progDM').style.width       = pct(dmd, total) + '%';
+  document.getElementById('progDMCount').textContent  = `${dmd} / ${total} DM'd`;
+  document.getElementById('progWarm').style.width     = pct(warm, dmd || 1) + '%';
+  document.getElementById('progWarmCount').textContent= `${warm} warm lead${warm !== 1 ? 's' : ''} of ${dmd} DM'd`;
+  document.getElementById('progPosted').style.width   = pct(posted, total) + '%';
+  document.getElementById('progPostedCount').textContent = `${posted} posted`;
+}
+
+// ── FILTER ────────────────────────────────────────────────────────────────
+function filterRows() { renderTable(); }
+
+function clearFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterDMd').value   = 'all';
+  document.getElementById('filterWarm').value  = 'all';
+  document.getElementById('filterTier').value  = 'all';
+  renderTable();
+}
+
+// ── SORT ──────────────────────────────────────────────────────────────────
+const SORT_FIELDS = ['', 'handle', 'city', 'aesthetic', 'recentWork', 'tier', 'followers', 'avgLikes', 'website', '', '', '', '', '', '', 'notes'];
+
+function sortTable(col) {
+  const field = SORT_FIELDS[col];
+  if (!field) return;
+
+  if (sortCol === col) {
+    sortDir = -sortDir;
+  } else {
+    sortCol = col;
+    sortDir = 1;
+  }
+
+  rows.sort((a, b) => {
+    const av = String(a[field] || '').toLowerCase();
+    const bv = String(b[field] || '').toLowerCase();
+    // Numeric sort for followers/avgLikes
+    if (col === 6 || col === 7) {
+      const an = parseFloat(av.replace(/[^0-9.]/g, '')) || 0;
+      const bn = parseFloat(bv.replace(/[^0-9.]/g, '')) || 0;
+      return (an - bn) * sortDir;
+    }
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  });
+
+  // Update header arrows
+  document.querySelectorAll('thead th').forEach((th, i) => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (i === col) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  });
+
+  renderTable();
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────────────────────
+function downloadCSV() {
+  if (rows.length === 0) { toast('No data to export.'); return; }
+
+  const headers = [
+    '#', 'IG Handle', 'City', 'Aesthetic', 'Recent-Work Detail',
+    'Client Tier', 'Followers', 'Avg Likes', 'Website',
+    'Seen', 'Liked', "DM'd", 'Posted', 'Warm', 'Cold', 'Notes'
+  ];
+
+  const yn = v => v ? 'Yes' : 'No';
+  const csvRows = rows.map((r, i) => [
+    i + 1, r.handle, r.city, r.aesthetic, r.recentWork,
+    r.tier, r.followers, r.avgLikes, r.website,
+    yn(r.seen), yn(r.liked), yn(r.dmd), yn(r.posted), yn(r.warm), yn(r.cold), r.notes
+  ].map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(','));
+
+  const csvContent = [headers.join(','), ...csvRows].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `dominique_leads_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  toast('CSV downloaded ✓');
+}
+
+// ── LOCAL STORAGE SAVE / LOAD ─────────────────────────────────────────────
+function saveLocal() {
+  localStorage.setItem('dc_leads', JSON.stringify({ rows, rowIdCounter }));
+  toast('Saved to browser storage ✓');
+}
+
+function loadLocal() {
+  const raw = localStorage.getItem('dc_leads');
+  if (!raw) { toast('No saved data found.'); return; }
+  try {
+    const data = JSON.parse(raw);
+    rows = data.rows || [];
+    rowIdCounter = data.rowIdCounter || rows.length;
+    renderTable();
+    updateStats();
+    toast(`Loaded ${rows.length} rows ✓`);
+  } catch (e) {
+    toast('Error loading saved data.');
+  }
+}
+
+// Auto-save on any change
+document.addEventListener('change', () => {
+  saveLocal();
+});
+document.addEventListener('input', debounce(() => {
+  saveLocal();
+}, 600));
+
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function toast(msg, duration = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ── KEYBOARD SHORTCUT ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    addRow();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveLocal();
+  }
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+(function init() {
+  // Try to load saved data first
+  const raw = localStorage.getItem('dc_leads');
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      rows = data.rows || [];
+      rowIdCounter = data.rowIdCounter || rows.length;
+    } catch (e) { rows = []; }
+  }
+
+  // Start with one blank row if nothing saved
+  if (rows.length === 0) addRow();
+  else { renderTable(); updateStats(); }
+
+  // Keyboard shortcut hint
+  setTimeout(() => toast('Tip: Ctrl+Enter to add row · Ctrl+S to save'), 1200);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0C0D14">
+<meta name="description" content="Dee_Cistem — Your Personal Operating System">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Dee_Cistem — v4.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Sora:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+:root{
+  --premium-heading:'Sora',sans-serif;
+  --bg:#0C0D14;--bg-light:#F5F5F5;
+  --bg2:#11131D;--bg2-light:#F2F2F2;
+  --surface:#161B27;--surface-light:#FFFFFF;
+  --card:#1C1E2C;--card-light:#FFFFFF;
+  --card2:#1F2535;--card2-light:#F8FAFC;
+  --border:#2A2D42;--border-light:#D9D9D9;
+  --accent:#4F8EF7;--accent-light:#2563EB;
+  --fin:#2DD4A0;--spirit:#F5B942;--mind:#9B7FFA;
+  --energy:#5BA4F5;--know:#2DD4A0;--dex:#F472B6;--dc:#38BDF8;
+  --ok:#22C55E;--warn:#F59E0B;--err:#F87171;--gold:#FBBF24;
+  --t1:#F0F2FF;--t1-light:#1a1a1a;
+  --t2:#9BA3C4;--t2-light:#666;
+  --t3:#4A5070;--t3-light:#555555;
+  --t4:#252B3B;
+  --r:14px;--rs:8px;--rl:20px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --shadow-accent:0 4px 20px rgba(79,142,247,.25);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  min-height:100vh;max-width:430px;margin:0 auto;
+  padding-bottom:100px;
+  transition:background 0.3s, color 0.3s;
+  overflow-x:hidden;
+}
+
+/* ── Route Animations ───────────────────────────────────────────── */
+.screen {
+  display: none;
+  animation: slideIn 0.3s ease-out forwards;
+}
+.screen.active {
+  display: block;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Skeleton Loads ─────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--border) 25%, var(--card) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 8px;
+}
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Toasts ─────────────────────────────────────────────────────── */
+#toastContainer {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 90%;
+  max-width: 400px;
+}
+.toast {
+  padding: 12px 20px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  animation: toastIn 0.3s ease-out;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.toast.success { background: var(--ok); }
+.toast.error { background: var(--err); }
+
+/* ── Laptop/Desktop Enhancement ─────────────────────────────────── */
+@media (min-width: 1024px) {
+  body {
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    height: 100vh;
+    padding-bottom: 0;
+  }
+  .sidebar {
+    display: flex !important;
+    flex-direction: column;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 24px;
+    gap: 12px;
+  }
+  .main-content {
+    overflow-y: auto;
+    padding: 40px;
+  }
+  .bottom-nav { display: none; }
+}
+
+/* ── Rest of Styles (Condensed) ─────────────────────────────────── */
+.header{padding:20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20;background:var(--bg);backdrop-filter:blur(10px)}
+.header h1{font-size:20px;font-weight:800;color:var(--accent);letter-spacing:2px}
+.card{background:var(--card);border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid var(--border);transition:0.2s}
+.btn{width:100%;padding:16px;border-radius:12px;border:none;font-weight:700;cursor:pointer;transition:0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:var(--border);color:var(--t2)}
+.field{width:100%;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--t1);margin-bottom:12px;outline:none}
+</style>
+</head>
+<body class="dark-theme">
+
+<div id="toastContainer"></div>
+
+<!-- ── Sidebar (Desktop) ─────────────────────────────────────────── -->
+<div class="sidebar" style="display:none">
+  <h1 style="font-family:'Syne';margin-bottom:20px">DEE_CISTEM</h1>
+  <button class="btn btn-secondary" onclick="show('home')">🏠 Dashboard</button>
+  <button class="btn btn-secondary" onclick="show('financial')">💰 Financial</button>
+  <button class="btn btn-secondary" onclick="show('focus')">🎯 AI Focus Debt</button>
+  <button class="btn btn-secondary" onclick="show('settings')">⚙️ Settings</button>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="openPaywall()">⭐ Upgrade Pro</button>
+</div>
+
+<div class="main-content" id="app">
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="header">
+      <div>
+        <h1>DEE_CISTEM</h1>
+        <p style="font-size:12px;color:var(--t2)" id="greeting">Welcome back, User</p>
+      </div>
+      <div id="pwaInstall" style="display:none">
+        <button class="btn btn-primary" style="padding:8px 12px;font-size:12px" onclick="installPWA()">Install App</button>
+      </div>
+    </div>
+    
+    <div class="card" onclick="shareRank()">
+      <p style="font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase">Current Status</p>
+      <h2 style="font-size:32px;font-weight:800;color:var(--accent)" id="userRank">Rank: B</h2>
+      <p style="font-size:12px;color:var(--t2)">Tap to share your progress</p>
+    </div>
+
+    <div class="card ai-card">
+      <h3>🧠 AI Focus Insights</h3>
+      <div id="aiFocusContent">
+        <div class="skeleton sk-line" style="width:80%"></div>
+        <div class="skeleton sk-line" style="width:60%"></div>
+      </div>
+    </div>
+
+    <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 0 20px">
+      <div class="card" onclick="show('financial')">💰 Financial</div>
+      <div class="card" onclick="show('focus')">🎯 Focus</div>
+    </div>
+  </div>
+
+  <!-- FINANCIAL -->
+  <div id="financial" class="screen">
+    <div class="header">
+      <button onclick="show('home')" style="background:none;border:none;color:var(--t2);cursor:pointer">← Back</button>
+      <h2>Financials</h2>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <p style="font-size:10px;color:var(--t3)">BALANCE</p>
+          <h2 id="balanceVal">₦0.00</h2>
+        </div>
+        <button class="btn btn-primary" style="width:auto" onclick="openPaywall()">Pro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOCUS DEBT (AI) -->
+  <div id="focus" class="screen">
+    <div class="header">
+      <button onclick="show('home')" style="background:none;border:none;color:var(--t2);cursor:pointer">← Back</button>
+      <h2>AI Focus Debt</h2>
+    </div>
+    <div class="card">
+      <h3>Analyze Focus Debt</h3>
+      <p style="font-size:13px;color:var(--t2);margin-bottom:16px">Enter your tasks or current state to see your "Focus Debt" and recovery plan.</p>
+      <textarea class="field" id="focusInput" rows="4" placeholder="I'm feeling overwhelmed with 5 projects..."></textarea>
+      <button class="btn btn-primary" onclick="analyzeFocus()">Analyze with Groq/Claude</button>
+    </div>
+    <div id="focusResult" class="card" style="display:none">
+      <h3 style="color:var(--mind)">AI Analysis</h3>
+      <div id="focusText" style="font-size:14px;line-height:1.6;color:var(--t2)"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="settings" class="screen">
+    <div class="header">
+      <button onclick="show('home')" style="background:none;border:none;color:var(--t2);cursor:pointer">← Back</button>
+      <h2>Settings</h2>
+    </div>
+    
+    <div class="card">
+      <h3>Sync & Devices</h3>
+      <p style="font-size:12px;color:var(--t2);margin-bottom:12px">Supabase Realtime (2-Device Limit)</p>
+      <div id="syncStatus" style="font-size:13px;margin-bottom:12px">Status: Offline</div>
+      <button class="btn btn-secondary" onclick="initSync()">Connect Supabase</button>
+    </div>
+
+    <div class="card">
+      <h3>Paywall (Stripe/Cleva)</h3>
+      <div style="display:grid;gap:10px">
+        <button class="btn btn-primary" onclick="handlePay('NGN')">NGN 1,000 / 24hr (Cleva)</button>
+        <button class="btn btn-primary" onclick="handlePay('USD')">$9.99 / mo (Stripe)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Referral Program</h3>
+      <p style="font-size:12px;color:var(--t2);margin-bottom:12px">Share your code for free trial</p>
+      <div class="field" style="text-align:center;font-weight:800;letter-spacing:2px" id="refCode">DEE-BETA-2024</div>
+      <button class="btn btn-secondary" onclick="shareReferral()">Share Referral Code</button>
+    </div>
+
+    <div class="card">
+      <h3>Accessibility</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span>Haptic Feedback</span>
+        <input type="checkbox" id="hapticToggle" checked>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <span>Voice Logs</span>
+        <button class="btn btn-secondary" style="width:auto;padding:8px" onclick="startVoice()">🎤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Configuration ────────────────────────────────────────────────
+const SUPA_URL = 'https://lnxvlpmvhjhvwzunkvts.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxueHZscG12aGpodnd6dW5rdnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjY0MDIsImV4cCI6MjA5MTQ0MjQwMn0.VNYvVvgQxMZhpEzCDuKHc_f7grB3bHpwaggGeJXhIhw';
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let STATE = {
+  rank: 'B',
+  balance: 0,
+  isPro: false,
+  devices: [],
+  haptics: true
+};
+
+// ── Navigation ───────────────────────────────────────────────────
+function show(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  triggerHaptic('light');
+}
+
+// ── Toasts ───────────────────────────────────────────────────────
+function toast(msg, type='success') {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerText = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── Haptics ──────────────────────────────────────────────────────
+function triggerHaptic(style) {
+  if (!STATE.haptics || !navigator.vibrate) return;
+  if (style === 'light') navigator.vibrate(10);
+  else if (style === 'medium') navigator.vibrate(30);
+  else if (style === 'error') navigator.vibrate([50, 30, 50]);
+}
+
+// ── Supabase Sync (2-Device Limit) ───────────────────────────────
+async function initSync() {
+  toast("Connecting to Supabase...");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    toast("Please login first", "error");
+    return;
+  }
+
+  // Check device count
+  const { data: devices } = await supabase.from('devices').select('*').eq('user_id', user.id);
+  if (devices && devices.length >= 2) {
+    toast("2-Device limit reached!", "error");
+    return;
+  }
+
+  // Realtime subscription
+  supabase.channel('state_sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'user_state' }, payload => {
+      STATE = { ...STATE, ...payload.new };
+      updateUI();
+    })
+    .subscribe();
+  
+  document.getElementById('syncStatus').innerText = "Status: Connected (Device 1/2)";
+}
+
+// ── AI Focus Debt (Groq/Claude Ready) ───────────────────────────
+async function analyzeFocus() {
+  const input = document.getElementById('focusInput').value;
+  if (!input) return toast("Enter something to analyze", "error");
+  
+  const resultDiv = document.getElementById('focusResult');
+  const textDiv = document.getElementById('focusText');
+  
+  resultDiv.style.display = 'block';
+  textDiv.innerHTML = '<div class="skeleton sk-line"></div><div class="skeleton sk-line" style="width:70%"></div>';
+  
+  // Placeholder for Ollama -> Groq/Claude
+  setTimeout(() => {
+    textDiv.innerHTML = `<strong>Focus Debt Analysis:</strong><br>
+    Your current debt is high due to context switching. <br><br>
+    <strong>Recovery Plan:</strong><br>
+    1. Deep work block for 90 mins.<br>
+    2. Eliminate notification debt.<br>
+    3. Delegate Project X.`;
+    toast("Analysis complete");
+  }, 1500);
+}
+
+// ── Paywall (Cleva/Stripe) ──────────────────────────────────────
+function handlePay(currency) {
+  if (currency === 'NGN') {
+    toast("Redirecting to Cleva (₦1,000)...");
+    // window.location.href = 'cleva_payment_url';
+  } else {
+    toast("Redirecting to Stripe ($9.99)...");
+    // window.location.href = 'stripe_checkout_url';
+  }
+}
+
+// ── Voice Logs ──────────────────────────────────────────────────
+function startVoice() {
+  if (!('webkitSpeechRecognition' in window)) {
+    return toast("Voice not supported in this browser", "error");
+  }
+  const recognition = new webkitSpeechRecognition();
+  recognition.onstart = () => toast("Listening...");
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    toast(`Logged: "${transcript}"`);
+  };
+  recognition.start();
+}
+
+// ── Share Rank ──────────────────────────────────────────────────
+function shareRank() {
+  if (navigator.share) {
+    navigator.share({
+      title: 'My Dee_Cistem Rank',
+      text: `I've reached Rank ${STATE.rank} on Dee_Cistem! Check my progress.`,
+      url: window.location.href
+    }).then(() => toast("Shared successfully!"))
+      .catch(() => toast("Share cancelled", "error"));
+  } else {
+    toast("Sharing not supported on this device", "error");
+  }
+}
+
+// ── PWA Support ─────────────────────────────────────────────────
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('pwaInstall').style.display = 'block';
+});
+
+function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choice) => {
+    if (choice.outcome === 'accepted') toast("Installing Dee_Cistem...");
+    document.getElementById('pwaInstall').style.display = 'none';
+  });
+}
+
+// ── Viral Referral ──────────────────────────────────────────────
+function shareReferral() {
+  const code = document.getElementById('refCode').innerText;
+  if (navigator.share) {
+    navigator.share({
+      title: 'Join Dee_Cistem',
+      text: `Use my code ${code} for a free trial!`,
+      url: window.location.href
+    });
+  }
+}
+
+function updateUI() {
+  document.getElementById('userRank').innerText = `Rank: ${STATE.rank}`;
+  document.getElementById('balanceVal').innerText = `₦${STATE.balance.toLocaleString()}`;
+}
+
+// Initial UI load
+updateUI();
+</script>
+</body>
+</html>

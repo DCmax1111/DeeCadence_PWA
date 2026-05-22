@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finance MVP | Subscription Plans</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #02070f;
+      --surface: rgba(15, 28, 52, 0.96);
+      --surface-soft: rgba(12, 18, 34, 0.98);
+      --text: #f6f8fb;
+      --muted: #93a9c6;
+      --accent: #6ae1ff;
+      --accent2: #91d56d;
+      --border: rgba(255,255,255,0.1);
+      --radius: 28px;
+      --shadow: 0 28px 80px rgba(0,0,0,0.28);
+      --max-width: 1160px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100%; font-family: Inter, system-ui, sans-serif; background: radial-gradient(circle at top left, rgba(106,225,255,0.18), transparent 24%), linear-gradient(180deg, #08101e 0%, #02070f 50%, #050714 100%); color: var(--text); }
+    .page { max-width: var(--max-width); margin: 0 auto; padding: 28px 24px 100px; }
+    a { color: var(--accent); }
+    .hero { padding: 36px; background: var(--surface); border: 1px solid var(--border); border-radius: 32px; box-shadow: var(--shadow); margin-bottom: 28px; }
+    .hero h1 { margin: 0 0 12px; font-size: clamp(2.4rem, 4vw, 3.8rem); }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.85; max-width: 720px; }
+    .rows { display: grid; gap: 24px; }
+    .overview, .plan-grid { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; padding: 28px; }
+    .overview h2, .plan-grid h2 { margin-top: 0; }
+    .overview p { margin: 0; color: var(--muted); line-height: 1.8; }
+    .badge { display: inline-flex; align-items: center; gap: 10px; background: rgba(106,225,255,0.12); color: var(--accent); padding: 10px 16px; border-radius: 999px; font-weight: 700; margin-bottom: 18px; }
+    .plan-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); }
+    .plan { padding: 24px; border-radius: 26px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.035); display: flex; flex-direction: column; justify-content: space-between; min-height: 360px; }
+    .plan h3 { margin: 0 0 8px; font-size: 1.35rem; }
+    .plan-price { font-size: 2.1rem; margin: 12px 0; line-height: 1; }
+    .plan-text { color: var(--muted); line-height: 1.8; margin-bottom: 18px; }
+    .features { list-style: none; padding: 0; margin: 0 0 22px; display: grid; gap: 12px; }
+    .features li { position: relative; padding-left: 24px; color: rgba(246,248,251,0.95); }
+    .features li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); }
+    .button { margin-top: auto; display: inline-flex; padding: 14px 18px; border-radius: 999px; background: linear-gradient(135deg, rgba(106,225,255,0.3), rgba(145,213,109,0.22)); color: #fff; text-transform: uppercase; letter-spacing: 0.02em; font-weight: 700; text-decoration: none; }
+    .panel { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 28px; padding: 28px; }
+    .panel h2 { margin-top: 0; }
+    .panel ul { margin: 0; padding-left: 20px; color: var(--muted); line-height: 1.75; }
+    .panel li { margin-bottom: 12px; }
+    .nav { margin-top: 26px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .nav a { color: var(--text); background: rgba(106,225,255,0.12); padding: 12px 16px; border-radius: 999px; text-decoration: none; }
+    .nav a:hover { background: rgba(106,225,255,0.22); }
+    @media (max-width: 760px) { .page { padding: 20px 18px 80px; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <span class="badge">MVP Demo</span>
+      <h1>Finance Bookkeeping MVP</h1>
+      <p>Launch a structured bookkeeping and cash management experience optimized for small businesses, freelance operators, and ecommerce founders. Built for quick setup, audit-safe records, and recurring revenue.</p>
+    </header>
+
+    <section class="rows">
+      <div class="overview">
+        <h2>Product summary</h2>
+        <p>This MVP combines ledger workflow clarity, editable transaction logs, and reporting templates into a premium finance system. Customers get simplified bookkeeping, cash sprint reviews, and export-ready financial statements—all from one dashboard.</p>
+      </div>
+
+      <div class="plan-grid">
+        <article class="plan">
+          <div>
+            <h3>Starter</h3>
+            <div class="plan-price">$30<span style="font-size:0.6rem;color:var(--muted);">/month</span></div>
+            <p class="plan-text">For solo operators who need clean bookkeeping and a single business profile.</p>
+            <ul class="features">
+              <li>Unlimited ledger entries</li>
+              <li>Cash flow overview</li>
+              <li>Editable logs + audit notes</li>
+              <li>CSV export</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Start free trial</a>
+        </article>
+
+        <article class="plan">
+          <div>
+            <h3>Growth</h3>
+            <div class="plan-price">$65<span style="font-size:0.6rem;color:var(--muted);">/month</span></div>
+            <p class="plan-text">For growing SMEs that need multi-entity tracking, templates, and customer-facing reporting.</p>
+            <ul class="features">
+              <li>Multi-business support</li>
+              <li>Team expense approvals</li>
+              <li>Cash sprint planning</li>
+              <li>Premium reporting dashboard</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Book demo</a>
+        </article>
+
+        <article class="plan">
+          <div>
+            <h3>Operator</h3>
+            <div class="plan-price">$120<span style="font-size:0.6rem;color:var(--muted);">/month</span></div>
+            <p class="plan-text">For agencies, accountants, and operators requiring audit, advisory, and priority support.</p>
+            <ul class="features">
+              <li>Audit trails & version history</li>
+              <li>Custom workflow templates</li>
+              <li>Dedicated account onboarding</li>
+              <li>White-label reporting</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Request pricing</a>
+        </article>
+      </div>
+
+      <div class="panel">
+        <h2>Why it works</h2>
+        <ul>
+          <li>Finance remains the highest monetization path in the portfolio, with clear value for SMB owners and operators.</li>
+          <li>Subscription pricing supports predictable cash flow and positions the product as an ongoing business tool, not a one-time template.</li>
+          <li>Operator-level packaging unlocks higher ARPU through advisory, custom workflows, and premium onboarding.</li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="nav">
+      <a href="index.html">Back to demo hub</a>
+      <a href="dashboard_mvp.html">Next: Dashboard MVP</a>
+      <a href="education_mvp.html">Next: Education MVP</a>
+    </div>
+  </div>
+</body>
+</html>

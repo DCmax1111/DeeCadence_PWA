@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — Executive Financial Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c14;
+    --surface: #0d1424;
+    --surface2: #131d30;
+    --border: #1e2d47;
+    --blue: #3b82f6;
+    --blue-light: #60a5fa;
+    --blue-dim: rgba(59,130,246,0.12);
+    --text: #e8edf5;
+    --text-muted: #6b7fa0;
+    --text-dim: #2a3a55;
+    --accent: #3b82f6;
+    --green: #34d399;
+    --red: #f87171;
+    --sidebar-w: 280px;
+    --toggle-size: 40px;
+  }
+
+  /* ── LIGHT THEME ── */
+  body.light {
+    --bg: #f0f4fb;
+    --surface: #ffffff;
+    --surface2: #e8eef8;
+    --border: #c8d4e8;
+    --blue: #2563eb;
+    --blue-light: #3b82f6;
+    --blue-dim: rgba(37,99,235,0.1);
+    --text: #0f1c35;
+    --text-muted: #4a5d80;
+    --text-dim: #9aaac4;
+    --green: #059669;
+    --red: #dc2626;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    transition: width 0.42s cubic-bezier(0.77,0,0.18,1);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #sidebar.collapsed { width: 0; border-right-color: transparent; }
+
+  /* ── FLOATING TOGGLE (lives outside sidebar) ── */
+  #sidebar-toggle {
+    position: fixed;
+    top: 28px;
+    left: calc(var(--sidebar-w) - 16px);
+    width: var(--toggle-size);
+    height: var(--toggle-size);
+    background: var(--blue);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    transition: left 0.42s cubic-bezier(0.77,0,0.18,1), background 0.2s, box-shadow 0.2s, transform 0.3s;
+    z-index: 200;
+    box-shadow: 0 4px 16px rgba(59,130,246,0.4);
+    line-height: 1;
+  }
+  #sidebar-toggle:hover { background: var(--blue-light); box-shadow: 0 6px 20px rgba(59,130,246,0.5); }
+  #sidebar-toggle.collapsed { left: 4px; transform: rotate(180deg); }
+
+  .sidebar-header {
+    padding: 32px 24px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .sidebar-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--blue);
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+  .sidebar-logo span { color: var(--text-muted); font-weight: 700; font-size: 11px; display: block; letter-spacing: 0.2em; margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+  /* theme toggle btn */
+  #theme-toggle {
+    position: fixed;
+    top: 28px; right: 28px;
+    width: var(--toggle-size); height: var(--toggle-size);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    z-index: 200;
+    transition: background 0.2s, border-color 0.2s, transform 0.3s;
+  }
+  #theme-toggle:hover { border-color: var(--blue); transform: rotate(20deg); }
+
+  .sidebar-section-label {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    padding: 20px 24px 8px;
+    text-transform: uppercase;
+  }
+
+  .nav-items { overflow-y: auto; flex: 1; padding-bottom: 24px; }
+  .nav-items::-webkit-scrollbar { width: 2px; }
+  .nav-items::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    border-left: 2px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .nav-item:hover { background: var(--blue-dim); color: var(--blue-light); }
+  .nav-item.active {
+    background: var(--blue-dim);
+    color: var(--blue);
+    border-left-color: var(--blue);
+  }
+  .nav-icon {
+    font-size: 16px;
+    width: 20px;
+    flex-shrink: 0;
+    text-align: center;
+  }
+  .nav-label { font-size: 11px; letter-spacing: 0.08em; opacity: 1; transition: opacity 0.2s; white-space: nowrap; }
+  #sidebar.collapsed .nav-label { opacity: 0; pointer-events: none; }
+  #sidebar.collapsed .sidebar-logo,
+  #sidebar.collapsed .sidebar-section-label { opacity: 0; }
+  #sidebar.collapsed .sidebar-header { padding: 32px 0 24px; }
+
+  /* ── MAIN CONTENT ── */
+  #main {
+    margin-left: var(--sidebar-w);
+    min-height: 100vh;
+    transition: margin-left 0.42s cubic-bezier(0.77,0,0.18,1);
+    padding: 48px 56px;
+    max-width: 960px;
+  }
+  #sidebar.collapsed ~ #main { margin-left: 0; }
+
+  .page-header {
+    margin-bottom: 48px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .page-eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--blue);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1.05;
+  }
+  .page-title em {
+    font-style: normal;
+    color: var(--blue);
+  }
+  .page-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    letter-spacing: 0.04em;
+    line-height: 1.8;
+    max-width: 480px;
+  }
+
+  /* ── CALCULATOR CARD ── */
+  .calc-panel {
+    display: none;
+    animation: fadeUp 0.4s ease both;
+  }
+  .calc-panel.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 36px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--blue), transparent);
+    opacity: 0.6;
+  }
+
+  .card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: 0.06em;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-title::before {
+    content: '';
+    width: 3px; height: 18px;
+    background: var(--blue);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── INPUTS ── */
+  .input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .field-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .field-prefix {
+    position: absolute;
+    left: 14px;
+    font-size: 12px;
+    color: var(--blue);
+    pointer-events: none;
+    font-family: 'DM Mono', monospace;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 12px 14px 12px 28px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+  .field input::-webkit-outer-spin-button,
+  .field input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .field input:focus, .field select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.08);
+  }
+  .field input.no-prefix, .field select { padding-left: 14px; }
+  .field select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%233b82f6' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  /* ── BUTTON ── */
+  .btn-calculate {
+    background: var(--blue);
+    color: var(--bg);
+    border: none;
+    padding: 14px 36px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    border-radius: 2px;
+  }
+  .btn-calculate:hover {
+    background: var(--blue-light);
+    box-shadow: 0 8px 24px rgba(59,130,246,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-calculate:active { transform: translateY(0); }
+
+  .btn-clear {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 14px 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    margin-left: 12px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-clear:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .btn-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+  /* ── RESULTS ── */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-top: 28px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .results-grid.visible { opacity: 1; transform: translateY(0); }
+
+  .result-tile {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 20px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-tile.highlight {
+    border-color: var(--blue);
+    background: rgba(59,130,246,0.06);
+  }
+  .result-tile.positive { border-color: rgba(76,175,125,0.4); background: rgba(76,175,125,0.05); }
+  .result-tile.negative { border-color: rgba(224,85,85,0.4); background: rgba(224,85,85,0.05); }
+
+  .result-label {
+    font-size: 8px;
+    letter-spacing: 0.25em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .result-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .result-tile.highlight .result-value { color: var(--blue); }
+  .result-tile.positive .result-value { color: var(--green); }
+  .result-tile.negative .result-value { color: var(--red); }
+  .result-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  .result-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2px;
+    background: var(--blue);
+    transition: width 0.8s cubic-bezier(0.23,1,0.32,1);
+    width: 0%;
+  }
+  .result-tile.highlight .result-bar { background: var(--blue); }
+  .result-tile.positive .result-bar { background: var(--green); }
+
+  /* ── BREAKDOWN TABLE ── */
+  .breakdown {
+    margin-top: 24px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    display: none;
+  }
+  .breakdown.visible { display: block; }
+  .breakdown-header {
+    background: var(--surface2);
+    padding: 12px 20px;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--blue);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-row:hover { background: var(--blue-dim); }
+  .breakdown-key { color: var(--text-muted); letter-spacing: 0.05em; }
+  .breakdown-val { color: var(--text); font-weight: 500; }
+  .breakdown-val.up { color: var(--green); }
+  .breakdown-val.down { color: var(--red); }
+
+  /* ── TOOLTIP / NOTE ── */
+  .formula-note {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-left: 2px solid var(--border);
+    letter-spacing: 0.04em;
+    line-height: 1.7;
+  }
+  .formula-note strong { color: var(--text-muted); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 32px 0;
+  }
+
+  /* ── SCROLLBAR ── */
+  #main::-webkit-scrollbar { width: 4px; }
+  #main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    #main { padding: 32px 24px; }
+    .input-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── WELCOME SCREEN ── */
+  .welcome {
+    text-align: center;
+    padding: 80px 40px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .welcome-icon { font-size: 48px; margin-bottom: 24px; opacity: 0.4; }
+  .welcome-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .welcome-sub { font-size: 11px; color: var(--text-dim); letter-spacing: 0.08em; line-height: 1.8; }
+
+  .tag {
+    display: inline-block;
+    background: var(--blue-dim);
+    color: var(--blue);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 3px 8px;
+    border-radius: 2px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  /* ── COMPOUND SCHEDULE ── */
+  .schedule-wrap {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    margin-top: 20px;
+    display: none;
+  }
+  .schedule-wrap.visible { display: block; }
+  .schedule-wrap::-webkit-scrollbar { width: 3px; }
+  .schedule-wrap::-webkit-scrollbar-thumb { background: var(--blue); }
+
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .schedule-table th {
+    background: var(--surface2);
+    padding: 10px 16px;
+    text-align: right;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--blue);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+  }
+  .schedule-table th:first-child { text-align: left; }
+  .schedule-table td {
+    padding: 9px 16px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .schedule-table td:first-child { text-align: left; color: var(--text-dim); }
+  .schedule-table tr:hover td { background: var(--blue-dim); color: var(--text); }
+  .schedule-table tr.peak td { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ SIDEBAR ══════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      APEX
+      <span>Executive Suite</span>
+    </div>
+  </div>
+
+  <div class="nav-items">
+    <div class="sidebar-section-label">Revenue & Profit</div>
+    <div class="nav-item" onclick="showPanel('revenue')"><span class="nav-icon">📈</span><span class="nav-label">Revenue Calculator</span></div>
+    <div class="nav-item" onclick="showPanel('profit')"><span class="nav-icon">💰</span><span class="nav-label">Profit & Loss</span></div>
+    <div class="nav-item" onclick="showPanel('margins')"><span class="nav-icon">📊</span><span class="nav-label">All Margins Suite</span></div>
+
+    <div class="sidebar-section-label">Investment</div>
+    <div class="nav-item" onclick="showPanel('roi')"><span class="nav-icon">🎯</span><span class="nav-label">ROI Calculator</span></div>
+    <div class="nav-item" onclick="showPanel('compound')"><span class="nav-icon">📐</span><span class="nav-label">Compound Interest</span></div>
+    <div class="nav-item" onclick="showPanel('daily')"><span class="nav-icon">📅</span><span class="nav-label">Daily Return Projector</span></div>
+    <div class="nav-item" onclick="showPanel('breakeven')"><span class="nav-icon">⚖️</span><span class="nav-label">Break-Even Analysis</span></div>
+
+    <div class="sidebar-section-label">Valuation</div>
+    <div class="nav-item" onclick="showPanel('markup')"><span class="nav-icon">🏷️</span><span class="nav-label">Markup vs Margin</span></div>
+    <div class="nav-item" onclick="showPanel('cagr')"><span class="nav-icon">🚀</span><span class="nav-label">CAGR Calculator</span></div>
+    <div class="nav-item" onclick="showPanel('payback')"><span class="nav-icon">⏱️</span><span class="nav-label">Payback Period</span></div>
+    <div class="nav-item" onclick="showPanel('ltvcac')"><span class="nav-icon">🔗</span><span class="nav-label">LTV : CAC Ratio</span></div>
+
+    <div class="sidebar-section-label">Operations</div>
+    <div class="nav-item" onclick="showPanel('burn')"><span class="nav-icon">🔥</span><span class="nav-label">Burn Rate & Runway</span></div>
+    <div class="nav-item" onclick="showPanel('salary')"><span class="nav-icon">💼</span><span class="nav-label">Salary Cost Analysis</span></div>
+    <div class="nav-item" onclick="showPanel('tax')"><span class="nav-icon">🏛️</span><span class="nav-label">Net After Tax</span></div>
+  </div>
+</nav>
+
+<!-- Floating sidebar toggle — lives outside sidebar so it never gets clipped -->
+<button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">◀</button>
+<!-- Theme toggle -->
+<button id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌙</button>
+
+<!-- ══════════════════════════ MAIN ══════════════════════════ -->
+<main id="main">
+
+  <!-- WELCOME -->
+  <div id="panel-welcome" class="calc-panel active">
+    <div class="page-header">
+      <div class="page-eyebrow">Executive Financial Suite</div>
+      <div class="page-title">Built for<br><em>Decision Makers.</em></div>
+      <div class="page-desc">Select a calculator from the sidebar. Every metric a founder, CEO, or investor needs — instantly.</div>
+    </div>
+    <div class="welcome">
+      <div class="welcome-icon">◈</div>
+      <div class="welcome-title">Choose a Calculator</div>
+      <div class="welcome-sub">14 calculators across Revenue, Investment, Valuation & Operations<br>Click any item in the left panel to begin.</div>
+    </div>
+  </div>
+
+  <!-- ── 1. REVENUE ── -->
+  <div id="panel-revenue" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Revenue & Profit</div>
+      <div class="page-title">Revenue <em>Calculator</em></div>
+      <div class="page-desc">Compute total revenue from units sold, or reverse-engineer units needed to hit a revenue target.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Revenue Inputs</div>
+      <div class="input-grid">
+        <div class="field"><label>Units Sold</label><div class="field-wrap"><span class="field-prefix">#</span><input type="number" id="r-units" placeholder="e.g. 500"></div></div>
+        <div class="field"><label>Price Per Unit ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="r-price" placeholder="e.g. 120"></div></div>
+        <div class="field"><label>Cost Per Unit ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="r-cost" placeholder="e.g. 45"></div></div>
+        <div class="field"><label>Fixed Costs ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="r-fixed" placeholder="e.g. 8000"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcRevenue()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('revenue')">Clear</button>
+      </div>
+      <div class="results-grid" id="r-results">
+        <div class="result-tile highlight"><div class="result-label">Total Revenue</div><div class="result-value" id="r-revenue">—</div><div class="result-bar" id="r-bar1"></div></div>
+        <div class="result-tile"><div class="result-label">Gross Profit</div><div class="result-value" id="r-gross">—</div></div>
+        <div class="result-tile"><div class="result-label">Net Profit</div><div class="result-value" id="r-net">—</div></div>
+        <div class="result-tile"><div class="result-label">Profit Margin</div><div class="result-value" id="r-margin">—</div></div>
+        <div class="result-tile"><div class="result-label">Gross Margin</div><div class="result-value" id="r-gmargin">—</div></div>
+        <div class="result-tile"><div class="result-label">Rev Per Unit</div><div class="result-value" id="r-rpu">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. PROFIT & LOSS ── -->
+  <div id="panel-profit" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Revenue & Profit</div>
+      <div class="page-title">Profit <em>& Loss</em></div>
+    </div>
+    <div class="card">
+      <div class="card-title">P&L Inputs</div>
+      <div class="input-grid">
+        <div class="field"><label>Total Revenue ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="pl-rev" placeholder="e.g. 250000"></div></div>
+        <div class="field"><label>COGS ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="pl-cogs" placeholder="e.g. 90000"></div></div>
+        <div class="field"><label>Operating Expenses ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="pl-opex" placeholder="e.g. 60000"></div></div>
+        <div class="field"><label>Interest & Other ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="pl-interest" placeholder="e.g. 5000"></div></div>
+        <div class="field"><label>Tax Rate (%)</label><div class="field-wrap"><span class="field-prefix">%</span><input type="number" id="pl-tax" placeholder="e.g. 20"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcPL()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('profit')">Clear</button>
+      </div>
+      <div class="results-grid" id="pl-results">
+        <div class="result-tile highlight"><div class="result-label">Net Income</div><div class="result-value" id="pl-net">—</div><div class="result-bar" id="pl-bar"></div></div>
+        <div class="result-tile"><div class="result-label">Gross Profit</div><div class="result-value" id="pl-gross">—</div></div>
+        <div class="result-tile"><div class="result-label">EBIT</div><div class="result-value" id="pl-ebit">—</div></div>
+        <div class="result-tile"><div class="result-label">EBT</div><div class="result-value" id="pl-ebt">—</div></div>
+        <div class="result-tile"><div class="result-label">Tax Paid</div><div class="result-value" id="pl-taxpaid">—</div></div>
+        <div class="result-tile"><div class="result-label">Net Margin</div><div class="result-value" id="pl-netmargin">—</div></div>
+      </div>
+      <div class="breakdown" id="pl-breakdown">
+        <div class="breakdown-header">P&L Waterfall</div>
+        <div class="breakdown-row"><span class="breakdown-key">Revenue</span><span class="breakdown-val up" id="bd-rev">—</span></div>
+        <div class="breakdown-row"><span class="breakdown-key">− COGS</span><span class="breakdown-val down" id="bd-cogs">—</span></div>
+        <div class="breakdown-row"><span class="breakdown-key">= Gross Profit</span><span class="breakdown-val" id="bd-gross">—</span></div>
+        <div class="breakdown-row"><span class="breakdown-key">− OpEx</span><span class="breakdown-val down" id="bd-opex">—</span></div>
+        <div class="breakdown-row"><span class="breakdown-key">= EBIT</span><span class="breakdown-val" id="bd-ebit">—</span></div>
+        <div class="breakdown-row"><span class="breakdown-key">− Interest</span><span class="breakdown-val down" id="bd-int">—</span></div>
+        <div class="breakdown-row"><span class="breakdown-key">= EBT</span><span class="breakdown-val" id="bd-ebt">—</span></div>
+        <div class="breakdown-row"><span class="breakdown-key">− Tax</span><span class="breakdown-val down" id="bd-tax">—</span></div>
+        <div class="breakdown-row"><span class="breakdown-key">= Net Income</span><span class="breakdown-val up" id="bd-net">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. MARGINS SUITE ── -->
+  <div id="panel-margins" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Revenue & Profit</div>
+      <div class="page-title">All Margins <em>Suite</em></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Margin Inputs</div>
+      <div class="input-grid">
+        <div class="field"><label>Revenue ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="m-rev" placeholder="e.g. 500000"></div></div>
+        <div class="field"><label>COGS ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="m-cogs" placeholder="e.g. 200000"></div></div>
+        <div class="field"><label>Operating Expenses ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="m-opex" placeholder="e.g. 100000"></div></div>
+        <div class="field"><label>EBITDA Add-backs ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="m-da" placeholder="Depreciation + Amort."></div></div>
+        <div class="field"><label>Net Income ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="m-net" placeholder="e.g. 80000"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcMargins()">Calculate All</button>
+        <button class="btn-clear" onclick="clearPanel('margins')">Clear</button>
+      </div>
+      <div class="results-grid" id="m-results">
+        <div class="result-tile highlight"><div class="result-label">Gross Margin</div><div class="result-value" id="m-gm">—</div><div class="result-sub">Revenue − COGS / Revenue</div><div class="result-bar"></div></div>
+        <div class="result-tile"><div class="result-label">Operating Margin</div><div class="result-value" id="m-om">—</div><div class="result-sub">EBIT / Revenue</div></div>
+        <div class="result-tile"><div class="result-label">Net Margin</div><div class="result-value" id="m-nm">—</div><div class="result-sub">Net Income / Revenue</div></div>
+        <div class="result-tile"><div class="result-label">EBITDA Margin</div><div class="result-value" id="m-ebitda">—</div><div class="result-sub">EBITDA / Revenue</div></div>
+        <div class="result-tile"><div class="result-label">Contribution Margin</div><div class="result-value" id="m-cm">—</div><div class="result-sub">Revenue − Variable Costs</div></div>
+        <div class="result-tile"><div class="result-label">Cost Ratio</div><div class="result-value" id="m-cr">—</div><div class="result-sub">Total Costs / Revenue</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. ROI ── -->
+  <div id="panel-roi" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Investment</div>
+      <div class="page-title">ROI <em>Calculator</em></div>
+      <div class="page-desc">Know your return on investment — or reverse-engineer what percentage you earned.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Investment Details</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:20px;letter-spacing:0.04em;">
+        Fill in any <strong style="color:var(--blue)">two</strong> of the three value fields — the third will be calculated automatically.
+      </p>
+      <div class="input-grid">
+        <div class="field"><label>Amount Invested ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="roi-invested" placeholder="e.g. 50000"></div></div>
+        <div class="field"><label>Interest / Profit Earned ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="roi-interest" placeholder="e.g. 22000"></div></div>
+        <div class="field"><label>Total Amount Returned ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="roi-returned" placeholder="e.g. 72000"></div></div>
+        <div class="field"><label>Time Period (months)</label><div class="field-wrap"><span class="field-prefix">mo</span><input type="number" id="roi-months" placeholder="e.g. 12"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcROI()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('roi')">Clear</button>
+      </div>
+      <div class="results-grid" id="roi-results">
+        <div class="result-tile highlight"><div class="result-label">ROI %</div><div class="result-value" id="roi-pct">—</div><div class="result-bar" id="roi-bar"></div></div>
+        <div class="result-tile positive"><div class="result-label">Net Gain</div><div class="result-value" id="roi-gain">—</div></div>
+        <div class="result-tile"><div class="result-label">Annualised ROI</div><div class="result-value" id="roi-ann">—</div><div class="result-sub">Projected over 12 months</div></div>
+        <div class="result-tile"><div class="result-label">Monthly ROI</div><div class="result-value" id="roi-mo">—</div></div>
+        <div class="result-tile"><div class="result-label">Multiple (x)</div><div class="result-value" id="roi-mult">—</div><div class="result-sub">Return per £1 invested</div></div>
+      </div>
+      <div class="formula-note"><strong>Formula:</strong> ROI = (Returned − Invested) ÷ Invested × 100. Annualised = ROI ÷ months × 12.</div>
+    </div>
+  </div>
+
+  <!-- ── 5. COMPOUND INTEREST ── -->
+  <div id="panel-compound" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Investment</div>
+      <div class="page-title">Compound <em>Interest</em></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Compound Growth Inputs</div>
+      <div class="input-grid">
+        <div class="field"><label>Principal ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="ci-p" placeholder="e.g. 10000"></div></div>
+        <div class="field"><label>Annual Rate (%)</label><div class="field-wrap"><span class="field-prefix">%</span><input type="number" id="ci-r" placeholder="e.g. 8"></div></div>
+        <div class="field"><label>Time (years)</label><div class="field-wrap"><span class="field-prefix">yr</span><input type="number" id="ci-t" placeholder="e.g. 10"></div></div>
+        <div class="field">
+          <label>Compounding Frequency</label>
+          <div class="field-wrap">
+            <select id="ci-n" class="no-prefix">
+              <option value="1">Annually</option>
+              <option value="2">Semi-Annually</option>
+              <option value="4">Quarterly</option>
+              <option value="12" selected>Monthly</option>
+              <option value="365">Daily</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Monthly Contribution ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="ci-contrib" placeholder="optional, e.g. 500"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcCompound()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('compound')">Clear</button>
+      </div>
+      <div class="results-grid" id="ci-results">
+        <div class="result-tile highlight"><div class="result-label">Future Value</div><div class="result-value" id="ci-fv">—</div><div class="result-bar"></div></div>
+        <div class="result-tile positive"><div class="result-label">Total Interest Earned</div><div class="result-value" id="ci-int">—</div></div>
+        <div class="result-tile"><div class="result-label">Total Contributions</div><div class="result-value" id="ci-total">—</div></div>
+        <div class="result-tile"><div class="result-label">Growth Multiple</div><div class="result-value" id="ci-mult">—</div></div>
+      </div>
+      <div class="schedule-wrap" id="ci-schedule">
+        <table class="schedule-table">
+          <thead><tr><th>Year</th><th>Balance</th><th>Interest</th><th>Contributions</th></tr></thead>
+          <tbody id="ci-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. DAILY RETURN PROJECTOR ── -->
+  <div id="panel-daily" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Investment</div>
+      <div class="page-title">Daily Return <em>Projector</em></div>
+      <div class="page-desc">Enter your capital and an annual or percentage return — see exactly what you earn per day, week, and month.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Return Projection Inputs</div>
+      <div class="input-grid">
+        <div class="field"><label>Capital Invested ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="dr-capital" placeholder="e.g. 100000"></div></div>
+        <div class="field"><label>Annual Return (%)</label><div class="field-wrap"><span class="field-prefix">%</span><input type="number" id="dr-rate" placeholder="e.g. 12"></div></div>
+        <div class="field"><label>Investment Duration (days)</label><div class="field-wrap"><span class="field-prefix">d</span><input type="number" id="dr-days" placeholder="e.g. 365"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcDaily()">Project Returns</button>
+        <button class="btn-clear" onclick="clearPanel('daily')">Clear</button>
+      </div>
+      <div class="results-grid" id="dr-results">
+        <div class="result-tile highlight"><div class="result-label">Daily Return</div><div class="result-value" id="dr-day">—</div><div class="result-bar"></div></div>
+        <div class="result-tile"><div class="result-label">Weekly Return</div><div class="result-value" id="dr-week">—</div></div>
+        <div class="result-tile"><div class="result-label">Monthly Return</div><div class="result-value" id="dr-month">—</div></div>
+        <div class="result-tile positive"><div class="result-label">Total Over Period</div><div class="result-value" id="dr-total">—</div></div>
+        <div class="result-tile"><div class="result-label">Final Balance</div><div class="result-value" id="dr-final">—</div></div>
+        <div class="result-tile"><div class="result-label">Effective Daily %</div><div class="result-value" id="dr-dpct">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 7. BREAK-EVEN ── -->
+  <div id="panel-breakeven" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Investment</div>
+      <div class="page-title">Break-Even <em>Analysis</em></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Break-Even Inputs</div>
+      <div class="input-grid">
+        <div class="field"><label>Fixed Costs ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="be-fixed" placeholder="e.g. 50000"></div></div>
+        <div class="field"><label>Price Per Unit ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="be-price" placeholder="e.g. 80"></div></div>
+        <div class="field"><label>Variable Cost Per Unit ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="be-var" placeholder="e.g. 30"></div></div>
+        <div class="field"><label>Target Profit ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="be-target" placeholder="optional, e.g. 20000"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcBreakEven()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('breakeven')">Clear</button>
+      </div>
+      <div class="results-grid" id="be-results">
+        <div class="result-tile highlight"><div class="result-label">Break-Even Units</div><div class="result-value" id="be-units">—</div><div class="result-bar"></div></div>
+        <div class="result-tile"><div class="result-label">Break-Even Revenue</div><div class="result-value" id="be-rev">—</div></div>
+        <div class="result-tile"><div class="result-label">Contribution Margin</div><div class="result-value" id="be-cm">—</div><div class="result-sub">Per unit</div></div>
+        <div class="result-tile"><div class="result-label">CM Ratio</div><div class="result-value" id="be-cmr">—</div></div>
+        <div class="result-tile"><div class="result-label">Units for Target Profit</div><div class="result-value" id="be-tp">—</div></div>
+        <div class="result-tile"><div class="result-label">Revenue for Target</div><div class="result-value" id="be-tprev">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 8. MARKUP vs MARGIN ── -->
+  <div id="panel-markup" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Valuation</div>
+      <div class="page-title">Markup <em>vs Margin</em></div>
+      <div class="page-desc">Most people confuse these two. This calculator converts between them and shows the full picture.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pricing Inputs</div>
+      <div class="input-grid">
+        <div class="field"><label>Cost Price ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="mu-cost" placeholder="e.g. 60"></div></div>
+        <div class="field"><label>Selling Price ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="mu-sell" placeholder="e.g. 100"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcMarkup()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('markup')">Clear</button>
+      </div>
+      <div class="results-grid" id="mu-results">
+        <div class="result-tile highlight"><div class="result-label">Markup %</div><div class="result-value" id="mu-markup">—</div><div class="result-sub">Based on Cost</div><div class="result-bar"></div></div>
+        <div class="result-tile"><div class="result-label">Gross Margin %</div><div class="result-value" id="mu-margin">—</div><div class="result-sub">Based on Revenue</div></div>
+        <div class="result-tile positive"><div class="result-label">Profit per Unit</div><div class="result-value" id="mu-profit">—</div></div>
+        <div class="result-tile"><div class="result-label">Cost Ratio</div><div class="result-value" id="mu-cr">—</div></div>
+      </div>
+      <div class="formula-note"><strong>Markup</strong> = (Sell − Cost) ÷ Cost × 100 &nbsp;|&nbsp; <strong>Margin</strong> = (Sell − Cost) ÷ Sell × 100<br>A 67% markup = 40% margin. They are NOT interchangeable.</div>
+    </div>
+  </div>
+
+  <!-- ── 9. CAGR ── -->
+  <div id="panel-cagr" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Valuation</div>
+      <div class="page-title">CAGR <em>Calculator</em></div>
+      <div class="page-desc">Compound Annual Growth Rate — the true measure of growth over time.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Growth Inputs</div>
+      <div class="input-grid">
+        <div class="field"><label>Beginning Value ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="cagr-bv" placeholder="e.g. 100000"></div></div>
+        <div class="field"><label>Ending Value ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="cagr-ev" placeholder="e.g. 350000"></div></div>
+        <div class="field"><label>Number of Years</label><div class="field-wrap"><span class="field-prefix">yr</span><input type="number" id="cagr-n" placeholder="e.g. 5"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcCAGR()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('cagr')">Clear</button>
+      </div>
+      <div class="results-grid" id="cagr-results">
+        <div class="result-tile highlight"><div class="result-label">CAGR</div><div class="result-value" id="cagr-rate">—</div><div class="result-bar"></div></div>
+        <div class="result-tile positive"><div class="result-label">Total Growth</div><div class="result-value" id="cagr-total">—</div></div>
+        <div class="result-tile"><div class="result-label">Absolute Gain</div><div class="result-value" id="cagr-gain">—</div></div>
+        <div class="result-tile"><div class="result-label">Growth Multiple</div><div class="result-value" id="cagr-mult">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 10. PAYBACK PERIOD ── -->
+  <div id="panel-payback" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Valuation</div>
+      <div class="page-title">Payback <em>Period</em></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Investment Recovery</div>
+      <div class="input-grid">
+        <div class="field"><label>Initial Investment ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="pb-inv" placeholder="e.g. 120000"></div></div>
+        <div class="field"><label>Annual Cash Inflow ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="pb-inflow" placeholder="e.g. 30000"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcPayback()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('payback')">Clear</button>
+      </div>
+      <div class="results-grid" id="pb-results">
+        <div class="result-tile highlight"><div class="result-label">Payback Period</div><div class="result-value" id="pb-years">—</div><div class="result-sub">years</div><div class="result-bar"></div></div>
+        <div class="result-tile"><div class="result-label">Payback in Months</div><div class="result-value" id="pb-months">—</div></div>
+        <div class="result-tile"><div class="result-label">Monthly Inflow</div><div class="result-value" id="pb-monthly">—</div></div>
+        <div class="result-tile"><div class="result-label">Annual Yield</div><div class="result-value" id="pb-yield">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 11. LTV:CAC ── -->
+  <div id="panel-ltvcac" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Valuation</div>
+      <div class="page-title">LTV <em>: CAC Ratio</em></div>
+      <div class="page-desc">The single most important SaaS metric. A ratio above 3:1 signals a healthy business.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Customer Metrics</div>
+      <div class="input-grid">
+        <div class="field"><label>Avg Revenue Per Customer ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="ltv-arpc" placeholder="e.g. 1200"></div></div>
+        <div class="field"><label>Gross Margin (%)</label><div class="field-wrap"><span class="field-prefix">%</span><input type="number" id="ltv-gm" placeholder="e.g. 70"></div></div>
+        <div class="field"><label>Churn Rate (% / month)</label><div class="field-wrap"><span class="field-prefix">%</span><input type="number" id="ltv-churn" placeholder="e.g. 2"></div></div>
+        <div class="field"><label>Cost to Acquire Customer ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="ltv-cac" placeholder="e.g. 400"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcLTVCAC()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('ltvcac')">Clear</button>
+      </div>
+      <div class="results-grid" id="ltv-results">
+        <div class="result-tile highlight"><div class="result-label">LTV : CAC Ratio</div><div class="result-value" id="ltv-ratio">—</div><div class="result-sub">Target: > 3:1</div><div class="result-bar"></div></div>
+        <div class="result-tile"><div class="result-label">Customer LTV</div><div class="result-value" id="ltv-val">—</div></div>
+        <div class="result-tile"><div class="result-label">Avg Customer Lifespan</div><div class="result-value" id="ltv-life">—</div><div class="result-sub">months</div></div>
+        <div class="result-tile"><div class="result-label">CAC Payback Period</div><div class="result-value" id="ltv-payback">—</div><div class="result-sub">months</div></div>
+      </div>
+      <div class="formula-note"><strong>LTV</strong> = (ARPC × GM%) ÷ Churn &nbsp;|&nbsp; <strong>CAC Payback</strong> = CAC ÷ (ARPC × GM%) × 12</div>
+    </div>
+  </div>
+
+  <!-- ── 12. BURN RATE ── -->
+  <div id="panel-burn" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Operations</div>
+      <div class="page-title">Burn Rate <em>& Runway</em></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Cash Position</div>
+      <div class="input-grid">
+        <div class="field"><label>Cash in Bank ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="br-cash" placeholder="e.g. 500000"></div></div>
+        <div class="field"><label>Monthly Revenue ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="br-rev" placeholder="e.g. 30000"></div></div>
+        <div class="field"><label>Monthly Expenses ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="br-exp" placeholder="e.g. 80000"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcBurn()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('burn')">Clear</button>
+      </div>
+      <div class="results-grid" id="br-results">
+        <div class="result-tile highlight"><div class="result-label">Runway</div><div class="result-value" id="br-runway">—</div><div class="result-sub">months</div><div class="result-bar"></div></div>
+        <div class="result-tile negative"><div class="result-label">Net Burn / Month</div><div class="result-value" id="br-burn">—</div></div>
+        <div class="result-tile"><div class="result-label">Gross Burn / Month</div><div class="result-value" id="br-gross">—</div></div>
+        <div class="result-tile"><div class="result-label">Runway in Years</div><div class="result-value" id="br-years">—</div></div>
+        <div class="result-tile"><div class="result-label">Weekly Burn</div><div class="result-value" id="br-weekly">—</div></div>
+        <div class="result-tile"><div class="result-label">Daily Burn</div><div class="result-value" id="br-daily">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 13. SALARY ── -->
+  <div id="panel-salary" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Operations</div>
+      <div class="page-title">Salary Cost <em>Analysis</em></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Employment Costs</div>
+      <div class="input-grid">
+        <div class="field"><label>Annual Salary ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="sal-annual" placeholder="e.g. 85000"></div></div>
+        <div class="field"><label>Employer Tax / NI (%)</label><div class="field-wrap"><span class="field-prefix">%</span><input type="number" id="sal-tax" placeholder="e.g. 13.8"></div></div>
+        <div class="field"><label>Benefits & Overheads (%)</label><div class="field-wrap"><span class="field-prefix">%</span><input type="number" id="sal-benefits" placeholder="e.g. 20"></div></div>
+        <div class="field"><label>Number of Employees</label><div class="field-wrap"><span class="field-prefix">#</span><input type="number" id="sal-count" placeholder="e.g. 5"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcSalary()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('salary')">Clear</button>
+      </div>
+      <div class="results-grid" id="sal-results">
+        <div class="result-tile highlight"><div class="result-label">True Cost per Employee</div><div class="result-value" id="sal-true">—</div><div class="result-sub">per year</div><div class="result-bar"></div></div>
+        <div class="result-tile negative"><div class="result-label">Total Payroll Cost</div><div class="result-value" id="sal-total">—</div></div>
+        <div class="result-tile"><div class="result-label">Monthly Cost</div><div class="result-value" id="sal-monthly">—</div></div>
+        <div class="result-tile"><div class="result-label">Cost vs Salary %</div><div class="result-value" id="sal-overhead">—</div><div class="result-sub">Overhead multiplier</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 14. NET AFTER TAX ── -->
+  <div id="panel-tax" class="calc-panel">
+    <div class="page-header">
+      <div class="page-eyebrow">Operations</div>
+      <div class="page-title">Net After <em>Tax</em></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tax Calculation</div>
+      <div class="input-grid">
+        <div class="field"><label>Gross Income ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="tx-gross" placeholder="e.g. 200000"></div></div>
+        <div class="field"><label>Tax Rate (%)</label><div class="field-wrap"><span class="field-prefix">%</span><input type="number" id="tx-rate" placeholder="e.g. 25"></div></div>
+        <div class="field"><label>Allowable Deductions ($)</label><div class="field-wrap"><span class="field-prefix">$</span><input type="number" id="tx-ded" placeholder="optional, e.g. 15000"></div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-calculate" onclick="calcTax()">Calculate</button>
+        <button class="btn-clear" onclick="clearPanel('tax')">Clear</button>
+      </div>
+      <div class="results-grid" id="tx-results">
+        <div class="result-tile highlight"><div class="result-label">Net After Tax</div><div class="result-value" id="tx-net">—</div><div class="result-bar"></div></div>
+        <div class="result-tile negative"><div class="result-label">Tax Liability</div><div class="result-value" id="tx-liability">—</div></div>
+        <div class="result-tile"><div class="result-label">Taxable Income</div><div class="result-value" id="tx-taxable">—</div></div>
+        <div class="result-tile"><div class="result-label">Effective Tax Rate</div><div class="result-value" id="tx-eff">—</div></div>
+        <div class="result-tile"><div class="result-label">Monthly Take-Home</div><div class="result-value" id="tx-monthly">—</div></div>
+        <div class="result-tile"><div class="result-label">Daily Take-Home</div><div class="result-value" id="tx-daily">—</div></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ══════════════════════════ UTILS ══════════════════════════
+const fmt = (n, decimals=0) => {
+  if (isNaN(n) || !isFinite(n)) return '—';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(n);
+};
+const fmtM = n => {
+  if (isNaN(n) || !isFinite(n)) return '—';
+  if (Math.abs(n) >= 1e9) return '$' + fmt(n/1e9, 2) + 'B';
+  if (Math.abs(n) >= 1e6) return '$' + fmt(n/1e6, 2) + 'M';
+  if (Math.abs(n) >= 1e4) return '$' + fmt(n, 0);
+  return '$' + fmt(n, 2);
+};
+const fmtP = n => isNaN(n) || !isFinite(n) ? '—' : fmt(n, 2) + '%';
+const fmtX = n => isNaN(n) || !isFinite(n) ? '—' : fmt(n, 2) + 'x';
+const val = id => parseFloat(document.getElementById(id).value) || 0;
+const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+function showResults(gridId) {
+  const g = document.getElementById(gridId);
+  if (g) { g.classList.add('visible'); }
+}
+function animateBar(barId, pct) {
+  const bar = document.getElementById(barId);
+  if (bar) setTimeout(() => bar.style.width = Math.min(pct, 100) + '%', 100);
+}
+
+// ══════════════════════════ SIDEBAR ══════════════════════════
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const btn = document.getElementById('sidebar-toggle');
+  sidebar.classList.toggle('collapsed');
+  btn.classList.toggle('collapsed');
+}
+
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('theme-toggle');
+  body.classList.toggle('light');
+  btn.textContent = body.classList.contains('light') ? '🌑' : '🌙';
+}
+
+function showPanel(name) {
+  document.querySelectorAll('.calc-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function clearPanel(name) {
+  const panel = document.getElementById('panel-' + name);
+  panel.querySelectorAll('input').forEach(i => i.value = '');
+  panel.querySelectorAll('.result-value').forEach(v => v.textContent = '—');
+  panel.querySelectorAll('.results-grid').forEach(g => g.classList.remove('visible'));
+  panel.querySelectorAll('.result-bar').forEach(b => b.style.width = '0%');
+  panel.querySelectorAll('.breakdown, .schedule-wrap').forEach(b => b.classList.remove('visible'));
+}
+
+// ══════════════════════════ CALCULATORS ══════════════════════════
+
+// 1. REVENUE
+function calcRevenue() {
+  const units = val('r-units'), price = val('r-price'), cost = val('r-cost'), fixed = val('r-fixed');
+  const revenue = units * price;
+  const varCost = units * cost;
+  const gross = revenue - varCost;
+  const net = gross - fixed;
+  const margin = revenue ? (net / revenue * 100) : 0;
+  const gmargin = revenue ? (gross / revenue * 100) : 0;
+  set('r-revenue', fmtM(revenue));
+  set('r-gross', fmtM(gross));
+  set('r-net', fmtM(net));
+  set('r-margin', fmtP(margin));
+  set('r-gmargin', fmtP(gmargin));
+  set('r-rpu', fmtM(price - cost));
+  showResults('r-results');
+  animateBar('r-bar1', gmargin);
+}
+
+// 2. P&L
+function calcPL() {
+  const rev = val('pl-rev'), cogs = val('pl-cogs'), opex = val('pl-opex'),
+        interest = val('pl-interest'), taxRate = val('pl-tax');
+  const gross = rev - cogs;
+  const ebit = gross - opex;
+  const ebt = ebit - interest;
+  const taxPaid = ebt * taxRate / 100;
+  const net = ebt - taxPaid;
+  set('pl-gross', fmtM(gross)); set('pl-ebit', fmtM(ebit)); set('pl-ebt', fmtM(ebt));
+  set('pl-taxpaid', fmtM(taxPaid)); set('pl-net', fmtM(net));
+  set('pl-netmargin', fmtP(rev ? net/rev*100 : 0));
+  // breakdown
+  set('bd-rev', fmtM(rev)); set('bd-cogs', fmtM(cogs)); set('bd-gross', fmtM(gross));
+  set('bd-opex', fmtM(opex)); set('bd-ebit', fmtM(ebit)); set('bd-int', fmtM(interest));
+  set('bd-ebt', fmtM(ebt)); set('bd-tax', fmtM(taxPaid)); set('bd-net', fmtM(net));
+  showResults('pl-results');
+  animateBar('pl-bar', rev ? gross/rev*100 : 0);
+  document.getElementById('pl-breakdown').classList.add('visible');
+}
+
+// 3. MARGINS
+function calcMargins() {
+  const rev = val('m-rev'), cogs = val('m-cogs'), opex = val('m-opex'),
+        da = val('m-da'), net = val('m-net');
+  const gross = rev - cogs;
+  const ebit = gross - opex;
+  const ebitda = ebit + da;
+  const gm = rev ? gross/rev*100 : 0;
+  const om = rev ? ebit/rev*100 : 0;
+  const nm = rev ? net/rev*100 : 0;
+  const ebitdaM = rev ? ebitda/rev*100 : 0;
+  const cm = rev ? (rev - cogs)/rev*100 : 0;
+  const cr = rev ? (cogs + opex)/rev*100 : 0;
+  set('m-gm', fmtP(gm)); set('m-om', fmtP(om)); set('m-nm', fmtP(nm));
+  set('m-ebitda', fmtP(ebitdaM)); set('m-cm', fmtP(cm)); set('m-cr', fmtP(cr));
+  showResults('m-results');
+}
+
+// 4. ROI — smart: any 2 of 3 value fields resolve the third
+function calcROI() {
+  let invested  = parseFloat(document.getElementById('roi-invested').value);
+  let interest  = parseFloat(document.getElementById('roi-interest').value);
+  let returned  = parseFloat(document.getElementById('roi-returned').value);
+  const months  = parseFloat(document.getElementById('roi-months').value) || 12;
+
+  // Resolve missing field
+  const hasInvested  = !isNaN(invested);
+  const hasInterest  = !isNaN(interest);
+  const hasReturned  = !isNaN(returned);
+
+  if (hasInvested && hasInterest && !hasReturned)  { returned = invested + interest; }
+  else if (hasInvested && hasReturned && !hasInterest) { interest = returned - invested; }
+  else if (hasInterest && hasReturned && !hasInvested) { invested = returned - interest; }
+  else if (hasInvested && hasInterest && hasReturned)  { /* all three given — use as-is */ }
+  else { alert('Please enter at least two of: Invested, Interest Earned, or Total Returned.'); return; }
+
+  const gain = returned - invested;
+  const roi  = invested ? gain / invested * 100 : 0;
+  const ann  = roi / months * 12;
+  const mo   = roi / months;
+  const mult = invested ? returned / invested : 0;
+
+  set('roi-pct',  fmtP(roi));
+  set('roi-gain', fmtM(gain));
+  set('roi-ann',  fmtP(ann));
+  set('roi-mo',   fmtP(mo));
+  set('roi-mult', fmtX(mult));
+  showResults('roi-results');
+  animateBar('roi-bar', Math.min(Math.abs(roi), 100));
+}
+
+// 5. COMPOUND INTEREST
+function calcCompound() {
+  const P = val('ci-p'), r = val('ci-r')/100, t = val('ci-t'),
+        n = parseInt(document.getElementById('ci-n').value), contrib = val('ci-contrib') || 0;
+  // FV of lump sum + FV of contributions (monthly)
+  const fvLump = P * Math.pow(1 + r/n, n*t);
+  const monthlyRate = r/12;
+  const totalMonths = t * 12;
+  const fvContrib = contrib > 0 ? contrib * (Math.pow(1+monthlyRate, totalMonths) - 1) / monthlyRate : 0;
+  const fv = fvLump + fvContrib;
+  const totalContrib = P + (contrib * totalMonths);
+  const intEarned = fv - totalContrib;
+  set('ci-fv', fmtM(fv)); set('ci-int', fmtM(intEarned));
+  set('ci-total', fmtM(totalContrib)); set('ci-mult', fmtX(P ? fv/P : 0));
+  showResults('ci-results');
+  // Build schedule
+  const tbody = document.getElementById('ci-tbody');
+  tbody.innerHTML = '';
+  let balance = P;
+  let cumContrib = P;
+  for (let y = 1; y <= t; y++) {
+    const newBalance = balance * Math.pow(1+r/n, n) + (contrib > 0 ? contrib * 12 * (1+r/n/2) : 0);
+    const yearInterest = newBalance - balance - (contrib*12);
+    cumContrib += contrib * 12;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>Year ${y}</td><td>${fmtM(newBalance)}</td><td>${fmtM(yearInterest)}</td><td>${fmtM(cumContrib)}</td>`;
+    tbody.appendChild(tr);
+    balance = newBalance;
+  }
+  document.getElementById('ci-schedule').classList.add('visible');
+}
+
+// 6. DAILY RETURN
+function calcDaily() {
+  const capital = val('dr-capital'), annRate = val('dr-rate'), days = val('dr-days') || 365;
+  const dailyRate = annRate / 365 / 100;
+  const dailyReturn = capital * dailyRate;
+  const weeklyReturn = dailyReturn * 7;
+  const monthlyReturn = dailyReturn * 30.44;
+  const totalReturn = dailyReturn * days;
+  const finalBalance = capital + totalReturn;
+  set('dr-day', fmtM(dailyReturn));
+  set('dr-week', fmtM(weeklyReturn));
+  set('dr-month', fmtM(monthlyReturn));
+  set('dr-total', fmtM(totalReturn));
+  set('dr-final', fmtM(finalBalance));
+  set('dr-dpct', fmtP(dailyRate * 100));
+  showResults('dr-results');
+}
+
+// 7. BREAK-EVEN
+function calcBreakEven() {
+  const fixed = val('be-fixed'), price = val('be-price'),
+        varCost = val('be-var'), target = val('be-target');
+  const cm = price - varCost;
+  const cmr = price ? cm/price*100 : 0;
+  const beUnits = cm ? Math.ceil(fixed / cm) : 0;
+  const beRev = beUnits * price;
+  const tpUnits = cm ? Math.ceil((fixed + target) / cm) : 0;
+  const tpRev = tpUnits * price;
+  set('be-units', fmt(beUnits)); set('be-rev', fmtM(beRev));
+  set('be-cm', fmtM(cm)); set('be-cmr', fmtP(cmr));
+  set('be-tp', target ? fmt(tpUnits) : '—'); set('be-tprev', target ? fmtM(tpRev) : '—');
+  showResults('be-results');
+}
+
+// 8. MARKUP
+function calcMarkup() {
+  const cost = val('mu-cost'), sell = val('mu-sell');
+  const profit = sell - cost;
+  const markup = cost ? profit/cost*100 : 0;
+  const margin = sell ? profit/sell*100 : 0;
+  const cr = sell ? cost/sell*100 : 0;
+  set('mu-markup', fmtP(markup)); set('mu-margin', fmtP(margin));
+  set('mu-profit', fmtM(profit)); set('mu-cr', fmtP(cr));
+  showResults('mu-results');
+}
+
+// 9. CAGR
+function calcCAGR() {
+  const bv = val('cagr-bv'), ev = val('cagr-ev'), n = val('cagr-n');
+  const cagr = bv && n ? (Math.pow(ev/bv, 1/n) - 1) * 100 : 0;
+  const total = bv ? (ev/bv - 1)*100 : 0;
+  const gain = ev - bv;
+  const mult = bv ? ev/bv : 0;
+  set('cagr-rate', fmtP(cagr)); set('cagr-total', fmtP(total));
+  set('cagr-gain', fmtM(gain)); set('cagr-mult', fmtX(mult));
+  showResults('cagr-results');
+}
+
+// 10. PAYBACK
+function calcPayback() {
+  const inv = val('pb-inv'), inflow = val('pb-inflow');
+  const years = inflow ? inv/inflow : 0;
+  const months = years * 12;
+  const monthly = inflow / 12;
+  const yld = inv ? inflow/inv*100 : 0;
+  set('pb-years', fmt(years, 2)); set('pb-months', fmt(months, 1));
+  set('pb-monthly', fmtM(monthly)); set('pb-yield', fmtP(yld));
+  showResults('pb-results');
+}
+
+// 11. LTV:CAC
+function calcLTVCAC() {
+  const arpc = val('ltv-arpc'), gm = val('ltv-gm')/100,
+        churn = val('ltv-churn')/100, cac = val('ltv-cac');
+  const lifespan = churn ? 1/churn : 0;
+  const ltv = churn ? (arpc * gm) / churn : 0;
+  const ratio = cac ? ltv/cac : 0;
+  const payback = (arpc * gm) ? cac / (arpc * gm) : 0;
+  set('ltv-ratio', fmt(ratio, 2) + ':1'); set('ltv-val', fmtM(ltv));
+  set('ltv-life', fmt(lifespan, 1)); set('ltv-payback', fmt(payback, 1));
+  const tile = document.querySelector('#ltv-results .result-tile.highlight');
+  if (tile) {
+    tile.classList.remove('positive', 'negative');
+    if (ratio >= 3) tile.classList.add('positive');
+    else if (ratio < 1) tile.classList.add('negative');
+  }
+  showResults('ltv-results');
+}
+
+// 12. BURN
+function calcBurn() {
+  const cash = val('br-cash'), rev = val('br-rev'), exp = val('br-exp');
+  const netBurn = exp - rev;
+  const runway = netBurn > 0 ? cash/netBurn : Infinity;
+  const runwayYears = runway / 12;
+  const weekly = netBurn / 4.33;
+  const daily = netBurn / 30.44;
+  set('br-runway', isFinite(runway) ? fmt(runway, 1) : '∞');
+  set('br-burn', fmtM(netBurn)); set('br-gross', fmtM(exp));
+  set('br-years', isFinite(runwayYears) ? fmt(runwayYears, 2) : '∞');
+  set('br-weekly', fmtM(weekly)); set('br-daily', fmtM(daily));
+  showResults('br-results');
+}
+
+// 13. SALARY
+function calcSalary() {
+  const annual = val('sal-annual'), taxPct = val('sal-tax')/100,
+        benefitPct = val('sal-benefits')/100, count = val('sal-count') || 1;
+  const truePerEmp = annual * (1 + taxPct + benefitPct);
+  const total = truePerEmp * count;
+  const monthly = total / 12;
+  const overhead = (truePerEmp/annual - 1)*100;
+  set('sal-true', fmtM(truePerEmp)); set('sal-total', fmtM(total));
+  set('sal-monthly', fmtM(monthly)); set('sal-overhead', fmtP(overhead));
+  showResults('sal-results');
+}
+
+// 14. TAX
+function calcTax() {
+  const gross = val('tx-gross'), rate = val('tx-rate')/100, ded = val('tx-ded');
+  const taxable = Math.max(0, gross - ded);
+  const liability = taxable * rate;
+  const net = gross - liability;
+  const effRate = gross ? liability/gross*100 : 0;
+  set('tx-net', fmtM(net)); set('tx-liability', fmtM(liability));
+  set('tx-taxable', fmtM(taxable)); set('tx-eff', fmtP(effRate));
+  set('tx-monthly', fmtM(net/12)); set('tx-daily', fmtM(net/365));
+  showResults('tx-results');
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const btn = document.querySelector('.calc-panel.active .btn-calculate');
+    if (btn) btn.click();
+  }
+});
+</script>
+</body>
+</html>

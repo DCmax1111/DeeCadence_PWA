@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>LEDGER — DC's Financial OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --surface3: #22222f;
+    --border: rgba(255,255,255,0.06);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f8;
+    --text2: #8888aa;
+    --text3: #4a4a66;
+    --income: #00e5a0;
+    --income-dim: rgba(0,229,160,0.12);
+    --expense: #ff4d6d;
+    --expense-dim: rgba(255,77,109,0.12);
+    --xp: #f5c842;
+    --xp-dim: rgba(245,200,66,0.12);
+    --accent: #7c6aff;
+    --accent-dim: rgba(124,106,255,0.15);
+    --rank-e: #888;
+    --rank-d: #4fc3f7;
+    --rank-c: #81c784;
+    --rank-b: #ce93d8;
+    --rank-a: #ff8a65;
+    --rank-s: #f5c842;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /* ── APP SHELL ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    transform: translateY(12px);
+  }
+  .screen.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    padding: 52px 20px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: linear-gradient(to bottom, var(--bg) 60%, transparent);
+    position: relative;
+    z-index: 2;
+  }
+  .topbar-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .rank-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.1em;
+    border: 1px solid;
+  }
+
+  /* ── SCROLL AREA ── */
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 100px;
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  /* ── HOME SCREEN ── */
+  .balance-card {
+    margin: 0 16px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .balance-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 120px; height: 120px;
+    background: var(--accent-dim);
+    border-radius: 50%;
+    filter: blur(30px);
+  }
+  .balance-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+  .balance-amount {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+    transition: color 0.3s;
+  }
+  .balance-amount.positive { color: var(--income); }
+  .balance-amount.negative { color: var(--expense); }
+  .balance-amount.zero { color: var(--text); }
+  .balance-sub {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'Space Mono', monospace;
+  }
+  .balance-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .balance-pill {
+    flex: 1;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .balance-pill-label {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.1em;
+    margin-bottom: 3px;
+  }
+  .balance-pill-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .income-val { color: var(--income); }
+  .expense-val { color: var(--expense); }
+
+  /* ── XP BAR ── */
+  .xp-section {
+    margin: 0 16px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .xp-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .xp-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--xp);
+    letter-spacing: 0.12em;
+  }
+  .xp-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+  }
+  .xp-track {
+    height: 4px;
+    background: var(--surface3);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--xp), #ffaa00);
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .xp-milestones {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .xp-milestone {
+    font-size: 9px;
+    color: var(--text3);
+    font-family: 'Space Mono', monospace;
+  }
+  .xp-milestone.done { color: var(--xp); }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .section-action {
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── TRANSACTION LIST ── */
+  .tx-group { margin-bottom: 4px; }
+  .tx-date-header {
+    padding: 8px 16px 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .tx-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .tx-item:active { background: var(--surface2); }
+  .tx-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 16px; right: 16px;
+    height: 1px;
+    background: var(--border);
+  }
+  .tx-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .tx-icon.income { background: var(--income-dim); }
+  .tx-icon.expense { background: var(--expense-dim); }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tx-cat {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'Space Mono', monospace;
+    margin-top: 1px;
+  }
+  .tx-amount {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .tx-amount.income { color: var(--income); }
+  .tx-amount.expense { color: var(--expense); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text2);
+  }
+  .empty-sub { font-size: 13px; color: var(--text3); line-height: 1.5; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    padding: 8px 0 24px;
+    z-index: 10;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 0;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .nav-item:active { opacity: 0.6; }
+  .nav-icon { font-size: 20px; line-height: 1; }
+  .nav-label {
+    font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    color: var(--text3);
+    letter-spacing: 0.05em;
+    transition: color 0.15s;
+  }
+  .nav-item.active .nav-label { color: var(--accent); }
+  .nav-item.active .nav-icon { filter: drop-shadow(0 0 6px var(--accent)); }
+
+  /* ── FAB ── */
+  .fab {
+    position: absolute;
+    bottom: 72px;
+    right: 20px;
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 11;
+    box-shadow: 0 8px 24px rgba(124,106,255,0.4);
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+  }
+  .fab:active { transform: scale(0.92); box-shadow: 0 4px 12px rgba(124,106,255,0.3); }
+  .fab.open { transform: rotate(45deg); }
+
+  /* ── MODAL / SHEET ── */
+  .sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .sheet-overlay.open { opacity: 1; pointer-events: all; }
+
+  .sheet {
+    position: fixed;
+    bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 100%; max-width: 480px;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    border-top: 1px solid var(--border2);
+    z-index: 51;
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    max-height: 95dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet.open { transform: translateX(-50%) translateY(0); }
+
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--surface3);
+    border-radius: 99px;
+    margin: 12px auto 0;
+    flex-shrink: 0;
+  }
+
+  .sheet-header {
+    padding: 16px 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .sheet-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .sheet-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: none;
+    color: var(--text2);
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  .sheet-body { padding: 0 20px 32px; overflow-y: auto; flex: 1; }
+
+  /* ── ENTRY FORM ── */
+  .type-toggle {
+    display: flex;
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 3px;
+    margin-bottom: 20px;
+  }
+  .type-btn {
+    flex: 1;
+    padding: 9px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    color: var(--text3);
+    transition: all 0.2s;
+  }
+  .type-btn.active-income {
+    background: var(--income-dim);
+    color: var(--income);
+    border: 1px solid rgba(0,229,160,0.2);
+  }
+  .type-btn.active-expense {
+    background: var(--expense-dim);
+    color: var(--expense);
+    border: 1px solid rgba(255,77,109,0.2);
+  }
+
+  .amount-display {
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .amount-currency {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    color: var(--text3);
+    vertical-align: super;
+  }
+  .amount-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .amount-number.income { color: var(--income); }
+  .amount-number.expense { color: var(--expense); }
+
+  /* ── NUMPAD ── */
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .num-btn {
+    height: 54px;
+    border-radius: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .num-btn:active { background: var(--surface3); transform: scale(0.95); }
+  .num-btn.del { color: var(--expense); font-size: 16px; }
+  .num-btn.zero { grid-column: span 2; }
+
+  /* ── FORM FIELDS ── */
+  .field-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .field {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .field:focus-within { border-color: var(--border2); }
+  .field-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 0.12em;
+    margin-bottom: 3px;
+  }
+  .field-val {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .field-val.placeholder { color: var(--text3); }
+  .field-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    width: 100%;
+  }
+  .field-input::placeholder { color: var(--text3); }
+
+  .save-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    margin-top: 4px;
+    box-shadow: 0 6px 20px rgba(124,106,255,0.35);
+  }
+  .save-btn.income-mode { background: var(--income); box-shadow: 0 6px 20px rgba(0,229,160,0.3); color: #000; }
+  .save-btn.expense-mode { background: var(--expense); box-shadow: 0 6px 20px rgba(255,77,109,0.3); }
+  .save-btn:active { transform: scale(0.97); }
+
+  /* ── CATEGORY PICKER ── */
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .cat-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .cat-item:active, .cat-item.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .cat-emoji { font-size: 22px; margin-bottom: 5px; }
+  .cat-name { font-size: 10px; color: var(--text2); font-family: 'Space Mono', monospace; }
+
+  /* ── DATE PICKER ── */
+  .date-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .date-row::-webkit-scrollbar { display: none; }
+  .date-chip {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: 99px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .date-chip.selected {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── ANALYSIS SCREEN ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0 16px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .stat-card.wide { grid-column: span 2; }
+  .stat-card-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+  }
+  .stat-card-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .stat-card-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* ── DONUT CHART ── */
+  .donut-container {
+    position: relative;
+    width: 120px; height: 120px;
+    margin: 0 auto 16px;
+  }
+  .donut-svg { transform: rotate(-90deg); }
+  .donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .donut-pct {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .donut-lbl {
+    font-size: 9px;
+    color: var(--text3);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .cat-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+  }
+  .cat-bar-icon { font-size: 18px; width: 24px; text-align: center; }
+  .cat-bar-info { flex: 1; }
+  .cat-bar-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .cat-bar-track {
+    height: 3px;
+    background: var(--surface3);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .cat-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.6s ease;
+  }
+  .cat-bar-amt {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--expense);
+  }
+
+  /* ── RECOVERY MODE ── */
+  .recovery-banner {
+    margin: 0 16px 16px;
+    background: linear-gradient(135deg, rgba(245,200,66,0.08), rgba(245,200,66,0.03));
+    border: 1px solid rgba(245,200,66,0.2);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .recovery-icon { font-size: 24px; }
+  .recovery-text { flex: 1; }
+  .recovery-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--xp);
+    margin-bottom: 2px;
+  }
+  .recovery-sub { font-size: 11px; color: var(--text3); }
+  .recovery-arrow { color: var(--xp); font-size: 18px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    z-index: 100;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast-xp {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--xp);
+    font-weight: 700;
+  }
+
+  /* ── XP POPUP ── */
+  .xp-popup {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--xp);
+    opacity: 0;
+    transition: all 0.8s ease;
+  }
+  .xp-popup.animate {
+    opacity: 1;
+    transform: translateY(-40px);
+  }
+
+  /* ── SETTINGS/PROFILE ── */
+  .profile-header {
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .profile-rank-circle {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 2px solid var(--xp);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--xp);
+    box-shadow: 0 0 20px rgba(245,200,66,0.2);
+  }
+  .profile-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .profile-sub { font-size: 12px; color: var(--text3); font-family: 'Space Mono', monospace; }
+
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .setting-row:active { background: var(--surface2); }
+  .setting-left { display: flex; align-items: center; gap: 12px; }
+  .setting-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .setting-name { font-size: 14px; font-weight: 500; }
+  .setting-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .setting-arrow { color: var(--text3); font-size: 14px; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes pulse-in {
+    0% { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pulse-in { animation: pulse-in 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ HOME SCREEN ═══ -->
+  <div class="screen active" id="screen-home">
+    <div class="topbar">
+      <span class="topbar-title">LEDGER</span>
+      <span class="rank-badge" id="rank-badge" style="color:var(--rank-e);border-color:var(--rank-e)">RANK E</span>
+    </div>
+    <div class="scroll-area">
+      <!-- Balance Card -->
+      <div class="balance-card">
+        <div class="balance-label">NET BALANCE</div>
+        <div class="balance-amount zero" id="main-balance">₦0.00</div>
+        <div class="balance-sub" id="balance-period">This month</div>
+        <div class="balance-row">
+          <div class="balance-pill">
+            <div class="balance-pill-label">INFLOW</div>
+            <div class="balance-pill-val income-val" id="total-income">₦0</div>
+          </div>
+          <div class="balance-pill">
+            <div class="balance-pill-label">OUTFLOW</div>
+            <div class="balance-pill-val expense-val" id="total-expense">₦0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- XP Bar -->
+      <div class="xp-section">
+        <div class="xp-row">
+          <span class="xp-label">⚡ DISCIPLINE XP</span>
+          <span class="xp-count" id="xp-count">0 / 100 XP</span>
+        </div>
+        <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+        <div class="xp-milestones">
+          <span class="xp-milestone" id="m1">▸ 10 LOG</span>
+          <span class="xp-milestone" id="m2">▸ STREAK</span>
+          <span class="xp-milestone" id="m3">▸ BUDGET</span>
+          <span class="xp-milestone" id="m4">▸ RANK UP</span>
+        </div>
+      </div>
+
+      <!-- Recovery Mode Banner -->
+      <div class="recovery-banner" id="recovery-banner" onclick="openRecovery()">
+        <div class="recovery-icon">⚡</div>
+        <div class="recovery-text">
+          <div class="recovery-title">RECOVERY MODE</div>
+          <div class="recovery-sub">Log past transactions fast</div>
+        </div>
+        <div class="recovery-arrow">›</div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="section-header">
+        <span class="section-title">RECENT</span>
+        <span class="section-action" onclick="showAllTx()">See all</span>
+      </div>
+
+      <div id="tx-list">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">No transactions yet</div>
+          <div class="empty-sub">Tap + to log your first entry.<br>Every entry earns XP.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ANALYSIS SCREEN ═══ -->
+  <div class="screen" id="screen-analysis">
+    <div class="topbar">
+      <span class="topbar-title">ANALYSIS</span>
+      <span class="rank-badge" id="rank-badge-2" style="color:var(--rank-e);border-color:var(--rank-e)">RANK E</span>
+    </div>
+    <div class="scroll-area" style="padding-bottom: 80px;">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-label">SAVED RATIO</div>
+          <div class="stat-card-val income-val" id="save-ratio">0%</div>
+          <div class="stat-card-sub">of income kept</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">AVG / DAY</div>
+          <div class="stat-card-val expense-val" id="avg-day">₦0</div>
+          <div class="stat-card-sub">spent daily</div>
+        </div>
+        <div class="stat-card wide">
+          <div class="stat-card-label">BIGGEST EXPENSE</div>
+          <div class="stat-card-val" id="biggest-cat">—</div>
+          <div class="stat-card-sub" id="biggest-cat-sub">no data yet</div>
+        </div>
+      </div>
+
+      <div class="section-header" style="margin-bottom:16px;">
+        <span class="section-title">EXPENSE BREAKDOWN</span>
+      </div>
+
+      <div style="margin: 0 16px 20px;">
+        <div class="donut-container">
+          <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="48" fill="none" stroke="var(--surface2)" stroke-width="16"/>
+            <circle id="donut-circle" cx="60" cy="60" r="48" fill="none" stroke="var(--expense)" stroke-width="16"
+              stroke-dasharray="0 302" stroke-linecap="round" style="transition: stroke-dasharray 0.8s ease;"/>
+          </svg>
+          <div class="donut-center">
+            <div class="donut-pct expense-val" id="donut-pct">0%</div>
+            <div class="donut-lbl">SPENT</div>
+          </div>
+        </div>
+
+        <div id="cat-breakdown">
+          <div style="text-align:center;padding:20px;color:var(--text3);font-family:'Space Mono',monospace;font-size:11px;">
+            Log expenses to see breakdown
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LOG SCREEN ═══ -->
+  <div class="screen" id="screen-log">
+    <div class="topbar">
+      <span class="topbar-title">ALL ENTRIES</span>
+    </div>
+    <div class="scroll-area" style="padding-bottom:80px;">
+      <div id="all-tx-list">
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">Nothing logged yet</div>
+          <div class="empty-sub">Your full transaction history<br>will appear here.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROFILE SCREEN ═══ -->
+  <div class="screen" id="screen-profile">
+    <div class="topbar">
+      <span class="topbar-title">PROFILE</span>
+    </div>
+    <div class="scroll-area" style="padding-bottom:80px;">
+      <div class="profile-header">
+        <div class="profile-rank-circle" id="profile-rank-circle">E</div>
+        <div class="profile-name">DC</div>
+        <div class="profile-sub" id="profile-rank-label">Rank E — Initiate</div>
+      </div>
+
+      <div class="xp-section" style="margin: 0 16px 16px;">
+        <div class="xp-row">
+          <span class="xp-label">⚡ TOTAL XP</span>
+          <span class="xp-count" id="profile-xp">0 XP</span>
+        </div>
+        <div class="xp-track"><div class="xp-fill" id="profile-xp-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="section-header"><span class="section-title">RANK PROGRESSION</span></div>
+      <div id="rank-list" style="padding: 0 16px 16px;"></div>
+
+      <div class="section-header"><span class="section-title">DATA</span></div>
+      <div class="setting-row" onclick="exportData()">
+        <div class="setting-left">
+          <div class="setting-icon">📤</div>
+          <div>
+            <div class="setting-name">Export to JSON</div>
+            <div class="setting-sub">Download your full transaction log</div>
+          </div>
+        </div>
+        <span class="setting-arrow">›</span>
+      </div>
+      <div class="setting-row" onclick="clearData()">
+        <div class="setting-left">
+          <div class="setting-icon">🗑️</div>
+          <div>
+            <div class="setting-name">Clear all data</div>
+            <div class="setting-sub">Reset everything — irreversible</div>
+          </div>
+        </div>
+        <span class="setting-arrow" style="color:var(--expense);">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BOTTOM NAV ═══ -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="navigate('home')" id="nav-home">
+      <div class="nav-icon">⚡</div>
+      <div class="nav-label">HOME</div>
+    </div>
+    <div class="nav-item" onclick="navigate('analysis')" id="nav-analysis">
+      <div class="nav-icon">📊</div>
+      <div class="nav-label">ANALYSIS</div>
+    </div>
+    <div class="nav-item" onclick="navigate('log')" id="nav-log">
+      <div class="nav-icon">📋</div>
+      <div class="nav-label">LOG</div>
+    </div>
+    <div class="nav-item" onclick="navigate('profile')" id="nav-profile">
+      <div class="nav-icon">🎖️</div>
+      <div class="nav-label">RANK</div>
+    </div>
+  </nav>
+
+  <!-- ═══ FAB ═══ -->
+  <button class="fab" id="fab" onclick="openEntry()">+</button>
+
+  <!-- ═══ ENTRY SHEET ═══ -->
+  <div class="sheet-overlay" id="entry-overlay" onclick="closeEntry()"></div>
+  <div class="sheet" id="entry-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title" id="entry-title">Log Entry</div>
+      <button class="sheet-close" onclick="closeEntry()">×</button>
+    </div>
+    <div class="sheet-body">
+      <div class="type-toggle">
+        <button class="type-btn active-expense" id="btn-expense" onclick="setType('expense')">EXPENSE</button>
+        <button class="type-btn" id="btn-income" onclick="setType('income')">INCOME</button>
+      </div>
+
+      <div class="amount-display">
+        <span class="amount-currency">₦</span><span class="amount-number expense" id="amount-display">0</span>
+      </div>
+
+      <div class="numpad">
+        <button class="num-btn" onclick="numpad('7')">7</button>
+        <button class="num-btn" onclick="numpad('8')">8</button>
+        <button class="num-btn" onclick="numpad('9')">9</button>
+        <button class="num-btn" onclick="numpad('4')">4</button>
+        <button class="num-btn" onclick="numpad('5')">5</button>
+        <button class="num-btn" onclick="numpad('6')">6</button>
+        <button class="num-btn" onclick="numpad('1')">1</button>
+        <button class="num-btn" onclick="numpad('2')">2</button>
+        <button class="num-btn" onclick="numpad('3')">3</button>
+        <button class="num-btn del" onclick="numpad('del')">⌫</button>
+        <button class="num-btn zero" onclick="numpad('0')">0</button>
+        <button class="num-btn" onclick="numpad('.')">.</button>
+      </div>
+
+      <div class="field-row">
+        <div class="field" onclick="openCatPicker()">
+          <div class="field-label">CATEGORY</div>
+          <div class="field-val placeholder" id="cat-display">Pick one</div>
+        </div>
+        <div class="field" onclick="openDatePicker()">
+          <div class="field-label">DATE</div>
+          <div class="field-val" id="date-display">Today</div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px;">
+        <div class="field-label">NOTE (optional)</div>
+        <input class="field-input" id="note-input" placeholder="What was this for?" maxlength="60">
+      </div>
+
+      <button class="save-btn expense-mode" id="save-btn" onclick="saveEntry()">LOG EXPENSE</button>
+    </div>
+  </div>
+
+  <!-- ═══ CATEGORY PICKER SHEET ═══ -->
+  <div class="sheet-overlay" id="cat-overlay" onclick="closeCatPicker()"></div>
+  <div class="sheet" id="cat-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Category</div>
+      <button class="sheet-close" onclick="closeCatPicker()">×</button>
+    </div>
+    <div class="sheet-body" id="cat-grid-container"></div>
+  </div>
+
+  <!-- ═══ DATE PICKER SHEET ═══ -->
+  <div class="sheet-overlay" id="date-overlay" onclick="closeDatePicker()"></div>
+  <div class="sheet" id="date-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Date</div>
+      <button class="sheet-close" onclick="closeDatePicker()">×</button>
+    </div>
+    <div class="sheet-body">
+      <div class="date-row" id="quick-dates"></div>
+      <div class="field" style="margin-bottom:16px;">
+        <div class="field-label">CUSTOM DATE</div>
+        <input type="date" class="field-input" id="custom-date-input" onchange="setCustomDate(this.value)">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TOAST ═══ -->
+  <div class="toast" id="toast">
+    <span id="toast-msg">Logged!</span>
+    <span class="toast-xp" id="toast-xp">+10 XP</span>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let state = {
+  transactions: [],
+  xp: 0,
+  rank: 'E',
+  streak: 0,
+  lastLogDate: null,
+  totalLogged: 0
+};
+
+const RANKS = [
+  { rank: 'E', label: 'Initiate',   xpNeeded: 0,    color: 'var(--rank-e)' },
+  { rank: 'D', label: 'Tracker',    xpNeeded: 100,  color: 'var(--rank-d)' },
+  { rank: 'C', label: 'Aware',      xpNeeded: 300,  color: 'var(--rank-c)' },
+  { rank: 'B', label: 'Disciplined',xpNeeded: 700,  color: 'var(--rank-b)' },
+  { rank: 'A', label: 'Operator',   xpNeeded: 1500, color: 'var(--rank-a)' },
+  { rank: 'S', label: 'Sovereign',  xpNeeded: 3000, color: 'var(--rank-s)' },
+];
+
+const EXPENSE_CATS = [
+  { emoji:'🚌', name:'Transport' },
+  { emoji:'🍔', name:'Food' },
+  { emoji:'🛒', name:'Shopping' },
+  { emoji:'📱', name:'Data' },
+  { emoji:'⛪', name:'Church' },
+  { emoji:'📚', name:'Education' },
+  { emoji:'💊', name:'Health' },
+  { emoji:'🏠', name:'Housing' },
+  { emoji:'🎮', name:'Fun' },
+  { emoji:'👕', name:'Clothes' },
+  { emoji:'🎁', name:'Gifts' },
+  { emoji:'⚡', name:'Utilities' },
+  { emoji:'💻', name:'Tech' },
+  { emoji:'✂️', name:'Personal' },
+  { emoji:'📦', name:'Other' },
+];
+const INCOME_CATS = [
+  { emoji:'💼', name:'Work' },
+  { emoji:'🎨', name:'Art' },
+  { emoji:'💻', name:'Projects' },
+  { emoji:'🎁', name:'Gift' },
+  { emoji:'📚', name:'Scholarship' },
+  { emoji:'💰', name:'Savings' },
+  { emoji:'👨‍👩‍👧', name:'Family' },
+  { emoji:'📈', name:'Investment' },
+  { emoji:'🏆', name:'Awards' },
+  { emoji:'📦', name:'Other' },
+];
+
+// ── Entry form state
+let entryType = 'expense';
+let entryAmountStr = '0';
+let entryCategory = null;
+let entryDate = new Date();
+let currentScreen = 'home';
+
+// ══════════════════════════════════════════════════════
+//  STORAGE
+// ══════════════════════════════════════════════════════
+function saveState() {
+  try {
+    const blob = JSON.stringify(state);
+    // Use a JS variable as in-memory store (since localStorage may not be available)
+    window._ledgerData = blob;
+    // Also try localStorage for persistence
+    try { localStorage.setItem('ledger_state', blob); } catch(e) {}
+  } catch(e) {}
+}
+function loadState() {
+  try {
+    let raw = null;
+    try { raw = localStorage.getItem('ledger_state'); } catch(e) {}
+    if (!raw && window._ledgerData) raw = window._ledgerData;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      state = { ...state, ...parsed };
+      // Ensure dates are Date objects
+      state.transactions = state.transactions.map(t => ({ ...t, date: new Date(t.date) }));
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════
+function navigate(screen) {
+  document.getElementById(`screen-${currentScreen}`).classList.remove('active');
+  document.getElementById(`nav-${currentScreen}`)?.classList.remove('active');
+  currentScreen = screen;
+  document.getElementById(`screen-${screen}`).classList.add('active');
+  document.getElementById(`nav-${screen}`)?.classList.add('active');
+  if (screen === 'analysis') renderAnalysis();
+  if (screen === 'log') renderAllTx();
+  if (screen === 'profile') renderProfile();
+}
+
+function showAllTx() { navigate('log'); }
+
+// ══════════════════════════════════════════════════════
+//  ENTRY SHEET
+// ══════════════════════════════════════════════════════
+function openEntry(prefillDate) {
+  entryAmountStr = '0';
+  entryCategory = null;
+  entryDate = prefillDate ? new Date(prefillDate) : new Date();
+  document.getElementById('amount-display').textContent = '0';
+  document.getElementById('cat-display').textContent = 'Pick one';
+  document.getElementById('cat-display').classList.add('placeholder');
+  document.getElementById('note-input').value = '';
+  document.getElementById('date-display').textContent = formatDateLabel(entryDate);
+  setType('expense');
+
+  document.getElementById('entry-overlay').classList.add('open');
+  document.getElementById('entry-sheet').classList.add('open');
+  document.getElementById('fab').classList.add('open');
+}
+function closeEntry() {
+  document.getElementById('entry-overlay').classList.remove('open');
+  document.getElementById('entry-sheet').classList.remove('open');
+  document.getElementById('fab').classList.remove('open');
+}
+
+function setType(type) {
+  entryType = type;
+  const btnE = document.getElementById('btn-expense');
+  const btnI = document.getElementById('btn-income');
+  const amt = document.getElementById('amount-display');
+  const save = document.getElementById('save-btn');
+  btnE.className = type === 'expense' ? 'type-btn active-expense' : 'type-btn';
+  btnI.className = type === 'income' ? 'type-btn active-income' : 'type-btn';
+  amt.className = `amount-number ${type}`;
+  save.className = `save-btn ${type}-mode`;
+  save.textContent = type === 'expense' ? 'LOG EXPENSE' : 'LOG INCOME';
+}
+
+function numpad(key) {
+  if (key === 'del') {
+    entryAmountStr = entryAmountStr.slice(0, -1) || '0';
+  } else if (key === '.') {
+    if (!entryAmountStr.includes('.')) entryAmountStr += '.';
+  } else {
+    if (entryAmountStr === '0') entryAmountStr = key;
+    else if (entryAmountStr.split('.')[1]?.length >= 2) return;
+    else entryAmountStr += key;
+    if (entryAmountStr.length > 10) return;
+  }
+  document.getElementById('amount-display').textContent = entryAmountStr;
+}
+
+function saveEntry() {
+  const amount = parseFloat(entryAmountStr);
+  if (!amount || amount <= 0) { showToast('Enter an amount', ''); return; }
+  if (!entryCategory) { showToast('Pick a category', ''); return; }
+
+  const tx = {
+    id: Date.now(),
+    type: entryType,
+    amount,
+    category: entryCategory,
+    note: document.getElementById('note-input').value.trim(),
+    date: new Date(entryDate),
+  };
+
+  state.transactions.unshift(tx);
+  state.totalLogged++;
+
+  // XP logic
+  let xpGained = 10;
+  if (state.totalLogged % 10 === 0) xpGained += 20; // bonus every 10
+  updateStreak();
+  if (state.streak >= 3) xpGained += 5;
+
+  state.xp += xpGained;
+  checkRankUp();
+  saveState();
+  renderHome();
+  closeEntry();
+  showToast(`${entryType === 'expense' ? '↓' : '↑'} ₦${fmtShort(amount)} logged`, `+${xpGained} XP`);
+  spawnXpPopup(`+${xpGained} XP`);
+}
+
+// ══════════════════════════════════════════════════════
+//  CATEGORY PICKER
+// ══════════════════════════════════════════════════════
+function openCatPicker() {
+  const cats = entryType === 'expense' ? EXPENSE_CATS : INCOME_CATS;
+  const container = document.getElementById('cat-grid-container');
+  container.innerHTML = `<div class="cat-grid">${cats.map(c =>
+    `<div class="cat-item ${entryCategory?.name === c.name ? 'selected' : ''}" onclick="selectCat('${c.emoji}','${c.name}')">
+      <div class="cat-emoji">${c.emoji}</div>
+      <div class="cat-name">${c.name.toUpperCase()}</div>
+    </div>`
+  ).join('')}</div>`;
+  document.getElementById('cat-overlay').classList.add('open');
+  document.getElementById('cat-sheet').classList.add('open');
+}
+function selectCat(emoji, name) {
+  entryCategory = { emoji, name };
+  document.getElementById('cat-display').textContent = `${emoji} ${name}`;
+  document.getElementById('cat-display').classList.remove('placeholder');
+  closeCatPicker();
+}
+function closeCatPicker() {
+  document.getElementById('cat-overlay').classList.remove('open');
+  document.getElementById('cat-sheet').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════
+//  DATE PICKER
+// ══════════════════════════════════════════════════════
+function openDatePicker() {
+  const container = document.getElementById('quick-dates');
+  const dates = [];
+  for (let i = 0; i < 14; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dates.push(d);
+  }
+  const sel = entryDate.toDateString();
+  container.innerHTML = dates.map(d =>
+    `<div class="date-chip ${d.toDateString() === sel ? 'selected' : ''}" onclick="selectDate('${d.toISOString()}','${formatDateLabel(d)}')">
+      ${i === 0 ? 'Today' : formatDateChip(d)}
+    </div>`
+  ).join('');
+  // Re-render with proper labels
+  container.innerHTML = dates.map((d, i) =>
+    `<div class="date-chip ${d.toDateString() === sel ? 'selected' : ''}" onclick="selectDate('${d.toISOString()}')">
+      ${i === 0 ? 'Today' : i === 1 ? 'Yesterday' : formatDateChip(d)}
+    </div>`
+  ).join('');
+
+  document.getElementById('date-overlay').classList.add('open');
+  document.getElementById('date-sheet').classList.add('open');
+}
+function selectDate(iso) {
+  entryDate = new Date(iso);
+  document.getElementById('date-display').textContent = formatDateLabel(entryDate);
+  closeDatePicker();
+  // Re-open to show selection — actually just close and update
+}
+function setCustomDate(val) {
+  if (val) {
+    entryDate = new Date(val + 'T12:00:00');
+    document.getElementById('date-display').textContent = formatDateLabel(entryDate);
+    closeDatePicker();
+  }
+}
+function closeDatePicker() {
+  document.getElementById('date-overlay').classList.remove('open');
+  document.getElementById('date-sheet').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════
+//  RECOVERY MODE
+// ══════════════════════════════════════════════════════
+function openRecovery() {
+  // Open entry sheet — user can scroll date back 61 days
+  openEntry();
+  showToast('Recovery Mode — tap Date to go back', '');
+}
+
+// ══════════════════════════════════════════════════════
+//  RENDER HOME
+// ══════════════════════════════════════════════════════
+function renderHome() {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+
+  const monthly = state.transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+
+  const income = monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const net = income - expense;
+
+  const balEl = document.getElementById('main-balance');
+  balEl.textContent = `₦${fmt(Math.abs(net))}`;
+  balEl.className = `balance-amount ${net > 0 ? 'positive' : net < 0 ? 'negative' : 'zero'}`;
+  document.getElementById('total-income').textContent = `₦${fmtShort(income)}`;
+  document.getElementById('total-expense').textContent = `₦${fmtShort(expense)}`;
+  document.getElementById('balance-period').textContent = now.toLocaleString('en', { month: 'long', year: 'numeric' });
+
+  // XP bar
+  const rankInfo = getCurrentRankInfo();
+  const nextRank = RANKS[RANKS.indexOf(rankInfo) + 1];
+  const xpInRank = state.xp - rankInfo.xpNeeded;
+  const xpToNext = nextRank ? nextRank.xpNeeded - rankInfo.xpNeeded : 100;
+  const pct = nextRank ? Math.min(100, (xpInRank / xpToNext) * 100) : 100;
+
+  document.getElementById('xp-fill').style.width = pct + '%';
+  document.getElementById('xp-fill').id = 'xp-fill'; // keep id
+  document.getElementById('xp-count').textContent = `${state.xp} / ${nextRank ? nextRank.xpNeeded : '∞'} XP`;
+
+  // Rank badge
+  ['rank-badge', 'rank-badge-2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = `RANK ${state.rank}`;
+      el.style.color = rankInfo.color;
+      el.style.borderColor = rankInfo.color;
+    }
+  });
+
+  // Milestones
+  document.getElementById('m1').className = `xp-milestone ${state.totalLogged >= 10 ? 'done' : ''}`;
+  document.getElementById('m2').className = `xp-milestone ${state.streak >= 3 ? 'done' : ''}`;
+  document.getElementById('m3').className = `xp-milestone ${state.xp >= 300 ? 'done' : ''}`;
+  document.getElementById('m4').className = `xp-milestone ${RANKS.indexOf(rankInfo) >= 1 ? 'done' : ''}`;
+
+  // Transaction list (recent 15)
+  renderTxList(document.getElementById('tx-list'), state.transactions.slice(0, 15));
+}
+
+function renderTxList(container, txs) {
+  if (!txs.length) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">No transactions yet</div>
+      <div class="empty-sub">Tap + to log your first entry.<br>Every entry earns XP.</div>
+    </div>`;
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  txs.forEach(tx => {
+    const d = new Date(tx.date);
+    const key = d.toDateString();
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(tx);
+  });
+
+  container.innerHTML = Object.entries(groups).map(([dateStr, items]) =>
+    `<div class="tx-group">
+      <div class="tx-date-header">${formatGroupDate(new Date(dateStr))}</div>
+      ${items.map(tx => `
+        <div class="tx-item" onclick="deleteTx(${tx.id})">
+          <div class="tx-icon ${tx.type}">${tx.category.emoji}</div>
+          <div class="tx-info">
+            <div class="tx-name">${tx.note || tx.category.name}</div>
+            <div class="tx-cat">${tx.category.name.toUpperCase()}</div>
+          </div>
+          <div class="tx-amount ${tx.type}">${tx.type === 'expense' ? '-' : '+'}₦${fmt(tx.amount)}</div>
+        </div>
+      `).join('')}
+    </div>`
+  ).join('');
+}
+
+function deleteTx(id) {
+  if (!confirm('Delete this entry?')) return;
+  state.transactions = state.transactions.filter(t => t.id !== id);
+  saveState();
+  renderHome();
+  if (currentScreen === 'log') renderAllTx();
+}
+
+// ══════════════════════════════════════════════════════
+//  ANALYSIS
+// ══════════════════════════════════════════════════════
+function renderAnalysis() {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  const monthly = state.transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+
+  const income = monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expense = monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+
+  // Save ratio
+  const ratio = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
+  document.getElementById('save-ratio').textContent = `${Math.max(0, ratio)}%`;
+  document.getElementById('save-ratio').style.color = ratio >= 0 ? 'var(--income)' : 'var(--expense)';
+
+  // Avg per day
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysPassed = Math.min(now.getDate(), daysInMonth);
+  document.getElementById('avg-day').textContent = `₦${fmtShort(expense / daysPassed)}`;
+
+  // Biggest category
+  const catTotals = {};
+  monthly.filter(t => t.type === 'expense').forEach(t => {
+    const k = t.category.name;
+    catTotals[k] = (catTotals[k] || 0) + t.amount;
+  });
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+  if (sorted.length) {
+    document.getElementById('biggest-cat').textContent = sorted[0][0];
+    document.getElementById('biggest-cat-sub').textContent = `₦${fmt(sorted[0][1])} this month`;
+  } else {
+    document.getElementById('biggest-cat').textContent = '—';
+    document.getElementById('biggest-cat-sub').textContent = 'no data yet';
+  }
+
+  // Donut
+  const pct = income > 0 ? Math.min(100, (expense / income) * 100) : 0;
+  const circumference = 2 * Math.PI * 48;
+  document.getElementById('donut-circle').setAttribute('stroke-dasharray',
+    `${(pct / 100) * circumference} ${circumference}`);
+  document.getElementById('donut-pct').textContent = `${Math.round(pct)}%`;
+
+  // Category bars
+  const breakdown = document.getElementById('cat-breakdown');
+  if (!sorted.length) {
+    breakdown.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3);font-family:'Space Mono',monospace;font-size:11px;">Log expenses to see breakdown</div>`;
+    return;
+  }
+  const cats = EXPENSE_CATS.reduce((m, c) => { m[c.name] = c.emoji; return m; }, {});
+  breakdown.innerHTML = sorted.map(([name, amt]) => {
+    const pct = sorted[0][1] > 0 ? (amt / sorted[0][1]) * 100 : 0;
+    return `<div class="cat-bar-item">
+      <div class="cat-bar-icon">${cats[name] || '📦'}</div>
+      <div class="cat-bar-info">
+        <div class="cat-bar-name">${name}</div>
+        <div class="cat-bar-track">
+          <div class="cat-bar-fill" style="width:${pct}%;background:var(--expense);"></div>
+        </div>
+      </div>
+      <div class="cat-bar-amt">₦${fmtShort(amt)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+//  ALL TRANSACTIONS
+// ══════════════════════════════════════════════════════
+function renderAllTx() {
+  renderTxList(document.getElementById('all-tx-list'), state.transactions);
+}
+
+// ══════════════════════════════════════════════════════
+//  PROFILE
+// ══════════════════════════════════════════════════════
+function renderProfile() {
+  const rankInfo = getCurrentRankInfo();
+  const nextRank = RANKS[RANKS.indexOf(rankInfo) + 1];
+  const xpInRank = state.xp - rankInfo.xpNeeded;
+  const xpToNext = nextRank ? nextRank.xpNeeded - rankInfo.xpNeeded : 100;
+  const pct = nextRank ? Math.min(100, (xpInRank / xpToNext) * 100) : 100;
+
+  document.getElementById('profile-rank-circle').textContent = state.rank;
+  document.getElementById('profile-rank-circle').style.color = rankInfo.color;
+  document.getElementById('profile-rank-circle').style.borderColor = rankInfo.color;
+  document.getElementById('profile-rank-circle').style.boxShadow = `0 0 20px ${rankInfo.color}44`;
+  document.getElementById('profile-rank-label').textContent = `Rank ${state.rank} — ${rankInfo.label}`;
+  document.getElementById('profile-xp').textContent = `${state.xp} XP`;
+  document.getElementById('profile-xp-fill').style.width = pct + '%';
+
+  // Rank list
+  const rankList = document.getElementById('rank-list');
+  rankList.innerHTML = RANKS.map((r, i) => {
+    const unlocked = state.xp >= r.xpNeeded;
+    const current = state.rank === r.rank;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);opacity:${unlocked ? 1 : 0.4}">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:2px solid ${unlocked ? r.color : 'var(--border)'};
+        display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${r.color};">
+        ${r.rank}
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:500">${r.label} ${current ? '← YOU' : ''}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:'Space Mono',monospace;">${r.xpNeeded} XP required</div>
+      </div>
+      ${unlocked ? '<span style="color:var(--income);font-size:16px;">✓</span>' : '<span style="color:var(--text3);font-size:12px;">🔒</span>'}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+//  XP / RANK
+// ══════════════════════════════════════════════════════
+function getCurrentRankInfo() {
+  let current = RANKS[0];
+  for (const r of RANKS) {
+    if (state.xp >= r.xpNeeded) current = r;
+  }
+  return current;
+}
+
+function checkRankUp() {
+  const newRank = getCurrentRankInfo().rank;
+  if (newRank !== state.rank) {
+    state.rank = newRank;
+    setTimeout(() => showToast(`🎖️ RANK UP → ${newRank}!`, '+RANK'), 600);
+  }
+}
+
+function updateStreak() {
+  const today = new Date().toDateString();
+  if (state.lastLogDate === today) return;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (state.lastLogDate === yesterday.toDateString()) {
+    state.streak++;
+  } else {
+    state.streak = 1;
+  }
+  state.lastLogDate = today;
+}
+
+// ══════════════════════════════════════════════════════
+//  TOAST + XP POPUP
+// ══════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, xp) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  document.getElementById('toast-xp').textContent = xp;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function spawnXpPopup(text) {
+  const el = document.createElement('div');
+  el.className = 'xp-popup';
+  el.textContent = text;
+  el.style.left = '50%';
+  el.style.top = '40%';
+  el.style.transform = 'translateX(-50%)';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    el.classList.add('animate');
+    setTimeout(() => el.remove(), 900);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  DATA UTILS
+// ══════════════════════════════════════════════════════
+function exportData() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ledger_export_${Date.now()}.json`;
+  a.click();
+}
+
+function clearData() {
+  if (!confirm('Clear ALL data? This cannot be undone.')) return;
+  state = { transactions: [], xp: 0, rank: 'E', streak: 0, lastLogDate: null, totalLogged: 0 };
+  saveState();
+  renderHome();
+  navigate('home');
+}
+
+// ══════════════════════════════════════════════════════
+//  FORMAT UTILS
+// ══════════════════════════════════════════════════════
+function fmt(n) {
+  if (!n && n !== 0) return '0';
+  return Number(n).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function fmtShort(n) {
+  if (!n) return '0';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return Math.round(n).toLocaleString();
+}
+function formatDateLabel(d) {
+  const today = new Date().toDateString();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === today) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
+}
+function formatDateChip(d) {
+  return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
+}
+function formatGroupDate(d) {
+  const today = new Date().toDateString();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === today) return 'TODAY';
+  if (d.toDateString() === yesterday.toDateString()) return 'YESTERDAY';
+  return d.toLocaleDateString('en-NG', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+loadState();
+renderHome();
+</script>
+</body>
+</html>

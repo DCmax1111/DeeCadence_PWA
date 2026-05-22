@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GST 311 — Peace & Conflict Resolution | Exam Prep</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+
+  :root {
+    --ink: #1a1612;
+    --paper: #f9f5ef;
+    --cream: #f0e9de;
+    --accent: #8b2e00;
+    --gold: #c8922a;
+    --green: #1e5c3a;
+    --blue: #1a3a5c;
+    --warn: #7a2020;
+    --muted: #6b5e52;
+    --border: #d9cec3;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 28px 32px 24px;
+    border-bottom: 4px solid var(--gold);
+  }
+  header .course-tag {
+    font-size: 11px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-family: 'Source Serif 4', serif;
+    font-weight: 300;
+    margin-bottom: 6px;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 5vw, 36px);
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -.02em;
+  }
+  header p.subtitle {
+    font-size: 13px;
+    color: #c8b89a;
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 14px 32px;
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+  .badge.easy { background: #d4edda; color: #1e5c3a; border: 1px solid #a8d8b4; }
+  .badge.focus { background: #fde8e8; color: var(--warn); border: 1px solid #f5b8b8; }
+  .badge.def { background: #e8eef8; color: var(--blue); border: 1px solid #b8ccee; }
+  .badge.list { background: #fef6e0; color: #7a5a00; border: 1px solid #f0d888; }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    overflow-x: auto;
+    background: var(--ink);
+    border-bottom: 3px solid var(--gold);
+    scrollbar-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #a89880;
+    padding: 10px 16px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -3px;
+    transition: color .2s, border-color .2s;
+  }
+  .tab-btn:hover { color: var(--paper); }
+  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── PANELS ── */
+  .panel { display: none; padding: 28px 32px 48px; max-width: 820px; }
+  .panel.active { display: block; }
+
+  /* ── SECTION TITLES ── */
+  .chapter-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    border-left: 5px solid var(--gold);
+    padding-left: 14px;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .chapter-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    margin-bottom: 22px;
+    padding-left: 19px;
+  }
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--accent);
+    margin: 24px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── BLOCKS ── */
+  .block {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 12px 0;
+  }
+  .block.easy { border-left: 4px solid #4caf7d; }
+  .block.focus { border-left: 4px solid #d94040; }
+  .block.neutral { border-left: 4px solid var(--gold); }
+
+  .block-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .block-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  ul.points { padding-left: 20px; }
+  ul.points li { margin: 5px 0; font-size: 14px; }
+  ul.points li strong { color: var(--accent); }
+
+  /* definition table */
+  .def-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+  .def-table th {
+    background: var(--ink);
+    color: var(--gold);
+    text-align: left;
+    padding: 7px 12px;
+    font-weight: 600;
+    font-family: 'Source Serif 4', serif;
+  }
+  .def-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .def-table tr:nth-child(even) td { background: var(--cream); }
+  .def-table td:first-child { font-weight: 600; color: var(--blue); width: 32%; }
+
+  /* comparison table */
+  .cmp-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12.5px; }
+  .cmp-table th {
+    background: var(--blue);
+    color: white;
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .cmp-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .cmp-table tr:nth-child(even) td { background: #eef2f8; }
+
+  /* alert */
+  .alert {
+    background: #fff8e6;
+    border: 1px solid #f5c842;
+    border-radius: 5px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin: 12px 0;
+    color: #5a4500;
+  }
+  .alert strong { color: #8b6000; }
+
+  .warn-alert {
+    background: #fff0f0;
+    border: 1px solid #e89090;
+    border-radius: 5px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin: 12px 0;
+    color: var(--warn);
+  }
+
+  /* mnemonics */
+  .mnemonic {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--gold);
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: .05em;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin: 4px 0 8px;
+  }
+  .mnemonic-exp { font-size: 13px; color: var(--muted); }
+  .mnemonic-exp span { font-weight: 700; color: var(--ink); }
+
+  /* timeline */
+  .timeline { border-left: 3px solid var(--gold); margin-left: 12px; padding-left: 20px; }
+  .tl-item { position: relative; margin: 12px 0; font-size: 13.5px; }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -27px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--paper);
+  }
+  .tl-year { font-weight: 700; color: var(--accent); }
+
+  /* divider */
+  hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  @media (max-width: 600px) {
+    .panel { padding: 18px 16px 40px; }
+    header { padding: 20px 16px 16px; }
+    .legend { padding: 10px 16px; }
+    .tab-btn { padding: 9px 12px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="course-tag">GST 311 · University of Uyo · Exam Prep</div>
+  <h1>Peace &amp; Conflict Resolution</h1>
+  <p class="subtitle">Comprehensive Multiple-Choice Study Guide — All 12 Chapters</p>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><span class="badge easy">Common Sense</span> intuitive / needs light review</div>
+  <div class="legend-item"><span class="badge focus">High Focus</span> technical / easily confused — study hard</div>
+  <div class="legend-item"><span class="badge def">Definition</span> key term to memorise</div>
+  <div class="legend-item"><span class="badge list">List / Numbers</span> enumerated facts to memorise</div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="show('overview', this)">Overview</button>
+  <button class="tab-btn" onclick="show('ch1', this)">Ch 1 · Concepts</button>
+  <button class="tab-btn" onclick="show('ch2', this)">Ch 2 · Nigeria</button>
+  <button class="tab-btn" onclick="show('ch3', this)">Ch 3 · Violence</button>
+  <button class="tab-btn" onclick="show('ch4', this)">Ch 4 · Security</button>
+  <button class="tab-btn" onclick="show('ch5', this)">Ch 5 · Post-Conflict</button>
+  <button class="tab-btn" onclick="show('ch6', this)">Ch 6 · Language I</button>
+  <button class="tab-btn" onclick="show('ch7', this)">Ch 7 · Language II</button>
+  <button class="tab-btn" onclick="show('ch8', this)">Ch 8 · Niger Delta</button>
+  <button class="tab-btn" onclick="show('ch9', this)">Ch 9 · ADR Law</button>
+  <button class="tab-btn" onclick="show('ch10', this)">Ch 10 · New Media</button>
+  <button class="tab-btn" onclick="show('ch11', this)">Ch 11 · Media</button>
+  <button class="tab-btn" onclick="show('ch12', this)">Ch 12 · Mediation</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- OVERVIEW -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="overview" class="panel active">
+  <div class="chapter-title">Study Roadmap</div>
+  <div class="chapter-subtitle">Where to spend your time</div>
+
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Chapters that require the MOST attention</span></div>
+    <ul class="points">
+      <li><strong>Ch 1</strong> — Specific types/sources/causes/strategies framework (many named categories)</li>
+      <li><strong>Ch 9</strong> — All 9 ADR types with advantages &amp; disadvantages (very specific legal content)</li>
+      <li><strong>Ch 8</strong> — Niger Delta timeline: agencies, dates, armed groups, Amnesty Programme details</li>
+      <li><strong>Ch 12</strong> — 3 mediation styles; 2 negotiation types; dialogue process stages</li>
+      <li><strong>Ch 6</strong> — P-R-U-P-T-A-I model; Tanzania/Rwanda/Switzerland examples</li>
+    </ul>
+  </div>
+
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">Chapters you can skim — answers are often intuitive</span></div>
+    <ul class="points">
+      <li><strong>Ch 5</strong> — Post-conflict recovery (general reasoning + OECD criteria)</li>
+      <li><strong>Ch 10</strong> — New media types (social media, streaming, blogs, apps — everyday knowledge)</li>
+      <li><strong>Ch 11</strong> — Media's role in peace building (mostly logical; focus on framing theory terms)</li>
+      <li><strong>Ch 4</strong> — Security/peace building strategies (logical but know the acronyms: DDR, SSR)</li>
+      <li><strong>Ch 2</strong> — Nigeria as social system (conceptual; know social control, 225M population figure)</li>
+    </ul>
+  </div>
+
+  <div class="block neutral">
+    <div class="block-header"><span class="badge list">Key Numbers to Memorise</span><span class="block-title">Specific facts the MCQ will likely test</span></div>
+    <ul class="points">
+      <li>Niger Delta region: <strong>9 oil-producing states</strong>, population ~<strong>32 million</strong>, area ~<strong>112,000 km²</strong></li>
+      <li>Nigeria's projected population: <strong>~225 million</strong> people, <strong>350+</strong> ethnic nationalities</li>
+      <li>Presidential Amnesty: proclaimed <strong>June 25, 2009</strong> by President <strong>Umaru Musa Yar'Adua</strong></li>
+      <li>~<strong>25,000</strong> ex-militants surrendered weapons under the Amnesty Programme</li>
+      <li>Nigeria has <strong>500+</strong> languages; 3 major ethnic groups: Hausa, Yoruba, Igbo</li>
+      <li>Switzerland: <strong>4 official languages</strong> (German 62%, French 23%, Italian 8%, Romansh 0.5%)</li>
+      <li>Rwandan Genocide: <strong>1994</strong>; Tanzania independence: <strong>1961</strong></li>
+      <li>First oil export from Nigeria: <strong>1958</strong>; oil discovered at Oloibiri: <strong>1956</strong></li>
+      <li>Social media users worldwide (by Jan 2023): <strong>4.8 billion</strong> people, 200+ countries</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 1 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch1" class="panel">
+  <div class="chapter-title">Chapter 1: Understanding Peace, Conflict, Security &amp; Conflict Resolution</div>
+  <div class="chapter-subtitle">Most content-dense chapter — lots of MCQ fodder</div>
+
+  <h3>Core Definitions</h3>
+  <div class="block neutral">
+    <table class="def-table">
+      <tr><th>Term</th><th>Definition / Key Points</th></tr>
+      <tr><td>Conflict</td><td>Situation of disagreement, disharmony, disaffection between individuals/groups. From Latin <em>configere</em> = confrontation. Involves incompatible goals. Can be intrapersonal or interpersonal.</td></tr>
+      <tr><td>Peace</td><td>Freedom from disturbance; tranquility and harmony. A <em>kinetic phenomenon</em> — always in transit, not a static destination. Peace without security is incomplete.</td></tr>
+      <tr><td>Conflict Management</td><td>Handling a dispute to minimize negative outcomes. Does NOT necessarily end conflict. Involves limitation, containment, litigation. (Best, 2006)</td></tr>
+      <tr><td>Conflict Resolution</td><td>Creating a situation of peace — actually ending the conflict. After resolution comes <strong>conflict transformation</strong> (change in perception and attitude).</td></tr>
+      <tr><td>Security</td><td>Safety; protection against harm, threats, risks. Safeguarding lives, property, and information.</td></tr>
+    </table>
+  </div>
+
+  <div class="warn-alert">⚠ <strong>Key distinction:</strong> Conflict Management ≠ Conflict Resolution. Management reduces/contains; Resolution ends it. Conflict Transformation comes <em>after</em> resolution.</div>
+
+  <h3>Two Schools of Thought on Conflict Sources</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Human Relations vs. Pluralists</span></div>
+    <table class="cmp-table">
+      <tr><th>Aspect</th><th>Human Relations Approach</th><th>Pluralists Approach</th></tr>
+      <tr><td>Is conflict inevitable?</td><td><strong>NO</strong> — not inevitable</td><td><strong>YES</strong> — inevitable &amp; desirable</td></tr>
+      <tr><td>View of conflict</td><td>Creates winners &amp; losers; destructive</td><td>Balance wheel of society; vehicle for change</td></tr>
+      <tr><td>Preferred approach</td><td>Avoid / manage conflict</td><td>Encourage &amp; regulate conflict</td></tr>
+      <tr><td>Sources identified</td><td>Misunderstanding, non-supportive relationships, failure to communicate, distrust/competition</td><td>Competition between sub-systems is healthy</td></tr>
+    </table>
+  </div>
+
+  <h3>Kinds of Conflict</h3>
+  <div class="block neutral">
+    <div class="block-header"><span class="badge list">List</span><span class="block-title">6 Kinds of Conflict</span></div>
+    <ul class="points">
+      <li><strong>Social</strong> — marital, religious, ethnic, racial</li>
+      <li><strong>Political</strong> — boundary disputes, power tussle, electoral rivalry</li>
+      <li><strong>Economic</strong> — balance of payment, subsidy, debt burden</li>
+      <li><strong>Administrative/Managerial</strong></li>
+      <li><strong>Mental/Psychological</strong></li>
+      <li><strong>Semiotic</strong> — pragmatic, semantic, syntactic</li>
+    </ul>
+  </div>
+
+  <h3>Organisational Causes of Conflict</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">6 Organisational Perspective Causes</span></div>
+    <ul class="points">
+      <li><strong>Competition over scarce resources</strong> — money, space, equipment, personnel</li>
+      <li><strong>Ambiguity in responsibility and jurisdiction</strong> — confusion over who does what</li>
+      <li><strong>Results of interdependence</strong> — performance depends on others; delays trigger conflict</li>
+      <li><strong>Reward System</strong> — unequal salaries/bonuses create resentment</li>
+      <li><strong>Differentiation</strong> — different sections view each other with suspicion</li>
+      <li><strong>Competition over scarce resources</strong> (repeated for distribution) — self-serving bias</li>
+    </ul>
+  </div>
+
+  <h3>Interpersonal Causes of Conflict</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li><strong>Grudges</strong> — anger and ridicule leading to revenge</li>
+      <li><strong>Wrong perception / faulty attribution</strong> — attributing bad motives to others' actions</li>
+      <li><strong>Faulty communication</strong> — message sent ≠ message received</li>
+    </ul>
+  </div>
+
+  <h3>Conditions for Conflict Management</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">6 Conditions</span></div>
+    <ul class="points">
+      <li><strong>Communication</strong> — includes listening, empathy, modern &amp; traditional forms</li>
+      <li><strong>Identification and Assessment</strong> — recognize existence, identify causes &amp; parties</li>
+      <li><strong>Mutual Respect</strong> — treat parties with respect even in dispute</li>
+      <li><strong>Understanding the Cause</strong> — investigate root cause</li>
+      <li><strong>Finding Common Grounds</strong> — identify shared interests</li>
+    </ul>
+    <div class="alert">Traditional communication methods include: floral and symbolography (eyei, okono, kola nuts). Communication avenues: negotiation, mediation, inquiry, arbitration, conciliation.</div>
+  </div>
+
+  <h3>Conflict Management Strategies</h3>
+  <div class="block neutral">
+    <div class="block-header"><span class="badge list">List</span><span class="block-title">5 Strategies</span></div>
+    <table class="def-table">
+      <tr><th>Strategy</th><th>What it Means</th></tr>
+      <tr><td>Avoidance</td><td>Ignoring conflict. Works for minor issues. Overuse delays resolution.</td></tr>
+      <tr><td>Accommodation</td><td>Meeting needs of disputing parties. Fosters harmony but watch imbalance.</td></tr>
+      <tr><td>Competition</td><td>Win-lose; useful for quick decisions. Strains relationships.</td></tr>
+      <tr><td>Compromise</td><td>Middle course; both concede something. Cooperative solution.</td></tr>
+      <tr><td>Collaboration</td><td>Work together; needs time and trust. Most lasting for complex issues.</td></tr>
+    </table>
+  </div>
+
+  <h3>Types of Peace (Galtung, 1999)</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Negative vs. Positive Peace + 5 Levels</span></div>
+    <table class="def-table">
+      <tr><th>Type</th><th>Description</th></tr>
+      <tr><td>Negative Peace</td><td>Absence of direct violence, fear, and conflict only</td></tr>
+      <tr><td>Positive Peace</td><td>Negative peace PLUS absence of unjust structures and unequal relationships; inner peace (Bakut: "real/complete peace")</td></tr>
+      <tr><td>Personal Peace</td><td>Awareness of one's real self; managing internal conflicts</td></tr>
+      <tr><td>Social Peace</td><td>Good relationships with others; restoring human dignity</td></tr>
+      <tr><td>Political Peace</td><td>Right relationships with diverse groups in decision-making</td></tr>
+      <tr><td>Institutional Peace</td><td>How organisations/governments structure mediation &amp; conduct</td></tr>
+      <tr><td>Ecological Peace</td><td>Right relationship with earth and ecosystem</td></tr>
+    </table>
+  </div>
+
+  <h3>Types of Security</h3>
+  <div class="block neutral">
+    <div class="block-header"><span class="badge list">List</span><span class="block-title">5 Types</span></div>
+    <ul class="points">
+      <li><strong>National</strong> — protection from external threats, war, espionage</li>
+      <li><strong>Physical</strong> — protection of people, buildings, assets</li>
+      <li><strong>Cyber/IT</strong> — protection of computer networks and data</li>
+      <li><strong>Financial</strong> — stable income; freedom from financial worries</li>
+      <li><strong>Job</strong> — guarantee of keeping one's job</li>
+    </ul>
+  </div>
+
+  <h3>Benefits of Conflict Resolution</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">4 Benefits</span></div>
+    <ul class="points">
+      <li>Reduces stress → well-being and satisfaction</li>
+      <li>Improves relationships → builds trust</li>
+      <li>Increases productivity → better work environment</li>
+      <li>Enhances communication and collaboration → personal growth</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 2 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch2" class="panel">
+  <div class="chapter-title">Chapter 2: Environmental Insecurity, Crime, Peace &amp; Conflict in Nigeria</div>
+  <div class="chapter-subtitle">Nigeria as a social system — know the framework</div>
+
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">Nigeria's Profile</span></div>
+    <ul class="points">
+      <li>Projected population: ~<strong>225 million</strong> people</li>
+      <li>Over <strong>350 ethnic nationalities</strong></li>
+      <li>Located on the West coast of Africa</li>
+      <li>Geo-political sovereign entity (Brown, 2013)</li>
+    </ul>
+  </div>
+
+  <h3>Nigeria as a Social System</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>A social system = multiple parts all contributing to the whole</li>
+      <li>Requires: national cohesion, social organisation, and social control</li>
+    </ul>
+  </div>
+
+  <h3>Key Concepts</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Environmental Insecurity</span></div>
+    <ul class="points">
+      <li><strong>Environmental insecurity</strong> — threats to the natural environment that compromise safety and livelihoods</li>
+      <li><strong>Crime</strong> — violation of established laws and norms, threatening peace</li>
+      <li><strong>Cultural conflict in Nigeria</strong> — conflict arising from Nigeria's diverse ethnic and cultural groups</li>
+    </ul>
+  </div>
+
+  <h3>The Way Out</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">Solutions Proposed</span></div>
+    <ul class="points">
+      <li>Social organisation and effective social control</li>
+      <li>Addressing environmental degradation</li>
+      <li>Reducing poverty and crime</li>
+      <li>Promoting civic responsibility and co-existence</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 3 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch3" class="panel">
+  <div class="chapter-title">Chapter 3: Forms / Types of Conflict and Violence</div>
+  <div class="chapter-subtitle">Know the taxonomy of conflict and violence types</div>
+
+  <h3>Forms of Conflict</h3>
+  <div class="block neutral">
+    <div class="block-header"><span class="badge list">List</span><span class="block-title">Major Types</span></div>
+    <ul class="points">
+      <li><strong>Intrapersonal</strong> — conflict within an individual</li>
+      <li><strong>Interpersonal</strong> — between two people</li>
+      <li><strong>Communal</strong> — between communities</li>
+      <li><strong>Regional</strong></li>
+      <li><strong>Institutional</strong> — within or between organisations</li>
+      <li><strong>Global/International</strong></li>
+      <li><strong>Organisational</strong></li>
+      <li><strong>Endogenous</strong> — internal origin; <strong>Exogenous</strong> — external origin (Wilson, 1997)</li>
+    </ul>
+  </div>
+
+  <h3>Violence</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Causes of Violence — 4 Categories</span></div>
+    <ul class="points">
+      <li><strong>Individual Factors</strong> — personality traits, psychological issues</li>
+      <li><strong>Social Factors</strong> — peer pressure, group dynamics, social norms</li>
+      <li><strong>Environmental Factors</strong> — poverty, poor living conditions</li>
+      <li><strong>Other Factors</strong> — political, economic, cultural triggers</li>
+    </ul>
+  </div>
+
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">Forms of Violence</span></div>
+    <ul class="points">
+      <li>Physical violence (direct harm)</li>
+      <li>Psychological/emotional violence</li>
+      <li>Structural violence (unjust systems)</li>
+      <li>Sexual violence</li>
+    </ul>
+  </div>
+
+  <h3>Wilson's 3 Conditions for Conflict</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Wilson (1997) — memorise these 3</span></div>
+    <ul class="points">
+      <li>Lack of information and misinformation</li>
+      <li>Incompatibility of goals</li>
+      <li>Differences in perception / unacceptable methods of handling issues</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 4 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch4" class="panel">
+  <div class="chapter-title">Chapter 4: Security &amp; Peace Building in Nigeria — Counselling Perspective</div>
+  <div class="chapter-subtitle">Forms of security, peace building elements, youth roles, Nigeria's challenges</div>
+
+  <h3>Forms of Security (Chapter 4 version)</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">5 Forms (slightly different from Ch.1)</span></div>
+    <table class="def-table">
+      <tr><th>Form</th><th>Description</th></tr>
+      <tr><td>Personal Security</td><td>Protection from physical violence and crime</td></tr>
+      <tr><td>National Security</td><td>Protection of sovereignty, territory, citizens from external threats</td></tr>
+      <tr><td>Economic Security</td><td>Access to resources, employment, stable livelihoods</td></tr>
+      <tr><td>Cybersecurity</td><td>Safeguarding infrastructure and information from unauthorized access</td></tr>
+      <tr><td>Social Security</td><td>Systems supporting vulnerable populations — healthcare, pensions, welfare</td></tr>
+    </table>
+  </div>
+
+  <h3>Key Elements of Security Building</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">5 Elements — Know the Acronyms</span></div>
+    <table class="def-table">
+      <tr><th>Element</th><th>What it Means</th></tr>
+      <tr><td><strong>DDR</strong></td><td>Disarmament, Demobilization, Reintegration — disbanding armed groups</td></tr>
+      <tr><td><strong>SSR</strong></td><td>Security Sector Reform — reforming police, military, intelligence under civilian control</td></tr>
+      <tr><td>Rule of Law</td><td>Strengthening legal systems for justice, accountability, human rights</td></tr>
+      <tr><td>Community Policing</td><td>Engaging local communities in maintaining law and order</td></tr>
+      <tr><td>Conflict Resolution and Dialogue</td><td>Promoting communication among conflicting groups</td></tr>
+    </table>
+  </div>
+
+  <h3>Peace Building Strategies</h3>
+  <div class="block neutral">
+    <div class="block-header"><span class="badge list">List</span><span class="block-title">7 Strategies</span></div>
+    <ul class="points">
+      <li>Dialogue and Mediation</li>
+      <li>Disarmament (+ Demobilization + Reintegration)</li>
+      <li>Strengthening Rule of Law</li>
+      <li>Inclusive Governance (women, youth, minorities in decision-making)</li>
+      <li>Economic Empowerment (jobs, microfinance, skills training)</li>
+      <li>Education and Awareness (peace curriculum in schools)</li>
+      <li>Community Policing</li>
+    </ul>
+  </div>
+
+  <h3>Nigeria's Security Challenges</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">5 Major Issues</span></div>
+    <ul class="points">
+      <li>Boko Haram insurgency — <strong>North-East</strong></li>
+      <li>Herdsmen-farmers conflicts — <strong>Middle Belt</strong></li>
+      <li>Banditry and kidnapping — <strong>North-West</strong></li>
+      <li>Oil militancy and piracy — <strong>South-South</strong></li>
+      <li>Ethno-religious clashes — <strong>various regions</strong></li>
+    </ul>
+  </div>
+
+  <h3>Youth Roles in Peace Building</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">5 Roles</span></div>
+    <ul class="points">
+      <li>Peace education and advocacy</li>
+      <li>Conflict prevention and mediation</li>
+      <li>Community development (volunteerism, entrepreneurship)</li>
+      <li>Using technology and social media</li>
+      <li>Participation in governance</li>
+    </ul>
+  </div>
+
+  <h3>Counselling Roles in Post-Conflict</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span></div>
+    <ul class="points">
+      <li>Trauma-informed care</li>
+      <li>Individual and group therapy for displaced persons/victims</li>
+      <li>Expressive therapies (art, storytelling, drama)</li>
+      <li>Working in rehabilitation centres for ex-insurgents</li>
+      <li>Anger management, conflict resolution, life skills training</li>
+      <li>Mentoring at-risk youths</li>
+      <li>Family and community reconciliation</li>
+      <li>Inter-ethnic and inter-religious dialogue facilitation</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 5 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch5" class="panel">
+  <div class="chapter-title">Chapter 5: Managing Post-Conflict Situations</div>
+  <div class="chapter-subtitle">NGO roles, OECD-DAC evaluation framework, post-conflict challenges</div>
+
+  <h3>Types of Conflict (Ch.5 version)</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li><strong>Structural causes</strong> — deep-rooted societal inequalities, governance failures</li>
+      <li><strong>Proximate causes</strong> — immediate triggers (incident-based)</li>
+    </ul>
+  </div>
+
+  <h3>Post-Conflict Situation</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span></div>
+    <ul class="points">
+      <li>Period after active conflict ends — requires rebuilding lives, trust, infrastructure</li>
+      <li>Key challenges: displacement, psychological trauma, economic collapse</li>
+      <li>Requires coordination between governments, NGOs, UN agencies, local communities</li>
+    </ul>
+  </div>
+
+  <h3>Role of NGOs in Post-Conflict</h3>
+  <div class="block neutral">
+    <div class="block-header"><span class="badge list">List</span><span class="block-title">5 Functions</span></div>
+    <ul class="points">
+      <li>Humanitarian assistance (food, shelter, medicine)</li>
+      <li>Advocacy and human rights monitoring (e.g., Cameroon displaced persons report)</li>
+      <li>Reconstruction of basic services (schools, hospitals, water)</li>
+      <li>Livelihood restoration (skills training, microfinance, agriculture)</li>
+      <li>Promoting reconciliation and social cohesion (community dialogues, trauma healing)</li>
+    </ul>
+  </div>
+
+  <h3>OECD-DAC Evaluation Criteria</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">5 Criteria — Know Each Definition</span></div>
+    <div class="mnemonic">R-E-E-I-S</div>
+    <table class="def-table">
+      <tr><th>Criterion</th><th>What It Asks</th></tr>
+      <tr><td><strong>R</strong>elevance</td><td>Does the intervention respond to most urgent, locally-defined needs?</td></tr>
+      <tr><td><strong>E</strong>ffectiveness</td><td>Did programmes achieve their stated objectives?</td></tr>
+      <tr><td><strong>E</strong>fficiency</td><td>Were results achieved at reasonable cost and speed?</td></tr>
+      <tr><td><strong>I</strong>mpact</td><td>What broader changes (positive or negative) resulted?</td></tr>
+      <tr><td><strong>S</strong>ustainability</td><td>Do benefits continue after external support ends?</td></tr>
+    </table>
+  </div>
+
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">Knight's Quote</span></div>
+    <p style="font-size:13.5px; font-style:italic; color:var(--muted);">"Peacebuilding is not a checklist; it is a long-term relationship between people, institutions, and resources." — Knight (2012)</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 6 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch6" class="panel">
+  <div class="chapter-title">Chapter 6: Language as a Detribaliser and Peace Agent</div>
+  <div class="chapter-subtitle">P-R-U-P-T-A-I model, language immersion, country examples</div>
+
+  <h3>Detribalisation</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span></div>
+    <ul class="points">
+      <li>Detribalisation = removing tribal/ethnic barriers through shared language</li>
+      <li>Shared language → reduced stereotypes, easier conflict resolution</li>
+      <li>Language immersion in first 9 years of schooling recommended for Nigeria</li>
+    </ul>
+  </div>
+
+  <h3>4 Language Scenarios</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Scenarios 1–4 Summary</span></div>
+    <table class="def-table">
+      <tr><th>Scenario</th><th>Setup</th><th>Implication</th></tr>
+      <tr><td>Scenario 1</td><td>Single-language, single community</td><td>Easiest for peace — no barriers</td></tr>
+      <tr><td>Scenario 2</td><td>Single-language, multi-community (mono-lingual, everyone understands)</td><td>Tanzania model — shared identity</td></tr>
+      <tr><td>Scenario 3</td><td>Multi-lingual, multi-community but mutually intelligible (Switzerland model)</td><td>Still peaceful — mutual understanding</td></tr>
+      <tr><td>Scenario 4</td><td>Multi-lingual, multi-community, NOT mutually intelligible</td><td><strong>Nigeria's situation</strong> — fertile ground for conflict</td></tr>
+    </table>
+  </div>
+
+  <h3>Country Examples</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span></div>
+    <table class="def-table">
+      <tr><th>Country</th><th>Policy</th><th>Outcome</th></tr>
+      <tr><td>Tanzania (1961)</td><td>Adopted Swahili as national &amp; official language under Julius Nyerere</td><td>National unity, broad literacy, reduced tribal tensions</td></tr>
+      <tr><td>Rwanda (post-1994)</td><td>Adopted Kinyarwanda (language of all Rwandans) after Hutu-Tutsi genocide</td><td>Unity and inclusion; "Rwandans first" identity</td></tr>
+      <tr><td>Switzerland</td><td>4 official languages: German (62%), French (23%), Italian (8%), Romansh (0.5%); multilingual education</td><td>Strong national identity through linguistic inclusion</td></tr>
+    </table>
+  </div>
+
+  <h3>The P-R-U-P-T-A-I Model</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">7 Steps — Memorise the Acronym</span></div>
+    <div class="mnemonic">P-R-U-P-T-A-I</div>
+    <table class="def-table">
+      <tr><th>Letter</th><th>Meaning</th></tr>
+      <tr><td><strong>P</strong></td><td>Prefer no language as "prestige" language</td></tr>
+      <tr><td><strong>R</strong></td><td>Rotate language usage in national/legislative addresses</td></tr>
+      <tr><td><strong>U</strong></td><td>Use all languages in the mass media</td></tr>
+      <tr><td><strong>P</strong></td><td>Publish in all languages (gazettes, budgets, national addresses)</td></tr>
+      <tr><td><strong>T</strong></td><td>Teach with all languages; educational materials in all languages</td></tr>
+      <tr><td><strong>A</strong></td><td>Accommodate all languages in offices (linguistic accommodation)</td></tr>
+      <tr><td><strong>I</strong></td><td>Interpret/translate into all languages at public events</td></tr>
+    </table>
+  </div>
+
+  <h3>Language Immersion Programme</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Applied in first <strong>9 years</strong> of education (Primary → Junior Secondary)</li>
+      <li>Nigeria: learn <strong>7 languages</strong>: Hausa, Yoruba, Igbo, Nigerian Pidgin + 3 senatorial district languages</li>
+      <li>Nigerian Pidgin: English-based Creole; bridges social class and ethnic lines</li>
+      <li>For Akwa Ibom State: Hausa, Yoruba, Igbo, Nigerian Pidgin, Ibibio, Anaañ, Oro</li>
+      <li>A credit pass in oral and written exams = requirement for graduation to Senior Secondary</li>
+    </ul>
+  </div>
+
+  <h3>Merits of Language Immersion</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">6 Merits</span></div>
+    <ul class="points">
+      <li>Fosters understanding and empathy between ethnic groups</li>
+      <li>Minimises non-sharing of meaning (reduces misunderstandings)</li>
+      <li>Reinforces national cohesion</li>
+      <li>Cultural preservation (language linked to culture)</li>
+      <li>Enhances dialogue and mediation in conflict scenarios</li>
+      <li>Promotes understanding and empathy</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 7 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch7" class="panel">
+  <div class="chapter-title">Chapter 7: The Role of Language in Conflict Resolution</div>
+  <div class="chapter-subtitle">Language as catalyst &amp; resolver; negotiation types; hate speech</div>
+
+  <h3>Language Definitions</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Language = ordered system of linguistic symbols used for communication</li>
+      <li>It mediates between self and society; is a vehicle of culture transmission</li>
+      <li>Words carry meaning that is <strong>linguistically, culturally, and contextually bound</strong></li>
+    </ul>
+  </div>
+
+  <h3>Language as a Conflict Escalator</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">2 Key Forms</span></div>
+    <ul class="points">
+      <li><strong>Competitive Language</strong> — justifications, personal attacks, excessive demands, threats. Motivated by "pro-self orientation" (Cordonnier). Focus on maximising personal outcome at expense of others.</li>
+      <li><strong>Hate Speech</strong> — inflammatory vocabulary creating tension between groups. Example: during 1994 Rwandan Genocide, radio broadcasts called Tutsi "cockroaches".</li>
+    </ul>
+    <div class="alert">FGN formulated a <strong>"Hate Speech"</strong> policy in response to conflict-triggering language in Nigeria.</div>
+  </div>
+
+  <h3>Causes of Conflict from Language</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span></div>
+    <ul class="points">
+      <li><strong>Language marginalisation</strong> — imposing a dominant language (e.g., Sri Lankan Tamil-Sinhalese conflict; the "Sinhala Only Act" disadvantaged Tamil speakers)</li>
+      <li><strong>Variations in language semantics</strong> — same word different meanings in different cultures (Cohen, 2001)</li>
+    </ul>
+  </div>
+
+  <h3>Types of Negotiation (Ch. 7)</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Shedrack (2004): 2 Types</span></div>
+    <table class="cmp-table">
+      <tr><th>Type</th><th>Characteristics</th></tr>
+      <tr><td>Positional Negotiation</td><td>Aggressive pursuit of interests; adversarial &amp; competitive; breaks down easily</td></tr>
+      <tr><td>Collaborative Negotiation</td><td>Both parties discuss needs amicably; non-violent; no third parties normally</td></tr>
+    </table>
+    <div class="alert">Example: South Africa Vice-President visited Nigeria for dialogue after xenophobia attacks — collaborative negotiation in action.</div>
+  </div>
+
+  <h3>Mediation and Arbitration Language</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Mediators must choose <strong>neutral, inclusive, respectful, non-threatening</strong> words</li>
+      <li>Language framing matters: "peace agreement" sounds better than "surrender"</li>
+      <li>Non-verbal cues are culture-bound — mediators must know cultural values</li>
+    </ul>
+  </div>
+
+  <h3>Language in Conflict Resolution</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">How Language Resolves Conflict</span></div>
+    <ul class="points">
+      <li><strong>Exposes disharmony</strong> — word choice reveals acrimony; enables proactive action</li>
+      <li><strong>Negotiation</strong> — direct back-and-forth dialogue toward agreement</li>
+      <li><strong>Mediation/Arbitration</strong> — third-party language facilitation</li>
+      <li><strong>Inclusive discourse</strong> — shared proverbs, religious texts, national metaphors; Truth and Reconciliation Commissions</li>
+      <li><strong>Peace journalism</strong> — media language that supports healing, not wounds</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 8 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch8" class="panel">
+  <div class="chapter-title">Chapter 8: Niger Delta Crisis &amp; Federal Government Amnesty Programme</div>
+  <div class="chapter-subtitle">Lots of specific facts — names, dates, agencies, groups</div>
+
+  <h3>Niger Delta — Basic Facts</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Memorise These Facts</span></div>
+    <ul class="points">
+      <li>Located in <strong>Southern Nigeria</strong>, largest part in South-South geopolitical zone</li>
+      <li>Made up of <strong>9 oil-producing states</strong>: Abia, Akwa Ibom, Bayelsa, Cross River, Delta, Edo, Imo, Ondo, Rivers</li>
+      <li>Population (2006 census): ~<strong>32 million</strong></li>
+      <li>Area: ~<strong>112,000 km²</strong> — <strong>3rd largest wetland globally</strong> (after Mississippi and Pantanal)</li>
+      <li>Over <strong>50 ethnic and sub-ethnic groups</strong>: Annang, Andoni, Bini, Efik, Edo, Eleme, Ibibio, Ikwerre, Itsekiri, Ijaw, Ibo, Isoko, Ogoni</li>
+      <li>Oil discovered at <strong>Oloibiri</strong>, Bayelsa State in <strong>1956</strong></li>
+      <li>First oil export: <strong>1958</strong></li>
+    </ul>
+  </div>
+
+  <h3>Factors Causing the Niger Delta Crisis</h3>
+  <div class="block neutral">
+    <div class="block-header"><span class="badge list">List</span><span class="block-title">7 Factors</span></div>
+    <ul class="points">
+      <li>Lack of development despite oil wealth</li>
+      <li>Environmental degradation and pollution (oil spills, gas flaring)</li>
+      <li>Perceived marginalisation and resource control disputes</li>
+      <li>Activities of multinational oil companies (social injustice, human rights abuses)</li>
+      <li>Inadequate government policies and actions</li>
+      <li>Historical and colonial factors (British rule legacy)</li>
+      <li>Security problems (kidnapping, sabotage)</li>
+    </ul>
+  </div>
+
+  <h3>Key Armed Groups</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Remember These Names &amp; Acronyms</span></div>
+    <table class="def-table">
+      <tr><th>Group</th><th>Full Name</th></tr>
+      <tr><td>MOSOP</td><td>Movement for the Survival of Ogoni People — led by <strong>Ken Saro-Wiwa</strong></td></tr>
+      <tr><td>NDPVF</td><td>Niger Delta People's Volunteer Force</td></tr>
+      <tr><td>NDV</td><td>Niger Delta Vigilantes</td></tr>
+      <tr><td>NDA</td><td>Niger Delta Avengers</td></tr>
+      <tr><td>MEND</td><td>Movement for the Emancipation of the Niger Delta</td></tr>
+      <tr><td>JTF</td><td>Joint Task Force — government military crackdown (2008–2009)</td></tr>
+    </table>
+  </div>
+
+  <h3>Government Agencies Timeline</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Know the Years!</span></div>
+    <div class="timeline">
+      <div class="tl-item"><span class="tl-year">1961</span> — Niger Delta Development Board (NDDB)</div>
+      <div class="tl-item"><span class="tl-year">1976</span> — Niger Delta Basin Development Authority (NDBDA)</div>
+      <div class="tl-item"><span class="tl-year">1986</span> — Oil Mineral Producing Areas Development Fund (OMPADEF)</div>
+      <div class="tl-item"><span class="tl-year">1992</span> — Oil Mineral Producing Areas Development Commission (OMPADEC)</div>
+      <div class="tl-item"><span class="tl-year">1995</span> — 13% Derivation Fund</div>
+      <div class="tl-item"><span class="tl-year">2000</span> — Niger Delta Development Commission (NDDC)</div>
+      <div class="tl-item"><span class="tl-year">2004</span> — Niger Delta Regional Master Plan</div>
+      <div class="tl-item"><span class="tl-year">2007</span> — VP from Niger Delta region + Niger Delta Summit + Ministry of Niger Delta</div>
+      <div class="tl-item"><span class="tl-year">2009</span> — <strong>Presidential Amnesty Programme</strong> (June 25)</div>
+    </div>
+  </div>
+
+  <h3>Presidential Amnesty Programme</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Key Details</span></div>
+    <ul class="points">
+      <li>Proclaimed: <strong>June 25, 2009</strong> by President <strong>Umaru Musa Yar'Adua</strong></li>
+      <li>Conditions: surrender weapons, renounce militancy, sign undertaking</li>
+      <li>Government pledged: DDR support + education scholarships + vocational training</li>
+      <li>~<strong>25,000</strong> ex-militants surrendered weapons</li>
+      <li>Initially designed to run for <strong>5 years</strong> (but still running — creates "sense of entitlement")</li>
+      <li>Nigeria lost over <strong>3 trillion Naira</strong> during peak crisis (Ezendu et al., 2013)</li>
+    </ul>
+  </div>
+
+  <h3>Amnesty Programme Objectives</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Promotion of peace and stability</li>
+      <li>Rehabilitation and re-integration of ex-militants</li>
+      <li>Economic empowerment; reducing poverty and unemployment</li>
+      <li>Human capital development (education, vocational training)</li>
+      <li>Addressing root causes of militancy</li>
+      <li>Facilitating social re-integration and community acceptance</li>
+      <li>Contribution to sustainable development of the region</li>
+    </ul>
+  </div>
+
+  <h3>Challenges of the Amnesty Programme</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span></div>
+    <ul class="points">
+      <li>Corruption and mismanagement of funds</li>
+      <li>May encourage criminality (reward for militancy)</li>
+      <li>Could become conduit for siphoning resources</li>
+      <li>Raised demands from criminal groups in other regions</li>
+      <li>Lacks clear exit strategy (still running beyond 5 years)</li>
+      <li>Sustainability threatened by government funding reliance</li>
+      <li>Lacks long-term stability framework</li>
+      <li>Emboldened ex-militants as political actors manipulating funds</li>
+      <li>Continued violence from new emerging groups</li>
+      <li>Root causes (degradation, poverty, unemployment) not fully addressed</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 9 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch9" class="panel">
+  <div class="chapter-title">Chapter 9: Legal Perspective of Alternative Dispute Resolution (ADR)</div>
+  <div class="chapter-subtitle">Most technical chapter — 9 ADR types with pros and cons</div>
+
+  <div class="warn-alert">⚠ <strong>This chapter is the highest-risk for MCQs.</strong> You must distinguish between all 9 ADR types, their key features, advantages, and disadvantages.</div>
+
+  <h3>What is ADR?</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Alternative to court <strong>litigation</strong> for resolving disputes</li>
+      <li>Purpose: resolve disputes without litigation's disadvantages</li>
+      <li>Legal basis: <strong>Arbitration and Conciliation Act Cap. 19, Laws of the Federation 1990</strong></li>
+      <li>Also applies the <strong>New York Convention</strong> on Recognition and Enforcement of Arbitral Awards</li>
+    </ul>
+  </div>
+
+  <h3>9 Types of ADR</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">All 9 Types</span></div>
+    <div class="mnemonic">N-M-A-C-M-N-M-P-M</div>
+    <div class="mnemonic-exp"><span>N</span>egotiation · <span>M</span>ediation · <span>A</span>rbitration · <span>C</span>onciliation · <span>M</span>ini Trial · <span>N</span>eutral Evaluation · <span>M</span>ed-Arb · <span>P</span>rivate Judging · <span>M</span>ulti-Door Court</div>
+  </div>
+
+  <h3>Negotiation</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Problem-solving process: two or more parties voluntarily discuss differences</li>
+      <li>Parties determine their own negotiator (unlike litigation where judge is assigned)</li>
+      <li><strong>No third party involved normally</strong></li>
+      <li>Exchanges can be tangible (money) or intangible (apology, attitude change)</li>
+    </ul>
+    <table class="cmp-table">
+      <tr><th>Advantages</th><th>Disadvantages</th></tr>
+      <tr><td>Easier and faster than litigation</td><td>Confers legitimacy on the parties' demands</td></tr>
+      <tr><td>Informal; parties fully participate</td><td>Parties may appear weak</td></tr>
+      <tr><td>Parties choose their negotiator</td><td>Discussions may be premature</td></tr>
+      <tr><td>Helps test strength of other party</td><td>May give false hope or increase dispute visibility</td></tr>
+    </table>
+  </div>
+
+  <h3>Mediation</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span></div>
+    <ul class="points">
+      <li>Neutral <strong>third party (mediator)</strong> facilitates structured discussion</li>
+      <li>Mediator does NOT impose a decision — parties reach own agreement</li>
+      <li>Confidential process; discussions are "wholly without prejudice"</li>
+      <li><strong>4 stages</strong>: Information Session → Information Exchange → Negotiation → Agreement</li>
+    </ul>
+    <table class="cmp-table">
+      <tr><th>Advantages</th><th>Disadvantages</th></tr>
+      <tr><td>Less expensive than litigation</td><td>Employer participation may erode authority</td></tr>
+      <tr><td>Confidential procedure</td><td>May imply relief even without merit</td></tr>
+      <tr><td>Flexible; parties control outcome</td><td>Not all mediators are skilled</td></tr>
+      <tr><td>Interest-based (not just legal)</td><td>Parties do not have to agree</td></tr>
+      <tr><td>Preserves relationships</td><td>Confidentiality not guaranteed</td></tr>
+    </table>
+  </div>
+
+  <h3>Arbitration</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span></div>
+    <ul class="points">
+      <li>Neutral third party (<strong>arbitrator</strong>) renders a <strong>binding decision</strong> after hearing both sides</li>
+      <li>Legal definition (Kano State Urban Development Board v. Fanz Construction Co. Ltd, 1990): reference to a person other than a court of competent jurisdiction</li>
+      <li>Arbitration law roots: English Common Law, Nigerian Laws, Doctrine of Equity</li>
+      <li><strong>Voluntary</strong>: parties mutually consent to select arbitrator</li>
+      <li><strong>Compulsory</strong>: consent enforced by statutory provision</li>
+      <li>Cannot include constitutional or customary law matters — <strong>purely business/commercial disputes</strong></li>
+      <li>Every arbitration agreement must be <strong>in writing</strong></li>
+      <li><strong>Arbitral award</strong> = final; binding and enforceable (Section 5(1))</li>
+    </ul>
+    <table class="cmp-table">
+      <tr><th>Advantages</th><th>Disadvantages</th></tr>
+      <tr><td>Reduces litigation costs</td><td>Arbitrator makes final decision — hard to appeal</td></tr>
+      <tr><td>Expedites resolution</td><td>May "split the difference" unfairly</td></tr>
+      <tr><td>Reduces enmity vs. court</td><td>Hearing may produce record used elsewhere</td></tr>
+      <tr><td>Limited judicial review</td><td>Adversarial in nature</td></tr>
+      <tr><td>Arbitrators are less emotional than jurors</td><td>Challenges of due process</td></tr>
+    </table>
+  </div>
+
+  <h3>Conciliation</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Key Distinction from Mediation and Arbitration</span></div>
+    <ul class="points">
+      <li>Neutral <strong>conciliator</strong> meets parties <strong>separately</strong> (unlike mediation, parties rarely face each other)</li>
+      <li>Conciliator has <strong>NO legal standing</strong>, no authority to seek evidence or call witnesses</li>
+      <li>Conciliator writes <strong>no decision</strong> and makes <strong>no award</strong></li>
+      <li>Goal: seek concessions from parties (main difference from mediation)</li>
+      <li>Lowers tensions, improves communication, explores solutions</li>
+    </ul>
+    <div class="warn-alert">⚠ Conciliation ≠ Mediation: In mediation, mediator guides discussion to minimise parties' needs and reframes. In conciliation, the goal is to conciliate by seeking concessions. Parties rarely face each other in conciliation.</div>
+  </div>
+
+  <h3>Mini Trial</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Not a trial per se; also called <strong>"information exchange"</strong></li>
+      <li>Resembles an abridged court case but <strong>without live evidence</strong></li>
+      <li>A form of <strong>evaluative mediation</strong></li>
+      <li>Uses a neutral third party called <strong>Advisor</strong></li>
+      <li>If parties agree → Advisor draws up binding agreement; if deadlock → non-binding opinion</li>
+      <li>Proceedings are <strong>confidential but NOT binding</strong> on the parties</li>
+    </ul>
+  </div>
+
+  <h3>Neutral Evaluation</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Parties present their case to a <strong>Neutral Evaluator</strong> (usually a retired judge or expert)</li>
+      <li>Evaluator provides strengths and weaknesses of each party's case</li>
+      <li>Helps facilitate access to mediation based on neutral analysis</li>
+      <li><strong>Advisive and persuasive</strong> in nature (not binding)</li>
+    </ul>
+  </div>
+
+  <h3>Med-Arb</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span></div>
+    <ul class="points">
+      <li>Abbreviation of <strong>Mediation-Arbitration</strong></li>
+      <li>First attempt: resolve through <strong>mediation</strong></li>
+      <li>If mediation fails → proceed to <strong>arbitration</strong> (binding decision)</li>
+      <li><strong>Same neutral third party</strong> serves as both mediator and then arbitrator</li>
+      <li>Agreement to go to arbitration if mediation fails is made <strong>before</strong> mediation starts</li>
+    </ul>
+  </div>
+
+  <h3>Private Judging</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Parties hire a <strong>Private Judge</strong> to try their dispute</li>
+      <li>Where applicable law supports it, the decision is <strong>decisive and binding</strong></li>
+      <li>Parties may define their own procedures (time, place)</li>
+    </ul>
+  </div>
+
+  <h3>Multi-Door Court (MDC)</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span></div>
+    <ul class="points">
+      <li>"Multiple doors" = various ADR options available at a court house</li>
+      <li>Available doors: Early Neutral Evaluation, Mediation, Arbitration</li>
+      <li>Court-annexed programme — "court" does NOT mean litigation!</li>
+    </ul>
+    <p style="font-size:13px;font-weight:600;color:var(--blue);margin:10px 0 5px;">MDC Objectives:</p>
+    <ul class="points">
+      <li>Provide enhanced, timely, cost-effective access to justice</li>
+      <li>Supplement avenues for justice with additional doors</li>
+      <li>Develop "Managerial Judges" concept</li>
+      <li>Utilise retired judges through mediation and arbitration services</li>
+    </ul>
+    <p style="font-size:13px;font-weight:600;color:var(--blue);margin:10px 0 5px;">MDC Process — 3 Stages:</p>
+    <ul class="points">
+      <li><strong>Stage 1:</strong> Fill Request Form (Form 1) + Statement of Issues; Notice of Referral sent within 7 days; Responding party returns Submission Form within 7 days</li>
+      <li><strong>Stage 2:</strong> Intake Screening + pre-session meeting with Dispute Resolution Specialist (DRS); parties fill Confirmation of Attendance Form (Form 4) + Confidentiality Agreement (Form 5); neutral's bio-data provided</li>
+      <li><strong>Stage 3:</strong> ADR Session scheduled; Mediator/Arbitrator notified + Disclosure Form; session convened</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 10 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch10" class="panel">
+  <div class="chapter-title">Chapter 10: Application of New Media in Peace &amp; Conflict Resolution</div>
+  <div class="chapter-subtitle">Mostly common sense — know the definitions and media types</div>
+
+  <h3>What is New Media?</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Computation media allowing rapid information spread via computers</li>
+      <li>Also called <strong>Web 2.0</strong></li>
+      <li>Examples: Twitter, Facebook, WhatsApp, YouTube, Blogging, TikTok, Reddit</li>
+      <li>56% of people worldwide are online; 45% use social media (Aminu, 2024)</li>
+    </ul>
+  </div>
+
+  <h3>Characteristics of New Media</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Umanu and Wilson (2023) — 5 Characteristics</span></div>
+    <ul class="points">
+      <li><strong>Interconnectedness</strong></li>
+      <li><strong>Accessibility</strong></li>
+      <li><strong>Interactivity</strong></li>
+      <li><strong>Open-ended nature and multiplicity of use</strong></li>
+      <li><strong>Ubiquity and "delocatedness"</strong></li>
+    </ul>
+  </div>
+
+  <h3>Types of New Media</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">4 Main Types</span></div>
+    <table class="def-table">
+      <tr><th>Type</th><th>Description / Examples</th></tr>
+      <tr><td>Social Media</td><td>Interactive platforms: TikTok, Facebook, Bluesky, LinkedIn, YouTube, Reddit. 4.8 billion users (Jan 2023)</td></tr>
+      <tr><td>Streaming Services</td><td>Audio/video without downloading: Spotify, YouTube, Netflix. Real-time access.</td></tr>
+      <tr><td>Virtual Media</td><td>Simulates real-world environments (VR/AR); gaming, education, healthcare training. Users engage through avatars.</td></tr>
+      <tr><td>Mobile Apps</td><td>Native (WhatsApp, Instagram), Web (Gmail, Google), Hybrid apps. Blogs also included.</td></tr>
+    </table>
+  </div>
+
+  <h3>New Media in Conflict Resolution</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span><span class="block-title">How New Media Helps</span></div>
+    <ul class="points">
+      <li><strong>Early warning systems</strong> — citizens report conflict situations quickly</li>
+      <li>Counters harmful rumours and misinformation</li>
+      <li>Promotes dialogue across geographical/ideological boundaries</li>
+      <li>Peace advocacy — spreading positive messages, countering hate speech</li>
+      <li>Connects government and relevant agencies to affected communities</li>
+    </ul>
+  </div>
+
+  <div class="warn-alert">⚠ <strong>Dual role of new media:</strong> can <em>resolve</em> conflict OR <em>escalate</em> it through misinformation, cyberbullying, incitement. Requires digital literacy and regulation.</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 11 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch11" class="panel">
+  <div class="chapter-title">Chapter 11: The Media in Peace-Building and Conflict Management</div>
+  <div class="chapter-subtitle">Framing theory, war journalism vs. peace journalism, #EndSARS</div>
+
+  <h3>The Media's Role</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span></div>
+    <ul class="points">
+      <li>Shapes public perception through framing</li>
+      <li>Provides platforms for dialogue</li>
+      <li>Can either escalate tension OR promote reconciliation</li>
+      <li>Media has sometimes outweiged government will (e.g., #EndSARS 2020)</li>
+    </ul>
+    <div class="alert">#EndSARS (2020): Media coverage galvanised national and international outrage over police brutality → forced government to disband <strong>Special Anti-Robbery Squad (SARS)</strong> and establish inquiry panels.</div>
+  </div>
+
+  <h3>Framing Theory</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Key Distinction</span></div>
+    <table class="cmp-table">
+      <tr><th>War Journalism (Conflict Frame)</th><th>Peace Journalism (Peace Frame)</th></tr>
+      <tr><td>Sensationalises violence &amp; divisions</td><td>Emphasises reconciliation, context, solutions</td></tr>
+      <tr><td>Highlights hostility among parties</td><td>Highlights cooperation and negotiation</td></tr>
+      <tr><td>Focus on fear and blame</td><td>Emphasises shared solutions</td></tr>
+      <tr><td>Can deepen divisions</td><td>Reduces fear and hostility</td></tr>
+    </table>
+  </div>
+
+  <h3>Communication Approaches to Conflict Management (Ch. 11)</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li>Avoidance, Accommodation, Competition, Compromise, Collaboration, Negotiation (same as Ch.1)</li>
+      <li>Accommodation often used by subordinates in Nigerian workplaces/political structures</li>
+      <li>Competition seen in Niger Delta — linked to cycles of violence</li>
+      <li>Collaboration: interfaith fora and community peace committees reduced ethno-religious violence</li>
+    </ul>
+  </div>
+
+  <h3>Specific Media Functions in Peace Building</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span></div>
+    <ul class="points">
+      <li><strong>Social Change</strong> — Communication for Development (C4D) theory; marginalised groups get a voice</li>
+      <li><strong>Combating Misinformation</strong> — fact-checking; Habermas's public sphere theory</li>
+      <li><strong>Post-conflict peace building</strong> — radio drama, community dialogue programmes, documentaries</li>
+    </ul>
+  </div>
+
+  <h3>SDG 16</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">UN Sustainable Development Goal 16</span></div>
+    <p style="font-size:13.5px;">Aims to promote <strong>peaceful and inclusive societies</strong> for sustainable development, provide <strong>access to justice</strong> for all, and build <strong>effective, accountable and inclusive institutions</strong> at all levels.</p>
+  </div>
+
+  <h3>Recommendations (Ch. 11)</h3>
+  <div class="block easy">
+    <ul class="points">
+      <li>Media and community partnerships for publicising peace agreements</li>
+      <li>Train journalists on conflict-sensitive journalism</li>
+      <li>Integrate conflict resolution experts into newsrooms</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CHAPTER 12 -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="ch12" class="panel">
+  <div class="chapter-title">Chapter 12: Mediation, Negotiation &amp; Dialogue as Conflict Resolution Tools</div>
+  <div class="chapter-subtitle">3 mediation styles; 2 negotiation types; dialogue process; organisational conflict types</div>
+
+  <h3>3 Styles of Mediation (Harvard Law School, 2024)</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Memorise All 3</span></div>
+    <table class="def-table">
+      <tr><th>Style</th><th>Key Features</th></tr>
+      <tr><td>Facilitative Mediation</td><td>Mediator = <strong>process guide only</strong>; does NOT impose solutions or judgements; focuses on improving communication; parties generate their own solutions; most widely recognised form</td></tr>
+      <tr><td>Evaluative Mediation</td><td>Mediator takes a <strong>directive role</strong>; provides assessment of each party's strengths/weaknesses; proposes settlement options; predicts court outcomes; useful in legal/commercial disputes; may reduce party autonomy</td></tr>
+      <tr><td>Transformative Mediation</td><td>Deepest, <strong>relationship-centred</strong> approach; seeks to transform how parties interact and perceive each other; principles: empowerment + recognition; views conflict as opportunity for moral/relational growth</td></tr>
+    </table>
+  </div>
+
+  <div class="warn-alert">⚠ <strong>Key distinction:</strong> Facilitative = mediator guides process only. Evaluative = mediator gives expert opinions/assessments. Transformative = mediator aims to change the relationship itself.</div>
+
+  <h3>Mediation Process Stages</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">5 Stages (Mediator Academy, 2024)</span></div>
+    <div class="mnemonic">P-O-E-N-A</div>
+    <table class="def-table">
+      <tr><th>Stage</th><th>What Happens</th></tr>
+      <tr><td><strong>P</strong>reparation</td><td>Mediator and parties agree on terms (confidentiality, mediator's role)</td></tr>
+      <tr><td><strong>O</strong>pening</td><td>Mediator outlines process, sets ground rules; parties present perspectives without interruption</td></tr>
+      <tr><td><strong>E</strong>xploration</td><td>Mediator identifies underlying issues and interests; moves beyond positions to understand needs</td></tr>
+      <tr><td><strong>N</strong>egotiation</td><td>Brainstorming solutions; evaluating feasibility; mediator facilitates constructive dialogue</td></tr>
+      <tr><td><strong>A</strong>greement</td><td>Mutually acceptable resolution; may be formalised in written agreement</td></tr>
+    </table>
+  </div>
+
+  <h3>Mediation Techniques</h3>
+  <div class="block neutral">
+    <ul class="points">
+      <li><strong>Active listening</strong> — attentively listen; reflect and clarify</li>
+      <li><strong>Reframing</strong> — restating message in neutral/positive way to reduce defensiveness</li>
+      <li><strong>Building trust</strong> — maintaining impartiality, confidentiality, safe environment</li>
+    </ul>
+  </div>
+
+  <h3>Types of Negotiation (Ch. 12)</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">Distributive vs. Integrative</span></div>
+    <table class="cmp-table">
+      <tr><th>Type</th><th>Nature</th><th>Outcome</th></tr>
+      <tr><td>Distributive Negotiation</td><td>Win-lose; fixed pie; competitive; one party gains at other's expense</td><td>Zero-sum; relationship often damaged</td></tr>
+      <tr><td>Integrative Negotiation</td><td>Win-win; collaborative; focuses on interests not positions; seeks mutual gains</td><td>Value creation; relationship preserved</td></tr>
+    </table>
+    <div class="alert"><strong>Key Concept (Fisher, Ury &amp; Patton, 2011):</strong> Positions = explicit demands. Interests = underlying needs/desires that motivate those positions. Always focus on interests, not positions.</div>
+  </div>
+
+  <h3>Dialogue</h3>
+  <div class="block easy">
+    <div class="block-header"><span class="badge easy">Common Sense</span></div>
+    <ul class="points">
+      <li>Transcends mere communication — a process of <strong>shared inquiry</strong></li>
+      <li>Promotes understanding and co-creation of solutions</li>
+      <li>Essential for long-term peace building (Swisspeace, 2023)</li>
+    </ul>
+  </div>
+
+  <h3>Types of Conflict (Organisational Context — Table)</h3>
+  <div class="block focus">
+    <div class="block-header"><span class="badge focus">High Focus</span><span class="block-title">5 Conflict Levels</span></div>
+    <table class="cmp-table">
+      <tr><th>Level</th><th>Cause</th><th>Nigerian Example</th><th>Resolution</th></tr>
+      <tr><td>Intrapersonal</td><td>Internal struggles</td><td>Individual self-doubt</td><td>Counselling, self-reflection</td></tr>
+      <tr><td>Interpersonal</td><td>Miscommunication, conflicting goals</td><td>Supervisor-subordinate dispute</td><td>Mediation, negotiation</td></tr>
+      <tr><td>Intragroup</td><td>Role ambiguity, divergent interests</td><td>Disputes within a political party</td><td>Team building, role clarification</td></tr>
+      <tr><td>Intergroup</td><td>Ethnic, religious, cultural, resource divisions</td><td>Farmer-herder clashes (Middle Belt)</td><td>Dialogue, peace building, mediation by neutral actors</td></tr>
+      <tr><td>Societal</td><td>Inequality, governance failures, insurgencies</td><td>Boko Haram insurgency</td><td>Good governance, inclusive policies, security, development</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

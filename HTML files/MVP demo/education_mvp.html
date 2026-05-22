@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Education MVP | Subscription Plans</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #020713;
+      --surface: rgba(10, 18, 32, 0.96);
+      --surface-soft: rgba(14, 26, 41, 0.98);
+      --text: #f6f8fb;
+      --muted: #9db7d5;
+      --accent: #6ae1ff;
+      --accent2: #c58cff;
+      --border: rgba(255,255,255,0.1);
+      --radius: 28px;
+      --shadow: 0 26px 70px rgba(0,0,0,0.26);
+      --max-width: 1160px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100%; font-family: Inter, system-ui, sans-serif; background: radial-gradient(circle at top left, rgba(166, 128, 255, 0.12), transparent 18%), linear-gradient(180deg, #07111e 0%, #02070f 50%, #050713 100%); color: var(--text); }
+    .page { max-width: var(--max-width); margin: 0 auto; padding: 28px 24px 100px; }
+    a { color: var(--accent); }
+    .hero { padding: 36px; background: var(--surface); border: 1px solid var(--border); border-radius: 32px; box-shadow: var(--shadow); margin-bottom: 28px; }
+    .hero h1 { margin: 0 0 12px; font-size: clamp(2.4rem, 4vw, 3.8rem); }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.85; max-width: 720px; }
+    .section { display: grid; gap: 24px; }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; padding: 28px; }
+    .panel h2 { margin-top: 0; }
+    .panel p { color: var(--muted); line-height: 1.8; }
+    .plan-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); }
+    .plan { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 26px; padding: 24px; min-height: 360px; display: flex; flex-direction: column; justify-content: space-between; }
+    .plan h3 { margin: 0 0 10px; }
+    .plan-price { font-size: 2.05rem; margin: 12px 0; color: var(--accent2); }
+    .plan-meta { color: var(--muted); line-height: 1.7; margin-bottom: 16px; }
+    .features { list-style: none; padding: 0; margin: 0 0 22px; display: grid; gap: 12px; }
+    .features li { position: relative; padding-left: 24px; color: rgba(246,248,251,0.92); }
+    .features li::before { content: "•"; position: absolute; left: 0; color: var(--accent); font-size: 1.15rem; line-height: 1; top: 0; }
+    .button { margin-top: auto; display: inline-flex; padding: 14px 18px; border-radius: 999px; background: linear-gradient(135deg, rgba(106,225,255,0.22), rgba(197,140,255,0.2)); color: #fff; font-weight: 700; text-decoration: none; }
+    .badge { display: inline-flex; align-items: center; gap: 10px; background: rgba(106,225,255,0.12); color: var(--accent); padding: 10px 16px; border-radius: 999px; margin-bottom: 18px; }
+    .nav { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 12px; }
+    .nav a { background: rgba(106,225,255,0.12); padding: 12px 16px; border-radius: 999px; text-decoration: none; color: var(--text); }
+    .nav a:hover { background: rgba(106,225,255,0.22); }
+    @media (max-width: 760px) { .page { padding: 20px 18px 80px; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <span class="badge">MVP Demo</span>
+      <h1>Education & Exam Prep MVP</h1>
+      <p>Turn the learning and practice pages into a subscription-driven study platform with progress tracking, exam bundles, and recurring student value.</p>
+    </header>
+
+    <section class="section">
+      <div class="panel">
+        <h2>Product summary</h2>
+        <p>Built from the exam prep and practice content, this MVP offers structured study plans, interactive quizzes, and certification preparation. It targets students, tutors, and continuing education audiences with tiered learning options.</p>
+      </div>
+
+      <div class="plan-grid">
+        <article class="plan">
+          <div>
+            <h3>Student</h3>
+            <div class="plan-price">$12<span style="font-size:0.62rem;color:var(--muted);">/month</span></div>
+            <p class="plan-meta">Best for individual learners and exam candidates.</p>
+            <ul class="features">
+              <li>Full study modules</li>
+              <li>Practice quizzes</li>
+              <li>Progress tracking</li>
+              <li>Exam-ready flashcards</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Start learning</a>
+        </article>
+
+        <article class="plan">
+          <div>
+            <h3>Pro</h3>
+            <div class="plan-price">$19<span style="font-size:0.62rem;color:var(--muted);">/month</span></div>
+            <p class="plan-meta">For learners who want premium study tools and personalized pathing.</p>
+            <ul class="features">
+              <li>Exam bundles</li>
+              <li>Adaptive review sequences</li>
+              <li>Study reminders</li>
+              <li>Performance analytics</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Get started</a>
+        </article>
+
+        <article class="plan">
+          <div>
+            <h3>Campus</h3>
+            <div class="plan-price">$99<span style="font-size:0.62rem;color:var(--muted);">/year</span></div>
+            <p class="plan-meta">For tutors, study groups, and institutional access.</p>
+            <ul class="features">
+              <li>Group dashboard</li>
+              <li>Multiple student seats</li>
+              <li>Curriculum planning tools</li>
+              <li>Resource sharing</li>
+            </ul>
+          </div>
+          <a class="button" href="#">Request access</a>
+        </article>
+      </div>
+
+      <div class="panel">
+        <h2>Retention strategy</h2>
+        <p>Focus on recurring engagement with daily study streaks, exam readiness reminders, and monthly content refreshes. The subscription model transforms one-time prep content into ongoing learning support.</p>
+      </div>
+    </section>
+
+    <div class="nav">
+      <a href="index.html">Back to demo hub</a>
+      <a href="finance_mvp.html">Previous: Finance MVP</a>
+      <a href="dashboard_mvp.html">Previous: Dashboard MVP</a>
+    </div>
+  </div>
+</body>
+</html>

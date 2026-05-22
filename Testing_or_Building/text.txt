@@ -1,0 +1,14 @@
+I need to add a functional Outreach CRM tab to my existing studio_dashboard.html. The dashboard currently has tabs for Revenue, Style Tracker, Projects, and Insights.
+Task Requirements:
+
+    UI Update: Add an 'OUTREACH CRM' button to the navigation bar. Create a new content section (id="crm") that matches the existing dark navy and gold aesthetic.
+    Input Fields: Include fields for 'IG Handle' (text), 'Aesthetic' (Dropdown: Minimalist, Maximalist, Royal), 'Message Summary' (text), and 'Status' (Dropdown: Sent, Responded, Sample Sent, Closed).
+    Lead Table: Create a table to display logged leads with a 'Delete' action for each row.
+    Logic & Persistence: Use Browser LocalStorage to ensure data persists after the tab is closed. Write a renderLeads() function to refresh the table whenever a lead is added or deleted.
+    Backup Feature: Add a 'Backup Nightly Data (CSV)' button. This must generate and trigger a download of a CSV file containing all logged lead data with a timestamped filename.
+    Integration: Ensure the showTab() function (or whatever existing tab-switching logic is in place) is updated to handle the new CRM section.
+
+Please output the modified HTML, CSS, and JavaScript as a single cohesive update to the file.
+
+---
+

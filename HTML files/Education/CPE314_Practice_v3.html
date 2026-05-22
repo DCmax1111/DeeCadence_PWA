@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPE 314 - Code Practice</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Consolas', 'Monaco', monospace; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        h1 { text-align: center; color: #667eea; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }
+        .progress { background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        .question-card { border: 3px solid #667eea; border-radius: 10px; padding: 25px; margin-bottom: 20px; background: #f9f9ff; }
+        .question-title { font-size: 18px; font-weight: bold; color: #667eea; margin-bottom: 15px; }
+        .question-text { font-size: 15px; line-height: 1.6; margin-bottom: 20px; color: #333; }
+        .code-input, .text-input { width: 100%; min-height: 250px; padding: 15px; font-family: 'Consolas', monospace; font-size: 14px; border: 2px solid #ddd; border-radius: 8px; resize: vertical; background: #1e1e1e; color: #d4d4d4; line-height: 1.5; }
+        .text-input { background: white; color: #333; }
+        .code-input:focus, .text-input:focus { outline: none; border-color: #667eea; }
+        .button-group { display: flex; gap: 10px; margin-top: 15px; }
+        button { padding: 12px 30px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
+        .check-btn { background: #667eea; color: white; flex: 1; }
+        .check-btn:hover { background: #5568d3; transform: translateY(-2px); }
+        .next-btn { background: #28a745; color: white; flex: 1; }
+        .next-btn:hover { background: #218838; }
+        .show-btn { background: #ffc107; color: #333; }
+        .show-btn:hover { background: #e0a800; }
+        .feedback { margin-top: 20px; padding: 20px; border-radius: 8px; display: none; }
+        .feedback.show { display: block; }
+        .feedback.correct { background: #d4edda; border: 2px solid #28a745; color: #155724; }
+        .feedback.partial { background: #fff3cd; border: 2px solid #ffc107; color: #856404; }
+        .feedback.wrong { background: #f8d7da; border: 2px solid #dc3545; color: #721c24; }
+        .tips { margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 5px; font-size: 13px; }
+        .correct-answer { margin-top: 15px; padding: 15px; background: #e7f3ff; border: 2px solid #0066cc; border-radius: 8px; display: none; }
+        .correct-answer.show { display: block; }
+        .correct-answer pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; overflow-x: auto; margin-top: 10px; }
+        .score-display { font-size: 24px; font-weight: bold; color: #667eea; }
+        .final-results { display: none; text-align: center; padding: 40px; }
+        .final-results.show { display: block; }
+        .final-score { font-size: 72px; font-weight: bold; color: #28a745; margin: 20px 0; }
+        .checklist { text-align: left; margin: 15px 0; }
+        .checklist-item { padding: 8px; margin: 5px 0; border-radius: 5px; }
+        .checklist-item.yes { background: #d4edda; color: #155724; }
+        .checklist-item.no { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CPE 314 - Interactive Code Practice</h1>
+        <div class="subtitle">Type code and get instant feedback with professional tips!</div>
+        <div class="progress">Question <span id="currentQ">1</span> of <span id="totalQ">10</span> | Score: <span class="score-display" id="score">0</span>/<span id="maxScore">0</span></div>
+        <div id="questionContainer"></div>
+        <div class="final-results" id="finalResults">
+            <h2>🎉 Practice Complete!</h2>
+            <div class="final-score" id="finalScore">0%</div>
+            <p style="font-size: 18px; margin: 20px 0;">Great work! Review questions you missed.</p>
+            <button onclick="location.reload()" style="background: #667eea; color: white; padding: 15px 40px; font-size: 18px;">Practice Again</button>
+        </div>
+    </div>
+    <script>
+        var questions = [
+            { type: "code", title: "Q1: Basic HTML Structure", question: "Write basic HTML5 with title 'My Page' and h1 'Welcome'.", requirements: [{check: "<!doctype", text: "Has DOCTYPE declaration"}, {check: "<html>", text: "Has <html> tag"}, {check: "<head>", text: "Has <head> section"}, {check: "<title>", text: "Has <title> tag"}, {check: "<body>", text: "Has <body> tag"}, {check: "<h1>", text: "Has <h1> heading"}], answer: "<!DOCTYPE html>\n<html>\n<head>\n    <title>My Page</title>\n</head>\n<body>\n    <h1>Welcome</h1>\n</body>\n</html>" },
+            { type: "theory", title: "Q2: Semantic Elements", question: "Name 3 HTML5 semantic elements and their purpose.", keywords: ["header", "nav", "main", "article", "footer"], answer: "<header> for page header, <nav> for navigation, <main> for main content, <article> for articles, <footer> for footer." },
+            { type: "code", title: "Q3: Simple Form", question: "Create form with Name input, Email input, Submit button.", requirements: [{check: "<form", text: "Has <form> tag"}, {check: 'type="text"', text: "Has text input"}, {check: 'type="email"', text: "Has email input"}, {check: "<button", text: "Has button"}, {check: "submit", text: "Has submit type"}], answer: '<form>\n    <input type="text" name="name">\n    <input type="email" name="email">\n    <button type="submit">Submit</button>\n</form>' },
+            { type: "theory", title: "Q4: id vs class", question: "Explain difference between id and class. How to select in CSS?", keywords: ["unique", "multiple", "#", ".", "once"], answer: "id is unique (used once), selected with #. class can be reused, selected with . in CSS." },
+            { type: "code", title: "Q5: Flexbox CSS", question: "Write CSS for .container with flexbox, min-height 400px.", requirements: [{check: ".container", text: "Has .container class"}, {check: "display", text: "Has display property"}, {check: "flex", text: "Uses flex"}, {check: "min-height", text: "Has min-height"}, {check: "400px", text: "Sets 400px height"}], answer: ".container {\n    display: flex;\n    min-height: 400px;\n}" },
+            { type: "theory", title: "Q6: Box Model", question: "List 4 parts of CSS Box Model from inside out.", keywords: ["content", "padding", "border", "margin"], answer: "Content, Padding, Border, Margin (from inside out)" },
+            { type: "code", title: "Q7: Get Element", question: "Get element with id 'myBtn' and store in variable btn.", requirements: [{check: "document.getelementbyid", text: "Uses getElementById"}, {check: "myBtn", text: "Gets 'myBtn'"}, {check: "btn", text: "Stores in btn variable"}], answer: "const btn = document.getElementById('myBtn');" },
+            { type: "theory", title: "Q8: let vs var", question: "Difference between let, var, const?", keywords: ["block", "function", "scope", "reassign"], answer: "var is function-scoped. let is block-scoped, can reassign. const is block-scoped, cannot reassign." },
+            { type: "code", title: "Q9: Event Listener", question: "Add click event to id 'btn' that alerts 'Clicked!'.", requirements: [{check: "addeventlistener", text: "Uses addEventListener"}, {check: "click", text: "Listens for click"}, {check: "alert", text: "Shows alert"}], answer: "document.getElementById('btn').addEventListener('click', function() {\n    alert('Clicked!');\n});" },
+            { type: "theory", title: "Q10: == vs ===", question: "Difference between == and === with example.", keywords: ["type", "coercion", "strict", "value"], answer: "== compares value (with type coercion). === compares value AND type. Example: 5 == '5' is true, 5 === '5' is false." }
+        ];
+        var currentQuestion = 0;
+        var score = 0;
+        function displayQuestion() {
+            var q = questions[currentQuestion];
+            var container = document.getElementById('questionContainer');
+            document.getElementById('currentQ').textContent = currentQuestion + 1;
+            document.getElementById('totalQ').textContent = questions.length;
+            document.getElementById('maxScore').textContent = questions.length;
+            var inputClass = q.type === 'code' ? 'code-input' : 'text-input';
+            var placeholder = q.type === 'code' ? 'Type your code here...' : 'Type your answer here...';
+            var answerEscaped = q.answer.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            container.innerHTML = '<div class="question-card"><div class="question-title">' + q.title + '</div><div class="question-text">' + q.question + '</div><textarea class="' + inputClass + '" id="userAnswer" placeholder="' + placeholder + '"></textarea><div class="button-group"><button class="check-btn" onclick="checkAnswer()">✓ Check Answer</button><button class="show-btn" onclick="showAnswer()">👁️ Show Answer</button></div><div class="feedback" id="feedback"></div><div class="correct-answer" id="correctAnswer"><strong>📝 Correct Answer:</strong><pre>' + answerEscaped + '</pre></div><div class="button-group" style="margin-top: 20px;"><button class="next-btn" onclick="nextQuestion()">Next Question →</button></div></div>';
+        }
+        function checkAnswer() {
+            var q = questions[currentQuestion];
+            var userAnswer = document.getElementById('userAnswer').value;
+            var feedback = document.getElementById('feedback');
+            if (!userAnswer.trim()) {
+                feedback.className = 'feedback wrong show';
+                feedback.innerHTML = '❌ Please type an answer first!';
+                return;
+            }
+            if (q.type === 'code') {
+                var userLower = userAnswer.toLowerCase().replace(/\s+/g, '');
+                var foundCount = 0;
+                var checklistHTML = '<div class="checklist"><strong>Checklist:</strong>';
+                for (var i = 0; i < q.requirements.length; i++) {
+                    var req = q.requirements[i];
+                    var checkLower = req.check.toLowerCase().replace(/\s+/g, '');
+                    var has = userLower.indexOf(checkLower) !== -1;
+                    if (has) foundCount++;
+                    var statusText = has ? ('✓ ' + req.text) : ('✗ Missing: ' + req.text);
+                    checklistHTML += '<div class="checklist-item ' + (has ? 'yes' : 'no') + '">' + statusText + '</div>';
+                }
+                checklistHTML += '</div>';
+                var percentage = (foundCount / q.requirements.length) * 100;
+                if (percentage === 100) {
+                    feedback.className = 'feedback correct show';
+                    feedback.innerHTML = '🎉 Perfect! All requirements met!' + checklistHTML;
+                    score++;
+                    document.getElementById('score').textContent = score;
+                } else if (percentage >= 60) {
+                    feedback.className = 'feedback partial show';
+                    feedback.innerHTML = '⚠️ Good! ' + foundCount + '/' + q.requirements.length + ' requirements (' + percentage.toFixed(0) + '%)' + checklistHTML;
+                    score += 0.5;
+                    document.getElementById('score').textContent = score;
+                } else {
+                    feedback.className = 'feedback wrong show';
+                    feedback.innerHTML = '❌ Needs work! ' + foundCount + '/' + q.requirements.length + ' requirements' + checklistHTML;
+                }
+            } else {
+                var userLower = userAnswer.toLowerCase();
+                var foundCount = 0;
+                for (var i = 0; i < q.keywords.length; i++) {
+                    if (userLower.indexOf(q.keywords[i].toLowerCase()) !== -1) {
+                        foundCount++;
+                    }
+                }
+                var percentage = (foundCount / q.keywords.length) * 100;
+                if (percentage >= 50) {
+                    feedback.className = 'feedback correct show';
+                    feedback.innerHTML = '✅ Good! Mentioned ' + foundCount + '/' + q.keywords.length + ' key points!';
+                    score++;
+                    document.getElementById('score').textContent = score;
+                } else {
+                    feedback.className = 'feedback partial show';
+                    feedback.innerHTML = '⚠️ Partial. Only ' + foundCount + '/' + q.keywords.length + ' key concepts mentioned.';
+                }
+            }
+        }
+        function showAnswer() {
+            document.getElementById('correctAnswer').classList.add('show');
+        }
+        function nextQuestion() {
+            currentQuestion++;
+            if (currentQuestion >= questions.length) {
+                showFinalResults();
+            } else {
+                displayQuestion();
+            }
+        }
+        function showFinalResults() {
+            document.getElementById('questionContainer').style.display = 'none';
+            document.querySelector('.progress').style.display = 'none';
+            var finalResults = document.getElementById('finalResults');
+            var percentage = (score / questions.length * 100).toFixed(0);
+            finalResults.classList.add('show');
+            document.getElementById('finalScore').innerHTML = score + '/' + questions.length + '<br><span style="font-size: 36px;">' + percentage + '%</span>';
+        }
+        window.onload = function() {
+            displayQuestion();
+        };
+    </script>
+</body>
+</html>

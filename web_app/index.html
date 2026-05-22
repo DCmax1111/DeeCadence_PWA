@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c0d14">
+  <title>DeeCadence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles/theme.css">
+</head>
+<body>
+  <main id="app" class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">DEE_CISTEM</p>
+        <h1 id="screenTitle">Today</h1>
+      </div>
+      <button id="activeFocusPill" class="focus-pill" type="button" data-route="focus" hidden>
+        <span>Focus Running</span>
+        <strong data-focus-pill-timer>00:00</strong>
+      </button>
+      <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle theme">Dark</button>
+    </header>
+
+    <section id="screen" class="screen" aria-live="polite"></section>
+
+    <nav class="bottom-nav" aria-label="Primary">
+      <button class="nav-button active" type="button" data-route="home">Home</button>
+      <button class="nav-button" type="button" data-route="stats">Stats</button>
+      <button class="nav-button" type="button" data-route="focus">Focus</button>
+      <button class="nav-button" type="button" data-route="settings">Settings</button>
+    </nav>
+  </main>
+
+  <script defer src="./src/app.js"></script>
+</body>
+</html>

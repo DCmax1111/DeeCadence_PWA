@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE SYSTEM</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050810;
+    --bg2: #080d1a;
+    --panel: #0a1020;
+    --border: #1a2a4a;
+    --accent: #4a9eff;
+    --accent2: #00d4ff;
+    --gold: #ffd700;
+    --purple: #8b5cf6;
+    --green: #00ff88;
+    --red: #ff4466;
+    --orange: #ff8c00;
+    --text: #c8d8f0;
+    --text-dim: #4a6080;
+    --glow: rgba(74,158,255,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(74,158,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(74,158,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(74,158,255,0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+    animation: bgPulse 8s ease-in-out infinite;
+  }
+
+  @keyframes bgPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 30px 0 20px;
+    position: relative;
+  }
+
+  .header-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 8px;
+  }
+
+  .header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    letter-spacing: 8px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent2) 50%, var(--purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    position: relative;
+  }
+
+  .header h1::after {
+    content: 'THE SYSTEM';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(74,158,255,0.3) 50%, transparent 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    filter: blur(8px);
+    z-index: -1;
+  }
+
+  .level-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05));
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 20px;
+    padding: 6px 16px;
+    margin-top: 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 2px;
+  }
+
+  .level-badge::before {
+    content: '◆';
+    font-size: 8px;
+  }
+
+  /* Day type selector */
+  .day-selector {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .day-btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 8px 18px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    text-transform: uppercase;
+  }
+
+  .day-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .day-btn.active {
+    background: rgba(74,158,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent2);
+    box-shadow: 0 0 20px rgba(74,158,255,0.2);
+  }
+
+  /* Stat Ring Section */
+  .stats-section {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 700px) {
+    .stats-section { grid-template-columns: 1fr; }
+  }
+
+  .stat-ring-container {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-ring-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .ring-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  .radar-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 0 auto 16px;
+  }
+
+  canvas#radarChart {
+    width: 160px !important;
+    height: 160px !important;
+  }
+
+  .stat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stat-item {
+    display: grid;
+    grid-template-columns: 20px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .stat-icon { font-size: 12px; }
+
+  .stat-bar-wrap {
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .stat-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .stat-bar::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: white;
+    opacity: 0.8;
+    border-radius: 2px;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  .stat-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* AI Panel */
+  .ai-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ai-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--purple), transparent);
+  }
+
+  .ai-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ai-orb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--purple);
+    box-shadow: 0 0 10px var(--purple);
+    animation: orbPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes orbPulse {
+    0%, 100% { box-shadow: 0 0 6px var(--purple); }
+    50% { box-shadow: 0 0 18px var(--purple), 0 0 30px rgba(139,92,246,0.3); }
+  }
+
+  .ai-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--purple);
+    text-transform: uppercase;
+  }
+
+  .ai-message {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    font-style: italic;
+    padding: 12px 16px;
+    background: rgba(139,92,246,0.05);
+    border-left: 2px solid var(--purple);
+    border-radius: 0 4px 4px 0;
+    min-height: 60px;
+  }
+
+  .ai-input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .ai-input {
+    flex: 1;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .ai-input:focus { border-color: var(--purple); }
+  .ai-input::placeholder { color: var(--text-dim); }
+
+  .ai-send {
+    background: linear-gradient(135deg, var(--purple), #6d28d9);
+    border: none;
+    color: white;
+    padding: 10px 18px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .ai-send:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(139,92,246,0.4); }
+  .ai-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Time blocks */
+  .blocks-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 800px) {
+    .blocks-grid { grid-template-columns: 1fr; }
+  }
+
+  .time-block {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+
+  .time-block:hover { border-color: rgba(74,158,255,0.3); }
+
+  .block-header {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .block-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.06;
+  }
+
+  .block-0 .block-header::before { background: linear-gradient(135deg, #4a9eff, transparent); }
+  .block-1 .block-header::before { background: linear-gradient(135deg, #ffd700, transparent); }
+  .block-2 .block-header::before { background: linear-gradient(135deg, #8b5cf6, transparent); }
+
+  .block-time {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .block-0 .block-time { color: var(--accent2); }
+  .block-1 .block-time { color: var(--gold); }
+  .block-2 .block-time { color: var(--purple); }
+
+  .block-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .block-progress {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .block-tasks {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+
+  .block-tasks::-webkit-scrollbar { width: 3px; }
+  .block-tasks::-webkit-scrollbar-track { background: transparent; }
+  .block-tasks::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    position: relative;
+  }
+
+  .task-item:hover { background: rgba(255,255,255,0.03); border-color: var(--border); }
+
+  .task-item.done { opacity: 0.45; }
+  .task-item.done .task-name { text-decoration: line-through; }
+
+  .task-item.anchor { }
+  .task-item.flex { }
+  .task-item.variable { }
+
+  .task-check {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-size: 10px;
+  }
+
+  .task-item.done .task-check {
+    background: var(--green);
+    border-color: var(--green);
+    color: #000;
+    box-shadow: 0 0 8px rgba(0,255,136,0.4);
+  }
+
+  .task-name {
+    font-size: 13px;
+    flex: 1;
+    line-height: 1.3;
+  }
+
+  .task-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .tag-anchor { background: rgba(74,158,255,0.1); color: var(--accent); border: 1px solid rgba(74,158,255,0.2); }
+  .tag-flex { background: rgba(255,215,0,0.1); color: var(--gold); border: 1px solid rgba(255,215,0,0.2); }
+  .tag-variable { background: rgba(139,92,246,0.1); color: var(--purple); border: 1px solid rgba(139,92,246,0.2); }
+
+  .block-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .progress-track {
+    flex: 1;
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .block-0 .progress-fill { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .block-1 .progress-fill { background: linear-gradient(90deg, var(--gold), #ffae00); }
+  .block-2 .progress-fill { background: linear-gradient(90deg, var(--purple), #a78bfa); }
+
+  /* Notification toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--accent2);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+    z-index: 100;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 300px;
+    box-shadow: 0 0 30px rgba(74,158,255,0.2);
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Divider */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0 20px;
+  }
+
+  .divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  .divider-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* Loading dots */
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+
+  @keyframes dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%, 100% { content: '...'; }
+  }
+
+  /* Entrance animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .header { animation: fadeUp 0.6s ease forwards; }
+  .stats-section { animation: fadeUp 0.6s ease 0.1s both; }
+  .blocks-grid .time-block:nth-child(1) { animation: fadeUp 0.6s ease 0.2s both; }
+  .blocks-grid .time-block:nth-child(2) { animation: fadeUp 0.6s ease 0.3s both; }
+  .blocks-grid .time-block:nth-child(3) { animation: fadeUp 0.6s ease 0.4s both; }
+
+  .current-block-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: orbPulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-tag">Personal Progression Interface v1.0</div>
+    <h1>THE SYSTEM</h1>
+    <div class="level-badge">HUNTER RANK — E → S</div>
+  </div>
+
+  <!-- Day Type Selector -->
+  <div class="day-selector">
+    <button class="day-btn active" onclick="setDayType('full')">Full Day</button>
+    <button class="day-btn" onclick="setDayType('light')">Light Day</button>
+    <button class="day-btn" onclick="setDayType('rest')">Rest Day</button>
+    <button class="day-btn" onclick="setDayType('out')">Out-of-House</button>
+  </div>
+
+  <div class="section-divider">
+    <div class="divider-line"></div>
+    <div class="divider-label">Status Overview</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- Stats + AI -->
+  <div class="stats-section">
+
+    <!-- Stat Panel -->
+    <div class="stat-ring-container">
+      <div class="ring-title">// Stat Sheet //</div>
+      <div class="radar-wrap">
+        <canvas id="radarChart"></canvas>
+      </div>
+      <div class="stat-list" id="statList"></div>
+    </div>
+
+    <!-- AI Panel -->
+    <div class="ai-panel">
+      <div class="ai-header">
+        <div class="ai-orb"></div>
+        <div class="ai-title">System Intelligence</div>
+      </div>
+      <div class="ai-message" id="aiMessage">
+        Initializing system analysis... Awaiting your daily check-in to calibrate stat projections and surface priority tasks.
+      </div>
+      <div class="ai-input-row">
+        <input class="ai-input" id="aiInput" placeholder="Report your current state to the System..." />
+        <button class="ai-send" id="aiSendBtn" onclick="queryAI()">CONSULT</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-divider">
+    <div class="divider-line"></div>
+    <div class="divider-label">Daily Quest Board</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- Time Blocks -->
+  <div class="blocks-grid" id="blocksGrid"></div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────────
+
+const STATS = [
+  { name: 'Body',        icon: '⚔', color: '#4a9eff', val: 62 },
+  { name: 'Mind',        icon: '🧠', color: '#00d4ff', val: 74 },
+  { name: 'Spirit',      icon: '✦', color: '#ffd700', val: 80 },
+  { name: 'Knowledge',   icon: '📖', color: '#00ff88', val: 68 },
+  { name: 'Financial',   icon: '◈', color: '#ff8c00', val: 45 },
+  { name: 'Dexterity',   icon: '✦', color: '#8b5cf6', val: 57 },
+];
+
+const BLOCKS = [
+  {
+    id: 0,
+    time: '0 — 8',
+    label: 'Foundation Block',
+    bio: 'Cortisol peak · Intention setting',
+    tasks: [
+      { name: 'Wake up', type: 'anchor', stat: 'Body' },
+      { name: 'Prayer', type: 'anchor', stat: 'Spirit' },
+      { name: 'Bible verse', type: 'anchor', stat: 'Spirit' },
+      { name: 'Water', type: 'anchor', stat: 'Body' },
+      { name: 'Wash face', type: 'anchor', stat: 'Body' },
+      { name: 'Restroom', type: 'anchor', stat: 'Body' },
+      { name: 'Read', type: 'flex', stat: 'Knowledge' },
+      { name: 'Shower', type: 'anchor', stat: 'Body' },
+      { name: 'Exercise', type: 'anchor', stat: 'Body' },
+      { name: 'Meditate', type: 'flex', stat: 'Mind' },
+      { name: 'Dress bed', type: 'anchor', stat: 'Mind' },
+      { name: 'Brush hair + teeth', type: 'anchor', stat: 'Body' },
+      { name: 'Body cream', type: 'anchor', stat: 'Body' },
+      { name: 'Dress up', type: 'anchor', stat: 'Body' },
+      { name: 'Family prayer', type: 'anchor', stat: 'Spirit' },
+      { name: 'Cashflow update', type: 'variable', stat: 'Financial' },
+      { name: 'Stroll / Leave', type: 'flex', stat: 'Body' },
+    ]
+  },
+  {
+    id: 1,
+    time: '8 — 16',
+    label: 'Peak Performance Block',
+    bio: 'Body temp peak · Deep work window',
+    tasks: [
+      { name: 'WhatsApp + Socials', type: 'flex', stat: 'Mind' },
+      { name: 'Vocabulary', type: 'anchor', stat: 'Knowledge' },
+      { name: 'Water', type: 'anchor', stat: 'Body' },
+      { name: 'Plan (DC + day tasks)', type: 'anchor', stat: 'Mind' },
+      { name: 'Language learning', type: 'variable', stat: 'Knowledge' },
+      { name: 'Study / Deep work', type: 'anchor', stat: 'Knowledge' },
+      { name: 'Nap', type: 'flex', stat: 'Body' },
+      { name: 'Drawing / Writing', type: 'variable', stat: 'Dexterity' },
+      { name: 'Cashflow update', type: 'anchor', stat: 'Financial' },
+      { name: 'Design work', type: 'variable', stat: 'Dexterity' },
+      { name: 'FB/IG/X/Emails', type: 'flex', stat: 'Financial' },
+      { name: 'Snacks + Water', type: 'anchor', stat: 'Body' },
+      { name: 'Coding', type: 'variable', stat: 'Knowledge' },
+      { name: 'Nap (recovery)', type: 'flex', stat: 'Body' },
+      { name: 'AI Chat', type: 'variable', stat: 'Mind' },
+      { name: 'Stroll', type: 'flex', stat: 'Body' },
+      { name: 'Reading', type: 'flex', stat: 'Knowledge' },
+      { name: 'Movie / YT', type: 'variable', stat: 'Mind' },
+    ]
+  },
+  {
+    id: 2,
+    time: '16 — 0',
+    label: 'Consolidation Block',
+    bio: 'Wind-down · Reflection · Memory lock',
+    tasks: [
+      { name: 'AI Goals review', type: 'anchor', stat: 'Mind' },
+      { name: 'Cashflow update', type: 'anchor', stat: 'Financial' },
+      { name: 'Water', type: 'anchor', stat: 'Body' },
+      { name: 'Reading', type: 'flex', stat: 'Knowledge' },
+      { name: 'Walk / Sing', type: 'flex', stat: 'Body' },
+      { name: 'Shower', type: 'anchor', stat: 'Body' },
+      { name: 'Wash clothes', type: 'variable', stat: 'Body' },
+      { name: 'Design work', type: 'variable', stat: 'Dexterity' },
+      { name: 'YT / Relax', type: 'flex', stat: 'Mind' },
+      { name: 'Dishes + Cook', type: 'anchor', stat: 'Body' },
+      { name: 'Read / Write', type: 'flex', stat: 'Knowledge' },
+      { name: 'Exercise (optional)', type: 'variable', stat: 'Body' },
+      { name: 'Plan for next day', type: 'anchor', stat: 'Mind' },
+      { name: 'Lock doors + Tidy', type: 'anchor', stat: 'Mind' },
+      { name: 'Meditate', type: 'flex', stat: 'Mind' },
+      { name: 'Prayers', type: 'anchor', stat: 'Spirit' },
+      { name: 'Sleep', type: 'anchor', stat: 'Body' },
+    ]
+  }
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+
+let dayType = 'full';
+let checked = {}; // taskId -> bool
+let statValues = STATS.map(s => s.val);
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+
+function init() {
+  renderStats();
+  renderBlocks();
+  drawRadar();
+  setCurrentBlockHighlight();
+}
+
+// ── STATS ────────────────────────────────────────────────────────────────────
+
+function renderStats() {
+  const el = document.getElementById('statList');
+  el.innerHTML = STATS.map((s, i) => `
+    <div class="stat-item">
+      <span class="stat-icon">${s.icon}</span>
+      <div>
+        <div style="font-size:11px;letter-spacing:1px;margin-bottom:3px;">${s.name}</div>
+        <div class="stat-bar-wrap">
+          <div class="stat-bar" style="width:${statValues[i]}%;background:${s.color};box-shadow:0 0 8px ${s.color}40;"></div>
+        </div>
+      </div>
+      <div class="stat-val">${statValues[i]}</div>
+    </div>
+  `).join('');
+}
+
+function drawRadar() {
+  const canvas = document.getElementById('radarChart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 160; canvas.height = 160;
+  const cx = 80, cy = 80, r = 65;
+  const n = STATS.length;
+  ctx.clearRect(0, 0, 160, 160);
+
+  // Grid
+  for (let ring = 1; ring <= 4; ring++) {
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const x = cx + (r * ring / 4) * Math.cos(angle);
+      const y = cy + (r * ring / 4) * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(74,158,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axes
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+    ctx.strokeStyle = 'rgba(74,158,255,0.15)';
+    ctx.stroke();
+  }
+
+  // Fill
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const val = statValues[i] / 100;
+    const x = cx + r * val * Math.cos(angle);
+    const y = cy + r * val * Math.sin(angle);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  grad.addColorStop(0, 'rgba(74,158,255,0.4)');
+  grad.addColorStop(1, 'rgba(139,92,246,0.1)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(74,158,255,0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Points
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const val = statValues[i] / 100;
+    const x = cx + r * val * Math.cos(angle);
+    const y = cy + r * val * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = STATS[i].color;
+    ctx.fill();
+  }
+}
+
+// ── BLOCKS ───────────────────────────────────────────────────────────────────
+
+function renderBlocks() {
+  const grid = document.getElementById('blocksGrid');
+  grid.innerHTML = BLOCKS.map(block => {
+    const tasks = getVisibleTasks(block);
+    const done = tasks.filter(t => checked[`${block.id}-${t.name}`]).length;
+    const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+
+    return `
+      <div class="time-block block-${block.id}" id="block-${block.id}">
+        <div class="block-header">
+          <div>
+            <div class="block-time">${block.time}</div>
+            <div class="block-label">${block.label}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="block-progress">${done}/${tasks.length}</div>
+            <div style="font-size:9px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;margin-top:2px;">${block.bio}</div>
+          </div>
+        </div>
+        <div class="block-tasks">
+          ${tasks.map(t => {
+            const id = `${block.id}-${t.name}`;
+            const done = checked[id];
+            return `
+              <div class="task-item ${t.type} ${done ? 'done' : ''}" onclick="toggleTask('${id}', ${block.id})">
+                <div class="task-check">${done ? '✓' : ''}</div>
+                <div class="task-name">${t.name}</div>
+                <div class="task-tag tag-${t.type}">${t.type}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="block-footer">
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${pct}%"></div>
+          </div>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim)">${pct}%</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getVisibleTasks(block) {
+  if (dayType === 'rest') return block.tasks.filter(t => t.type === 'anchor');
+  if (dayType === 'light') return block.tasks.filter(t => t.type !== 'variable');
+  if (dayType === 'out') {
+    return block.tasks.filter(t => t.type === 'anchor' || t.name.toLowerCase().includes('stroll') || t.name.toLowerCase().includes('leave'));
+  }
+  return block.tasks;
+}
+
+function toggleTask(id, blockId) {
+  checked[id] = !checked[id];
+
+  // Update stat
+  const [bid, ...nameParts] = id.split('-');
+  const taskName = nameParts.join('-');
+  const block = BLOCKS[parseInt(bid)];
+  const task = block.tasks.find(t => t.name === taskName);
+  if (task) {
+    const si = STATS.findIndex(s => s.name === task.stat);
+    if (si !== -1) {
+      const delta = checked[id] ? 2 : -2;
+      statValues[si] = Math.max(0, Math.min(100, statValues[si] + delta));
+    }
+  }
+
+  renderBlocks();
+  renderStats();
+  drawRadar();
+
+  if (checked[id]) {
+    showToast(`[ ${taskName} ] — COMPLETED`);
+  }
+}
+
+// ── DAY TYPE ─────────────────────────────────────────────────────────────────
+
+function setDayType(type) {
+  dayType = type;
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderBlocks();
+}
+
+// ── CURRENT BLOCK ────────────────────────────────────────────────────────────
+
+function setCurrentBlockHighlight() {
+  const h = new Date().getHours();
+  let active = h < 8 ? 0 : h < 16 ? 1 : 2;
+  setTimeout(() => {
+    const block = document.getElementById(`block-${active}`);
+    if (block) {
+      block.style.borderColor = active === 0 ? 'rgba(0,212,255,0.4)' : active === 1 ? 'rgba(255,215,0,0.4)' : 'rgba(139,92,246,0.4)';
+    }
+  }, 500);
+}
+
+// ── AI ───────────────────────────────────────────────────────────────────────
+
+async function queryAI() {
+  const input = document.getElementById('aiInput');
+  const btn = document.getElementById('aiSendBtn');
+  const msg = document.getElementById('aiMessage');
+  const userText = input.value.trim();
+  if (!userText) return;
+
+  // Build context
+  const totalDone = Object.values(checked).filter(Boolean).length;
+  const totalTasks = BLOCKS.flatMap(b => getVisibleTasks(b)).length;
+  const weakStat = STATS[statValues.indexOf(Math.min(...statValues))];
+  const strongStat = STATS[statValues.indexOf(Math.max(...statValues))];
+
+  const systemPrompt = `You are THE SYSTEM — an intelligent personal progression AI from a Solo Leveling-inspired life management system. You speak with clarity, insight, and quiet authority. You are not a cheerleader. You analyze, observe, and guide.
+
+The user has the following stats (0-100):
+${STATS.map((s, i) => `- ${s.name}: ${statValues[i]}`).join('\n')}
+
+Weakest stat: ${weakStat.name} (${Math.min(...statValues)})
+Strongest stat: ${strongStat.name} (${Math.max(...statValues)})
+Day type: ${dayType}
+Tasks completed today: ${totalDone}/${totalTasks}
+
+The user's life system is divided into three biological time blocks:
+- 0-8: Foundation (cortisol peak, intention setting)
+- 8-16: Peak Performance (deep work, coordination)
+- 16-0: Consolidation (wind-down, reflection)
+
+Stats tracked: Body, Mind, Spirit, Knowledge, Financial, Dexterity.
+
+Respond in 2-4 sentences max. Be direct, insightful, occasionally poetic. Reference their actual stats and progress. No emojis. No bullet points. Speak like a system that knows them deeply.`;
+
+  btn.disabled = true;
+  input.value = '';
+  msg.innerHTML = '<span class="loading-dots">Analyzing</span>';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userText }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.find(c => c.type === 'text')?.text || 'System offline.';
+    msg.textContent = text;
+  } catch(e) {
+    msg.textContent = 'System connection failed. The dungeon gates remain closed.';
+  }
+
+  btn.disabled = false;
+}
+
+document.getElementById('aiInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') queryAI();
+});
+
+// ── TOAST ────────────────────────────────────────────────────────────────────
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── RUN ──────────────────────────────────────────────────────────────────────
+
+init();
+</script>
+</body>
+</html>

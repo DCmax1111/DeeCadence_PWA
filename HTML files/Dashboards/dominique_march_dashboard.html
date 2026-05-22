@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dominique Creations · March $3K Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --gold: #B8960C;
+    --gold-light: #D4A017;
+    --gold-pale: #F5E9C0;
+    --gold-faint: #FAF6ED;
+    --charcoal: #1A1A1A;
+    --dark: #2C2C2C;
+    --mid: #6B6B6B;
+    --light: #F9F7F3;
+    --white: #FFFFFF;
+    --success: #4A7C59;
+    --success-bg: #EAF4ED;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: var(--light);
+    color: var(--charcoal);
+    min-height: 100vh;
+  }
+
+  /* ── TOP HEADER ── */
+  .header {
+    background: var(--charcoal);
+    padding: 28px 40px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid var(--gold);
+  }
+  .header-brand { display: flex; flex-direction: column; }
+  .header-brand .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .header-brand .tagline {
+    font-size: 10px;
+    color: var(--gold-light);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+  .header-right {
+    text-align: right;
+  }
+  .days-left {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 42px;
+    font-weight: 300;
+    color: var(--gold-light);
+    line-height: 1;
+  }
+  .days-label {
+    font-size: 9px;
+    color: var(--mid);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main { display: grid; grid-template-columns: 340px 1fr; gap: 0; min-height: calc(100vh - 83px); }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    background: var(--white);
+    border-right: 1px solid #E8E0D0;
+    padding: 0;
+    overflow-y: auto;
+  }
+
+  .panel-section { border-bottom: 1px solid #F0EBE0; }
+  .panel-header {
+    padding: 18px 24px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel-header .label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .panel-header .rule { flex: 1; height: 1px; background: var(--gold-pale); }
+
+  /* Revenue Tracker */
+  .revenue-block { padding: 0 24px 20px; }
+  .revenue-input-row {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 14px;
+  }
+  .revenue-input {
+    flex: 1;
+    border: 1.5px solid #E8E0D0;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--charcoal);
+    background: var(--light);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .revenue-input:focus { border-color: var(--gold); }
+  .revenue-input::placeholder { color: #C0B898; font-weight: 400; }
+  .add-btn {
+    background: var(--gold);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 16px;
+    font-size: 18px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: background 0.2s;
+    line-height: 1;
+  }
+  .add-btn:hover { background: var(--gold-light); }
+
+  .progress-wrap {
+    background: #F0EBE0;
+    border-radius: 100px;
+    height: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    border-radius: 100px;
+    transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+
+  .revenue-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .stat-box { background: var(--light); border-radius: 6px; padding: 10px 8px; text-align: center; }
+  .stat-box .val {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px; font-weight: 700; color: var(--charcoal); line-height: 1;
+  }
+  .stat-box .val.gold { color: var(--gold); }
+  .stat-box .key { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mid); margin-top: 3px; }
+
+  .entries-list { max-height: 130px; overflow-y: auto; }
+  .entry-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 10px;
+    background: var(--gold-faint);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .entry-item .entry-amt { font-weight: 700; color: var(--success); }
+  .entry-item .del-btn { cursor: pointer; color: #C0B898; font-size: 14px; border: none; background: none; }
+  .entry-item .del-btn:hover { color: #c0392b; }
+  .no-entries { font-size: 11px; color: #C0B898; text-align: center; padding: 12px 0; font-style: italic; }
+
+  /* Tabs */
+  .tab-nav { display: flex; border-bottom: 1px solid #F0EBE0; }
+  .tab-btn {
+    flex: 1; padding: 12px 8px; font-size: 10px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    background: none; border: none; cursor: pointer;
+    color: var(--mid); border-bottom: 2px solid transparent;
+    transition: all 0.2s; font-family: 'Montserrat', sans-serif;
+  }
+  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Daily Plan */
+  .day-list { padding: 12px 16px; max-height: 420px; overflow-y: auto; }
+  .day-card {
+    border: 1px solid #EDE7D8;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .day-card:hover { box-shadow: 0 2px 10px rgba(184,150,12,0.1); }
+  .day-card.today { border-color: var(--gold); }
+  .day-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    background: var(--white);
+  }
+  .day-card.today .day-card-header { background: var(--gold-faint); }
+  .day-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-weight: 700; color: var(--gold); line-height: 1;
+  }
+  .day-info { flex: 1; padding-left: 12px; }
+  .day-label { font-size: 11px; font-weight: 600; color: var(--charcoal); }
+  .day-phase { font-size: 9px; color: var(--mid); letter-spacing: 1px; text-transform: uppercase; margin-top: 1px; }
+  .day-check { font-size: 16px; color: #D0C8B0; cursor: pointer; transition: color 0.2s; }
+  .day-check.done { color: var(--success); }
+  .day-tasks { display: none; padding: 0 14px 12px; background: #FDFBF7; border-top: 1px solid #F0EBE0; }
+  .day-tasks.open { display: block; }
+  .day-task { font-size: 11px; color: var(--dark); padding: 4px 0; border-bottom: 1px solid #F5F0E8; display: flex; gap: 8px; }
+  .day-task:last-child { border-bottom: none; }
+  .task-dot { color: var(--gold); flex-shrink: 0; }
+  .today-badge {
+    font-size: 8px; background: var(--gold); color: white;
+    padding: 2px 6px; border-radius: 10px; font-weight: 700; letter-spacing: 1px;
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel { padding: 32px 40px; overflow-y: auto; }
+
+  .scripts-header {
+    margin-bottom: 28px;
+  }
+  .scripts-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px; font-weight: 600; color: var(--charcoal);
+    margin-bottom: 6px;
+  }
+  .scripts-header p { font-size: 12px; color: var(--mid); line-height: 1.6; }
+
+  .scripts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .script-card {
+    background: var(--white);
+    border: 1px solid #EDE7D8;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.25s, transform 0.2s;
+  }
+  .script-card:hover { box-shadow: 0 6px 24px rgba(184,150,12,0.12); transform: translateY(-2px); }
+
+  .script-card-header {
+    padding: 16px 20px;
+    background: var(--charcoal);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .script-icon { font-size: 20px; }
+  .script-meta { flex: 1; }
+  .script-title { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; color: var(--white); }
+  .script-who { font-size: 9px; color: var(--gold-light); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+  .copy-btn {
+    background: var(--gold);
+    color: white; border: none; border-radius: 4px;
+    padding: 7px 14px; font-size: 10px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; transition: background 0.2s;
+    font-family: 'Montserrat', sans-serif;
+  }
+  .copy-btn:hover { background: var(--gold-light); }
+  .copy-btn.copied { background: var(--success); }
+
+  .script-body {
+    padding: 18px 20px;
+  }
+  .script-context {
+    font-size: 10px; color: var(--mid); letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 10px; font-weight: 600;
+  }
+  .script-text {
+    font-size: 12.5px; color: var(--dark);
+    line-height: 1.8;
+    font-style: italic;
+    border-left: 3px solid var(--gold-pale);
+    padding-left: 14px;
+    white-space: pre-line;
+  }
+  .script-tip {
+    margin-top: 12px;
+    font-size: 10.5px; color: var(--mid);
+    background: var(--gold-faint);
+    border-radius: 4px;
+    padding: 8px 12px;
+    line-height: 1.6;
+  }
+  .script-tip strong { color: var(--gold); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .scripts-grid { grid-template-columns: 1fr; }
+    .right-panel { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="name">Dominique Creations</div>
+    <div class="tagline">March · $3,000 Revenue Dashboard</div>
+  </div>
+  <div class="header-right">
+    <div class="days-left" id="daysLeft">17</div>
+    <div class="days-label">days remaining in March</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ── LEFT PANEL ── -->
+  <div class="left-panel">
+
+    <!-- Revenue Tracker -->
+    <div class="panel-section">
+      <div class="panel-header">
+        <span class="label">Revenue Tracker</span>
+        <div class="rule"></div>
+      </div>
+      <div class="revenue-block">
+        <div class="revenue-input-row">
+          <input class="revenue-input" id="amtInput" type="number" placeholder="Enter amount earned ($)" min="0"/>
+          <button class="add-btn" onclick="addRevenue()">+</button>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="revenue-stats">
+          <div class="stat-box">
+            <div class="val gold" id="statEarned">$0</div>
+            <div class="key">Earned</div>
+          </div>
+          <div class="stat-box">
+            <div class="val" id="statRemaining">$3,000</div>
+            <div class="key">To Go</div>
+          </div>
+          <div class="stat-box">
+            <div class="val" id="statPct">0%</div>
+            <div class="key">Complete</div>
+          </div>
+        </div>
+        <div class="entries-list" id="entriesList">
+          <div class="no-entries">No revenue logged yet — let's change that.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs: Daily Plan -->
+    <div class="panel-section">
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('plan')">Daily Plan</button>
+        <button class="tab-btn" onclick="switchTab('checklist')">Today's Tasks</button>
+      </div>
+
+      <div id="tab-plan" class="tab-content active">
+        <div class="day-list" id="dayList"></div>
+      </div>
+
+      <div id="tab-checklist" class="tab-content">
+        <div class="day-list" id="todayChecklist"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── RIGHT PANEL ── -->
+  <div class="right-panel">
+    <div class="scripts-header">
+      <h2>DM Scripts Library</h2>
+      <p>Professional, warm messages ready to copy and send. Personalise the [brackets] before hitting send.</p>
+    </div>
+
+    <div class="scripts-grid" id="scriptsGrid"></div>
+  </div>
+
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────
+const TARGET = 3000;
+let entries = JSON.parse(localStorage.getItem('dc_entries') || '[]');
+let completedDays = JSON.parse(localStorage.getItem('dc_completedDays') || '[]');
+let todayTasks = JSON.parse(localStorage.getItem('dc_todayTasks') || '[]');
+let openDays = [];
+
+// ── DAYS LEFT ────────────────────────────────────────────────────────────
+const today = new Date();
+const endOfMarch = new Date(today.getFullYear(), 2, 31);
+const daysLeft = Math.max(0, Math.ceil((endOfMarch - today) / 86400000));
+document.getElementById('daysLeft').textContent = daysLeft;
+
+// ── DAILY PLAN DATA ──────────────────────────────────────────────────────
+const PLAN = [
+  { date: 14, label: "Activate the page", phase: "Foundation", tasks: [
+    "Update IG bio: 'Bespoke wedding stationery · Print-ready designs delivered in days'",
+    "Add a clear profile photo or logo",
+    "Set your link in bio (Linktree, direct DM CTA, or booking link)",
+    "Post your first design with a luxury caption (see scripts)",
+    "Send 5 vendor outreach DMs (wedding planners)"
+  ]},
+  { date: 15, label: "Build portfolio momentum", phase: "Foundation", tasks: [
+    "Post 2nd design — focus on invitation suite",
+    "Send 10 vendor DMs (3 planners, 3 photographers, 2 MUAs, 2 venues)",
+    "Search #2025bride and #weddingplanning — send 5 couple discovery DMs",
+    "Reply to any responses within 1 hour"
+  ]},
+  { date: 16, label: "Establish consistency", phase: "Foundation", tasks: [
+    "Post 3rd design — show a different style (e.g. ivory minimal)",
+    "Send 10 vendor DMs",
+    "Send 5 couple DMs",
+    "Follow up with anyone from Day 1 who didn't reply"
+  ]},
+  { date: 17, label: "Push engagement", phase: "Growth", tasks: [
+    "Post 4th design + a Story showing your 'design process'",
+    "Send 10 vendor DMs",
+    "Send 5 couple DMs",
+    "Comment on 5 wedding posts — genuine, warm, not salesy"
+  ]},
+  { date: 18, label: "Convert first inquiry", phase: "Growth", tasks: [
+    "Post 5th design — full wedding suite if possible",
+    "Send 10 vendor DMs",
+    "Send 5 couple DMs",
+    "If anyone asked for pricing — send the package overview immediately",
+    "Follow up Day 1–2 vendor DMs: 'Just checking in!'"
+  ]},
+  { date: 19, label: "Social proof push", phase: "Growth", tasks: [
+    "Post a 'What's included' graphic for your $349 or $650 package",
+    "Send 10 vendor DMs",
+    "Send 5 couple DMs",
+    "Ask any past client or friend for a testimonial screenshot"
+  ]},
+  { date: 20, label: "Weekend push — couples active", phase: "Growth", tasks: [
+    "Post 2 designs today (weekend = peak IG activity)",
+    "Send 15 DMs today — focus on couples (#engaged, #bridetobe)",
+    "Share a Story: 'DM me PROGRAM to see my ceremony program packages'",
+    "Respond to every single inquiry within 30 mins"
+  ]},
+  { date: 21, label: "Weekend — close leads", phase: "Closing", tasks: [
+    "Post a 'Before & after' style design comparison",
+    "Follow up EVERY open conversation from this week",
+    "Offer a gentle nudge: 'I have 2 slots open this week — happy to start yours'",
+    "Send 10 vendor DMs"
+  ]},
+  { date: 22, label: "Referral activation", phase: "Closing", tasks: [
+    "Message the 5 most responsive vendors from last week",
+    "Say: 'If you ever have couples who need stationery, I'd love to be your go-to'",
+    "Post 7th design",
+    "Send 5 couple DMs"
+  ]},
+  { date: 23, label: "Urgency content", phase: "Closing", tasks: [
+    "Post a Story or Reel: 'March slots are filling — here's what I'm working on'",
+    "Send 10 vendor DMs",
+    "Send 5 couple DMs",
+    "Follow up anyone who asked for info but didn't book"
+  ]},
+  { date: 24, label: "Premium package focus", phase: "Closing", tasks: [
+    "Post a detailed breakdown of the $650 Brand Experience package",
+    "Caption should sell the value, not just list features",
+    "Send 10 vendor DMs",
+    "Send 5 couple DMs"
+  ]},
+  { date: 25, label: "Midweek momentum", phase: "Closing", tasks: [
+    "Post 9th design — show your most luxurious style",
+    "Send 10 vendor DMs",
+    "Follow up ALL open conversations",
+    "If you've made any money — screenshot your tracker and post it as motivation"
+  ]},
+  { date: 26, label: "Engagement push", phase: "Closing", tasks: [
+    "Post a Story poll: 'Which style do you love more?' (two designs)",
+    "Use poll engagement to start conversations — DM people who voted",
+    "Send 10 vendor DMs",
+    "Send 5 couple DMs"
+  ]},
+  { date: 27, label: "Final weekend — maximum outreach", phase: "Final Push", tasks: [
+    "Post 2 designs today",
+    "Send 20 DMs — couples and vendors",
+    "Story: 'Only a few March slots left — DM me NOW'",
+    "Respond instantly to everything"
+  ]},
+  { date: 28, label: "Final weekend — close everything", phase: "Final Push", tasks: [
+    "Follow up EVERY single open lead",
+    "Offer a small nudge: 'Happy to get started today if you'd like to lock in'",
+    "Post 11th design",
+    "Review your revenue tracker — what's the gap? Make a plan to close it"
+  ]},
+  { date: 29, label: "Last Monday — final outreach", phase: "Final Push", tasks: [
+    "Send 15 vendor DMs",
+    "Send 10 couple DMs",
+    "Post a carousel: 'Here's what Dominique Creations delivered this March'",
+    "Follow up every warm lead one final time"
+  ]},
+  { date: 30, label: "Second-to-last day", phase: "Final Push", tasks: [
+    "Final follow-up to ALL leads who showed interest",
+    "Post a Story: 'Last 2 days of March pricing — book now'",
+    "Confirm delivery timelines for any active orders",
+    "Send thank-you DMs to every vendor who engaged with you this month"
+  ]},
+  { date: 31, label: "March closes — finish strong", phase: "Final Push", tasks: [
+    "Respond to every DM — no lead left behind",
+    "Post a final Story: 'Thank you for a beautiful March — DM me for April bookings'",
+    "Log all final revenue",
+    "Celebrate what you built — then plan April"
+  ]},
+];
+
+// ── RENDER DAY LIST ───────────────────────────────────────────────────────
+function renderDays() {
+  const list = document.getElementById('dayList');
+  list.innerHTML = '';
+  PLAN.forEach(day => {
+    const isToday = day.date === today.getDate();
+    const isDone = completedDays.includes(day.date);
+    const isOpen = openDays.includes(day.date);
+    const card = document.createElement('div');
+    card.className = 'day-card' + (isToday ? ' today' : '');
+    card.innerHTML = `
+      <div class="day-card-header" onclick="toggleDay(${day.date})">
+        <div class="day-num">Mar ${day.date}</div>
+        <div class="day-info">
+          <div class="day-label">${day.label} ${isToday ? '<span class="today-badge">TODAY</span>' : ''}</div>
+          <div class="day-phase">${day.phase} · ${day.tasks.length} tasks</div>
+        </div>
+        <div class="day-check ${isDone ? 'done' : ''}" onclick="toggleDone(event, ${day.date})">${isDone ? '✓' : '○'}</div>
+      </div>
+      <div class="day-tasks ${isOpen ? 'open' : ''}">
+        ${day.tasks.map(t => `<div class="day-task"><span class="task-dot">◆</span><span>${t}</span></div>`).join('')}
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function renderTodayChecklist() {
+  const container = document.getElementById('todayChecklist');
+  container.innerHTML = '';
+  const todayPlan = PLAN.find(d => d.date === today.getDate());
+  if (!todayPlan) { container.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:#999">No plan for today</div>'; return; }
+  todayPlan.tasks.forEach((task, i) => {
+    const done = todayTasks.includes(i);
+    const card = document.createElement('div');
+    card.className = 'day-card' + (done ? '' : '');
+    card.innerHTML = `<div class="day-card-header" onclick="toggleTodayTask(${i})" style="cursor:pointer">
+      <div class="day-info"><div class="day-label" style="${done ? 'text-decoration:line-through;color:#aaa' : ''}">${task}</div></div>
+      <div class="day-check ${done ? 'done' : ''}">${done ? '✓' : '○'}</div>
+    </div>`;
+    container.appendChild(card);
+  });
+}
+
+function toggleDay(date) {
+  const idx = openDays.indexOf(date);
+  if (idx > -1) openDays.splice(idx, 1); else openDays.push(date);
+  renderDays();
+}
+function toggleDone(e, date) {
+  e.stopPropagation();
+  const idx = completedDays.indexOf(date);
+  if (idx > -1) completedDays.splice(idx, 1); else completedDays.push(date);
+  localStorage.setItem('dc_completedDays', JSON.stringify(completedDays));
+  renderDays();
+}
+function toggleTodayTask(i) {
+  const idx = todayTasks.indexOf(i);
+  if (idx > -1) todayTasks.splice(idx, 1); else todayTasks.push(i);
+  localStorage.setItem('dc_todayTasks', JSON.stringify(todayTasks));
+  renderTodayChecklist();
+}
+
+// ── REVENUE ────────────────────────────────────────────────────────────────
+function addRevenue() {
+  const input = document.getElementById('amtInput');
+  const val = parseFloat(input.value);
+  if (!val || val <= 0) return;
+  entries.push({ amount: val, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) });
+  localStorage.setItem('dc_entries', JSON.stringify(entries));
+  input.value = '';
+  renderRevenue();
+}
+document.getElementById('amtInput').addEventListener('keydown', e => { if (e.key === 'Enter') addRevenue(); });
+
+function deleteEntry(i) {
+  entries.splice(i, 1);
+  localStorage.setItem('dc_entries', JSON.stringify(entries));
+  renderRevenue();
+}
+
+function renderRevenue() {
+  const total = entries.reduce((s, e) => s + e.amount, 0);
+  const pct = Math.min(100, (total / TARGET) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('statEarned').textContent = '$' + total.toLocaleString('en-US', { minimumFractionDigits: 0 });
+  document.getElementById('statRemaining').textContent = '$' + Math.max(0, TARGET - total).toLocaleString('en-US', { minimumFractionDigits: 0 });
+  document.getElementById('statPct').textContent = Math.round(pct) + '%';
+  const list = document.getElementById('entriesList');
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="no-entries">No revenue logged yet — let\'s change that.</div>';
+  } else {
+    list.innerHTML = entries.map((e, i) =>
+      `<div class="entry-item"><span>${e.date}</span><span class="entry-amt">+$${e.amount.toLocaleString()}</span><button class="del-btn" onclick="deleteEntry(${i})">×</button></div>`
+    ).reverse().join('');
+  }
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', ['plan','checklist'][i] === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'checklist') renderTodayChecklist();
+}
+
+// ── DM SCRIPTS ────────────────────────────────────────────────────────────
+const SCRIPTS = [
+  {
+    icon: "💍",
+    title: "Wedding Planner Outreach",
+    who: "For: Planners & Coordinators",
+    context: "Send to wedding planners — aim for 3 per day",
+    text: `Hi [Name], I came across your page and your work is genuinely beautiful — the level of detail you bring to your events is clear.
+
+I'm Dominique, a wedding stationery designer. I specialise in bespoke invitation suites, ceremony programs, and full stationery collections delivered fast and print-ready.
+
+I'd love to be a resource for your couples — happy to offer your clients a referral discount whenever you send someone my way.
+
+Would that be something you'd be open to?`,
+    tip: "<strong>Pro tip:</strong> Always reference something specific from their page — a recent wedding, their aesthetic. Generic DMs get ignored."
+  },
+  {
+    icon: "📸",
+    title: "Photographer Outreach",
+    who: "For: Wedding Photographers",
+    context: "Photographers work closely with couples — great referral source",
+    text: `Hi [Name], your photography is stunning — the light you capture in your work is really special.
+
+I'm Dominique, a wedding stationery designer. I create bespoke programs, invitations, and full wedding suites — the kind of details that photograph beautifully on the wedding day.
+
+I'm building referral partnerships with photographers I admire. If any of your couples ever need stationery, I'd love to be your recommendation — and I'd make sure they're taken care of.
+
+No strings attached — just a genuine partnership.`,
+    tip: "<strong>Pro tip:</strong> Photographers love designers who make their photos look better. Mention how beautiful stationery elevates the detail shots."
+  },
+  {
+    icon: "💐",
+    title: "Engaged Couple — Direct",
+    who: "For: Couples posting engagements",
+    context: "Search #engaged #bridetobe #2025bride — send warmly",
+    text: `Hi [Name], congratulations on your engagement — so exciting! Wishing you both the most beautiful wedding.
+
+I'm Dominique — I design bespoke wedding stationery: invitation suites, ceremony programs, and full collections. My packages start at $49 and everything is delivered print-ready within days.
+
+If you're in the planning stage and would love stationery that feels as special as your day, I'd love to help. Happy to share some designs if you're curious!`,
+    tip: "<strong>Pro tip:</strong> Keep it warm and brief. Don't pitch hard — open a conversation. The sale happens in the reply."
+  },
+  {
+    icon: "🎨",
+    title: "Venue & Decorator Outreach",
+    who: "For: Venues, Florists & Decorators",
+    context: "They interact with couples constantly — valuable referrers",
+    text: `Hi [Name], I've been admiring your work — the spaces you create are absolutely stunning.
+
+I'm Dominique, a wedding stationery designer. I work with couples on their invitation suites, ceremony programs, welcome signage, and more — all designed to complement the visual world their venue and décor team creates.
+
+I'd love to explore a referral partnership. If you ever have couples asking about stationery, I'd be grateful to be your go-to recommendation.
+
+Would you be open to connecting?`,
+    tip: "<strong>Pro tip:</strong> Venues and decorators are constantly asked for vendor recommendations. Getting on their list is incredibly valuable."
+  },
+  {
+    icon: "✨",
+    title: "Follow-Up (No Reply)",
+    who: "For: Warm leads who went quiet",
+    context: "Send 5–7 days after first message — gentle, no pressure",
+    text: `Hi [Name], just following up on my message from last week — no worries if the timing isn't right.
+
+I wanted to share that I recently finished a full wedding suite for a couple in [style, e.g. 'black & gold luxury'] — it turned out really beautifully. Happy to send you a peek if you'd like.
+
+Either way, wishing you a wonderful week!`,
+    tip: "<strong>Pro tip:</strong> Most sales happen on the 2nd or 3rd follow-up. Don't stop at one message — persistence (done warmly) works."
+  },
+  {
+    icon: "💼",
+    title: "Closing — Couple Ready to Book",
+    who: "For: Interested couples asking about next steps",
+    context: "When someone asks 'how does it work?' — this closes them",
+    text: `So excited to work with you! Here's how it works:
+
+1. You choose your package (I'll send the full menu)
+2. You share your wedding details: date, names, colours, vibe
+3. I send your first design within 48 hours
+4. We refine together until it's perfect
+
+Everything is delivered as a print-ready PDF — you can take it to any printer or use it digitally.
+
+To get started, I just need a 50% deposit to lock in your slot. Want me to send the payment details?`,
+    tip: "<strong>Pro tip:</strong> Make the next step crystal clear. Confusion kills conversions. Tell them exactly what to do next."
+  },
+];
+
+function renderScripts() {
+  const grid = document.getElementById('scriptsGrid');
+  grid.innerHTML = SCRIPTS.map((s, i) => `
+    <div class="script-card">
+      <div class="script-card-header">
+        <span class="script-icon">${s.icon}</span>
+        <div class="script-meta">
+          <div class="script-title">${s.title}</div>
+          <div class="script-who">${s.who}</div>
+        </div>
+        <button class="copy-btn" id="copybtn-${i}" onclick="copyScript(${i})">Copy</button>
+      </div>
+      <div class="script-body">
+        <div class="script-context">${s.context}</div>
+        <div class="script-text">${s.text}</div>
+        <div class="script-tip">💡 ${s.tip}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyScript(i) {
+  navigator.clipboard.writeText(SCRIPTS[i].text).then(() => {
+    const btn = document.getElementById('copybtn-' + i);
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+renderRevenue();
+renderDays();
+renderScripts();
+
+// Auto-open today
+const todayPlan = PLAN.find(d => d.date === today.getDate());
+if (todayPlan) openDays.push(todayPlan.date);
+renderDays();
+</script>
+</body>
+</html>

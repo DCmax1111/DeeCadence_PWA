@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dominique Creations · Project Checklist</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --navy:#0D1B2A;--navy2:#152336;--blue:#1E3A5F;--blue-mid:#2E5490;--blue-lt:#3B6FBF;
+  --sky:#D6E4F7;--sky-faint:#EEF4FC;--gold:#C9A84C;--gold-lt:#E0BF6A;--gold-pale:#F5EDD0;
+  --gold-faint:#FAF6ED;--dark:#1E2D3D;--mid:#5A7A99;--rule:#C8D8EC;--white:#FFFFFF;
+  --success:#2E7D52;--success-bg:#E6F4EE;--light:#F0F5FB;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Montserrat',sans-serif;background:var(--light);color:var(--dark);min-height:100vh;}
+
+/* HEADER */
+.header{background:var(--navy);padding:22px 36px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);}
+.brand-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--white);letter-spacing:3px;text-transform:uppercase;}
+.brand-sub{font-size:8px;color:var(--gold-lt);letter-spacing:3px;text-transform:uppercase;margin-top:2px;font-weight:500;}
+.header-right{text-align:right;}
+.progress-summary{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--gold-lt);line-height:1;}
+.progress-label{font-size:8px;color:var(--mid);letter-spacing:2px;text-transform:uppercase;}
+
+/* TABS */
+.tabs-wrap{background:var(--navy2);padding:0 36px;display:flex;gap:4px;border-bottom:2px solid var(--gold);}
+.pkg-tab{padding:14px 20px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:none;background:none;cursor:pointer;color:var(--mid);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;font-family:'Montserrat',sans-serif;}
+.pkg-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.pkg-tab:hover:not(.active){color:var(--sky);}
+.pkg-pane{display:none;padding:28px 36px;}
+.pkg-pane.active{display:block;}
+
+/* PACKAGE HEADER */
+.pkg-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding:20px 24px;background:var(--white);border-radius:10px;border-left:4px solid var(--gold);box-shadow:0 2px 12px rgba(30,58,95,.08);}
+.pkg-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--dark);}
+.pkg-price{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;color:var(--gold);line-height:1;}
+.pkg-delivery{font-size:9px;color:var(--mid);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;text-align:right;}
+.pkg-desc{font-size:11px;color:var(--mid);line-height:1.7;margin-top:6px;max-width:500px;}
+.pkg-progress-wrap{background:var(--sky);border-radius:100px;height:6px;margin-top:10px;overflow:hidden;max-width:500px;}
+.pkg-progress-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--gold));border-radius:100px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.pkg-progress-text{font-size:9px;color:var(--mid);margin-top:5px;font-weight:600;}
+
+/* SECTIONS */
+.section{margin-bottom:20px;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 16px;background:var(--navy);border-radius:7px;}
+.section-icon{font-size:16px;}
+.section-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);}
+.section-count{font-size:9px;color:var(--mid);margin-left:auto;font-weight:600;}
+
+/* CHECKLIST ITEMS */
+.checklist{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.checklist.single{grid-template-columns:1fr;}
+.check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:var(--white);border-radius:6px;border:1px solid var(--rule);cursor:pointer;transition:all .2s;}
+.check-item:hover{border-color:var(--blue-lt);box-shadow:0 2px 8px rgba(30,58,95,.08);}
+.check-item.checked{background:var(--success-bg);border-color:var(--success);}
+.tick{width:16px;height:16px;border-radius:3px;border:1.5px solid var(--rule);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s;background:white;}
+.tick.on{background:var(--success);border-color:var(--success);}
+.tick.on::after{content:'✓';font-size:10px;color:white;font-weight:700;}
+.check-item.checked .tick{background:var(--success);border-color:var(--success);}
+.check-item.checked .tick::after{content:'✓';font-size:10px;color:white;font-weight:700;}
+.check-label{font-size:10.5px;color:var(--dark);line-height:1.5;flex:1;}
+.check-item.checked .check-label{text-decoration:line-through;color:#A0B8D0;}
+.check-note{font-size:9px;color:var(--mid);margin-top:2px;font-style:italic;}
+
+/* CLIENT INFO */
+.client-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-label{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);}
+.form-input{border:1.5px solid var(--rule);border-radius:5px;padding:8px 12px;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--dark);background:var(--white);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--blue-lt);}
+.form-input::placeholder{color:#A0B8D0;font-size:10px;}
+
+/* STATUS BAR */
+.status-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.status-btn{padding:7px 14px;font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:20px;border:1.5px solid var(--rule);cursor:pointer;color:var(--mid);background:var(--white);transition:all .2s;font-family:'Montserrat',sans-serif;}
+.status-btn.active-status{background:var(--navy);color:var(--gold-lt);border-color:var(--navy);}
+.status-btn:hover:not(.active-status){border-color:var(--gold);color:var(--gold);}
+
+/* ACTIONS */
+.actions{display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--rule);}
+.action-btn{padding:10px 20px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:5px;border:none;cursor:pointer;font-family:'Montserrat',sans-serif;transition:all .2s;}
+.btn-primary{background:var(--gold);color:var(--navy);}
+.btn-primary:hover{background:var(--gold-lt);}
+.btn-secondary{background:var(--white);color:var(--mid);border:1.5px solid var(--rule);}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
+.btn-danger{background:var(--white);color:#c0392b;border:1.5px solid #f5c6cb;}
+.btn-danger:hover{background:#fdecea;}
+
+/* NOTES */
+.notes-area{width:100%;border:1.5px solid var(--rule);border-radius:5px;padding:10px 14px;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--dark);background:var(--white);outline:none;resize:vertical;min-height:80px;transition:border-color .2s;margin-top:10px;}
+.notes-area:focus{border-color:var(--blue-lt);}
+
+/* ADDON */
+.addon-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.addon-item{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--white);border-radius:6px;border:1px solid var(--rule);cursor:pointer;transition:all .2s;}
+.addon-item:hover{border-color:var(--gold);}
+.addon-item.checked{background:var(--gold-faint);border-color:var(--gold);}
+.addon-price{font-size:11px;font-weight:700;color:var(--gold);margin-left:auto;}
+
+/* SAVED PROJECTS */
+.saved-list{margin-top:10px;}
+.saved-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--white);border-radius:6px;border:1px solid var(--rule);margin-bottom:6px;cursor:pointer;transition:all .2s;}
+.saved-item:hover{border-color:var(--blue-lt);box-shadow:0 2px 8px rgba(30,58,95,.08);}
+.saved-name{font-size:11px;font-weight:600;color:var(--dark);}
+.saved-meta{font-size:9px;color:var(--mid);}
+.saved-status{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:10px;}
+.s-new{background:var(--sky-faint);color:var(--blue-mid);}
+.s-progress{background:#FEF3E2;color:#D4860A;}
+.s-delivered{background:var(--success-bg);color:var(--success);}
+.s-paid{background:#E8F5E9;color:#2E7D32;}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:40px 20px;color:var(--mid);font-size:11px;font-style:italic;}
+
+@media(max-width:760px){
+  .checklist{grid-template-columns:1fr;}
+  .client-form{grid-template-columns:1fr;}
+  .addon-grid{grid-template-columns:1fr 1fr;}
+  .pkg-tab{padding:12px 10px;font-size:8px;}
+  .pkg-pane{padding:20px 16px;}
+  .header{padding:18px 20px;}
+  .tabs-wrap{padding:0 16px;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="brand-name">Dominique Creations</div>
+    <div class="brand-sub">Project Checklist & Client Tracker</div>
+  </div>
+  <div class="header-right">
+    <div class="progress-summary" id="globalProgress">0/0</div>
+    <div class="progress-label">tasks complete</div>
+  </div>
+</div>
+
+<div class="tabs-wrap">
+  <button class="pkg-tab active" onclick="switchPkg('p1')">$49 · Program</button>
+  <button class="pkg-tab" onclick="switchPkg('p2')">$149 · Suite</button>
+  <button class="pkg-tab" onclick="switchPkg('p3')">$349 · Collection</button>
+  <button class="pkg-tab" onclick="switchPkg('p4')">$650 · Experience</button>
+  <button class="pkg-tab" onclick="switchPkg('projects')">📁 Projects</button>
+</div>
+
+<!-- ══ PACKAGE 1 ══ -->
+<div id="pane-p1" class="pkg-pane active">
+  <div class="pkg-header">
+    <div>
+      <div class="pkg-title">Signature Program</div>
+      <div class="pkg-desc">Custom 4 or 6-panel ceremony program. Elegant typography, print-ready PDF, digital sharing version. 2 revision rounds.</div>
+      <div class="pkg-progress-wrap"><div class="pkg-progress-bar" id="bar-p1" style="width:0%"></div></div>
+      <div class="pkg-progress-text" id="txt-p1">0 of 0 complete</div>
+    </div>
+    <div>
+      <div class="pkg-price">$49</div>
+      <div class="pkg-delivery">Delivery: 2–3 days</div>
+    </div>
+  </div>
+
+  <!-- Client Info -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">👤</span><span class="section-title">Client Details</span></div>
+    <div class="client-form">
+      <div class="form-group"><label class="form-label">Couple Names</label><input class="form-input" placeholder="e.g. Mary & Kingsley" id="p1-names"/></div>
+      <div class="form-group"><label class="form-label">Wedding Date</label><input class="form-input" type="date" id="p1-date"/></div>
+      <div class="form-group"><label class="form-label">Wedding Colours</label><input class="form-input" placeholder="e.g. Burgundy & Gold" id="p1-colours"/></div>
+      <div class="form-group"><label class="form-label">Style / Vibe</label><input class="form-input" placeholder="e.g. Elegant, Traditional" id="p1-style"/></div>
+      <div class="form-group"><label class="form-label">Panel Count</label>
+        <select class="form-input" id="p1-panels"><option>4-panel</option><option>6-panel</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Deposit Received</label>
+        <select class="form-input" id="p1-deposit"><option>Pending</option><option>Received — 50%</option><option>Paid in Full</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📊</span><span class="section-title">Project Status</span></div>
+    <div class="status-bar" id="status-p1">
+      <button class="status-btn active-status" onclick="setStatus('p1','New')">New</button>
+      <button class="status-btn" onclick="setStatus('p1','In Progress')">In Progress</button>
+      <button class="status-btn" onclick="setStatus('p1','Revision')">Revision</button>
+      <button class="status-btn" onclick="setStatus('p1','Delivered')">Delivered</button>
+      <button class="status-btn" onclick="setStatus('p1','Paid in Full')">Paid in Full ✓</button>
+    </div>
+  </div>
+
+  <!-- Invitation Structure -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📋</span><span class="section-title">Program Structure Checklist</span><span class="section-count" id="sc-p1-struct">0/0</span></div>
+    <div class="checklist" id="cl-p1-struct"></div>
+  </div>
+
+  <!-- Design Tasks -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🎨</span><span class="section-title">Design Tasks</span><span class="section-count" id="sc-p1-design">0/0</span></div>
+    <div class="checklist" id="cl-p1-design"></div>
+  </div>
+
+  <!-- Delivery -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📦</span><span class="section-title">Delivery Checklist</span><span class="section-count" id="sc-p1-delivery">0/0</span></div>
+    <div class="checklist" id="cl-p1-delivery"></div>
+  </div>
+
+  <!-- Add-ons -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">➕</span><span class="section-title">Add-Ons</span></div>
+    <div class="addon-grid" id="ao-p1"></div>
+  </div>
+
+  <!-- Notes -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📝</span><span class="section-title">Project Notes</span></div>
+    <textarea class="notes-area" id="notes-p1" placeholder="Client preferences, revision notes, special requests..."></textarea>
+  </div>
+
+  <div class="actions">
+    <button class="action-btn btn-primary" onclick="saveProject('p1')">Save Project</button>
+    <button class="action-btn btn-secondary" onclick="resetChecklist('p1')">Reset Checklist</button>
+    <button class="action-btn btn-danger" onclick="clearProject('p1')">Clear All</button>
+  </div>
+</div>
+
+<!-- ══ PACKAGE 2 ══ -->
+<div id="pane-p2" class="pkg-pane">
+  <div class="pkg-header">
+    <div>
+      <div class="pkg-title">Coordinated Suite</div>
+      <div class="pkg-desc">Wedding invitation + ceremony program designed as a matching set with coordinated typography system. Print-ready files, digital versions, 3 revision rounds.</div>
+      <div class="pkg-progress-wrap"><div class="pkg-progress-bar" id="bar-p2" style="width:0%"></div></div>
+      <div class="pkg-progress-text" id="txt-p2">0 of 0 complete</div>
+    </div>
+    <div>
+      <div class="pkg-price">$149</div>
+      <div class="pkg-delivery">Delivery: 3–5 days</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">👤</span><span class="section-title">Client Details</span></div>
+    <div class="client-form">
+      <div class="form-group"><label class="form-label">Couple Names</label><input class="form-input" placeholder="e.g. Mary & Kingsley" id="p2-names"/></div>
+      <div class="form-group"><label class="form-label">Wedding Date</label><input class="form-input" type="date" id="p2-date"/></div>
+      <div class="form-group"><label class="form-label">Wedding Colours</label><input class="form-input" placeholder="e.g. Burgundy & Gold" id="p2-colours"/></div>
+      <div class="form-group"><label class="form-label">Style / Vibe</label><input class="form-input" placeholder="e.g. Elegant, Traditional" id="p2-style"/></div>
+      <div class="form-group"><label class="form-label">Venue</label><input class="form-input" placeholder="Venue name & address" id="p2-venue"/></div>
+      <div class="form-group"><label class="form-label">Deposit Received</label>
+        <select class="form-input" id="p2-deposit"><option>Pending</option><option>Received — 50%</option><option>Paid in Full</option></select>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📊</span><span class="section-title">Project Status</span></div>
+    <div class="status-bar" id="status-p2">
+      <button class="status-btn active-status" onclick="setStatus('p2','New')">New</button>
+      <button class="status-btn" onclick="setStatus('p2','In Progress')">In Progress</button>
+      <button class="status-btn" onclick="setStatus('p2','Revision')">Revision</button>
+      <button class="status-btn" onclick="setStatus('p2','Delivered')">Delivered</button>
+      <button class="status-btn" onclick="setStatus('p2','Paid in Full')">Paid in Full ✓</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">💌</span><span class="section-title">Invitation Structure Checklist</span><span class="section-count" id="sc-p2-invite">0/0</span></div>
+    <div class="checklist" id="cl-p2-invite"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📋</span><span class="section-title">Program Structure Checklist</span><span class="section-count" id="sc-p2-program">0/0</span></div>
+    <div class="checklist" id="cl-p2-program"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🎨</span><span class="section-title">Design Tasks</span><span class="section-count" id="sc-p2-design">0/0</span></div>
+    <div class="checklist" id="cl-p2-design"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📦</span><span class="section-title">Delivery Checklist</span><span class="section-count" id="sc-p2-delivery">0/0</span></div>
+    <div class="checklist" id="cl-p2-delivery"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">➕</span><span class="section-title">Add-Ons</span></div>
+    <div class="addon-grid" id="ao-p2"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📝</span><span class="section-title">Project Notes</span></div>
+    <textarea class="notes-area" id="notes-p2" placeholder="Client preferences, revision notes, special requests..."></textarea>
+  </div>
+  <div class="actions">
+    <button class="action-btn btn-primary" onclick="saveProject('p2')">Save Project</button>
+    <button class="action-btn btn-secondary" onclick="resetChecklist('p2')">Reset Checklist</button>
+    <button class="action-btn btn-danger" onclick="clearProject('p2')">Clear All</button>
+  </div>
+</div>
+
+<!-- ══ PACKAGE 3 ══ -->
+<div id="pane-p3" class="pkg-pane">
+  <div class="pkg-header">
+    <div>
+      <div class="pkg-title">Identity Collection</div>
+      <div class="pkg-desc">Full coordinated stationery identity: invitation, program, welcome sign, seating plan, stickers, thank-you card. Unified visual style, print-ready files, 4 revision rounds.</div>
+      <div class="pkg-progress-wrap"><div class="pkg-progress-bar" id="bar-p3" style="width:0%"></div></div>
+      <div class="pkg-progress-text" id="txt-p3">0 of 0 complete</div>
+    </div>
+    <div>
+      <div class="pkg-price">$349</div>
+      <div class="pkg-delivery">Delivery: 5–7 days</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">👤</span><span class="section-title">Client Details</span></div>
+    <div class="client-form">
+      <div class="form-group"><label class="form-label">Couple Names</label><input class="form-input" placeholder="e.g. Mary & Kingsley" id="p3-names"/></div>
+      <div class="form-group"><label class="form-label">Wedding Date</label><input class="form-input" type="date" id="p3-date"/></div>
+      <div class="form-group"><label class="form-label">Wedding Colours</label><input class="form-input" placeholder="e.g. Burgundy & Gold" id="p3-colours"/></div>
+      <div class="form-group"><label class="form-label">Style / Vibe</label><input class="form-input" placeholder="e.g. Elegant, Traditional" id="p3-style"/></div>
+      <div class="form-group"><label class="form-label">Venue</label><input class="form-input" placeholder="Venue name & address" id="p3-venue"/></div>
+      <div class="form-group"><label class="form-label">Guest Count (for seating)</label><input class="form-input" placeholder="e.g. 150 guests" id="p3-guests"/></div>
+      <div class="form-group"><label class="form-label">Deposit Received</label>
+        <select class="form-input" id="p3-deposit"><option>Pending</option><option>Received — 50%</option><option>Paid in Full</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Dress Code</label><input class="form-input" placeholder="e.g. Black tie, Traditional" id="p3-dress"/></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📊</span><span class="section-title">Project Status</span></div>
+    <div class="status-bar" id="status-p3">
+      <button class="status-btn active-status" onclick="setStatus('p3','New')">New</button>
+      <button class="status-btn" onclick="setStatus('p3','In Progress')">In Progress</button>
+      <button class="status-btn" onclick="setStatus('p3','Revision')">Revision</button>
+      <button class="status-btn" onclick="setStatus('p3','Delivered')">Delivered</button>
+      <button class="status-btn" onclick="setStatus('p3','Paid in Full')">Paid in Full ✓</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">💌</span><span class="section-title">Invitation Checklist</span><span class="section-count" id="sc-p3-invite">0/0</span></div>
+    <div class="checklist" id="cl-p3-invite"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📋</span><span class="section-title">Program Checklist</span><span class="section-count" id="sc-p3-program">0/0</span></div>
+    <div class="checklist" id="cl-p3-program"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🪧</span><span class="section-title">Welcome Sign Checklist</span><span class="section-count" id="sc-p3-sign">0/0</span></div>
+    <div class="checklist" id="cl-p3-sign"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🪑</span><span class="section-title">Seating Plan Checklist</span><span class="section-count" id="sc-p3-seating">0/0</span></div>
+    <div class="checklist" id="cl-p3-seating"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🎀</span><span class="section-title">Sticker & Thank-You Card</span><span class="section-count" id="sc-p3-extras">0/0</span></div>
+    <div class="checklist" id="cl-p3-extras"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🎨</span><span class="section-title">Design Tasks</span><span class="section-count" id="sc-p3-design">0/0</span></div>
+    <div class="checklist" id="cl-p3-design"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📦</span><span class="section-title">Delivery Checklist</span><span class="section-count" id="sc-p3-delivery">0/0</span></div>
+    <div class="checklist" id="cl-p3-delivery"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">➕</span><span class="section-title">Add-Ons</span></div>
+    <div class="addon-grid" id="ao-p3"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📝</span><span class="section-title">Project Notes</span></div>
+    <textarea class="notes-area" id="notes-p3" placeholder="Client preferences, revision notes, special requests..."></textarea>
+  </div>
+  <div class="actions">
+    <button class="action-btn btn-primary" onclick="saveProject('p3')">Save Project</button>
+    <button class="action-btn btn-secondary" onclick="resetChecklist('p3')">Reset Checklist</button>
+    <button class="action-btn btn-danger" onclick="clearProject('p3')">Clear All</button>
+  </div>
+</div>
+
+<!-- ══ PACKAGE 4 ══ -->
+<div id="pane-p4" class="pkg-pane">
+  <div class="pkg-header">
+    <div>
+      <div class="pkg-title">Brand Experience</div>
+      <div class="pkg-desc">Complete wedding visual identity: invitation suite, program, welcome signage, seating chart, table numbers, stickers, thank-you card, social media graphics. Priority timeline, 5 revision rounds.</div>
+      <div class="pkg-progress-wrap"><div class="pkg-progress-bar" id="bar-p4" style="width:0%"></div></div>
+      <div class="pkg-progress-text" id="txt-p4">0 of 0 complete</div>
+    </div>
+    <div>
+      <div class="pkg-price">$650</div>
+      <div class="pkg-delivery">Delivery: 7–10 days</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">👤</span><span class="section-title">Client Details</span></div>
+    <div class="client-form">
+      <div class="form-group"><label class="form-label">Couple Names</label><input class="form-input" placeholder="e.g. Mary & Kingsley" id="p4-names"/></div>
+      <div class="form-group"><label class="form-label">Wedding Date</label><input class="form-input" type="date" id="p4-date"/></div>
+      <div class="form-group"><label class="form-label">Wedding Colours</label><input class="form-input" placeholder="e.g. Burgundy & Gold" id="p4-colours"/></div>
+      <div class="form-group"><label class="form-label">Style / Vibe</label><input class="form-input" placeholder="e.g. Luxury, Black tie" id="p4-style"/></div>
+      <div class="form-group"><label class="form-label">Venue</label><input class="form-input" placeholder="Venue name & address" id="p4-venue"/></div>
+      <div class="form-group"><label class="form-label">Guest Count</label><input class="form-input" placeholder="e.g. 200 guests" id="p4-guests"/></div>
+      <div class="form-group"><label class="form-label">Table Count</label><input class="form-input" placeholder="e.g. 20 tables" id="p4-tables"/></div>
+      <div class="form-group"><label class="form-label">Instagram Handle</label><input class="form-input" placeholder="For social media graphics" id="p4-ig"/></div>
+      <div class="form-group"><label class="form-label">Dress Code</label><input class="form-input" placeholder="e.g. Black tie, Traditional" id="p4-dress"/></div>
+      <div class="form-group"><label class="form-label">Deposit Received</label>
+        <select class="form-input" id="p4-deposit"><option>Pending</option><option>Received — 50%</option><option>Paid in Full</option></select>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📊</span><span class="section-title">Project Status</span></div>
+    <div class="status-bar" id="status-p4">
+      <button class="status-btn active-status" onclick="setStatus('p4','New')">New</button>
+      <button class="status-btn" onclick="setStatus('p4','In Progress')">In Progress</button>
+      <button class="status-btn" onclick="setStatus('p4','Revision')">Revision</button>
+      <button class="status-btn" onclick="setStatus('p4','Delivered')">Delivered</button>
+      <button class="status-btn" onclick="setStatus('p4','Paid in Full')">Paid in Full ✓</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">💌</span><span class="section-title">Invitation Suite</span><span class="section-count" id="sc-p4-invite">0/0</span></div>
+    <div class="checklist" id="cl-p4-invite"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📋</span><span class="section-title">Ceremony Program</span><span class="section-count" id="sc-p4-program">0/0</span></div>
+    <div class="checklist" id="cl-p4-program"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🪧</span><span class="section-title">Welcome Signage</span><span class="section-count" id="sc-p4-sign">0/0</span></div>
+    <div class="checklist" id="cl-p4-sign"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🪑</span><span class="section-title">Seating Chart</span><span class="section-count" id="sc-p4-seating">0/0</span></div>
+    <div class="checklist" id="cl-p4-seating"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🔢</span><span class="section-title">Table Numbers</span><span class="section-count" id="sc-p4-tables">0/0</span></div>
+    <div class="checklist" id="cl-p4-tables"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🎀</span><span class="section-title">Stickers & Thank-You Card</span><span class="section-count" id="sc-p4-extras">0/0</span></div>
+    <div class="checklist" id="cl-p4-extras"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📱</span><span class="section-title">Social Media Graphics</span><span class="section-count" id="sc-p4-social">0/0</span></div>
+    <div class="checklist" id="cl-p4-social"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🎨</span><span class="section-title">Design Tasks</span><span class="section-count" id="sc-p4-design">0/0</span></div>
+    <div class="checklist" id="cl-p4-design"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📦</span><span class="section-title">Delivery Checklist</span><span class="section-count" id="sc-p4-delivery">0/0</span></div>
+    <div class="checklist" id="cl-p4-delivery"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">➕</span><span class="section-title">Add-Ons</span></div>
+    <div class="addon-grid" id="ao-p4"></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📝</span><span class="section-title">Project Notes</span></div>
+    <textarea class="notes-area" id="notes-p4" placeholder="Client preferences, revision notes, special requests..."></textarea>
+  </div>
+  <div class="actions">
+    <button class="action-btn btn-primary" onclick="saveProject('p4')">Save Project</button>
+    <button class="action-btn btn-secondary" onclick="resetChecklist('p4')">Reset Checklist</button>
+    <button class="action-btn btn-danger" onclick="clearProject('p4')">Clear All</button>
+  </div>
+</div>
+
+<!-- ══ SAVED PROJECTS ══ -->
+<div id="pane-projects" class="pkg-pane">
+  <div class="pkg-header">
+    <div>
+      <div class="pkg-title">Saved Projects</div>
+      <div class="pkg-desc">All your active and completed client projects. Click any project to load it back into its package checklist.</div>
+    </div>
+    <div>
+      <div class="pkg-price" id="projectCount" style="font-size:28px;">0</div>
+      <div class="pkg-delivery">total projects</div>
+    </div>
+  </div>
+  <div class="saved-list" id="savedList">
+    <div class="empty">No projects saved yet. Fill in a client checklist and click Save Project.</div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const CHECKLISTS = {
+  // PROGRAM STRUCTURE (used in P1, P2, P3, P4)
+  program_struct: [
+    {t:"Cover panel — couple names",n:"Large display typography"},
+    {t:"Cover panel — wedding date",n:"Written out or numeric"},
+    {t:"Cover panel — venue name",n:""},
+    {t:"Cover panel — ceremony time",n:"e.g. 10:00 AM"},
+    {t:"Cover panel — decorative elements",n:"Monogram, florals, or pattern"},
+    {t:"Inside — Order of Service",n:"Processional through Recessional"},
+    {t:"Inside — Prelude / guests seated",n:""},
+    {t:"Inside — Processional",n:"Bridal party entrance"},
+    {t:"Inside — Bride's entrance",n:""},
+    {t:"Inside — Opening prayer",n:""},
+    {t:"Inside — Welcome address",n:""},
+    {t:"Inside — Worship / hymn",n:"If applicable"},
+    {t:"Inside — Scripture reading",n:""},
+    {t:"Inside — Message / sermon",n:""},
+    {t:"Inside — Exchange of vows",n:""},
+    {t:"Inside — Exchange of rings",n:""},
+    {t:"Inside — Pronouncement",n:""},
+    {t:"Inside — First kiss",n:""},
+    {t:"Inside — Signing of register",n:"If applicable"},
+    {t:"Inside — Recessional",n:""},
+    {t:"Wedding party — Officiant",n:"Name and title"},
+    {t:"Wedding party — Parents of bride",n:""},
+    {t:"Wedding party — Parents of groom",n:""},
+    {t:"Wedding party — Best man",n:""},
+    {t:"Wedding party — Maid of honour",n:""},
+    {t:"Wedding party — Groomsmen",n:""},
+    {t:"Wedding party — Bridesmaids",n:""},
+    {t:"Wedding party — Flower girls / ring bearer",n:"If applicable"},
+    {t:"Wedding party — Ushers",n:""},
+    {t:"Back panel — Appreciation / thank-you note",n:""},
+    {t:"Back panel — Toast or Bible verse",n:""},
+    {t:"Back panel — Couple photo",n:"Optional but premium"},
+    {t:"Back panel — Memorial tribute",n:"If applicable"},
+  ],
+  // INVITATION STRUCTURE
+  invite_struct: [
+    {t:"Host line",n:"e.g. Together with their families"},
+    {t:"Couple names",n:"Bride first, groom second (traditional)"},
+    {t:"Request line",n:"e.g. invite you to join in the celebration"},
+    {t:"Wedding date — written in full",n:"e.g. Saturday, 6th December 2025"},
+    {t:"Ceremony time",n:"e.g. Ceremony begins at 10:00 AM"},
+    {t:"Venue name",n:""},
+    {t:"Venue address — full",n:""},
+    {t:"Reception line",n:"If reception is at different venue"},
+    {t:"RSVP details",n:"Date, phone or email"},
+    {t:"Dress code",n:"Optional but recommended"},
+    {t:"Wedding hashtag",n:"Optional"},
+    {t:"Wedding website",n:"Optional"},
+  ],
+  // WELCOME SIGN
+  sign_struct: [
+    {t:"Welcome heading",n:"e.g. Welcome to the wedding of"},
+    {t:"Couple names — large display",n:""},
+    {t:"Wedding date",n:""},
+    {t:"Venue name",n:""},
+    {t:"Decorative elements matching suite",n:""},
+    {t:"Size confirmed with client",n:"e.g. A1, A2, 24x36 inches"},
+  ],
+  // SEATING PLAN
+  seating_struct: [
+    {t:"Table count confirmed",n:""},
+    {t:"Guest list received from client",n:""},
+    {t:"Table names or numbers decided",n:""},
+    {t:"Layout format chosen",n:"Grid, alphabetical, or by table"},
+    {t:"Design matches suite aesthetic",n:""},
+    {t:"Size confirmed",n:""},
+  ],
+  // TABLE NUMBERS
+  table_struct: [
+    {t:"Number count confirmed",n:""},
+    {t:"Format decided",n:"Number, name, or theme"},
+    {t:"Design matches suite",n:""},
+    {t:"Print size confirmed",n:""},
+  ],
+  // STICKERS & THANK YOU
+  extras_struct: [
+    {t:"Sticker size confirmed",n:"e.g. 2 inch round"},
+    {t:"Sticker quantity confirmed",n:""},
+    {t:"Sticker design matches suite",n:""},
+    {t:"Thank-you card front designed",n:""},
+    {t:"Thank-you card message text received",n:""},
+    {t:"Thank-you card back designed",n:""},
+  ],
+  // SOCIAL MEDIA GRAPHICS
+  social_struct: [
+    {t:"Announcement graphic — square (1080x1080)",n:""},
+    {t:"Announcement graphic — story (1080x1920)",n:""},
+    {t:"Save the date graphic",n:"If needed"},
+    {t:"Countdown graphic",n:"Optional"},
+    {t:"Couple names and date confirmed for graphics",n:""},
+    {t:"Instagram handle included",n:""},
+  ],
+  // DESIGN TASKS (all packages)
+  design_tasks: [
+    {t:"Collect all client details",n:"Names, date, venue, colours, style"},
+    {t:"Confirm colour palette with client",n:"Get hex codes if possible"},
+    {t:"Confirm typography direction",n:"Serif, script, modern"},
+    {t:"Create first draft",n:""},
+    {t:"Internal review — check for typos",n:"Read every word carefully"},
+    {t:"Internal review — check alignment",n:""},
+    {t:"Internal review — check colour consistency",n:""},
+    {t:"Send first draft to client",n:""},
+    {t:"Receive revision notes",n:""},
+    {t:"Apply revisions",n:""},
+    {t:"Send revised version",n:""},
+    {t:"Final approval received from client",n:""},
+  ],
+  // DELIVERY
+  delivery_tasks: [
+    {t:"Export as print-ready PDF",n:"300 DPI minimum, CMYK if possible"},
+    {t:"Export as digital sharing version",n:"RGB, compressed for sharing"},
+    {t:"File naming — clear and professional",n:"e.g. MaryKingsley_Program_Final.pdf"},
+    {t:"Final proofread before sending",n:"One last check"},
+    {t:"Send files to client",n:""},
+    {t:"Confirm client received and is happy",n:""},
+    {t:"Request testimonial",n:"After they confirm satisfaction"},
+    {t:"Request referral",n:"If they're happy"},
+    {t:"Collect final balance payment",n:"Remaining 50%"},
+    {t:"Update project status to Paid in Full",n:""},
+    {t:"Save to portfolio if client permits",n:""},
+  ],
+};
+
+const ADDONS = [
+  {t:"Extra revision round",p:"$15"},
+  {t:"Rush delivery — 24hrs",p:"$30"},
+  {t:"Additional stationery item",p:"$35"},
+];
+
+// ── PACKAGE CONFIG ────────────────────────────────────────────────────────
+const PKG_SECTIONS = {
+  p1: [
+    {id:'struct', title:'', el:'cl-p1-struct', data:'program_struct'},
+    {id:'design', title:'', el:'cl-p1-design', data:'design_tasks'},
+    {id:'delivery',title:'', el:'cl-p1-delivery',data:'delivery_tasks'},
+  ],
+  p2: [
+    {id:'invite', el:'cl-p2-invite',  data:'invite_struct'},
+    {id:'program',el:'cl-p2-program', data:'program_struct'},
+    {id:'design', el:'cl-p2-design',  data:'design_tasks'},
+    {id:'delivery',el:'cl-p2-delivery',data:'delivery_tasks'},
+  ],
+  p3: [
+    {id:'invite', el:'cl-p3-invite',  data:'invite_struct'},
+    {id:'program',el:'cl-p3-program', data:'program_struct'},
+    {id:'sign',   el:'cl-p3-sign',    data:'sign_struct'},
+    {id:'seating',el:'cl-p3-seating', data:'seating_struct'},
+    {id:'extras', el:'cl-p3-extras',  data:'extras_struct'},
+    {id:'design', el:'cl-p3-design',  data:'design_tasks'},
+    {id:'delivery',el:'cl-p3-delivery',data:'delivery_tasks'},
+  ],
+  p4: [
+    {id:'invite', el:'cl-p4-invite',  data:'invite_struct'},
+    {id:'program',el:'cl-p4-program', data:'program_struct'},
+    {id:'sign',   el:'cl-p4-sign',    data:'sign_struct'},
+    {id:'seating',el:'cl-p4-seating', data:'seating_struct'},
+    {id:'tables', el:'cl-p4-tables',  data:'table_struct'},
+    {id:'extras', el:'cl-p4-extras',  data:'extras_struct'},
+    {id:'social', el:'cl-p4-social',  data:'social_struct'},
+    {id:'design', el:'cl-p4-design',  data:'design_tasks'},
+    {id:'delivery',el:'cl-p4-delivery',data:'delivery_tasks'},
+  ],
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let state = JSON.parse(localStorage.getItem('dc_checklist_state') || '{}');
+let projects = JSON.parse(localStorage.getItem('dc_projects') || '[]');
+
+function save() { localStorage.setItem('dc_checklist_state', JSON.stringify(state)); }
+
+// ── RENDER CHECKLISTS ─────────────────────────────────────────────────────
+function renderAll() {
+  ['p1','p2','p3','p4'].forEach(pkg => {
+    PKG_SECTIONS[pkg].forEach(sec => {
+      const items = CHECKLISTS[sec.data];
+      const el = document.getElementById(sec.el);
+      if (!el) return;
+      el.innerHTML = items.map((item,i) => {
+        const key = `${pkg}-${sec.id}-${i}`;
+        const checked = state[key] || false;
+        return `<div class="check-item ${checked?'checked':''}" onclick="toggle('${key}','${pkg}')">
+          <div class="tick ${checked?'on':''}"></div>
+          <div><div class="check-label">${item.t}</div>${item.n?`<div class="check-note">${item.n}</div>`:''}</div>
+        </div>`;
+      }).join('');
+      updateCount(pkg, sec.id, items.length);
+    });
+    renderAddons(pkg);
+    updatePkgProgress(pkg);
+  });
+  updateGlobal();
+}
+
+function toggle(key, pkg) {
+  state[key] = !state[key];
+  save();
+  renderAll();
+}
+
+function updateCount(pkg, secId, total) {
+  const el = document.getElementById(`sc-${pkg}-${secId}`);
+  if (!el) return;
+  const done = PKG_SECTIONS[pkg].find(s=>s.id===secId);
+  if (!done) return;
+  const items = CHECKLISTS[done.data];
+  const count = items.filter((_,i) => state[`${pkg}-${secId}-${i}`]).length;
+  el.textContent = `${count}/${total}`;
+}
+
+function updatePkgProgress(pkg) {
+  const secs = PKG_SECTIONS[pkg];
+  let total = 0, done = 0;
+  secs.forEach(sec => {
+    const items = CHECKLISTS[sec.data];
+    total += items.length;
+    done += items.filter((_,i) => state[`${pkg}-${sec.id}-${i}`]).length;
+  });
+  const pct = total ? Math.round((done/total)*100) : 0;
+  const bar = document.getElementById(`bar-${pkg}`);
+  const txt = document.getElementById(`txt-${pkg}`);
+  if (bar) bar.style.width = pct + '%';
+  if (txt) txt.textContent = `${done} of ${total} complete — ${pct}%`;
+}
+
+function updateGlobal() {
+  const keys = Object.keys(state);
+  const done = keys.filter(k => state[k]).length;
+  document.getElementById('globalProgress').textContent = `${done}/${keys.length}`;
+}
+
+function renderAddons(pkg) {
+  const el = document.getElementById(`ao-${pkg}`);
+  if (!el) return;
+  el.innerHTML = ADDONS.map((a,i) => {
+    const key = `${pkg}-addon-${i}`;
+    const checked = state[key] || false;
+    return `<div class="addon-item ${checked?'checked':''}" onclick="toggleAddon('${key}','${pkg}')">
+      <div class="tick ${checked?'on':''}"></div>
+      <span style="font-size:10.5px;color:var(--dark)">${a.t}</span>
+      <span class="addon-price">${a.p}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleAddon(key, pkg) {
+  state[key] = !state[key];
+  save();
+  renderAddons(pkg);
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+function switchPkg(name) {
+  document.querySelectorAll('.pkg-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.pkg-pane').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(`pane-${name}`).classList.add('active');
+  if (name === 'projects') renderProjects();
+}
+
+// ── STATUS ────────────────────────────────────────────────────────────────
+function setStatus(pkg, status) {
+  document.querySelectorAll(`#status-${pkg} .status-btn`).forEach(b => {
+    b.classList.toggle('active-status', b.textContent.trim().startsWith(status));
+  });
+  state[`${pkg}-status`] = status;
+  save();
+}
+
+// ── SAVE / LOAD PROJECT ───────────────────────────────────────────────────
+function saveProject(pkg) {
+  const names = document.getElementById(`${pkg}-names`)?.value || 'Unnamed Client';
+  const date  = document.getElementById(`${pkg}-date`)?.value  || '';
+  const notes = document.getElementById(`notes-${pkg}`)?.value || '';
+  const status = state[`${pkg}-status`] || 'New';
+  const pkgNames = {p1:'$49 Program',p2:'$149 Suite',p3:'$349 Collection',p4:'$650 Experience'};
+
+  const secs = PKG_SECTIONS[pkg];
+  let total=0, done=0;
+  secs.forEach(sec => {
+    const items = CHECKLISTS[sec.data];
+    total += items.length;
+    done += items.filter((_,i) => state[`${pkg}-${sec.id}-${i}`]).length;
+  });
+
+  const project = {
+    id: Date.now(),
+    pkg, names, date, notes, status,
+    pkgName: pkgNames[pkg],
+    progress: `${done}/${total}`,
+    savedState: JSON.parse(JSON.stringify(state)),
+    savedAt: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+  };
+
+  projects = projects.filter(p => !(p.pkg===pkg && p.names===names));
+  projects.unshift(project);
+  localStorage.setItem('dc_projects', JSON.stringify(projects));
+  alert(`✓ Project saved: ${names}`);
+  renderProjects();
+}
+
+function renderProjects() {
+  const list = document.getElementById('savedList');
+  const count = document.getElementById('projectCount');
+  if (count) count.textContent = projects.length;
+  if (!projects.length) {
+    list.innerHTML = '<div class="empty">No projects saved yet. Fill in a client checklist and click Save Project.</div>';
+    return;
+  }
+  const statusCls = {
+    'New':'s-new','In Progress':'s-progress',
+    'Delivered':'s-delivered','Paid in Full':'s-paid','Revision':'s-progress'
+  };
+  list.innerHTML = projects.map(p => `
+    <div class="saved-item" onclick="loadProject(${p.id})">
+      <div>
+        <div class="saved-name">${p.names}</div>
+        <div class="saved-meta">${p.pkgName} · ${p.date||'No date'} · ${p.progress} tasks · Saved ${p.savedAt}</div>
+      </div>
+      <span class="saved-status ${statusCls[p.status]||'s-new'}">${p.status}</span>
+    </div>`).join('');
+}
+
+function loadProject(id) {
+  const p = projects.find(x=>x.id===id);
+  if (!p) return;
+  Object.assign(state, p.savedState);
+  save();
+  const inp = (fid,val) => { const el=document.getElementById(fid); if(el) el.value=val||''; };
+  inp(`${p.pkg}-names`,p.names);
+  inp(`${p.pkg}-date`,p.date);
+  inp(`notes-${p.pkg}`,p.notes);
+  setStatus(p.pkg, p.status);
+  switchPkg(p.pkg);
+  document.querySelector(`.pkg-tab[onclick="switchPkg('${p.pkg}')"]`)?.click();
+  renderAll();
+}
+
+function resetChecklist(pkg) {
+  if (!confirm('Reset all checkboxes for this package? Client details will be kept.')) return;
+  PKG_SECTIONS[pkg].forEach(sec => {
+    CHECKLISTS[sec.data].forEach((_,i) => { delete state[`${pkg}-${sec.id}-${i}`]; });
+  });
+  ADDONS.forEach((_,i) => { delete state[`${pkg}-addon-${i}`]; });
+  save(); renderAll();
+}
+
+function clearProject(pkg) {
+  if (!confirm('Clear all data for this package including client details?')) return;
+  PKG_SECTIONS[pkg].forEach(sec => {
+    CHECKLISTS[sec.data].forEach((_,i) => { delete state[`${pkg}-${sec.id}-${i}`]; });
+  });
+  ADDONS.forEach((_,i) => { delete state[`${pkg}-addon-${i}`]; });
+  delete state[`${pkg}-status`];
+  ['names','date','colours','style','venue','guests','tables','ig','dress','deposit','panels'].forEach(f => {
+    const el = document.getElementById(`${pkg}-${f}`); if(el) el.value='';
+  });
+  const notes = document.getElementById(`notes-${pkg}`); if(notes) notes.value='';
+  save(); renderAll();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+renderAll();
+renderProjects();
+</script>
+</body>
+</html>

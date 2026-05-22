@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPE 314 - Code Practice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .progress {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .question-card {
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            background: #f9f9ff;
+        }
+
+        .question-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .question-text {
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .code-input {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            line-height: 1.5;
+        }
+
+        .text-input {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            font-family: inherit;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+        }
+
+        .code-input:focus, .text-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .check-btn {
+            background: #667eea;
+            color: white;
+            flex: 1;
+        }
+
+        .check-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .next-btn {
+            background: #28a745;
+            color: white;
+            flex: 1;
+        }
+
+        .next-btn:hover {
+            background: #218838;
+        }
+
+        .show-btn {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .show-btn:hover {
+            background: #e0a800;
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .feedback.show {
+            display: block;
+        }
+
+        .feedback.correct {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+
+        .feedback.partial {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+        }
+
+        .feedback.wrong {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+
+        .comparison {
+            margin-top: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+        }
+
+        .line-compare {
+            display: flex;
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .line-compare.correct {
+            background: #d4edda;
+        }
+
+        .line-compare.wrong {
+            background: #f8d7da;
+        }
+
+        .line-number {
+            width: 40px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .line-content {
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .correct-answer {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e7f3ff;
+            border: 2px solid #0066cc;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .correct-answer.show {
+            display: block;
+        }
+
+        .correct-answer pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        .score-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .final-results {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .final-results.show {
+            display: block;
+        }
+
+        .final-score {
+            font-size: 72px;
+            font-weight: bold;
+            color: #28a745;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CPE 314 - Interactive Code Practice</h1>
+        <div class="subtitle">Type the code and check your answer line-by-line!</div>
+
+        <div class="progress">
+            Question <span id="currentQ">1</span> of <span id="totalQ">15</span> | 
+            Score: <span class="score-display" id="score">0</span>/<span id="maxScore">0</span>
+        </div>
+
+        <div id="questionContainer"></div>
+
+        <div class="final-results" id="finalResults">
+            <h2>🎉 Practice Complete!</h2>
+            <div class="final-score" id="finalScore">0%</div>
+            <p style="font-size: 18px; margin: 20px 0;">You've completed all questions!</p>
+            <button onclick="location.reload()" style="background: #667eea; color: white; padding: 15px 40px; font-size: 18px;">
+                Practice Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                type: "code",
+                title: "Question 1: Basic HTML Structure",
+                question: "Write the basic HTML5 structure with DOCTYPE, html, head (with title 'My Page'), and body tags.",
+                answer: `<!DOCTYPE html>
+<html>
+<head>
+    <title>My Page</title>
+</head>
+<body>
+</body>
+</html>`
+            },
+            {
+                type: "theory",
+                title: "Question 2: Semantic Elements",
+                question: "Define HTML semantic elements and give TWO examples with their purpose.",
+                answer: "Semantic elements clearly describe their meaning to both browser and developer. Examples: <header> represents introductory content or navigation, <nav> defines navigation links, <main> represents main content, <article> represents self-contained content."
+            },
+            {
+                type: "code",
+                title: "Question 3: Registration Form",
+                question: "Create a form with id='regForm' containing: Name input (id='name'), Email input (id='email'), Password input (id='password'), and a Submit button.",
+                answer: `<form id="regForm">
+    <label>Name:</label>
+    <input type="text" id="name"><br>
+    <label>Email:</label>
+    <input type="email" id="email"><br>
+    <label>Password:</label>
+    <input type="password" id="password"><br>
+    <button type="submit">Submit</button>
+</form>`
+            },
+            {
+                type: "theory",
+                title: "Question 4: id vs class",
+                question: "Explain the difference between id and class attributes in HTML. Include how to select them in CSS.",
+                answer: "id is a unique identifier used once per page, selected with # in CSS (e.g., #myId). class can be used multiple times, selected with . in CSS (e.g., .myClass). id has higher specificity than class."
+            },
+            {
+                type: "code",
+                title: "Question 5: CSS Flexbox Container",
+                question: "Write CSS for a class .container that uses flexbox with: display flex, min-height 400px, and makes the first child take 3 parts and second child take 1 part of space.",
+                answer: `.container {
+    display: flex;
+    min-height: 400px;
+}
+.container > :first-child {
+    flex: 3;
+}
+.container > :last-child {
+    flex: 1;
+}`
+            },
+            {
+                type: "theory",
+                title: "Question 6: CSS Box Model",
+                question: "Explain the CSS Box Model and list its components from inside to outside.",
+                answer: "The CSS Box Model consists of (from inside out): 1. Content - actual content like text/images, 2. Padding - space between content and border, 3. Border - border around padding, 4. Margin - space outside border."
+            },
+            {
+                type: "code",
+                title: "Question 7: JavaScript Form Validation",
+                question: "Write JavaScript to get an element with id 'email', check if its value is empty, and alert 'Email required!' if empty.",
+                answer: `let email = document.getElementById('email').value;
+if (email === '') {
+    alert('Email required!');
+}`
+            },
+            {
+                type: "theory",
+                title: "Question 8: display none vs visibility hidden",
+                question: "Explain the difference between display: none and visibility: hidden in CSS.",
+                answer: "display: none completely removes element from layout and takes no space. visibility: hidden makes element invisible but it still takes up space in the layout."
+            },
+            {
+                type: "code",
+                title: "Question 9: JavaScript Event Listener",
+                question: "Write JavaScript to add a click event listener to an element with id 'btn' that shows an alert saying 'Button clicked!'.",
+                answer: `document.getElementById('btn').addEventListener('click', function() {
+    alert('Button clicked!');
+});`
+            },
+            {
+                type: "theory",
+                title: "Question 10: let, var, const",
+                question: "Explain the differences between let, var, and const in JavaScript.",
+                answer: "var is function-scoped, can be redeclared, hoisted (old way). let is block-scoped, cannot be redeclared, can be reassigned (modern way). const is block-scoped, cannot be reassigned, must be initialized (for constants)."
+            },
+            {
+                type: "code",
+                title: "Question 11: Email Validation Regex",
+                question: "Write JavaScript to validate email format using regex pattern. Store pattern in variable emailPattern and test it against variable email.",
+                answer: `let emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+if (!emailPattern.test(email)) {
+    alert('Invalid email!');
+}`
+            },
+            {
+                type: "theory",
+                title: "Question 12: What is the DOM?",
+                question: "Explain what the DOM (Document Object Model) is and give one example of DOM manipulation.",
+                answer: "DOM is the programming interface for HTML/XML documents. It represents the page as a tree of objects. Each HTML element is a node. Example: document.getElementById('myId').textContent = 'Hello' changes text content."
+            },
+            {
+                type: "code",
+                title: "Question 13: Password Length Validation",
+                question: "Write JavaScript to check if a password (stored in variable password) has length >= 6. Alert 'Password too short!' if less than 6.",
+                answer: `if (password.length < 6) {
+    alert('Password too short!');
+}`
+            },
+            {
+                type: "theory",
+                title: "Question 14: == vs ===",
+                question: "Explain the difference between == and === in JavaScript with examples.",
+                answer: "== (loose equality) compares value only and performs type coercion (5 == '5' is true). === (strict equality) compares value AND type without coercion (5 === '5' is false, 5 === 5 is true). Always use === for safer comparisons."
+            },
+            {
+                type: "theory",
+                title: "Question 15: Responsive Design",
+                question: "What is responsive design? Give one technique used to implement it.",
+                answer: "Responsive design is an approach where webpage adapts to different screen sizes (mobile, tablet, desktop). Techniques include: media queries (@media (max-width: 768px)), flexible layouts (Flexbox, Grid), flexible images (max-width: 100%), and viewport meta tag."
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+
+        function normalizeCode(code) {
+            return code
+                .trim()
+                .replace(/\s+/g, ' ')
+                .replace(/\s*([{}();:,<>])\s*/g, '$1')
+                .toLowerCase();
+        }
+
+        function compareLines(userAnswer, correctAnswer) {
+            const userLines = userAnswer.split('\n').map(line => line.trim()).filter(line => line);
+            const correctLines = correctAnswer.split('\n').map(line => line.trim()).filter(line => line);
+            
+            let matches = 0;
+            const comparison = [];
+            const maxLines = Math.max(userLines.length, correctLines.length);
+            
+            for (let i = 0; i < maxLines; i++) {
+                const userLine = userLines[i] || '';
+                const correctLine = correctLines[i] || '';
+                const isCorrect = normalizeCode(userLine) === normalizeCode(correctLine);
+                
+                if (isCorrect && userLine) matches++;
+                
+                comparison.push({
+                    lineNum: i + 1,
+                    userLine: userLine,
+                    correctLine: correctLine,
+                    isCorrect: isCorrect
+                });
+            }
+            
+            return {
+                matches: matches,
+                total: correctLines.length,
+                percentage: correctLines.length > 0 ? (matches / correctLines.length * 100) : 0,
+                comparison: comparison
+            };
+        }
+
+        function displayQuestion() {
+            const q = questions[currentQuestion];
+            const container = document.getElementById('questionContainer');
+            
+            document.getElementById('currentQ').textContent = currentQuestion + 1;
+            document.getElementById('totalQ').textContent = questions.length;
+            document.getElementById('maxScore').textContent = questions.length;
+            
+            const inputType = q.type === 'code' ? 'code-input' : 'text-input';
+            
+            container.innerHTML = `
+                <div class="question-card">
+                    <div class="question-title">${q.title}</div>
+                    <div class="question-text">${q.question}</div>
+                    <textarea class="${inputType}" id="userAnswer" placeholder="${q.type === 'code' ? 'Type your code here...' : 'Type your answer here...'}"></textarea>
+                    
+                    <div class="button-group">
+                        <button class="check-btn" onclick="checkAnswer()">✓ Check Answer</button>
+                        <button class="show-btn" onclick="showAnswer()">👁️ Show Answer</button>
+                    </div>
+                    
+                    <div class="feedback" id="feedback"></div>
+                    <div class="correct-answer" id="correctAnswer">
+                        <strong>📝 Correct Answer:</strong>
+                        <pre>${q.answer}</pre>
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 20px;">
+                        <button class="next-btn" onclick="nextQuestion()">Next Question →</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function checkAnswer() {
+            const q = questions[currentQuestion];
+            const userAnswer = document.getElementById('userAnswer').value;
+            const feedback = document.getElementById('feedback');
+            
+            if (!userAnswer.trim()) {
+                feedback.className = 'feedback wrong show';
+                feedback.innerHTML = '❌ Please type an answer first!';
+                return;
+            }
+            
+            if (q.type === 'code') {
+                const result = compareLines(userAnswer, q.answer);
+                
+                let comparisonHTML = '<div class="comparison"><strong>Line-by-Line Comparison:</strong><br>';
+                result.comparison.forEach(line => {
+                    if (line.userLine || line.correctLine) {
+                        comparisonHTML += `
+                            <div class="line-compare ${line.isCorrect ? 'correct' : 'wrong'}">
+                                <span class="line-number">${line.lineNum}</span>
+                                <span class="line-content">${line.userLine || '(empty)'}</span>
+                            </div>
+                        `;
+                    }
+                });
+                comparisonHTML += '</div>';
+                
+                if (result.percentage === 100) {
+                    feedback.className = 'feedback correct show';
+                    feedback.innerHTML = `🎉 Perfect! All lines correct! (${result.matches}/${result.total})` + comparisonHTML;
+                    score++;
+                    document.getElementById('score').textContent = score;
+                } else if (result.percentage >= 50) {
+                    feedback.className = 'feedback partial show';
+                    feedback.innerHTML = `⚠️ Partially correct: ${result.matches}/${result.total} lines (${result.percentage.toFixed(0)}%)` + comparisonHTML;
+                } else {
+                    feedback.className = 'feedback wrong show';
+                    feedback.innerHTML = `❌ Needs work: ${result.matches}/${result.total} lines correct` + comparisonHTML;
+                }
+            } else {
+                const normalized1 = normalizeCode(userAnswer);
+                const normalized2 = normalizeCode(q.answer);
+                const similarity = normalized1.includes(normalized2.substring(0, 20)) || normalized2.includes(normalized1.substring(0, 20));
+                
+                if (similarity || normalized1 === normalized2) {
+                    feedback.className = 'feedback correct show';
+                    feedback.innerHTML = '✅ Correct! Good explanation!';
+                    score++;
+                    document.getElementById('score').textContent = score;
+                } else {
+                    feedback.className = 'feedback partial show';
+                    feedback.innerHTML = '⚠️ Your answer is close but check the correct answer for complete information.';
+                }
+            }
+        }
+
+        function showAnswer() {
+            document.getElementById('correctAnswer').classList.add('show');
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            
+            if (currentQuestion >= questions.length) {
+                showFinalResults();
+            } else {
+                displayQuestion();
+            }
+        }
+
+        function showFinalResults() {
+            document.getElementById('questionContainer').style.display = 'none';
+            document.querySelector('.progress').style.display = 'none';
+            
+            const finalResults = document.getElementById('finalResults');
+            const percentage = (score / questions.length * 100).toFixed(0);
+            
+            finalResults.classList.add('show');
+            document.getElementById('finalScore').textContent = percentage + '%';
+            document.getElementById('finalScore').innerHTML = `
+                ${score}/${questions.length}<br>
+                <span style="font-size: 36px;">${percentage}%</span>
+            `;
+        }
+
+        // Start
+        window.onload = function() {
+            displayQuestion();
+        };
+    </script>
+</body>
+</html>

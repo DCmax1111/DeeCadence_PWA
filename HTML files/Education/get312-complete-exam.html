@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GET 312 - Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            overflow: visible;
+        }
+
+        .header {
+            background: #2a5298;
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 4px solid #1e3c72;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header .course-info {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .timer-section {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .timer {
+            font-size: 48px;
+            font-weight: bold;
+            color: #2a5298;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
+        }
+
+        .timer.warning {
+            color: #ff6b6b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .timer-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            color: #2a5298;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #2a5298;
+            font-weight: 600;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .question-block {
+            margin-bottom: 35px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #2a5298;
+        }
+
+        .question-number {
+            font-weight: bold;
+            color: #2a5298;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .question-text {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .options {
+            margin-left: 20px;
+        }
+
+        .option {
+            display: block;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option:hover {
+            border-color: #2a5298;
+            background: #f0f4ff;
+        }
+
+        .option input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .option label {
+            cursor: pointer;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .option.correct {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .option.wrong {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+
+        .option.correct::before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .option.wrong::before {
+            content: "✗ ";
+            color: #dc3545;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .theory-answer {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Georgia', serif;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        .theory-answer:focus {
+            outline: none;
+            border-color: #2a5298;
+            background: #f0f4ff;
+        }
+
+        .theory-counter {
+            position: sticky;
+            top: 90px;
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            z-index: 999;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .theory-counter.valid {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .theory-counter.invalid {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .marks-info {
+            color: #666;
+            font-size: 13px;
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        .submit-btn {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            display: block;
+            margin: 40px auto;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(42, 82, 152, 0.3);
+        }
+
+        .submit-btn:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(42, 82, 152, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .results {
+            display: none;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 30px;
+            border: 3px solid #2a5298;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h2 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .score-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #2a5298;
+            text-align: center;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .result-details {
+            font-size: 16px;
+            line-height: 2;
+            color: #333;
+        }
+
+        .warning-message {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .timer-section, .submit-btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>STUDY ASSASSINS</h1>
+            <h1>GET 312: Engineering Statistics</h1>
+                <div class="course-info">
+                <div>UNIVERSITY OF UYO, UYO</div>
+                <div>FACULTY OF ENGINEERING - DEPARTMENT OF COMPUTER ENGINEERING</div>
+                <div>SESSION: 2025/2026 | SEMESTER: FIRST</div>
+            </div>
+        </div>
+
+        <div class="timer-section">
+            <div class="timer" id="timer">02:00:00</div>
+            <div class="timer-label">Time Remaining</div>
+        </div>
+
+        <div class="content" id="examContent">
+            <div class="section-title">SECTION A: OBJECTIVE QUESTIONS (30 Marks)</div>
+            <div class="instructions">
+                <strong>INSTRUCTION:</strong> Answer ALL questions in this section. Choose the correct option for each question.
+            </div>
+
+            <div id="objectiveQuestions"></div>
+
+            <div class="section-title" style="margin-top: 50px;">SECTION B: THEORY QUESTIONS (70 Marks)</div>
+            <div class="instructions">
+                <strong>INSTRUCTION:</strong> Answer QUESTION ONE and ANY OTHER THREE QUESTIONS. Submit your question paper at the end of the examination.<br>
+                <strong>NOTE:</strong> For questions requiring diagrams, sketches, or flowcharts, you may draw them on your answer sheet/notebook.
+            </div>
+
+            <div class="theory-counter" id="theoryCounter">
+                📝 Questions answered: <span id="questionCount">0</span> / 4 (Q1 + any 3 others)
+            </div>
+
+            <div id="theoryQuestions"></div>
+
+            <button class="submit-btn" onclick="submitExam()">SUBMIT EXAM</button>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const EXAM_CONFIG = {
+            title: "GET 312: Engineering Statistics - Complete Exam",
+            session: "2025/2026",
+            semester: "FIRST",
+            duration: 120,
+            objectiveMarks: 30,
+            theoryMarks: 70
+        };
+
+        const objectiveQuestions = [
+        {
+                "question": "Descriptive statistics is used to:",
+                "options": [
+                        "A. Make predictions about future data",
+                        "B. Summarize and describe data features",
+                        "C. Test hypotheses",
+                        "D. Calculate probabilities"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Which is a measure of central tendency?",
+                "options": [
+                        "A. Range",
+                        "B. Variance",
+                        "C. Median",
+                        "D. Standard deviation"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "A population parameter is denoted by:",
+                "options": [
+                        "A. x-bar",
+                        "B. Greek letters like \u03bc",
+                        "C. s",
+                        "D. n"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "A sample statistic is denoted by:",
+                "options": [
+                        "A. \u03bc",
+                        "B. \u03c3",
+                        "C. x-bar",
+                        "D. \u03b8"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "The 75th percentile is also called:",
+                "options": [
+                        "A. Q1",
+                        "B. Q2",
+                        "C. Q3",
+                        "D. Q4"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "IQR is calculated as:",
+                "options": [
+                        "A. Q3 + Q1",
+                        "B. Q3 - Q1",
+                        "C. Q3 / Q1",
+                        "D. Q3 \u00d7 Q1"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Standard deviation is the square root of:",
+                "options": [
+                        "A. Mean",
+                        "B. Median",
+                        "C. Variance",
+                        "D. Range"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "In sample variance, we divide by (n-1) to get:",
+                "options": [
+                        "A. Biased estimate",
+                        "B. Unbiased estimate",
+                        "C. Larger value",
+                        "D. Smaller value"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Probability values range from:",
+                "options": [
+                        "A. -1 to 1",
+                        "B. 0 to 1",
+                        "C. 0 to 100",
+                        "D. Any real number"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "In binomial distribution, each trial has:",
+                "options": [
+                        "A. Multiple outcomes",
+                        "B. Two outcomes (success/failure)",
+                        "C. Continuous outcomes",
+                        "D. No outcomes"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "The normal distribution is:",
+                "options": [
+                        "A. Skewed left",
+                        "B. Skewed right",
+                        "C. Symmetric and bell-shaped",
+                        "D. Uniform"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "A z-score tells you:",
+                "options": [
+                        "A. The mean value",
+                        "B. How many standard deviations from mean",
+                        "C. The variance",
+                        "D. The range"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Pearson correlation measures:",
+                "options": [
+                        "A. Non-linear relationships",
+                        "B. Linear relationships",
+                        "C. Causal relationships",
+                        "D. No relationships"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Spearman correlation is used for:",
+                "options": [
+                        "A. Only linear data",
+                        "B. Rank-based or monotonic data",
+                        "C. Nominal data",
+                        "D. Time series only"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Correlation coefficient r ranges from:",
+                "options": [
+                        "A. 0 to 1",
+                        "B. -1 to 0",
+                        "C. -1 to 1",
+                        "D. -\u221e to +\u221e"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "If r = -0.9, the relationship is:",
+                "options": [
+                        "A. Weak positive",
+                        "B. Strong positive",
+                        "C. Weak negative",
+                        "D. Strong negative"
+                ],
+                "correctAnswer": "D"
+        },
+        {
+                "question": "In regression Y = a + bX, b represents:",
+                "options": [
+                        "A. Y-intercept",
+                        "B. Slope",
+                        "C. Correlation",
+                        "D. Mean of Y"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "The intercept 'a' in regression is:",
+                "options": [
+                        "A. Slope",
+                        "B. Value of Y when X = 0",
+                        "C. Mean of X",
+                        "D. Correlation coefficient"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Data Analytics focuses on:",
+                "options": [
+                        "A. Hardware infrastructure",
+                        "B. Analyzing data to extract insights",
+                        "C. Internet connectivity",
+                        "D. Operating systems"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Cloud Computing provides:",
+                "options": [
+                        "A. Data analysis tools only",
+                        "B. Computing resources over internet",
+                        "C. Statistical methods only",
+                        "D. Local storage only"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Python library for statistical functions is:",
+                "options": [
+                        "A. pandas",
+                        "B. matplotlib",
+                        "C. scipy",
+                        "D. numpy only"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "To calculate mean in pandas:",
+                "options": [
+                        "A. df.average()",
+                        "B. df[\"col\"].mean()",
+                        "C. mean(df)",
+                        "D. df.calc_mean()"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Finite population has:",
+                "options": [
+                        "A. Unlimited size",
+                        "B. Fixed, countable size",
+                        "C. Unknown size",
+                        "D. Infinite members"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Random sampling means:",
+                "options": [
+                        "A. Pick first n members",
+                        "B. Each member has equal selection chance",
+                        "C. Pick every 5th member",
+                        "D. Divide into groups first"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Type I error occurs when:",
+                "options": [
+                        "A. H0 is true and we reject it",
+                        "B. H0 is false and we reject it",
+                        "C. H0 is true and we accept it",
+                        "D. H0 is false and we accept it"
+                ],
+                "correctAnswer": "A"
+        },
+        {
+                "question": "The median is most resistant to:",
+                "options": [
+                        "A. Small datasets",
+                        "B. Outliers",
+                        "C. Normal distributions",
+                        "D. Large datasets"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "In Python, to import numpy:",
+                "options": [
+                        "A. import numpy as np",
+                        "B. include numpy",
+                        "C. using numpy",
+                        "D. load numpy"
+                ],
+                "correctAnswer": "A"
+        },
+        {
+                "question": "Standard deviation measures:",
+                "options": [
+                        "A. Central location",
+                        "B. Spread of data",
+                        "C. Skewness",
+                        "D. Kurtosis"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "The mean of a binomial distribution is:",
+                "options": [
+                        "A. np",
+                        "B. n + p",
+                        "C. n - p",
+                        "D. n / p"
+                ],
+                "correctAnswer": "A"
+        },
+        {
+                "question": "68% of data in normal distribution falls within:",
+                "options": [
+                        "A. \u03bc \u00b1 2\u03c3",
+                        "B. \u03bc \u00b1 1\u03c3",
+                        "C. \u03bc \u00b1 3\u03c3",
+                        "D. \u03bc only"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Regression is used to:",
+                "options": [
+                        "A. Only describe relationships",
+                        "B. Predict one variable from another",
+                        "C. Test hypotheses only",
+                        "D. Calculate correlation only"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "In stratified sampling, the population is:",
+                "options": [
+                        "A. Selected randomly",
+                        "B. Divided into groups, sample from each",
+                        "C. Ordered systematically",
+                        "D. Kept as whole"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Q2 is the same as:",
+                "options": [
+                        "A. Mean",
+                        "B. Mode",
+                        "C. Median",
+                        "D. Range"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "Variance is measured in:",
+                "options": [
+                        "A. Same units as data",
+                        "B. Squared units of data",
+                        "C. No units",
+                        "D. Percentage"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "To calculate correlation in pandas:",
+                "options": [
+                        "A. df.correlation()",
+                        "B. df.corr()",
+                        "C. corr(df)",
+                        "D. df.relate()"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "AWS and Azure are examples of:",
+                "options": [
+                        "A. Data analytics tools",
+                        "B. Cloud computing platforms",
+                        "C. Statistical software",
+                        "D. Python libraries"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "The symbol \u03c1 (rho) represents:",
+                "options": [
+                        "A. Pearson correlation",
+                        "B. Spearman correlation",
+                        "C. Population mean",
+                        "D. Sample proportion"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Central Limit Theorem requires sample size:",
+                "options": [
+                        "A. n < 10",
+                        "B. n = 20",
+                        "C. n \u2265 30",
+                        "D. n = 100 exactly"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "In hypothesis testing, \u03b1 represents:",
+                "options": [
+                        "A. Population mean",
+                        "B. Sample mean",
+                        "C. Significance level",
+                        "D. Standard deviation"
+                ],
+                "correctAnswer": "C"
+        },
+        {
+                "question": "The purpose of descriptive statistics is to:",
+                "options": [
+                        "A. Make inferences about population",
+                        "B. Organize and summarize data",
+                        "C. Test hypotheses",
+                        "D. Predict future values"
+                ],
+                "correctAnswer": "B"
+        },
+        {
+                "question": "Which measure is NOT affected by extreme values?",
+                "options": [
+                        "A. Mean",
+                        "B. Median",
+                        "C. Variance",
+                        "D. Standard deviation"
+                ],
+                "correctAnswer": "B"
+        }
+];
+
+        const theoryQuestions = [
+        {
+                "questionNumber": "ONE",
+                "isCompulsory": true,
+                "marks": 35,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Define population and sample. Give one example of each. What is the difference between a parameter and a statistic?",
+                                "marks": 5
+                        },
+                        {
+                                "label": "b.",
+                                "text": "List and briefly explain THREE real-world applications of descriptive statistics in different fields (e.g., business, healthcare, education).",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "Given data: 15, 18, 20, 22, 25, 28, 30. Calculate: (i) Mean (ii) Variance (iii) Standard deviation. Show all working.",
+                                "marks": 8
+                        },
+                        {
+                                "label": "d.",
+                                "text": "For the dataset: 10, 15, 20, 25, 30, 35, 40. Find: (i) Q1 (ii) Q3 (iii) IQR (iv) Identify if 50 would be an outlier using 1.5\u00d7IQR rule. Show all steps.",
+                                "marks": 8
+                        },
+                        {
+                                "label": "e.",
+                                "text": "Write Python code (max 4 lines per part) to: (i) Import pandas and calculate mean of a column (ii) Import scipy and calculate binomial probability P(X=2) for n=5, p=0.3",
+                                "marks": 8
+                        }
+                ]
+        },
+        {
+                "questionNumber": "TWO",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Explain the difference between Pearson and Spearman correlation. When would you use each? Give one example for each type.",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Given X: 1, 2, 3, 4, 5 and Y: 2, 4, 5, 4, 5. Calculate the Pearson correlation coefficient r. Show all working including all sums needed.",
+                                "marks": 10
+                        }
+                ]
+        },
+        {
+                "questionNumber": "THREE",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Compare and contrast Data Analytics and Cloud Computing. Give THREE key differences in a table format.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "What is probability? A bag contains 5 red balls and 3 blue balls. Calculate: (i) P(red ball) (ii) P(blue ball) (iii) If two balls are drawn with replacement, P(both red).",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "State the formulas for: (i) Sample mean (ii) Sample variance (iii) Standard deviation",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "FOUR",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "A fair coin is tossed 6 times. Using binomial distribution, calculate: (i) P(exactly 4 heads) (ii) P(at most 2 heads). Show all working.",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Explain the following types of sampling with examples: (i) Random sampling (ii) Stratified sampling (iii) Systematic sampling",
+                                "marks": 10
+                        }
+                ]
+        },
+        {
+                "questionNumber": "FIVE",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "What is the difference between correlation and regression? Give two differences and explain when each is used.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Calculate the regression line Y = a + bX for: X: 2, 3, 4 and Y: 5, 7, 9. Show calculation of slope b and intercept a.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "In hypothesis testing, define: (i) Type I error (ii) Type II error. Give one example of each.",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "SIX",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Exam scores are normally distributed with mean \u03bc = 75 and standard deviation \u03c3 = 8. Calculate: (i) z-score for X = 83 (ii) z-score for X = 67 (iii) What percentage of students scored between 67 and 83?",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Write Python code (max 4 lines each) for: (i) Calculating Q1 and Q3 using pandas (ii) Creating a histogram with seaborn (iii) Calculating Spearman correlation",
+                                "marks": 10
+                        }
+                ]
+        },
+        {
+                "questionNumber": "SEVEN",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Explain what percentile and quartile mean. Calculate Q1, Q2, and Q3 for the dataset: 12, 15, 18, 20, 22, 25, 28, 30, 35. Show all steps.",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Distinguish between the following with examples: (i) Finite and infinite population (ii) Random and stratified sampling (iii) Parameter and statistic",
+                                "marks": 10
+                        }
+                ]
+        },
+        {
+                "questionNumber": "EIGHT",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "What are the assumptions of simple linear regression? List and explain FOUR assumptions.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Given the regression equation Y = 12 + 3X. Interpret: (i) the slope (ii) the intercept (iii) predict Y when X = 5",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "Explain the Central Limit Theorem. Why is it important in statistics? What is the minimum sample size typically required?",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "NINE",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Explain the key differences between correlation and regression. When would you use correlation versus regression in engineering data analysis?",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Compare Spearman correlation with linear regression. Can Spearman correlation be used for prediction? Why or why not?",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "A standard deck has 52 cards (13 ranks, 4 suits). Calculate: (i) P(drawing an Ace) (ii) P(drawing a heart) (iii) P(drawing an Ace OR a heart) (iv) P(drawing 2 Aces in a row without replacement)",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "TEN",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Write Python code (max 4 lines per part) to: (i) Define a 3x3 matrix using NumPy (ii) Multiply two matrices (iii) Calculate the determinant of a matrix",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "An electrical circuit has 3 mesh currents I1, I2, I3. Given the system: 5I1 - 2I2 = 10, -2I1 + 8I2 - 3I3 = 0, -3I2 + 6I3 = 15. Write Python code using NumPy to solve for I1, I2, and I3. Show the coefficient matrix A, constant vector b, and the solution method.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "Explain why NumPy is preferred over writing custom loops for matrix operations in engineering. Give TWO specific reasons related to performance and reliability.",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "ELEVEN",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Python is an interpreted language. Explain what this means. Is it too slow for heavy engineering calculations? Justify your answer with specific examples or solutions.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Compare Python and MATLAB for engineering applications. Give THREE advantages of Python over MATLAB in modern engineering practice.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "Write Python code (max 4 lines per part) to: (i) Create a bar chart of exam scores using matplotlib (ii) Create a scatter plot with regression line (iii) Save a plot as a PNG file",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "TWELVE",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "An engineering student measured voltage across 5 resistors: 12V, 15V, 14V, 13V, 16V. Using Python (max 4 lines), calculate the mean and standard deviation. Then create a histogram to visualize the distribution.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Explain mesh current analysis. How can Python and NumPy be used to solve mesh equations in circuit analysis? Give one advantage of using Python for this task.",
+                                "marks": 6
+                        },
+                        {
+                                "label": "c.",
+                                "text": "Given two datasets X (study hours): 5, 6, 7, 8, 9 and Y (exam scores): 65, 70, 75, 80, 85. Write Python code (max 4 lines per part) to: (i) Calculate and plot the regression line (ii) Predict the score for 10 study hours (iii) Calculate R-squared value",
+                                "marks": 6
+                        }
+                ]
+        },
+        {
+                "questionNumber": "THIRTEEN",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "A deck of cards is shuffled. Calculate the probability of: (i) Drawing 3 hearts in a row (without replacement) (ii) Drawing at least one face card (J, Q, K) in 2 draws (with replacement) (iii) Drawing exactly 2 spades in 5 draws (binomial)",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Explain the difference between sampling with replacement and without replacement. How does this affect probability calculations? Give one example of each in engineering or real-world context.",
+                                "marks": 10
+                        }
+                ]
+        },
+        {
+                "questionNumber": "FOURTEEN",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Write a complete Python program (max 12 lines) that: (i) Takes a 2x2 matrix as input (ii) Calculates the inverse using NumPy (iii) Verifies the result by multiplying the matrix with its inverse (iv) Prints 'Correct!' if result is identity matrix",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "In linear algebra, explain how matrices are used in engineering applications. Give TWO specific examples (e.g., circuit analysis, structural analysis, signal processing). Why is Python with NumPy suitable for these applications?",
+                                "marks": 10
+                        }
+                ]
+        },
+        {
+                "questionNumber": "FIFTEEN",
+                "isCompulsory": false,
+                "marks": 18,
+                "parts": [
+                        {
+                                "label": "a.",
+                                "text": "Compare the following for engineering calculations: (i) Python vs MATLAB (speed, cost, libraries) (ii) NumPy arrays vs Python lists for matrix operations (iii) When would you choose MATLAB over Python?",
+                                "marks": 8
+                        },
+                        {
+                                "label": "b.",
+                                "text": "Write Python code using matplotlib/seaborn (max 4 lines per visualization) to: (i) Create a line plot of temperature vs time (ii) Create a histogram with KDE (iii) Create subplots (2 plots side-by-side)",
+                                "marks": 10
+                        }
+                ]
+        }
+];
+
+        let timeRemaining = EXAM_CONFIG.duration * 60;
+        let timerInterval;
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Time's up! The exam will be submitted automatically.");
+                    submitExam();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const hours = Math.floor(timeRemaining / 3600);
+            const minutes = Math.floor((timeRemaining % 3600) / 60);
+            const seconds = timeRemaining % 60;
+
+            const display = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            document.getElementById('timer').textContent = display;
+
+            if (timeRemaining < 600) {
+                document.getElementById('timer').classList.add('warning');
+            }
+        }
+
+        function renderObjectiveQuestions() {
+            const container = document.getElementById('objectiveQuestions');
+            objectiveQuestions.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-block';
+                questionDiv.innerHTML = `
+                    <div class="question-number">Question ${index + 1}</div>
+                    <div class="question-text">${q.question}</div>
+                    <div class="options">
+                        ${q.options.map((option, optIndex) => `
+                            <label class="option">
+                                <input type="radio" name="q${index}" value="${option.charAt(0)}">
+                                ${option}
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+        }
+
+        function renderTheoryQuestions() {
+            const container = document.getElementById('theoryQuestions');
+            theoryQuestions.forEach((q) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-block';
+                questionDiv.dataset.questionNumber = q.questionNumber;
+                
+                let html = `
+                    <div class="question-number">
+                        QUESTION ${q.questionNumber} ${q.isCompulsory ? '(Compulsory)' : ''} - ${q.marks} marks
+                    </div>
+                `;
+
+                q.parts.forEach((part) => {
+                    html += `
+                        <div style="margin-bottom: 25px;">
+                            <div class="question-text"><strong>${part.label}</strong> ${part.text}</div>
+                            <div class="marks-info">(${part.marks} marks)</div>
+                            <textarea class="theory-answer" placeholder="Write your answer here..." data-question="${q.questionNumber}" data-part="${part.label}" oninput="updateTheoryCounter()"></textarea>
+                        </div>
+                    `;
+                });
+
+                questionDiv.innerHTML = html;
+                container.appendChild(questionDiv);
+            });
+        }
+
+        function updateTheoryCounter() {
+            const answeredQuestions = new Set();
+            
+            document.querySelectorAll('.theory-answer').forEach(textarea => {
+                if (textarea.value.trim().length > 10) {  // Must have at least 10 characters
+                    answeredQuestions.add(textarea.dataset.question);
+                }
+            });
+
+            const count = answeredQuestions.size;
+            const counterDiv = document.getElementById('theoryCounter');
+            const countSpan = document.getElementById('questionCount');
+            
+            countSpan.textContent = count;
+            
+            // Update styling based on count
+            counterDiv.classList.remove('valid', 'invalid');
+            if (count === 4 && answeredQuestions.has('ONE')) {
+                counterDiv.classList.add('valid');
+                counterDiv.innerHTML = `✅ Perfect! Questions answered: <span id="questionCount">${count}</span> / 4 (Q1 + 3 others)`;
+            } else if (count > 4) {
+                counterDiv.classList.add('invalid');
+                counterDiv.innerHTML = `⚠️ Too many! Questions answered: <span id="questionCount">${count}</span> / 4 (Answer only Q1 + 3 others)`;
+            } else if (!answeredQuestions.has('ONE') && count > 0) {
+                counterDiv.classList.add('invalid');
+                counterDiv.innerHTML = `⚠️ Question ONE is compulsory! Questions answered: <span id="questionCount">${count}</span> / 4`;
+            } else {
+                counterDiv.innerHTML = `📝 Questions answered: <span id="questionCount">${count}</span> / 4 (Q1 + any 3 others)`;
+            }
+        }
+
+        function submitExam() {
+            // Check theory questions
+            const answeredQuestions = new Set();
+            document.querySelectorAll('.theory-answer').forEach(textarea => {
+                if (textarea.value.trim().length > 10) {
+                    answeredQuestions.add(textarea.dataset.question);
+                }
+            });
+
+            const count = answeredQuestions.size;
+            
+            // Warn if not exactly 4 questions, but allow submission
+            if (count !== 4 || !answeredQuestions.has('ONE')) {
+                let warningMessage = '⚠️ THEORY SECTION WARNING!';
+                
+                if (count !== 4) {
+                    warningMessage += `You answered ${count} theory questions (expected: 4).
+`;
+                }
+                if (!answeredQuestions.has('ONE') && count > 0) {
+                    warningMessage += 'Question ONE is compulsory!';
+                }
+                
+                warningMessage += 'Do you still want to submit?';
+                
+                const confirmAnyway = confirm(warningMessage);
+                if (!confirmAnyway) {
+                    document.getElementById('theoryCounter').scrollIntoView({ behavior: 'smooth' });
+                    return;
+                }
+            } else {
+                // Confirm submission if everything looks good
+                const confirmSubmit = confirm(`📋 Ready to submit?
+
+Objective: All ${objectiveQuestions.length} questions
+Theory: ${count} questions (Q1 + ${count - 1} others)
+
+Once submitted, you cannot change your answers.`);
+                
+                if (!confirmSubmit) {
+                    return;
+                }
+            }
+
+            clearInterval(timerInterval);
+
+            let correctAnswers = 0;
+            objectiveQuestions.forEach((q, index) => {
+                const selected = document.querySelector(`input[name="q${index}"]:checked`);
+                const allOptions = document.querySelectorAll(`input[name="q${index}"]`);
+                
+                // Highlight all options
+                allOptions.forEach(option => {
+                    const optionContainer = option.closest('.option');
+                    if (option.value === q.correctAnswer) {
+                        optionContainer.classList.add('correct');
+                    } else if (option.checked) {
+                        optionContainer.classList.add('wrong');
+                    }
+                    // Disable all options after submission
+                    option.disabled = true;
+                });
+                
+                if (selected && selected.value === q.correctAnswer) {
+                    correctAnswers++;
+                }
+            });
+
+            const objectiveScore = (correctAnswers / objectiveQuestions.length) * EXAM_CONFIG.objectiveMarks;
+            const percentage = ((correctAnswers / objectiveQuestions.length) * 100).toFixed(1);
+
+            const theoryAnswers = [];
+            document.querySelectorAll('.theory-answer').forEach(textarea => {
+                if (textarea.value.trim()) {
+                    theoryAnswers.push({
+                        question: textarea.dataset.question,
+                        part: textarea.dataset.part,
+                        answer: textarea.value.trim()
+                    });
+                }
+            });
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h2>📊 EXAM RESULTS</h2>
+                <div class="score-display">${objectiveScore.toFixed(1)} / ${EXAM_CONFIG.objectiveMarks}</div>
+                <div class="result-details">
+                    <strong>Objective Section:</strong><br>
+                    • Correct Answers: ${correctAnswers} out of ${objectiveQuestions.length}<br>
+                    • Percentage: ${percentage}%<br>
+                    • Score: ${objectiveScore.toFixed(1)} / ${EXAM_CONFIG.objectiveMarks} marks<br><br>
+                    
+                    <strong>Theory Section:</strong><br>
+                    • Answered ${theoryAnswers.length} question parts<br>
+                    • Review your answers manually for grading<br><br>
+                    
+                    <div class="warning-message">
+                        Theory questions require manual grading. Review your answers carefully.<br>
+                        WISHING YOU THE BEST IN YOUR EXAMS! JESUS LOVES YOU! ❤️
+                    </div>
+                </div>
+                <button class="download-btn" onclick="downloadAnswers()">📥 DOWNLOAD MY ANSWERS</button>
+            `;
+            resultsDiv.classList.add('show');
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+
+            // Store answers globally for download
+            window.examAnswers = {
+                objective: objectiveQuestions.map((q, index) => {
+                    const selected = document.querySelector(`input[name="q${index}"]:checked`);
+                    return {
+                        question: q.question,
+                        yourAnswer: selected ? selected.value : 'Not answered',
+                        correctAnswer: q.correctAnswer,
+                        isCorrect: selected && selected.value === q.correctAnswer
+                    };
+                }),
+                theory: theoryAnswers
+            };
+
+            console.log("Theory Answers:", theoryAnswers);
+        }
+
+        function downloadAnswers() {
+            const answers = window.examAnswers;
+            const date = new Date().toLocaleString();
+            
+            let content = `${EXAM_CONFIG.title}
+EXAM ANSWERS REVIEW
+Date: ${date}
+===================================================
+
+SECTION A: OBJECTIVE QUESTIONS
+Score: ${answers.objective.filter(a => a.isCorrect).length} / ${answers.objective.length}
+
+`;
+
+            answers.objective.forEach((a, index) => {
+                const status = a.isCorrect ? '✓ CORRECT' : '✗ WRONG';
+                content += `
+Q${index + 1}. ${a.question}
+   Your Answer: ${a.yourAnswer} ${status}
+   Correct Answer: ${a.correctAnswer}
+`;
+            });
+
+            content += `
+
+===================================================
+SECTION B: THEORY QUESTIONS
+Total Parts Answered: ${answers.theory.length}
+
+`;
+
+            answers.theory.forEach((a) => {
+                content += `
+QUESTION ${a.question} - Part ${a.part}
+${'-'.repeat(50)}
+${a.answer}
+
+`;
+            });
+
+            content += `
+===================================================
+END OF ANSWERS
+Review your theory answers and mark them against your notes.
+`;
+
+            // Create download
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${EXAM_CONFIG.title.replace(/[^a-z0-9]/gi, '_')}_answers.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        window.onload = function() {
+            renderObjectiveQuestions();
+            renderTheoryQuestions();
+            startTimer();
+        };
+
+        window.onbeforeunload = function() {
+            return "Are you sure you want to leave? Your exam progress will be lost.";
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dee_Cistem Admin</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0C0D14; color: #F0F2FF;
+    font-family: -apple-system, sans-serif;
+    min-height: 100vh; padding: 24px;
+  }
+  h1 { color: #4F8EF7; font-size: 24px; margin-bottom: 4px; }
+  .sub { color: #565E82; font-size: 13px; margin-bottom: 32px; }
+  .card {
+    background: #1C1E2C; border-radius: 12px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 13px; letter-spacing: 2px;
+    color: #565E82; margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+  input, select {
+    width: 100%; padding: 12px 14px;
+    background: #161720; border: 1px solid #2A2D42;
+    border-radius: 8px; color: #F0F2FF;
+    font-size: 14px; margin-bottom: 10px;
+    outline: none;
+  }
+  input:focus, select:focus {
+    border-color: #4F8EF7;
+  }
+  button {
+    width: 100%; padding: 14px;
+    border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 4px;
+  }
+  .btn-primary { background: #4F8EF7; color: white; }
+  .btn-success { background: #34D399; color: #0C0D14; }
+  .btn-danger  { background: #F87171; color: white; }
+  .btn-warning { background: #FBBF24; color: #0C0D14; }
+  .status {
+    padding: 12px; border-radius: 8px;
+    font-size: 13px; margin-top: 12px;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.ok  { background: #34D39920; color: #34D399; }
+  .status.err { background: #F8717120; color: #F87171; }
+  .row { display: flex; gap: 10px; }
+  .row button { flex: 1; }
+  .badge {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 11px;
+    font-weight: 600; letter-spacing: 1px;
+  }
+  .badge-free     { background:#2E335220; color:#9BA3C4; }
+  .badge-pioneer  { background:#FBBF2420; color:#FBBF24; }
+  .badge-pro      { background:#4F8EF720; color:#4F8EF7; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left; color: #565E82;
+    padding: 8px 12px; border-bottom: 1px solid #2A2D42;
+    font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid #16172020; }
+  .loading { color: #565E82; text-align: center; padding: 20px; }
+</style>
+</head>
+<body>
+
+<h1>DEE_CISTEM</h1>
+<p class="sub">Admin Panel — Subscription Management</p>
+
+<!-- Config -->
+<div class="card">
+  <h2>Configuration</h2>
+  <input id="supabaseUrl" placeholder="Supabase URL" />
+  <input id="supabaseKey" placeholder="Service Role Key (secret)" type="password" />
+  <button class="btn-primary" onclick="saveConfig()">Save Config</button>
+  <div id="configStatus" class="status"></div>
+</div>
+
+<!-- Master switch -->
+<div class="card">
+  <h2>Master Switch</h2>
+  <p style="color:#9BA3C4;font-size:13px;margin-bottom:14px;">
+    OFF = everyone gets full access (testing mode)<br>
+    ON = tier gates active
+  </p>
+  <div class="row">
+    <button class="btn-success" onclick="toggleSubs(true)">
+      Turn ON (gates active)
+    </button>
+    <button class="btn-warning" onclick="toggleSubs(false)">
+      Turn OFF (full access)
+    </button>
+  </div>
+  <div id="switchStatus" class="status"></div>
+</div>
+
+<!-- Activate user -->
+<div class="card">
+  <h2>Activate User</h2>
+  <input id="accountId" placeholder="Account ID (email or device ID)" />
+  <input id="userName" placeholder="User name (optional)" />
+  <input id="amountPaid" placeholder="Amount paid (NGN)" type="number" />
+  <select id="tierSelect">
+    <option value="pioneer">Pioneer — NGN 5,000 lifetime</option>
+    <option value="pro">Pro — Monthly/Annual</option>
+    <option value="free">Free</option>
+  </select>
+  <input id="notes" placeholder="Notes (payment ref, etc)" />
+  <button class="btn-primary" onclick="activateUser()">
+    Activate User
+  </button>
+  <div id="activateStatus" class="status"></div>
+</div>
+
+<!-- Users list -->
+<div class="card">
+  <h2>Paid Users
+    <button onclick="loadUsers()"
+      style="width:auto;padding:4px 12px;font-size:11px;
+             background:#2A2D42;color:#9BA3C4;
+             border-radius:6px;margin-left:8px;">
+      Refresh
+    </button>
+  </h2>
+  <div id="usersList">
+    <p class="loading">Configure Supabase above to load users</p>
+  </div>
+</div>
+
+<!-- Feedback -->
+<div class="card">
+  <h2>Beta Feedback
+    <button onclick="loadFeedback()"
+      style="width:auto;padding:4px 12px;font-size:11px;
+             background:#2A2D42;color:#9BA3C4;
+             border-radius:6px;margin-left:8px;">
+      Refresh
+    </button>
+  </h2>
+  <div id="feedbackList">
+    <p class="loading">Configure Supabase above to load feedback</p>
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────
+
+let SUPA_URL = localStorage.getItem('supa_url') || '';
+let SUPA_KEY = localStorage.getItem('supa_key') || '';
+
+window.onload = () => {
+  if (SUPA_URL) document.getElementById('supabaseUrl').value = SUPA_URL;
+  if (SUPA_KEY) document.getElementById('supabaseKey').value = SUPA_KEY;
+  if (SUPA_URL && SUPA_KEY) {
+    loadUsers();
+    loadFeedback(); // add this
+  }
+};
+
+function saveConfig() {
+  SUPA_URL = document.getElementById('supabaseUrl').value.trim();
+  SUPA_KEY = document.getElementById('supabaseKey').value.trim();
+  localStorage.setItem('supa_url', SUPA_URL);
+  localStorage.setItem('supa_key', SUPA_KEY);
+  showStatus('configStatus', 'Config saved locally', true);
+  loadUsers();
+}
+
+// ── API helpers ───────────────────────────────────────────────────
+
+async function supaFetch(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, opts);
+  const text = await res.text();
+  try { return { ok: res.ok, data: JSON.parse(text), status: res.status }; }
+  catch { return { ok: res.ok, data: text, status: res.status }; }
+}
+
+// ── Master switch ─────────────────────────────────────────────────
+
+async function toggleSubs(active) {
+  try {
+    const val = active ? '1' : '0';
+    // Store in a settings table or just show instructions
+    showStatus('switchStatus',
+      active
+        ? 'Subscriptions ON — tier gates active. Run in app: gate.set_subscriptions_active(True)'
+        : 'Subscriptions OFF — full access mode. Run in app: gate.set_subscriptions_active(False)',
+      true);
+  } catch(e) {
+    showStatus('switchStatus', e.message, false);
+  }
+}
+
+// ── Activate user ─────────────────────────────────────────────────
+
+async function activateUser() {
+  const accountId = document.getElementById('accountId').value.trim();
+  const userName  = document.getElementById('userName').value.trim();
+  const amount    = parseInt(document.getElementById('amountPaid').value || '0');
+  const tier      = document.getElementById('tierSelect').value;
+  const notes     = document.getElementById('notes').value.trim();
+
+  if (!accountId) {
+    showStatus('activateStatus', 'Account ID required', false);
+    return;
+  }
+  if (!SUPA_URL || !SUPA_KEY) {
+    showStatus('activateStatus', 'Configure Supabase first', false);
+    return;
+  }
+
+  const expiresAt = tier === 'pro'
+    ? new Date(Date.now() + 30*24*60*60*1000).toISOString()
+    : null;
+
+  const payload = {
+    account_id:     accountId,
+    user_name:      userName || 'User',
+    tier,
+    payment_method: 'bank_transfer',
+    amount_paid:    amount,
+    currency:       'NGN',
+    notes
+  };
+  if (expiresAt) payload.expires_at = expiresAt;
+
+  try {
+    const res = await supaFetch(
+      'paid_users?on_conflict=account_id',
+      'POST', payload);
+
+    if (res.ok) {
+      showStatus('activateStatus',
+        `${userName || accountId} activated as ${tier}. ` +
+        `They open app > Settings > Check subscription status to unlock.`,
+        true);
+      document.getElementById('accountId').value = '';
+      document.getElementById('userName').value = '';
+      document.getElementById('amountPaid').value = '';
+      document.getElementById('notes').value = '';
+      loadUsers();
+    } else {
+      showStatus('activateStatus',
+        `Error: ${JSON.stringify(res.data)}`, false);
+    }
+  } catch(e) {
+    showStatus('activateStatus', e.message, false);
+  }
+}
+
+// ── Load users ────────────────────────────────────────────────────
+
+async function loadUsers() {
+  if (!SUPA_URL || !SUPA_KEY) return;
+  document.getElementById('usersList').innerHTML =
+    '<p class="loading">Loading...</p>';
+
+  try {
+    const res = await supaFetch(
+      'paid_users?order=activated_at.desc&limit=50');
+
+    if (!res.ok) {
+      document.getElementById('usersList').innerHTML =
+        `<p class="loading">Error: ${res.status}</p>`;
+      return;
+    }
+
+    const users = res.data;
+    if (!users || users.length === 0) {
+      document.getElementById('usersList').innerHTML =
+        '<p class="loading">No paid users yet</p>';
+      return;
+    }
+
+    const tierBadge = t => ({
+      free:    '<span class="badge badge-free">FREE</span>',
+      pioneer: '<span class="badge badge-pioneer">PIONEER</span>',
+      pro:     '<span class="badge badge-pro">PRO</span>',
+    }[t] || t);
+
+    const rows = users.map(u => `
+      <tr>
+        <td>${u.user_name || '—'}</td>
+        <td style="color:#565E82;font-size:11px;">
+          ${(u.account_id||'').substring(0,20)}...
+        </td>
+        <td>${tierBadge(u.tier)}</td>
+        <td style="color:#34D399;">
+          ₦${(u.amount_paid||0).toLocaleString()}
+        </td>
+        <td style="color:#565E82;font-size:11px;">
+          ${new Date(u.activated_at).toLocaleDateString()}
+        </td>
+        <td>
+          <button onclick="deactivate('${u.account_id}')"
+            style="width:auto;padding:4px 10px;font-size:11px;
+                   background:#F8717120;color:#F87171;
+                   border-radius:6px;">
+            Revoke
+          </button>
+        </td>
+      </tr>`).join('');
+
+    document.getElementById('usersList').innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th><th>Account ID</th>
+            <th>Tier</th><th>Paid</th>
+            <th>Date</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="color:#565E82;font-size:11px;
+                margin-top:12px;text-align:right;">
+        ${users.length} user(s)
+      </p>`;
+
+  } catch(e) {
+    document.getElementById('usersList').innerHTML =
+      `<p class="loading">Error: ${e.message}</p>`;
+  }
+}
+
+async function loadFeedback() {
+  if (!SUPA_URL || !SUPA_KEY) return;
+  document.getElementById('feedbackList').innerHTML =
+    '<p class="loading">Loading...</p>';
+
+  const res = await supaFetch(
+    'beta_feedback?order=created_at.desc&limit=50');
+
+  if (!res.ok || !res.data?.length) {
+    document.getElementById('feedbackList').innerHTML =
+      '<p class="loading">No feedback yet</p>';
+    return;
+  }
+
+  const stars = r => '★'.repeat(parseInt(r||0)) + '☆'.repeat(5-parseInt(r||0));
+  const payColor = p => ({
+    'yes5k':'#34D399','yes1500':'#60A5FA',
+    'maybe':'#FBBF24','no':'#F87171'
+  }[p]||'#9BA3C4');
+  const payLabel = p => ({
+    'yes5k':'Would pay ₦5k lifetime',
+    'yes1500':'Would pay ₦1.5k/month',
+    'maybe':'Maybe',
+    'no':'Not yet'
+  }[p]||p||'—');
+
+  document.getElementById('feedbackList').innerHTML =
+    res.data.map(f => `
+      <div style="border:1px solid #2A2D42;border-radius:8px;
+                  padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;
+                    margin-bottom:8px;align-items:center">
+          <span style="color:#FBBF24;font-size:14px">${stars(f.rating)}</span>
+          <span style="color:${payColor(f.would_pay)};font-size:11px;
+                       font-weight:600">${payLabel(f.would_pay)}</span>
+        </div>
+        <div style="font-size:13px;color:#F0F2FF;
+                    margin-bottom:6px;line-height:1.5">
+          "${f.feedback}"
+        </div>
+        <div style="font-size:11px;color:#565E82">
+          ${f.module||'—'} · ${new Date(f.created_at).toLocaleString()}
+        </div>
+      </div>`).join('') +
+    `<p style="color:#565E82;font-size:11px;
+               margin-top:8px;text-align:right">
+      ${res.data.length} response(s)
+    </p>`;
+}
+
+async function deactivate(accountId) {
+  if (!confirm('Revoke this user\'s access?')) return;
+  const res = await supaFetch(
+    `paid_users?account_id=eq.${accountId}`,
+    'PATCH', { tier: 'free', amount_paid: 0 });
+  if (res.ok) loadUsers();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+
+function showStatus(id, msg, ok) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `status show ${ok ? 'ok' : 'err'}`;
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+</script>
+</body>
+</html>

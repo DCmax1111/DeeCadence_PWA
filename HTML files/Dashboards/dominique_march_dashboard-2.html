@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dominique Creations · March $3K Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --gold: #B8960C;--gold-light: #D4A017;--gold-pale: #F5E9C0;--gold-faint: #FAF6ED;
+    --charcoal: #1A1A1A;--dark: #2C2C2C;--mid: #6B6B6B;--light: #F9F7F3;
+    --white: #FFFFFF;--success: #4A7C59;--success-bg: #EAF4ED;--amber: #D4860A;--amber-bg: #FEF3E2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Montserrat',sans-serif;background:var(--light);color:var(--charcoal);min-height:100vh;}
+  .header{background:var(--charcoal);padding:28px 40px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);}
+  .header-brand{display:flex;flex-direction:column;}
+  .header-brand .name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--white);letter-spacing:3px;text-transform:uppercase;}
+  .header-brand .tagline{font-size:10px;color:var(--gold-light);letter-spacing:3px;text-transform:uppercase;margin-top:2px;font-weight:500;}
+  .header-right{text-align:right;}
+  .days-left{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;color:var(--gold-light);line-height:1;}
+  .days-label{font-size:9px;color:var(--mid);letter-spacing:2px;text-transform:uppercase;}
+  .main{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:calc(100vh - 83px);}
+  .left-panel{background:var(--white);border-right:1px solid #E8E0D0;padding:0;overflow-y:auto;}
+  .panel-section{border-bottom:1px solid #F0EBE0;}
+  .panel-header{padding:18px 24px 14px;display:flex;align-items:center;gap:10px;}
+  .panel-header .label{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);}
+  .panel-header .rule{flex:1;height:1px;background:var(--gold-pale);}
+  .revenue-block{padding:0 24px 20px;}
+  .revenue-input-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;}
+  .revenue-input{flex:1;border:1.5px solid #E8E0D0;border-radius:4px;padding:10px 14px;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:600;color:var(--charcoal);background:var(--light);outline:none;transition:border-color 0.2s;}
+  .revenue-input:focus{border-color:var(--gold);}
+  .revenue-input::placeholder{color:#C0B898;font-weight:400;}
+  .add-btn{background:var(--gold);color:white;border:none;border-radius:4px;padding:10px 16px;font-size:18px;cursor:pointer;font-weight:700;transition:background 0.2s;line-height:1;}
+  .add-btn:hover{background:var(--gold-light);}
+  .progress-wrap{background:#F0EBE0;border-radius:100px;height:10px;margin-bottom:10px;overflow:hidden;}
+  .progress-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:100px;transition:width 0.6s cubic-bezier(.4,0,.2,1);width:0%;}
+  .revenue-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
+  .stat-box{background:var(--light);border-radius:6px;padding:10px 8px;text-align:center;}
+  .stat-box .val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--charcoal);line-height:1;}
+  .stat-box .val.gold{color:var(--gold);}
+  .stat-box .key{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-top:3px;}
+  .entries-list{max-height:130px;overflow-y:auto;}
+  .entry-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--gold-faint);border-radius:4px;margin-bottom:4px;font-size:12px;}
+  .entry-item .entry-amt{font-weight:700;color:var(--success);}
+  .entry-item .del-btn{cursor:pointer;color:#C0B898;font-size:14px;border:none;background:none;}
+  .entry-item .del-btn:hover{color:#c0392b;}
+  .no-entries{font-size:11px;color:#C0B898;text-align:center;padding:12px 0;font-style:italic;}
+
+  /* OUTREACH STATS */
+  .outreach-block{padding:0 24px 16px;}
+  .outreach-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+  .o-stat{background:var(--light);border-radius:6px;padding:9px 8px;text-align:center;}
+  .o-stat .val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--charcoal);line-height:1;}
+  .o-stat .val.gold{color:var(--gold);}
+  .o-stat .val.green{color:var(--success);}
+  .o-stat .key{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-top:3px;}
+
+  /* WARM LEADS */
+  .leads-block{padding:0 24px 16px;}
+  .lead-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--gold-faint);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--gold);}
+  .lead-item.hot{background:var(--success-bg);border-left-color:var(--success);}
+  .lead-name{font-size:11px;font-weight:600;color:var(--charcoal);flex:1;}
+  .lead-type{font-size:8px;color:var(--mid);letter-spacing:1px;text-transform:uppercase;}
+  .lead-status{font-size:8px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--amber-bg);color:var(--amber);}
+  .lead-status.hot{background:var(--success-bg);color:var(--success);}
+  .lead-fu{font-size:9px;color:var(--mid);margin-top:2px;}
+
+  /* Tabs */
+  .tab-nav{display:flex;border-bottom:1px solid #F0EBE0;}
+  .tab-btn{flex:1;padding:12px 8px;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--mid);border-bottom:2px solid transparent;transition:all 0.2s;font-family:'Montserrat',sans-serif;}
+  .tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+
+  /* Day cards */
+  .day-list{padding:12px 16px;max-height:420px;overflow-y:auto;}
+  .day-card{border:1px solid #EDE7D8;border-radius:8px;margin-bottom:8px;overflow:hidden;transition:box-shadow 0.2s;}
+  .day-card:hover{box-shadow:0 2px 10px rgba(184,150,12,0.1);}
+  .day-card.today{border-color:var(--gold);}
+  .day-card.behind{border-left:3px solid var(--gold-light);}
+  .day-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--white);}
+  .day-card.today .day-card-header{background:var(--gold-faint);}
+  .day-card.behind .day-card-header{background:#FFFDF5;}
+  .day-num{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--gold);line-height:1;}
+  .day-info{flex:1;padding-left:12px;}
+  .day-label{font-size:11px;font-weight:600;color:var(--charcoal);}
+  .day-phase{font-size:9px;color:var(--mid);letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
+  .day-progress{font-size:8px;color:var(--gold);font-weight:600;margin-top:3px;}
+  .day-check{font-size:16px;color:#D0C8B0;cursor:pointer;transition:color 0.2s;border:none;background:none;}
+  .day-check.done{color:var(--success);}
+  .today-badge{font-size:8px;background:var(--gold);color:white;padding:2px 6px;border-radius:10px;font-weight:700;letter-spacing:1px;}
+  .behind-badge{font-size:8px;background:#D4860A;color:white;padding:2px 6px;border-radius:10px;font-weight:700;letter-spacing:1px;}
+  .day-tasks{display:none;background:#FDFBF7;border-top:1px solid #F0EBE0;padding:6px 12px 10px;}
+  .day-tasks.open{display:block;}
+  .task-row{display:flex;align-items:flex-start;gap:8px;padding:5px 2px;border-bottom:1px solid #F5F0E8;cursor:pointer;border-radius:3px;transition:background 0.15s;}
+  .task-row:last-child{border-bottom:none;}
+  .task-row:hover{background:var(--gold-faint);}
+  .task-tick{width:15px;height:15px;border-radius:3px;border:1.5px solid #D0C8B0;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:white;}
+  .task-tick.checked{background:var(--success);border-color:var(--success);}
+  .task-tick.checked::after{content:'✓';font-size:9px;color:white;font-weight:700;}
+  .task-text{font-size:11px;color:var(--dark);line-height:1.5;flex:1;}
+  .task-text.done{text-decoration:line-through;color:#C0B898;}
+
+  /* RIGHT */
+  .right-panel{padding:32px 40px;overflow-y:auto;}
+  .lib-tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;}
+  .lib-tab{padding:8px 16px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:20px;border:1.5px solid #E8E0D0;cursor:pointer;color:var(--mid);background:var(--white);transition:all 0.2s;font-family:'Montserrat',sans-serif;}
+  .lib-tab.active{background:var(--charcoal);color:var(--gold-light);border-color:var(--charcoal);}
+  .lib-tab:hover:not(.active){border-color:var(--gold);color:var(--gold);}
+  .lib-section{display:none;}
+  .lib-section.active{display:block;}
+  .section-intro{font-size:11px;color:var(--mid);line-height:1.7;margin-bottom:20px;padding:12px 16px;background:var(--white);border-radius:8px;border-left:3px solid var(--gold);}
+  .scripts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .script-card{background:var(--white);border:1px solid #EDE7D8;border-radius:10px;overflow:hidden;transition:box-shadow 0.25s,transform 0.2s;}
+  .script-card:hover{box-shadow:0 6px 24px rgba(184,150,12,0.12);transform:translateY(-2px);}
+  .script-card-header{padding:16px 20px;background:var(--charcoal);display:flex;align-items:center;gap:12px;}
+  .script-icon{font-size:20px;}
+  .script-meta{flex:1;}
+  .script-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);}
+  .script-who{font-size:9px;color:var(--gold-light);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+  .copy-btn{background:var(--gold);color:white;border:none;border-radius:4px;padding:7px 14px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:background 0.2s;font-family:'Montserrat',sans-serif;white-space:nowrap;}
+  .copy-btn:hover{background:var(--gold-light);}
+  .copy-btn.copied{background:var(--success);}
+  .script-body{padding:18px 20px;}
+  .script-context{font-size:10px;color:var(--mid);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;font-weight:600;}
+  .script-text{font-size:12px;color:var(--dark);line-height:1.8;font-style:italic;border-left:3px solid var(--gold-pale);padding-left:14px;white-space:pre-line;}
+  .script-tip{margin-top:12px;font-size:10px;color:var(--mid);background:var(--gold-faint);border-radius:4px;padding:8px 12px;line-height:1.6;}
+  .script-tip strong{color:var(--gold);}
+  .hash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .hash-card{background:var(--white);border:1px solid #EDE7D8;border-radius:10px;overflow:hidden;}
+  .hash-head{padding:14px 18px;background:var(--charcoal);display:flex;align-items:center;justify-content:space-between;}
+  .hash-title{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--white);}
+  .hash-sub{font-size:8px;color:var(--gold-light);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+  .hash-body{padding:14px 18px;}
+  .hash-ctx{font-size:9px;color:var(--mid);letter-spacing:1px;text-transform:uppercase;margin-bottom:9px;font-weight:600;}
+  .hash-tags{display:flex;flex-wrap:wrap;gap:5px;}
+  .hash-tag{font-size:10px;color:var(--gold);background:var(--gold-faint);border:1px solid var(--gold-pale);border-radius:12px;padding:3px 9px;cursor:pointer;transition:all 0.2s;}
+  .hash-tag:hover{background:var(--gold);color:white;border-color:var(--gold);}
+  .hash-tip{margin-top:10px;font-size:10px;color:var(--mid);background:var(--gold-faint);border-radius:4px;padding:7px 10px;line-height:1.6;}
+  .hash-tip strong{color:var(--gold);}
+  .caption-card{background:var(--white);border:1px solid #EDE7D8;border-radius:10px;overflow:hidden;margin-bottom:16px;}
+  .caption-head{padding:14px 20px;background:var(--charcoal);display:flex;align-items:center;justify-content:space-between;}
+  .caption-head-left{display:flex;align-items:center;gap:12px;}
+  .caption-icon{font-size:18px;}
+  .caption-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);}
+  .caption-sub{font-size:9px;color:var(--gold-light);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+  .caption-body{padding:16px 20px;}
+  .caption-when{font-size:9px;color:var(--mid);letter-spacing:1px;text-transform:uppercase;margin-bottom:9px;font-weight:600;}
+  .caption-text{font-size:12px;color:var(--dark);line-height:1.85;border-left:3px solid var(--gold-pale);padding-left:14px;white-space:pre-line;margin-bottom:10px;}
+  .caption-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:9px;}
+  .caption-tag{font-size:9px;color:var(--gold);background:var(--gold-faint);border-radius:10px;padding:2px 8px;border:1px solid var(--gold-pale);}
+  .caption-tip{font-size:10px;color:var(--mid);background:var(--gold-faint);border-radius:4px;padding:7px 10px;line-height:1.6;}
+  .caption-tip strong{color:var(--gold);}
+  .obj-card{background:var(--white);border:1px solid #EDE7D8;border-radius:10px;overflow:hidden;margin-bottom:14px;}
+  .obj-head{padding:12px 18px;background:var(--charcoal);display:flex;align-items:center;gap:10px;}
+  .obj-q{font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:600;color:var(--gold-pale);font-style:italic;}
+  .obj-body{display:grid;grid-template-columns:1fr 1fr;}
+  .obj-left{padding:13px 15px;background:var(--gold-faint);border-right:1px solid #F0EBE0;}
+  .obj-right{padding:13px 15px;}
+  .obj-label{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-bottom:5px;}
+  .obj-left .obj-label{color:var(--gold);}
+  .obj-right .obj-label{color:var(--success);display:flex;align-items:center;justify-content:space-between;}
+  .obj-text{font-size:10.5px;color:var(--dark);line-height:1.7;font-style:italic;}
+
+  /* SPRINT CARD */
+  .sprint-card{background:var(--charcoal);border-radius:10px;padding:18px 22px;margin-bottom:16px;border-left:4px solid var(--gold);}
+  .sprint-day{font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:700;color:var(--gold-light);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+  .sprint-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--white);margin-bottom:10px;}
+  .sprint-tasks{list-style:none;}
+  .sprint-task{font-size:11px;color:#C8D8EC;line-height:1.6;padding:3px 0;display:flex;gap:8px;}
+  .sprint-dot{color:var(--gold);flex-shrink:0;}
+  .sprint-priority{font-size:8px;background:var(--gold);color:var(--charcoal);padding:2px 6px;border-radius:8px;font-weight:700;margin-left:6px;letter-spacing:1px;}
+
+  @media(max-width:900px){.main{grid-template-columns:1fr;}.scripts-grid{grid-template-columns:1fr;}.hash-grid{grid-template-columns:1fr;}.right-panel{padding:24px 20px;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <div class="name">Dominique Creations</div>
+    <div class="tagline">March · Final Sprint — $3,000 Target</div>
+  </div>
+  <div class="header-right">
+    <div class="days-left" id="daysLeft">—</div>
+    <div class="days-label">days remaining in March</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- Revenue -->
+    <div class="panel-section">
+      <div class="panel-header"><span class="label">Revenue Tracker</span><div class="rule"></div></div>
+      <div class="revenue-block">
+        <div class="revenue-input-row">
+          <input class="revenue-input" id="amtInput" type="number" placeholder="Enter amount earned ($)" min="0"/>
+          <button class="add-btn" onclick="addRevenue()">+</button>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="revenue-stats">
+          <div class="stat-box"><div class="val gold" id="statEarned">$0</div><div class="key">Earned</div></div>
+          <div class="stat-box"><div class="val" id="statRemaining">$3,000</div><div class="key">To Go</div></div>
+          <div class="stat-box"><div class="val" id="statPct">0%</div><div class="key">Complete</div></div>
+        </div>
+        <div class="entries-list" id="entriesList"><div class="no-entries">No revenue logged yet — let's change that.</div></div>
+      </div>
+    </div>
+
+    <!-- Outreach Stats -->
+    <div class="panel-section">
+      <div class="panel-header"><span class="label">Outreach Progress</span><div class="rule"></div></div>
+      <div class="outreach-block">
+        <div class="outreach-stats">
+          <div class="o-stat"><div class="val gold">57</div><div class="key">DMs Sent</div></div>
+          <div class="o-stat"><div class="val green">4</div><div class="key">Warm Leads</div></div>
+          <div class="o-stat"><div class="val">~7%</div><div class="key">Response Rate</div></div>
+          <div class="o-stat"><div class="val">2</div><div class="key">Designs Posted</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warm Leads -->
+    <div class="panel-section">
+      <div class="panel-header"><span class="label">Warm Leads</span><div class="rule"></div></div>
+      <div class="leads-block">
+        <div class="lead-item">
+          <div>
+            <div class="lead-name">Chukwuel · @westyimage</div>
+            <div class="lead-type">Photographer · International</div>
+            <div class="lead-fu">Said: "Will hit you up when needed" · Follow up Apr 4</div>
+          </div>
+          <span class="lead-status">Warm</span>
+        </div>
+        <div class="lead-item">
+          <div>
+            <div class="lead-name">eventsbye...</div>
+            <div class="lead-type">Events Business</div>
+            <div class="lead-fu">"Details noted, will reach out" · Follow up Apr 2</div>
+          </div>
+          <span class="lead-status">Warm</span>
+        </div>
+        <div class="lead-item hot">
+          <div>
+            <div class="lead-name">lovebirds_... </div>
+            <div class="lead-type">Events · Has WhatsApp link</div>
+            <div class="lead-fu">Auto-detected as lead · Message on WhatsApp NOW</div>
+          </div>
+          <span class="lead-status hot">🔥 Hot</span>
+        </div>
+        <div class="lead-item">
+          <div>
+            <div class="lead-name">4th Lead</div>
+            <div class="lead-type">Update with details from tracker</div>
+            <div class="lead-fu">Check Excel tracker for follow-up date</div>
+          </div>
+          <span class="lead-status">Warm</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="panel-section">
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('plan')">Final Sprint</button>
+        <button class="tab-btn" onclick="switchTab('checklist')">Today</button>
+      </div>
+      <div id="tab-plan" class="tab-content active"><div class="day-list" id="dayList"></div></div>
+      <div id="tab-checklist" class="tab-content"><div class="day-list" id="todayChecklist"></div></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <div class="lib-tabs">
+      <button class="lib-tab active" onclick="switchLib(event,'sprint')">🏁 5-Day Sprint</button>
+      <button class="lib-tab" onclick="switchLib(event,'dms')">💬 DM Scripts</button>
+      <button class="lib-tab" onclick="switchLib(event,'hashtags')"># Hashtags</button>
+      <button class="lib-tab" onclick="switchLib(event,'captions')">✍️ Captions</button>
+      <button class="lib-tab" onclick="switchLib(event,'objections')">💰 Price Objections</button>
+    </div>
+
+    <!-- FINAL SPRINT -->
+    <div id="lib-sprint" class="lib-section active">
+      <div class="section-intro">
+        <strong>57 DMs sent. 4 warm leads. 5 days left.</strong> The outreach phase is done. This is now purely a conversion and content game. Every action this week must either close a lead, nurture a warm contact, or build social proof. Nothing else.
+      </div>
+
+      <div class="sprint-card">
+        <div class="sprint-day">Day 1 · March 26 — Today</div>
+        <div class="sprint-title">Close the Hot Lead</div>
+        <ul class="sprint-tasks">
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Message lovebirds_ on WhatsApp — send pitch + your best design image <span class="sprint-priority">PRIORITY #1</span></span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Follow up all 4 warm leads — use the Day 2 follow-up script</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Post the before/after design comparison on Instagram</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Story: "DM me PROGRAM to see your wedding stationery in your colours — free preview"</span></li>
+        </ul>
+      </div>
+
+      <div class="sprint-card">
+        <div class="sprint-day">Day 2 · March 27</div>
+        <div class="sprint-title">Design + Social Proof Push</div>
+        <ul class="sprint-tasks">
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Post your 3rd design — new style (ivory minimal or black & gold) <span class="sprint-priority">PRIORITY #1</span></span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Story poll: "Which aesthetic speaks to you?" — two designs side by side</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>DM everyone who votes on the poll — open a conversation</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Send 10 new DMs to fresh accounts you haven't contacted yet</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Record yourself designing in Photoshop — even 30 seconds for a Reel</span></li>
+        </ul>
+      </div>
+
+      <div class="sprint-card">
+        <div class="sprint-day">Day 3 · March 28</div>
+        <div class="sprint-title">Package Showcase + Urgency</div>
+        <ul class="sprint-tasks">
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Post the $650 Brand Experience package breakdown — sell the outcome not the features <span class="sprint-priority">PRIORITY #1</span></span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Story: "3 days left in March — a few slots remaining"</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Follow up all warm leads again — Day 5 script + attach newest design</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Offer free sample to any warm lead who hasn't converted yet</span></li>
+        </ul>
+      </div>
+
+      <div class="sprint-card">
+        <div class="sprint-day">Day 4 · March 29</div>
+        <div class="sprint-title">Design Process Reel + Final Push</div>
+        <ul class="sprint-tasks">
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Post the design process Reel — even rough and short is fine <span class="sprint-priority">PRIORITY #1</span></span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Caption: "This is what goes into every Dominique Creations design — DM me SUITE to start yours"</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Send 10 more DMs — new accounts</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Final follow-up to any warm lead who still hasn't responded</span></li>
+        </ul>
+      </div>
+
+      <div class="sprint-card">
+        <div class="sprint-day">Day 5 · March 30–31</div>
+        <div class="sprint-title">Close Everything. Plant April Seeds.</div>
+        <ul class="sprint-tasks">
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Post final March Story: "Last slots of March — DM me today" <span class="sprint-priority">PRIORITY #1</span></span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Send thank-you DMs to every warm lead whether they booked or not</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Post a wrap-up: "Here's what Dominique Creations built in March" — even without revenue, show the journey</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Log all revenue. Update tracker. Plan April with fresh eyes.</span></li>
+          <li class="sprint-task"><span class="sprint-dot">◆</span><span>Celebrate. Seriously. You sent 57 DMs. That's real. 🤍</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- DM SCRIPTS -->
+    <div id="lib-dms" class="lib-section">
+      <div class="section-intro">Updated teach-first scripts — these perform significantly better than standard cold outreach. Always personalise the <strong>[brackets]</strong>. Specificity is everything.</div>
+      <div class="scripts-grid" id="scriptsGrid"></div>
+    </div>
+
+    <!-- HASHTAGS -->
+    <div id="lib-hashtags" class="lib-section">
+      <div class="section-intro">Hyper-specific hashtags for diaspora brides and cultural wedding vendors. Click any tag to copy it individually, or <strong>Copy All</strong> for the full set.</div>
+      <div class="hash-grid" id="hashGrid"></div>
+    </div>
+
+    <!-- CAPTIONS -->
+    <div id="lib-captions" class="lib-section">
+      <div class="section-intro">Demo captions for every post type. Swap in real details before posting. Formula: <strong>Story → Detail → CTA.</strong></div>
+      <div id="captionsGrid"></div>
+    </div>
+
+    <!-- OBJECTIONS -->
+    <div id="lib-objections" class="lib-section">
+      <div class="section-intro">When a client questions your price they are asking for reassurance — not saying no. <strong>Never apologise for your pricing. Never discount unprompted.</strong></div>
+      <div id="objectionsGrid"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const TARGET=3000,today=new Date(),todayDate=today.getDate();
+document.getElementById('daysLeft').textContent=Math.max(0,Math.ceil((new Date(today.getFullYear(),2,31)-today)/86400000));
+let entries=JSON.parse(localStorage.getItem('dc_entries')||'[]');
+let tasksDone=JSON.parse(localStorage.getItem('dc_tasks')||'{}');
+let openDays=[];
+
+const PLAN=[
+  {d:26,lbl:"Close the hot lead",phase:"Final Sprint",tasks:["Message lovebirds_ on WhatsApp — send pitch + best design","Follow up all 4 warm leads — Day 2 follow-up script","Post the before/after design comparison","Story: 'DM me PROGRAM for a free preview in your colours'"]},
+  {d:27,lbl:"Design + social proof push",phase:"Final Sprint",tasks:["Post 3rd design — new style (ivory minimal or black & gold)","Story poll: 'Which aesthetic speaks to you?' — 2 designs","DM everyone who votes on the poll","Send 10 new DMs to fresh accounts","Record yourself designing in Photoshop — 30 sec Reel"]},
+  {d:28,lbl:"Package showcase + urgency",phase:"Final Sprint",tasks:["Post $650 Brand Experience breakdown — sell the outcome","Story: '3 days left — a few March slots remaining'","Follow up all warm leads — Day 5 script + newest design","Offer free sample to any warm lead not yet converted"]},
+  {d:29,lbl:"Design process Reel + final push",phase:"Final Sprint",tasks:["Post the design process Reel","Caption: 'This is what goes into every DC design — DM me SUITE'","Send 10 more DMs — fresh accounts","Final follow-up to any warm lead still not responded"]},
+  {d:30,lbl:"Close everything. Plant April.",phase:"Final Sprint",tasks:["Post final Story: 'Last slots of March — DM me today'","Send thank-you DMs to all warm leads","Post March wrap-up — show the journey","Log all revenue. Update tracker. Plan April.","Celebrate. You sent 57 DMs. 🤍"]},
+  {d:31,lbl:"March closes",phase:"Final Sprint",tasks:["Respond to every DM — no lead left behind","Post final Story: 'DM me for April bookings'","Log all final revenue","Screenshot your tracker. You built something real."]},
+];
+
+function renderDays(){
+  const list=document.getElementById('dayList');list.innerHTML='';
+  PLAN.forEach(day=>{
+    const isToday=day.d===todayDate,isBehind=day.d<todayDate,isOpen=openDays.includes(day.d);
+    const done=tasksDone[day.d]||[],allDone=done.length===day.tasks.length;
+    let cls='day-card'+(isToday?' today':isBehind?' behind':'');
+    const el=document.createElement('div');el.className=cls;
+    const badge=isToday?` <span class="today-badge">TODAY</span>`:isBehind?` <span class="behind-badge">CATCH UP</span>`:'';
+    el.innerHTML=`<div class="day-card-header" onclick="toggleDay(${day.d})"><div class="day-num">Mar ${day.d}</div><div class="day-info"><div class="day-label">${day.lbl}${badge}</div><div class="day-phase">${day.phase}</div><div class="day-progress">${done.length}/${day.tasks.length} complete${allDone?' ✓':''}</div></div><button class="day-check ${allDone?'done':''}" onclick="markAllDay(event,${day.d})">${allDone?'✓':'○'}</button></div><div class="day-tasks ${isOpen?'open':''}">${day.tasks.map((t,i)=>{const chk=done.includes(i);return`<div class="task-row" onclick="toggleTask(${day.d},${i})"><div class="task-tick ${chk?'checked':''}"></div><span class="task-text ${chk?'done':''}">${t}</span></div>`;}).join('')}</div>`;
+    list.appendChild(el);
+  });
+}
+
+function renderTodayChecklist(){
+  const container=document.getElementById('todayChecklist');container.innerHTML='';
+  const plan=PLAN.find(d=>d.d===todayDate);
+  if(!plan){container.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:#999">No plan for today</div>';return;}
+  const done=tasksDone[todayDate]||[];
+  plan.tasks.forEach((task,i)=>{
+    const chk=done.includes(i);const el=document.createElement('div');el.className='day-card';
+    el.innerHTML=`<div class="task-row" onclick="toggleTask(${todayDate},${i})" style="padding:12px 14px;"><div class="task-tick ${chk?'checked':''}"></div><span class="task-text ${chk?'done':''}">${task}</span></div>`;
+    container.appendChild(el);
+  });
+}
+
+function toggleDay(d){const i=openDays.indexOf(d);if(i>-1)openDays.splice(i,1);else openDays.push(d);renderDays();}
+function toggleTask(day,idx){if(!tasksDone[day])tasksDone[day]=[];const arr=tasksDone[day],i=arr.indexOf(idx);if(i>-1)arr.splice(i,1);else arr.push(idx);localStorage.setItem('dc_tasks',JSON.stringify(tasksDone));renderDays();if(document.getElementById('tab-checklist').classList.contains('active'))renderTodayChecklist();}
+function markAllDay(e,day){e.stopPropagation();const plan=PLAN.find(d=>d.d===day);if(!plan)return;const done=tasksDone[day]||[];tasksDone[day]=done.length===plan.tasks.length?[]:plan.tasks.map((_,i)=>i);localStorage.setItem('dc_tasks',JSON.stringify(tasksDone));renderDays();}
+function switchTab(name){document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['plan','checklist'][i]===name));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.getElementById('tab-'+name).classList.add('active');if(name==='checklist')renderTodayChecklist();}
+
+function addRevenue(){const input=document.getElementById('amtInput');const val=parseFloat(input.value);if(!val||val<=0)return;entries.push({amount:val,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})});localStorage.setItem('dc_entries',JSON.stringify(entries));input.value='';renderRevenue();}
+document.getElementById('amtInput').addEventListener('keydown',e=>{if(e.key==='Enter')addRevenue();});
+function deleteEntry(i){entries.splice(i,1);localStorage.setItem('dc_entries',JSON.stringify(entries));renderRevenue();}
+function renderRevenue(){
+  const total=entries.reduce((s,e)=>s+e.amount,0),pct=Math.min(100,(total/TARGET)*100);
+  document.getElementById('progressBar').style.width=pct+'%';
+  document.getElementById('statEarned').textContent='$'+total.toLocaleString('en-US',{minimumFractionDigits:0});
+  document.getElementById('statRemaining').textContent='$'+Math.max(0,TARGET-total).toLocaleString('en-US',{minimumFractionDigits:0});
+  document.getElementById('statPct').textContent=Math.round(pct)+'%';
+  const list=document.getElementById('entriesList');
+  if(!entries.length){list.innerHTML='<div class="no-entries">No revenue logged yet — let\'s change that.</div>';return;}
+  list.innerHTML=[...entries].reverse().map((e,ri)=>{const i=entries.length-1-ri;return`<div class="entry-item"><span>${e.date}</span><span class="entry-amt">+$${e.amount.toLocaleString()}</span><button class="del-btn" onclick="deleteEntry(${i})">×</button></div>`;}).join('');
+}
+
+function switchLib(ev,name){document.querySelectorAll('.lib-tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.lib-section').forEach(s=>s.classList.remove('active'));ev.target.classList.add('active');document.getElementById('lib-'+name).classList.add('active');}
+function cp(id,text){navigator.clipboard.writeText(text).then(()=>{const btn=document.getElementById(id);if(!btn)return;const orig=btn.textContent;btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},2000);});}
+
+const SCRIPTS=[
+  {icon:"💍",title:"Wedding Planner — Teach First",who:"Planners & Coordinators",ctx:"Lead with insight, not pitch — earns 3× more replies",text:"Hi [Name] — one thing I've noticed with high-end weddings: when the stationery doesn't match the décor aesthetic, it creates a visual disconnect that guests notice even if they can't name it. Cohesive stationery makes the whole event feel more intentional.\n\nI design bespoke wedding stationery — programs, invitations, full suites — built to match the visual world of each wedding.\n\nIf you ever need a stationery partner for your clients, I'd love to be your go-to. Here's a recent design below. 🤍",tip:"<strong>Key:</strong> Teaching them something valuable first earns goodwill before you ask for anything."},
+  {icon:"📸",title:"Photographer — Teach First",who:"Wedding Photographers",ctx:"Speak to their work — beautiful stationery = better detail shots",text:"Hi [Name] — something most couples don't realise until after the wedding: the detail shots of stationery are often the most shared photos from the day. A beautifully designed program photographs completely differently from a generic printed one.\n\nI design bespoke wedding stationery that's built to look as good in photos as it does in person.\n\nIf any of your couples need stationery that elevates your shots, I'd love to be your recommendation. Recent design below. 🤍",tip:"<strong>Key:</strong> You're not just selling stationery — you're selling better photos for them too."},
+  {icon:"💐",title:"Engaged Couple — Teach First",who:"Couples on #diasporawedding #nigerianbride",ctx:"Teach them something they don't know yet — then make the offer",text:"Hi [Name], congratulations! 🤍 One thing engaged couples often don't think about until late in planning: your ceremony program is the one item every single guest holds and reads during your wedding. It sets the tone before anything else happens.\n\nI design bespoke programs and invitation suites — built around your colours, your names, your day. Print-ready within days, starting from $49.\n\nHappy to show you some styles if you're curious!",tip:"<strong>Key:</strong> The insight makes them feel informed, not sold to. Much lower resistance."},
+  {icon:"🏛️",title:"Venue & Decorator — Teach First",who:"Venues, Florists, Décor Studios",ctx:"Connect stationery to the overall guest experience",text:"Hi [Name] — something worth knowing: couples who invest in coordinated stationery tend to rate their overall wedding experience higher, because everything feels intentional rather than assembled from different places.\n\nI design bespoke wedding stationery — programs, invitations, full suites — built to match the aesthetic of the venue and décor setup.\n\nIf couples ever ask you for stationery recommendations, I'd love to be your go-to. Recent design below. 🤍",tip:"<strong>Key:</strong> You're positioning stationery as something that makes their work look better too."},
+  {icon:"💄",title:"Makeup Artist Outreach",who:"Bridal MUAs",ctx:"MUAs have close relationships with brides — great referrers",text:"Hi [Name] — your work is stunning. One thing I've seen: brides who have cohesive stationery feel more confident on the day because every detail — including the program guests hold while watching them walk in — matches the vision they worked so hard to create.\n\nI design bespoke wedding stationery and I'd love to be a resource for your brides. If any of them need programs or invitations, I'd be grateful for the recommendation.\n\nRecent design below. 🤍",tip:"<strong>Key:</strong> MUAs see brides on the most emotional day of their lives. A warm recommendation from them carries serious weight."},
+  {icon:"✨",title:"Follow-Up — Day 2",who:"No reply after first DM",ctx:"Bump it up gently — bring new value",text:"Hi [Name], just dropping this back up in case it got buried — I know DMs can get hectic. Happy to send more designs or answer any questions. 🤍",tip:"<strong>Key:</strong> Short and light. No guilt-tripping. Just a gentle nudge."},
+  {icon:"🔄",title:"Follow-Up — Day 5",who:"Still no reply after Day 2 follow-up",ctx:"Attach your newest design — gives them a reason to look",text:"Hi [Name] — finished a new design recently and thought of you. I'll drop it below. No pressure at all — just wanted to stay on your radar for whenever the need comes up. 🤍\n[attach newest design]",tip:"<strong>Key:</strong> A new design gives them a genuine reason to re-engage. You're not chasing — you're sharing."},
+  {icon:"💼",title:"The Sample Close",who:"Warm leads who are hesitating",ctx:"Single highest-converting message — personalised free preview",text:"I'd love to put together a quick sample in your wedding colours — completely free, no commitment. It just means you can see exactly how your stationery would look before deciding.\n\nAll I need is:\n• Your wedding colours\n• Your names\n• Your wedding date\n\nShall I put one together for you? 🤍",tip:"<strong>Key:</strong> Once they see their names on a design, they stop evaluating and start imagining their wedding day."},
+  {icon:"🎉",title:"Deposit Request — Closing",who:"Clients who have said yes",ctx:"Specific amount, payment details immediately — no delay",text:"So excited to get started! 🤍\n\nTo lock in your slot and begin your design, I require a 50% deposit — that's $[amount].\n\nOnce confirmed, I'll begin within 24 hours and send your first draft by [date].\n\nHere are my payment details:\n[Your payment method / details]\n\nLooking forward to creating something beautiful for your day!",tip:"<strong>Key:</strong> Say the exact dollar amount. Vagueness creates friction. They said yes — make paying effortless."},
+];
+
+const HASHTAGS=[
+  {title:"Diaspora Brides",sub:"Your #1 priority niche",ctx:"Use 3–4 per post — small pond, your exact client",tags:["#nigerianbride","#diasporawedding","#nigerianbrideinuk","#nigerianbrideinusa","#africanbrideuk","#2025naijabride","#nigerianengagement","#africanengaged","#nigerianbridetobe","#africanwedding2025"],tip:"<strong>Own this space.</strong> Diaspora brides planning cultural weddings are massively underserved for premium stationery."},
+  {title:"Stationery Discovery",sub:"Couples searching for your product",ctx:"Mix 2–3 with diaspora tags every post",tags:["#weddingprogramdesign","#ceremonyprogramdesign","#weddingstationerydesign","#bespokedesign","#weddingsuite","#weddinginvitedesign","#luxuryweddingstationery","#weddingpapergoods"],tip:"<strong>Discovery tags</strong> put you in front of couples already searching for exactly what you make."},
+  {title:"Cultural Wedding Community",sub:"Vendor & community discovery",ctx:"Use 2–3 on posts featuring cultural or Afro-elegant styles",tags:["#africanweddingphotographer","#nigerianweddingplanner","#nigerianweddingvendor","#africanbridestyle","#naijawedding","#nigerianwedding","#owambe","#yorubawedding","#igbowedding"],tip:"<strong>Vendors here</strong> are actively looking for quality creative partners to refer."},
+  {title:"Planning Mode Couples",sub:"Find couples actively planning",ctx:"1–2 per post to reach mid-planning couples",tags:["#bridetobe","#2025bride","#weddingplanning","#weddinginspo","#weddingdetails2025","#elegantwedding","#luxurywedding","#modernwedding"],tip:"<strong>Couples searching these</strong> are in active planning mode — they need stationery and don't know it yet."},
+];
+
+const CAPTIONS=[
+  {icon:"🖼️",title:"First Portfolio Post",sub:"Kingsley & Mary program reveal",when:"Single image or carousel of program panels",text:"Every detail of your wedding day deserves to be designed with intention.\n\nThis ceremony program was created for Kingsley & Mary — part of a fully coordinated wedding stationery suite, where the typography, palette, and layout carry one visual story from the first page to the last.\n\nNothing was accidental.\n\nIf you're planning your wedding and want stationery that feels as considered as the day itself, we'd love to hear from you. Send us a DM — and let's talk about your vision.\n\n✦ Dominique Creations — Bespoke Wedding Stationery",tags:["#nigerianbride","#weddingprogramdesign","#diasporawedding","#luxuryweddingstationery","#2025naijabride"],tip:"<strong>Why it works:</strong> Leads with emotion and intention. Ends with a soft open invitation — not a hard sell."},
+  {icon:"↔️",title:"Before & After Post",sub:"Generic template vs your bespoke design",when:"Side by side image — generic on left, yours on right",text:"Most couples settle for a printed template.\n\nThis is what a bespoke design looks like instead.\n\nSame information. Same purpose. Completely different experience for every guest who holds it.\n\nAt Dominique Creations, every piece is built around your names, your colours, and your wedding aesthetic — not copied from a catalogue.\n\nDM me PROGRAM to see what yours could look like. 🤍\n\n✦ Dominique Creations",tags:["#weddingprogramdesign","#nigerianbride","#diasporawedding","#bespokedesign","#luxuryweddingstationery"],tip:"<strong>Why it works:</strong> The contrast does the selling. No need to say 'mine is better' — they can see it."},
+  {icon:"💌",title:"New Style Drop",sub:"Posting any new design style",when:"Carousel showing the full design",text:"Introducing [Style Name] — [e.g. clean ivory lines, gold serif typography, generous white space for the couple who believes elegance is in the edit].\n\nAvailable now as part of the [Package Name] collection.\n\nEverything is bespoke — your names, your date, your palette. Print-ready and delivered in [X] days.\n\nDM me SUITE to see the full collection. 🤍\n\n✦ Dominique Creations",tags:["#weddingstationerydesign","#nigerianbridetobe","#africanwedding2025","#ceremonyprogramdesign","#bespokedesign"],tip:"<strong>Why it works:</strong> The keyword CTA 'DM me SUITE' creates an open loop the brain wants to close."},
+  {icon:"✨",title:"Package Value Post",sub:"Showcasing what's inside a package",when:"Graphic or carousel listing inclusions",text:"Here's what a full wedding stationery suite looks like when every piece is designed to belong together.\n\nThe [Package Name] ($[price]) includes:\n✦ [Item 1]\n✦ [Item 2]\n✦ [Item 3]\n✦ Print-ready files · Delivered in [X] days\n\nBecause your wedding day deserves more than a template.\n\nDM me [KEYWORD] to get started. 🤍",tags:["#luxuryweddingstationery","#nigerianbride","#weddingsuite","#africanbrideuk","#nigerianweddingvendor"],tip:"<strong>Why it works:</strong> Listing inclusions removes the 'what do I actually get?' objection before it's asked."},
+  {icon:"🔥",title:"Final Push — March Closing",sub:"Last 3–5 days of March",when:"Story or feed post — urgency without desperation",text:"A few March slots remaining. 🤍\n\nIf you've been thinking about your wedding stationery and haven't made a move yet — this is the moment.\n\nBespoke programs from $49. Full suites from $650. Everything designed for you and delivered print-ready within days.\n\nDM me today and we'll get started. ✦",tags:["#nigerianbride","#diasporawedding","#2025naijabride","#weddingprogramdesign","#luxuryweddingstationery"],tip:"<strong>Why it works:</strong> Creates real urgency without aggression. Honest scarcity motivates action."},
+  {icon:"🎬",title:"Design Process Reel",sub:"Screen recording of you designing in Photoshop",when:"Short Reel — 15 to 60 seconds",text:"This is what goes into every Dominique Creations design. ✦\n\nEvery element placed with intention. Every font chosen for how it feels, not just how it looks. Every colour pulled directly from the couple's palette.\n\nThis is bespoke. This is the difference.\n\nDM me SUITE to start yours. 🤍",tags:["#weddingdesigner","#weddingstationery","#nigerianbride","#diasporawedding","#designprocess"],tip:"<strong>Why it works:</strong> Process content builds trust faster than product shots. People buy from makers they can see working."},
+];
+
+const OBJECTIONS=[
+  {q:'"Why is it this amount? / It\'s a bit expensive."',they:"Client needs more confidence in the quality before committing.",resp:"I completely understand — and I want to make sure you feel confident before committing. What you're getting is a fully bespoke design: your names, your wedding date, your colours, your style — built specifically for your day and delivered print-ready in [X] days. Would it help if I put together a quick free sample in your colours so you can see exactly what it looks like?"},
+  {q:'"Can you do it cheaper? / Do you have a lower price?"',they:"Client wants the work but is probing for a discount.",resp:"The pricing reflects the quality I put into every design — I don't rush and I don't use generic templates. That said, if budget is a consideration, my Signature Program at $49 is a great starting point — same quality, just for the ceremony program. Would that work, or shall we discuss the full suite?"},
+  {q:'"Other designers charge less."',they:"Client is using competitor pricing as leverage.",resp:"That's true — there are many price points out there. The difference with Dominique Creations is the level of detail, the coordinated aesthetic, and the turnaround time. I'd love to show you my portfolio so you can compare the quality directly: [Notion link]. I'm confident you'll see the difference."},
+  {q:'"I\'ll think about it." / "Let me check with my partner."',they:"Client is interested but not yet confident enough to commit.",resp:"Of course — take your time. To make it easier to decide together, I can put together a free sample in your wedding colours so you can both see exactly how it would look. No commitment at all. What are your colours and wedding date?"},
+  {q:'"Can I pay the full amount after delivery?"',they:"Client wants to avoid the upfront deposit.",resp:"I work with a 50% deposit upfront to secure your slot and begin the design, with the remaining 50% due on delivery. This protects both of us — it confirms your commitment and means I can prioritise your project fully. Once confirmed, I begin within 24 hours."},
+  {q:'"I found a free template online."',they:"Client is comparing your service to DIY options.",resp:"Free templates are great for some couples! The difference with a bespoke design is it's built entirely around your wedding — your names, your colours, your ceremony structure, your identity. I'd love to show you a free sample in your colours so you can see the difference for yourself — no commitment at all."},
+];
+
+function renderScripts(){document.getElementById('scriptsGrid').innerHTML=SCRIPTS.map((s,i)=>`<div class="script-card"><div class="script-card-header"><span class="script-icon">${s.icon}</span><div class="script-meta"><div class="script-title">${s.title}</div><div class="script-who">${s.who}</div></div><button class="copy-btn" id="dm${i}" onclick="cp('dm${i}',SCRIPTS[${i}].text)">Copy</button></div><div class="script-body"><div class="script-context">${s.ctx}</div><div class="script-text">${s.text}</div><div class="script-tip">💡 ${s.tip}</div></div></div>`).join('');}
+
+function renderHashtags(){document.getElementById('hashGrid').innerHTML=HASHTAGS.map((h,hi)=>`<div class="hash-card"><div class="hash-head"><div><div class="hash-title">${h.title}</div><div class="hash-sub">${h.sub}</div></div><button class="copy-btn" id="ha${hi}" onclick="cp('ha${hi}',HASHTAGS[${hi}].tags.join(' '))">Copy All</button></div><div class="hash-body"><div class="hash-ctx">${h.ctx}</div><div class="hash-tags">${h.tags.map((t,ti)=>`<span class="hash-tag" id="ht${hi}_${ti}" onclick="cp('ht${hi}_${ti}','${t}')">${t}</span>`).join('')}</div><div class="hash-tip">💡 ${h.tip}</div></div></div>`).join('');}
+
+function renderCaptions(){document.getElementById('captionsGrid').innerHTML=CAPTIONS.map((c,i)=>`<div class="caption-card"><div class="caption-head"><div class="caption-head-left"><span class="caption-icon">${c.icon}</span><div><div class="caption-title">${c.title}</div><div class="caption-sub">${c.sub}</div></div></div><button class="copy-btn" id="cap${i}" onclick="cp('cap${i}',CAPTIONS[${i}].text+'\\n\\n'+CAPTIONS[${i}].tags.join(' '))">Copy</button></div><div class="caption-body"><div class="caption-when">📌 ${c.when}</div><div class="caption-text">${c.text}</div><div class="caption-tags">${c.tags.map(t=>`<span class="caption-tag">${t}</span>`).join('')}</div><div class="caption-tip">💡 ${c.tip}</div></div></div>`).join('');}
+
+function renderObjections(){document.getElementById('objectionsGrid').innerHTML=OBJECTIONS.map((o,i)=>`<div class="obj-card"><div class="obj-head"><span style="font-size:14px;">💬</span><div class="obj-q">${o.q}</div></div><div class="obj-body"><div class="obj-left"><div class="obj-label">What they really mean</div><div class="obj-text">${o.they}</div></div><div class="obj-right"><div class="obj-label">Your response <button class="copy-btn" id="ob${i}" onclick="cp('ob${i}',OBJECTIONS[${i}].resp)" style="padding:4px 10px;font-size:8px;">Copy</button></div><div class="obj-text" style="margin-top:6px;">${o.resp}</div></div></div></div>`).join('');}
+
+renderRevenue();renderScripts();renderHashtags();renderCaptions();renderObjections();
+const tp=PLAN.find(d=>d.d===todayDate);if(tp)openDays.push(tp.d);
+renderDays();
+</script>
+</body>
+</html>

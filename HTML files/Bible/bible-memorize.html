@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logos — Bible Memory</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Spectral:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0f1e;
+    --page: #f0f4ff;
+    --page-deep: #e4eaf8;
+    --page-dark: #c8d2ec;
+    --accent: #2563eb;
+    --accent-bright: #3b82f6;
+    --accent-pale: #bfdbfe;
+    --accent-dim: #1e40af;
+    --navy: #0f172a;
+    --navy-mid: #1e293b;
+    --muted: #475569;
+    --faint: #94a3b8;
+    --white: #ffffff;
+    --green: #16a34a;
+    --danger: #dc2626;
+    --shadow: rgba(10,15,30,0.22);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Spectral', Georgia, serif; background: var(--page); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E"); pointer-events: none; z-index: 999; opacity: 0.6; }
+
+  .app-header { background: var(--navy); color: var(--white); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--accent); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 28px var(--shadow); }
+  .app-logo { font-family: 'Cinzel', serif; font-size: 1.5rem; letter-spacing: 0.15em; color: var(--accent-bright); }
+  .app-logo span { color: var(--faint); font-weight: 400; }
+  .header-nav { display: flex; gap: 6px; }
+  .nav-btn { font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; padding: 7px 14px; border: 1px solid var(--accent); background: transparent; color: var(--accent-pale); cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+  .nav-btn:hover, .nav-btn.active { background: var(--accent); color: var(--white); }
+
+  .app-body { display: flex; min-height: calc(100vh - 65px); }
+
+  .sidebar { width: 270px; background: var(--navy); padding: 24px 0; flex-shrink: 0; border-right: 2px solid var(--accent-dim); overflow-y: auto; max-height: calc(100vh - 65px); position: sticky; top: 65px; }
+  .sidebar-section { padding: 0 20px 16px; border-bottom: 1px solid rgba(37,99,235,0.18); margin-bottom: 16px; }
+  .sidebar-label { font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.18em; color: var(--accent-bright); text-transform: uppercase; margin-bottom: 10px; }
+  .stage-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; border-radius: 2px; transition: background 0.15s; margin-bottom: 3px; }
+  .stage-item:hover { background: rgba(37,99,235,0.12); }
+  .stage-item.active { background: rgba(37,99,235,0.22); }
+  .stage-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .stage-name { font-family: 'Spectral', serif; font-size: 0.82rem; color: var(--white); flex: 1; }
+  .stage-count { font-size: 0.7rem; color: var(--faint); font-style: italic; }
+  .stat-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .stat-box { flex: 1; background: rgba(37,99,235,0.1); border: 1px solid rgba(37,99,235,0.28); padding: 8px; text-align: center; border-radius: 2px; }
+  .stat-val { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--accent-bright); }
+  .stat-lbl { font-size: 0.6rem; color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; }
+  .due-item { font-size: 0.75rem; color: var(--accent-pale); padding: 5px 12px; cursor: pointer; transition: background 0.15s; border-left: 2px solid transparent; }
+  .due-item:hover { background: rgba(37,99,235,0.12); border-left-color: var(--accent-bright); }
+  .due-item .ref { font-family: 'Cinzel', serif; font-size: 0.65rem; color: var(--accent-bright); display: block; }
+
+  .content { flex: 1; padding: 32px 40px; max-width: 900px; }
+
+  .memory-card { background: var(--white); border: 1px solid var(--page-dark); border-top: 4px solid var(--accent); padding: 42px 52px; box-shadow: 0 8px 40px var(--shadow), 0 1px 3px rgba(37,99,235,0.06); margin-bottom: 24px; animation: cardIn 0.35s ease; }
+  @keyframes cardIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:none; } }
+  .card-meta { font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.15em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+  .card-meta::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--accent-pale), transparent); }
+  .card-stage-badge { padding: 3px 9px; border: 1px solid currentColor; font-size: 0.6rem; }
+  .badge-words { color: var(--accent); border-color: var(--accent); }
+
+  .context-box { background: rgba(37,99,235,0.05); border-left: 3px solid var(--accent); padding: 10px 14px; margin-bottom: 20px; font-size: 0.8rem; color: var(--muted); font-style: italic; line-height: 1.65; }
+  .context-box strong { font-style: normal; color: var(--accent-dim); font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.1em; display: block; margin-bottom: 4px; text-transform: uppercase; }
+
+  .verse-text { font-family: 'IM Fell English', serif; font-size: 1.28rem; line-height: 2.3; color: var(--ink); margin-bottom: 10px; min-height: 60px; letter-spacing: 0.01em; }
+  .verse-ref { font-family: 'Cinzel', serif; font-size: 0.72rem; color: var(--accent-dim); letter-spacing: 0.12em; text-align: right; margin-bottom: 24px; font-style: italic; }
+
+  /* Inline blanks — appear as navy bars in the verse */
+  .cloze-blank-inline { display: inline-block; background: var(--navy); color: transparent; border-radius: 2px; padding: 1px 5px; min-width: 2em; font-family: 'IM Fell English', serif; font-size: 1.28rem; line-height: 2.3; vertical-align: baseline; cursor: default; transition: background 0.35s, color 0.35s; user-select: none; letter-spacing: 0.01em; }
+  .cloze-blank-inline.shown { background: transparent; color: var(--green); font-weight: 600; }
+  .cloze-blank-inline.missed { background: rgba(220,38,38,0.1); color: var(--danger); }
+
+  .answer-area { margin: 22px 0 14px; }
+  .answer-label { font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .blanks-grid { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-bottom: 14px; }
+  .blank-wrap { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .blank-num { font-size: 0.56rem; color: var(--faint); font-family: 'Cinzel', serif; letter-spacing: 0.08em; }
+  .blank-input { font-family: 'IM Fell English', serif; font-size: 0.95rem; padding: 6px 10px; border: 1px solid var(--page-dark); background: var(--page); color: var(--ink); outline: none; width: 120px; transition: border-color 0.2s; text-align: center; }
+  .blank-input:focus { border-color: var(--accent); }
+  .blank-input.correct { border-color: var(--green); background: rgba(22,163,74,0.05); color: var(--green); }
+  .blank-input.wrong { border-color: var(--danger); background: rgba(220,38,38,0.05); color: var(--danger); }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .btn { font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; padding: 10px 22px; border: 1px solid; cursor: pointer; text-transform: uppercase; transition: all 0.18s; }
+  .btn-primary { background: var(--accent); color: var(--white); border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: var(--white); }
+  .btn-outline { background: transparent; color: var(--ink); border-color: var(--page-dark); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-reveal { background: transparent; color: var(--muted); border-color: var(--page-dark); }
+  .btn-reveal:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 7px 14px; font-size: 0.62rem; }
+
+  .srs-wrap { margin-top: 20px; border-top: 1px solid var(--page-dark); padding-top: 18px; }
+  .srs-label-row { font-family: 'Cinzel', serif; font-size: 0.58rem; color: var(--faint); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+  .srs-row { display: flex; gap: 8px; }
+  .srs-btn { flex: 1; padding: 11px 6px; font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.1em; border: 1px solid; cursor: pointer; text-align: center; text-transform: uppercase; transition: all 0.18s; }
+  .srs-again { color: var(--danger); border-color: var(--danger); background: transparent; }
+  .srs-again:hover { background: var(--danger); color: var(--white); }
+  .srs-hard { color: #b45309; border-color: #b45309; background: transparent; }
+  .srs-hard:hover { background: #b45309; color: var(--white); }
+  .srs-good { color: var(--green); border-color: var(--green); background: transparent; }
+  .srs-good:hover { background: var(--green); color: var(--white); }
+  .srs-easy { color: var(--accent); border-color: var(--accent); background: transparent; }
+  .srs-easy:hover { background: var(--accent); color: var(--white); }
+  .srs-sublabel { display: block; font-size: 0.52rem; color: var(--faint); margin-top: 3px; font-family: 'Spectral', serif; font-style: italic; text-transform: none; letter-spacing: 0; }
+
+  .feedback-box { padding: 13px 16px; margin: 12px 0; font-size: 0.85rem; line-height: 1.6; animation: fadeIn 0.25s ease; font-family: 'Spectral', serif; }
+  .fb-correct { background: rgba(22,163,74,0.07); border-left: 3px solid var(--green); color: #14532d; }
+  .fb-partial { background: rgba(37,99,235,0.07); border-left: 3px solid var(--accent); color: var(--accent-dim); }
+  .fb-wrong { background: rgba(220,38,38,0.07); border-left: 3px solid var(--danger); color: #991b1b; }
+  @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+  .verse-reveal-box { background: var(--page-deep); border: 1px solid var(--page-dark); border-left: 4px solid var(--accent); padding: 18px 22px; margin: 14px 0; animation: fadeIn 0.3s ease; }
+  .vr-label { font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.14em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+  .vr-text { font-family: 'IM Fell English', serif; font-size: 1.05rem; line-height: 1.95; color: var(--ink); }
+
+  .progress-label { font-family: 'Cinzel', serif; font-size: 0.62rem; color: var(--faint); letter-spacing: 0.1em; margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-wrap { background: var(--page-dark); height: 4px; margin-bottom: 28px; border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(to right, var(--accent), var(--accent-bright)); transition: width 0.5s ease; border-radius: 2px; }
+
+  .session-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+  .session-title { font-family: 'Cinzel', serif; font-size: 1.2rem; color: var(--ink); letter-spacing: 0.08em; }
+  .session-subtitle { font-family: 'Spectral', serif; font-style: italic; font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
+  .mode-chip { padding: 4px 12px; border: 1px solid; font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; margin-left: auto; }
+  .chip-new { color: var(--accent); border-color: var(--accent); }
+  .chip-review { color: var(--accent-dim); border-color: var(--accent-dim); }
+
+  .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  .dash-card { background: var(--navy); padding: 22px 20px; border-top: 3px solid var(--accent); text-align: center; }
+  .dash-val { font-family: 'Cinzel', serif; font-size: 2rem; color: var(--accent-bright); line-height: 1; }
+  .dash-label { font-size: 0.7rem; color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; }
+  .dash-sub { font-size: 0.65rem; color: var(--accent-pale); font-style: italic; margin-top: 4px; }
+
+  .stage-progress-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--page-dark); }
+  .sp-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .sp-name { font-family: 'Cinzel', serif; font-size: 0.78rem; color: var(--ink); flex: 1; }
+  .sp-bar-wrap { width: 160px; height: 6px; background: var(--page-dark); border-radius: 3px; overflow: hidden; }
+  .sp-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .sp-pct { font-size: 0.7rem; color: var(--muted); min-width: 36px; text-align: right; }
+  .sp-count { font-size: 0.7rem; color: var(--faint); min-width: 90px; text-align: right; font-style: italic; }
+
+  .next-card { background: linear-gradient(135deg, var(--navy), var(--navy-mid)); border: 1px solid var(--accent-dim); padding: 28px 32px; margin-top: 20px; display: flex; align-items: center; gap: 24px; }
+  .next-title { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--accent-bright); }
+  .next-desc { font-size: 0.8rem; color: var(--accent-pale); margin-top: 4px; font-style: italic; }
+  .next-btn { margin-left: auto; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.12em; padding: 12px 28px; background: var(--accent); color: var(--white); border: none; cursor: pointer; text-transform: uppercase; transition: background 0.18s; font-weight: 600; white-space: nowrap; }
+  .next-btn:hover { background: var(--accent-bright); }
+
+  .science-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .sci-badge { font-size: 0.58rem; font-family: 'Cinzel', serif; letter-spacing: 0.07em; padding: 4px 10px; border: 1px solid var(--page-dark); color: var(--muted); text-transform: uppercase; }
+
+  .ornament { text-align: center; color: var(--accent); font-size: 1.2rem; margin: 16px 0; opacity: 0.4; letter-spacing: 0.4em; }
+  .hint { font-size: 0.72rem; color: var(--faint); font-style: italic; margin-top: 10px; line-height: 1.5; }
+  .browse-row { border-bottom: 1px solid var(--page-dark); padding: 14px 0; display: flex; gap: 16px; align-items: flex-start; }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: var(--navy); }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--accent-dim); border-radius: 2px; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .content { padding: 20px 16px; }
+    .memory-card { padding: 26px 20px; }
+    .dash-grid { grid-template-columns: 1fr 1fr; }
+    .sp-bar-wrap { width: 80px; }
+    .next-card { flex-wrap: wrap; }
+    .next-btn { margin-left: 0; }
+    .blank-input { width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-logo">LOGOS <span>/ Bible Memory</span></div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showView('study')">Study</button>
+    <button class="nav-btn" onclick="showView('browse')">Browse</button>
+  </nav>
+</header>
+
+<div class="app-body">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Stages</div>
+      <div class="stage-item active" id="si-words" onclick="selectStage('words',this)">
+        <div class="stage-dot" style="background:var(--accent-bright)"></div>
+        <div class="stage-name">Words of Jesus</div>
+        <div class="stage-count" id="wj-count">—</div>
+      </div>
+      <div class="stage-item" id="si-nt" onclick="selectStage('nt',this)">
+        <div class="stage-dot" style="background:var(--accent)"></div>
+        <div class="stage-name">New Testament</div>
+        <div class="stage-count" id="nt-count">—</div>
+      </div>
+      <div class="stage-item" id="si-ot" onclick="selectStage('ot',this)">
+        <div class="stage-dot" style="background:var(--faint)"></div>
+        <div class="stage-name">Old Testament</div>
+        <div class="stage-count" id="ot-count">locked</div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Today</div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-val" id="sb-due">0</div><div class="stat-lbl">Due</div></div>
+        <div class="stat-box"><div class="stat-val" id="sb-new">0</div><div class="stat-lbl">New</div></div>
+        <div class="stat-box"><div class="stat-val" id="sb-streak">0</div><div class="stat-lbl">Streak</div></div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Due Now</div>
+      <div id="due-list"></div>
+    </div>
+  </aside>
+  <main class="content" id="main-content"></main>
+</div>
+
+<script>
+// ── VERSE DATA ──────────────────────────────────────────
+const JESUS_VERSES = [
+  {ref:"Matthew 4:4",text:"It is written, Man shall not live by bread alone, but by every word that proceedeth out of the mouth of God.",context:"Jesus quoting Scripture to Satan during his 40-day fast in the wilderness. The first temptation: turn stones to bread."},
+  {ref:"Matthew 4:7",text:"It is written again, Thou shalt not tempt the Lord thy God.",context:"Jesus rebuking Satan's second temptation — to jump from the temple pinnacle and be caught by angels."},
+  {ref:"Matthew 4:10",text:"Get thee hence, Satan: for it is written, Thou shalt worship the Lord thy God, and him only shalt thou serve.",context:"The final wilderness temptation: Satan offers all earthly kingdoms in exchange for worship."},
+  {ref:"Matthew 4:17",text:"Repent: for the kingdom of heaven is at hand.",context:"Jesus' very first public proclamation after returning from the wilderness. The opening word of his ministry."},
+  {ref:"Matthew 5:3",text:"Blessed are the poor in spirit: for theirs is the kingdom of heaven.",context:"First Beatitude. The Sermon on the Mount — opening with humility. Poverty of spirit means knowing your need of God."},
+  {ref:"Matthew 5:4",text:"Blessed are they that mourn: for they shall be comforted.",context:"Second Beatitude. Those who grieve over sin and suffering are promised divine comfort."},
+  {ref:"Matthew 5:5",text:"Blessed are the meek: for they shall inherit the earth.",context:"Third Beatitude. Meekness is not weakness — it is strength under control, surrendered to God."},
+  {ref:"Matthew 5:6",text:"Blessed are they which do hunger and thirst after righteousness: for they shall be filled.",context:"Fourth Beatitude. A spiritual appetite as intense and urgent as physical starvation."},
+  {ref:"Matthew 5:7",text:"Blessed are the merciful: for they shall obtain mercy.",context:"Fifth Beatitude. The principle of receiving what you give — mercy flows back to the merciful."},
+  {ref:"Matthew 5:8",text:"Blessed are the pure in heart: for they shall see God.",context:"Sixth Beatitude. Inner purity — not ritual cleanliness — is the condition for beholding God."},
+  {ref:"Matthew 5:9",text:"Blessed are the peacemakers: for they shall be called the children of God.",context:"Seventh Beatitude. Active peacemakers bear God's family name."},
+  {ref:"Matthew 5:10",text:"Blessed are they which are persecuted for righteousness' sake: for theirs is the kingdom of heaven.",context:"Eighth Beatitude. The same reward as the first — those who suffer for what is right receive the kingdom."},
+  {ref:"Matthew 5:14",text:"Ye are the light of the world. A city that is set on an hill cannot be hid.",context:"Jesus describing his disciples' calling — not to shine for themselves but to be unmistakably visible."},
+  {ref:"Matthew 5:16",text:"Let your light so shine before men, that they may see your good works, and glorify your Father which is in heaven.",context:"The purpose of good works: not self-glorification but pointing others toward the Father."},
+  {ref:"Matthew 5:44",text:"Love your enemies, bless them that curse you, do good to them that hate you, and pray for them which despitefully use you, and persecute you.",context:"The most radical command of the Sermon — love directed precisely at those who oppose you."},
+  {ref:"Matthew 6:9",text:"After this manner therefore pray ye: Our Father which art in heaven, Hallowed be thy name.",context:"The Lord's Prayer, first line. Jesus teaching his disciples how to pray — beginning with God's holiness, not our needs."},
+  {ref:"Matthew 6:10",text:"Thy kingdom come. Thy will be done in earth, as it is in heaven.",context:"Lord's Prayer: aligning earthly reality with heavenly reality. A prayer of complete surrender."},
+  {ref:"Matthew 6:11",text:"Give us this day our daily bread.",context:"Lord's Prayer: daily dependence. The word 'daily' occurs nowhere else in ancient Greek — possibly coined for this prayer."},
+  {ref:"Matthew 6:12",text:"And forgive us our debts, as we forgive our debtors.",context:"Lord's Prayer: forgiveness is conditional on extending forgiveness. A serious and sobering clause."},
+  {ref:"Matthew 6:13",text:"And lead us not into temptation, but deliver us from evil: For thine is the kingdom, and the power, and the glory, for ever. Amen.",context:"Lord's Prayer: closing doxology. Returning glory to God — where the prayer began."},
+  {ref:"Matthew 6:33",text:"But seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you.",context:"The single great priority principle — after 30 verses on anxiety about food, clothing, and tomorrow."},
+  {ref:"Matthew 7:7",text:"Ask, and it shall be given you; seek, and ye shall find; knock, and it shall be opened unto you.",context:"Three verbs, each more intense than the last. A promise about persistent, earnest prayer."},
+  {ref:"Matthew 7:12",text:"Therefore all things whatsoever ye would that men should do to you, do ye even so to them: for this is the law and the prophets.",context:"The Golden Rule — Jesus' summary of the entire moral law in a single sentence."},
+  {ref:"Matthew 11:28",text:"Come unto me, all ye that labour and are heavy laden, and I will give you rest.",context:"Perhaps the most comforting invitation in Scripture. Jesus speaking to the exhausted and burdened."},
+  {ref:"Matthew 11:29",text:"Take my yoke upon you, and learn of me; for I am meek and lowly in heart: and ye shall find rest unto your souls.",context:"The yoke metaphor: a yoke joins two — one experienced, one learning. Jesus carries the heavy end."},
+  {ref:"Matthew 16:24",text:"If any man will come after me, let him deny himself, and take up his cross, and follow me.",context:"The cost of discipleship — spoken immediately after Peter confessed Jesus as Christ. No softening."},
+  {ref:"Matthew 22:37",text:"Thou shalt love the Lord thy God with all thy heart, and with all thy soul, and with all thy mind.",context:"Jesus quoting Deuteronomy 6:5 — the Great Commandment. Entire being directed to God."},
+  {ref:"Matthew 22:39",text:"Thou shalt love thy neighbour as thyself.",context:"The Second Great Commandment. Jesus says these two contain the whole law and the prophets."},
+  {ref:"Matthew 28:19",text:"Go ye therefore, and teach all nations, baptizing them in the name of the Father, and of the Son, and of the Holy Ghost.",context:"The Great Commission. Jesus' final command before ascending — a global mandate."},
+  {ref:"Matthew 28:20",text:"Teaching them to observe all things whatsoever I have commanded you: and, lo, I am with you alway, even unto the end of the world. Amen.",context:"The Great Commission's promise — the mission is never done alone. His presence accompanies the command."},
+  {ref:"Mark 10:27",text:"With men it is impossible, but not with God: for with God all things are possible.",context:"After the rich young ruler walked away — Jesus telling his disciples what salvation truly requires."},
+  {ref:"Luke 21:33",text:"Heaven and earth shall pass away: but my words shall not pass away.",context:"Olivet Discourse — Jesus prophesying about the end of the age, then anchoring all in the permanence of his words."},
+  {ref:"John 3:3",text:"Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.",context:"Said to Nicodemus, a Pharisee who came to Jesus by night. The doctrine of regeneration."},
+  {ref:"John 3:16",text:"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",context:"The most cited verse in Scripture. Jesus explaining the divine motive behind the incarnation to Nicodemus."},
+  {ref:"John 6:35",text:"I am the bread of life: he that cometh to me shall never hunger; and he that believeth on me shall never thirst.",context:"First of the seven 'I AM' statements in John. Spoken after feeding 5,000 — physical bread to spiritual sustenance."},
+  {ref:"John 8:12",text:"I am the light of the world: he that followeth me shall not walk in darkness, but shall have the light of life.",context:"Second 'I AM' statement. Spoken at the treasury of the temple during the Feast of Tabernacles."},
+  {ref:"John 8:32",text:"And ye shall know the truth, and the truth shall make you free.",context:"The freedom Jesus offers is from the slavery of sin, not political oppression."},
+  {ref:"John 10:10",text:"I am come that they might have life, and that they might have it more abundantly.",context:"Jesus contrasting himself with thieves and robbers. His purpose is abundance of life."},
+  {ref:"John 10:11",text:"I am the good shepherd: the good shepherd giveth his life for the sheep.",context:"Fourth 'I AM' statement. The defining quality of the good shepherd: self-sacrifice, not self-preservation."},
+  {ref:"John 11:25",text:"I am the resurrection, and the life: he that believeth in me, though he were dead, yet shall he live.",context:"Fifth 'I AM' statement. Said to Martha at Lazarus' tomb, moments before raising him from the dead."},
+  {ref:"John 13:34",text:"A new commandment I give unto you, That ye love one another; as I have loved you, that ye also love one another.",context:"The Upper Room, the night before the crucifixion. A new standard: not 'as yourself' but 'as I have loved you.'"},
+  {ref:"John 13:35",text:"By this shall all men know that ye are my disciples, if ye have love one to another.",context:"Love is the badge of discipleship — visible to the watching world."},
+  {ref:"John 14:1",text:"Let not your heart be troubled: ye believe in God, believe also in me.",context:"Opening of the Farewell Discourse. Jesus comforting disciples who are distressed that he is leaving."},
+  {ref:"John 14:6",text:"I am the way, the truth, and the life: no man cometh unto the Father, but by me.",context:"Sixth 'I AM' statement. The most exclusive claim in Scripture — all three nouns belong to him."},
+  {ref:"John 14:15",text:"If ye love me, keep my commandments.",context:"Love and obedience are inseparable — the test of genuine love for Christ is faithfulness."},
+  {ref:"John 14:27",text:"Peace I leave with you, my peace I give unto you: not as the world giveth, give I unto you. Let not your heart be troubled, neither let it be afraid.",context:"Jesus' legacy gift to his disciples: a peace qualitatively different from anything the world provides."},
+  {ref:"John 15:5",text:"I am the vine, ye are the branches: He that abideth in me, and I in him, the same bringeth forth much fruit: for without me ye can do nothing.",context:"Seventh 'I AM' statement. The branch cannot produce fruit by its own effort — only by abiding."},
+  {ref:"John 15:12",text:"This is my commandment, That ye love one another, as I have loved you.",context:"The commandment repeated — now framed as his commandment, singular and defining."},
+  {ref:"John 15:13",text:"Greater love hath no man than this, that a man lay down his life for his friends.",context:"The highest possible definition of love — and Jesus is about to demonstrate it the very next day."},
+  {ref:"John 16:33",text:"These things I have spoken unto you, that in me ye might have peace. In the world ye shall have tribulation: but be of good cheer; I have overcome the world.",context:"Final line of the Farewell Discourse. Tribulation is promised; but so is the One who has already conquered it."},
+];
+
+const NT_VERSES = [
+  {ref:"Romans 1:16",text:"For I am not ashamed of the gospel of Christ: for it is the power of God unto salvation to every one that believeth; to the Jew first, and also to the Greek.",context:"Paul opening his theological masterpiece — personal confession before systematic argument."},
+  {ref:"Romans 3:23",text:"For all have sinned, and come short of the glory of God.",context:"The universal diagnosis. No exceptions by ethnicity, morality, or religious pedigree."},
+  {ref:"Romans 5:8",text:"But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.",context:"The timing makes it remarkable — not after we improved, but while still in rebellion."},
+  {ref:"Romans 6:23",text:"For the wages of sin is death; but the gift of God is eternal life through Jesus Christ our Lord.",context:"Two roads: sin earns death (wages — deserved); grace gives life (gift — undeserved)."},
+  {ref:"Romans 8:28",text:"And we know that all things work together for good to them that love God, to them who are the called according to his purpose.",context:"Said in the context of suffering and weakness — the 'all things' includes the painful ones."},
+  {ref:"Romans 10:9",text:"That if thou shalt confess with thy mouth the Lord Jesus, and shalt believe in thine heart that God hath raised him from the dead, thou shalt be saved.",context:"The minimal and sufficient conditions for salvation stated plainly."},
+  {ref:"Romans 12:2",text:"And be not conformed to this world: but be ye transformed by the renewing of your mind, that ye may prove what is that good, and acceptable, and perfect, will of God.",context:"Two verbs: 'conformed' (passive, external pressure) vs 'transformed' (Greek: metamorphoo — internal change)."},
+  {ref:"1 Corinthians 13:4",text:"Charity suffereth long, and is kind; charity envieth not; charity vaunteth not itself, is not puffed up.",context:"The Love Chapter — Paul defining love by a list of verbs, not feelings."},
+  {ref:"1 Corinthians 13:13",text:"And now abideth faith, hope, charity, these three; but the greatest of these is charity.",context:"The three eternal virtues — charity is greatest because it is the nature of God himself."},
+  {ref:"Galatians 5:22",text:"But the fruit of the Spirit is love, joy, peace, longsuffering, gentleness, goodness, faith.",context:"Nine graces listed as a single fruit — not produced by effort but by abiding in the Spirit."},
+  {ref:"Ephesians 2:8",text:"For by grace are ye saved through faith; and that not of yourselves: it is the gift of God.",context:"Grace + faith, neither originating in us — both are gifts. Salvation is entirely divine initiative."},
+  {ref:"Philippians 4:7",text:"And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus.",context:"Peace that guards — military metaphor: a sentinel standing watch over the heart."},
+  {ref:"Philippians 4:13",text:"I can do all things through Christ which strengtheneth me.",context:"Written from prison. 'All things' means the contentment Paul just described — not unlimited achievement."},
+  {ref:"2 Timothy 3:16",text:"All scripture is given by inspiration of God, and is profitable for doctrine, for reproof, for correction, for instruction in righteousness.",context:"The foundational doctrine of Scripture's divine origin. 'Inspiration' means God-breathed."},
+  {ref:"Hebrews 11:1",text:"Now faith is the substance of things hoped for, the evidence of things not seen.",context:"The definition of faith — not blind belief but confident assurance grounded in God's character."},
+  {ref:"James 1:5",text:"If any of you lack wisdom, let him ask of God, that giveth to all men liberally, and upbraideth not; and it shall be given him.",context:"God does not scold you for not knowing. He gives wisdom generously to all who sincerely ask."},
+  {ref:"1 Peter 5:7",text:"Casting all your care upon him; for he careth for you.",context:"The word 'casting' is one action — a deliberate, complete transfer of your anxieties onto him."},
+  {ref:"1 John 1:9",text:"If we confess our sins, he is faithful and just to forgive us our sins, and to cleanse us from all unrighteousness.",context:"Written to believers — ongoing confession, ongoing cleansing."},
+  {ref:"Revelation 3:20",text:"Behold, I stand at the door, and knock: if any man hear my voice, and open the door, I will come in to him, and will sup with him, and he with me.",context:"Spoken to the lukewarm church of Laodicea — Christ outside the very church that bears his name."},
+];
+
+const OT_VERSES = [
+  {ref:"Genesis 1:1",text:"In the beginning God created the heaven and the earth.",context:"The opening declaration of Scripture — God precedes everything; creation is his act, not an accident."},
+  {ref:"Psalm 23:1",text:"The LORD is my shepherd; I shall not want.",context:"David's personal declaration — not 'a shepherd' but 'my shepherd.' The relationship is intimate and specific."},
+  {ref:"Psalm 23:4",text:"Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me.",context:"The Psalm's turning point — from green pastures to the valley. Presence conquers fear where escape cannot."},
+  {ref:"Psalm 119:105",text:"Thy word is a lamp unto my feet, and a light unto my path.",context:"From the longest chapter in the Bible — 176 verses entirely devoted to the glory of God's Word."},
+  {ref:"Proverbs 3:5",text:"Trust in the LORD with all thine heart; and lean not unto thine own understanding.",context:"The foundational proverb — whole-hearted trust set against the human tendency toward self-reliance."},
+  {ref:"Proverbs 3:6",text:"In all thy ways acknowledge him, and he shall direct thy paths.",context:"'All thy ways' — every decision, trivial or momentous. Guidance is tied to total acknowledgment."},
+  {ref:"Isaiah 40:31",text:"But they that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint.",context:"Three speeds of life: soaring, running, walking. Supernatural strength for each."},
+  {ref:"Jeremiah 29:11",text:"For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end.",context:"Written to Israelites in Babylonian exile — 70 years of captivity ahead, yet this promise stands."},
+];
+
+// ── SCHEDULE: 7-day verse introduction ─────────────────
+const INTRO_KEY  = 'logos_intro_v2';
+const DB_KEY     = 'logos_srs_v2';
+const STREAK_KEY = 'logos_streak_v2';
+const DAY        = 86400000;
+
+function initSchedule() {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(INTRO_KEY)) || {}; } catch {}
+  if (Object.keys(s).length > 0) return s;
+  const now = Date.now();
+  // Words of Jesus: ~9/day over days 0-5
+  JESUS_VERSES.forEach((v,i) => { s[v.ref] = now + Math.floor(i/9)*DAY; });
+  // NT: ~4/day starting day 3
+  NT_VERSES.forEach((v,i) => { s[v.ref] = now + (3+Math.floor(i/4))*DAY; });
+  // OT: day 8 onwards
+  OT_VERSES.forEach((v,i) => { s[v.ref] = now + (8+i)*DAY; });
+  localStorage.setItem(INTRO_KEY, JSON.stringify(s));
+  return s;
+}
+function getSchedule() { try { return JSON.parse(localStorage.getItem(INTRO_KEY))||{}; } catch { return {}; } }
+function isIntroduced(ref) { const s=getSchedule(); return s[ref] && Date.now()>=s[ref]; }
+
+// ── SRS ────────────────────────────────────────────────
+function loadDB() { try { return JSON.parse(localStorage.getItem(DB_KEY))||{}; } catch { return {}; } }
+function saveDB(db) { localStorage.setItem(DB_KEY,JSON.stringify(db)); }
+function loadStreak() { try { return JSON.parse(localStorage.getItem(STREAK_KEY))||{count:0,lastDate:null}; } catch { return {count:0,lastDate:null}; } }
+function saveStreak(s) { localStorage.setItem(STREAK_KEY,JSON.stringify(s)); }
+
+function getCard(ref) {
+  const db=loadDB();
+  return db[ref]||{ref,interval:0,easeFactor:2.5,nextReview:0,reps:0,lapses:0};
+}
+function saveCard(card) { const db=loadDB(); db[card.ref]=card; saveDB(db); }
+
+function scheduleCard(card,rating) {
+  let {interval,easeFactor,reps,lapses=0}=card;
+  if(rating===0){lapses++;interval=1;reps=0;}
+  else {
+    if(reps===0)interval=1;
+    else if(reps===1)interval=6;
+    else interval=Math.round(interval*easeFactor);
+    if(rating===1)interval=Math.max(1,Math.round(interval*0.6));
+    if(rating===3)interval=Math.round(interval*1.3);
+    easeFactor=Math.max(1.3,easeFactor+(0.1-(3-rating)*(0.08+(3-rating)*0.02)));
+    reps++;
+  }
+  card.interval=interval; card.easeFactor=easeFactor; card.reps=reps; card.lapses=lapses;
+  card.nextReview=Date.now()+interval*DAY;
+  saveCard(card);
+}
+
+function ivPreview(card,rating) {
+  let {interval,easeFactor,reps}=card;
+  if(rating===0)return '<1d';
+  if(reps===0)return '1d'; if(reps===1)return '6d';
+  let iv=Math.round(interval*easeFactor);
+  if(rating===1)iv=Math.max(1,Math.round(iv*0.6));
+  if(rating===3)iv=Math.round(iv*1.3);
+  return iv+'d';
+}
+
+function getDue(verses) { const now=Date.now(); return verses.filter(v=>isIntroduced(v.ref)&&getCard(v.ref).reps>0&&getCard(v.ref).nextReview<=now); }
+function getNew(verses) { return verses.filter(v=>isIntroduced(v.ref)&&getCard(v.ref).reps===0); }
+
+// ── 60% CLOZE ─────────────────────────────────────────
+const FW = new Set(['the','a','an','and','or','but','for','nor','so','yet','of','in','on','at','to','by','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','that','which','who','whom','whose','this','these','those','it','its','not','also','then','as','with','from','upon','unto','thee','thou','thy','ye','hath','doth','them','him','his','her','our','your','my','me','us','we','he','she','they','i','am','if','no','all','into']);
+
+function buildCloze(text) {
+  const words = text.split(' ');
+  const n = words.length;
+  const blanks = {};
+  const target = Math.ceil(n * 0.60);
+
+  // Protect first 2 and last 2 words (primacy/recency effect)
+  const middle = [];
+  for (let i=2; i<n-2; i++) middle.push(i);
+
+  // Priority 1: content words in middle
+  const content = middle.filter(i => {
+    const c = words[i].toLowerCase().replace(/[^a-z]/g,'');
+    return c.length > 2 && !FW.has(c);
+  });
+  content.forEach(i => { blanks[i] = words[i]; });
+
+  // Priority 2: fill up to target with remaining middle words
+  if (Object.keys(blanks).length < target) {
+    const rest = middle.filter(i => !blanks[i]);
+    shuffle(rest);
+    const need = target - Object.keys(blanks).length;
+    rest.slice(0, need).forEach(i => { blanks[i] = words[i]; });
+  }
+
+  return { words, blanks };
+}
+
+function cw(w) { return w.toLowerCase().replace(/[^a-z']/g,''); }
+function shuffle(a) { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+// ── STATE ──────────────────────────────────────────────
+const S = { view:'dashboard', queue:[], idx:0, phase:'question', cloze:null, userAnswers:{}, score:null };
+
+function allByStage(stage) {
+  if(stage==='words')return JESUS_VERSES;
+  if(stage==='nt')return [...JESUS_VERSES,...NT_VERSES];
+  return [...JESUS_VERSES,...NT_VERSES,...OT_VERSES];
+}
+
+function buildQueue(stage) {
+  const v=allByStage(stage);
+  const due=getDue(v); const nw=getNew(v);
+  shuffle(due); shuffle(nw);
+  return shuffle([...due.slice(0,10),...nw.slice(0,5)]);
+}
+
+// ── VIEWS ──────────────────────────────────────────────
+function showView(v) {
+  S.view=v;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>{ if(b.textContent.toLowerCase().startsWith(v.substring(0,4)))b.classList.add('active'); });
+  render();
+}
+function selectStage(s,el) {
+  document.querySelectorAll('.stage-item').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  updateSidebar();
+}
+function render() {
+  const el=document.getElementById('main-content');
+  if(S.view==='dashboard')el.innerHTML=renderDash();
+  else if(S.view==='study')el.innerHTML=renderStudy();
+  else if(S.view==='browse')el.innerHTML=renderBrowse();
+  afterRender();
+  updateSidebar();
+}
+
+function updateSidebar() {
+  const wjD=getDue(JESUS_VERSES).length+getNew(JESUS_VERSES).length;
+  const ntD=getDue(NT_VERSES).length+getNew(NT_VERSES).length;
+  const allD=getDue([...JESUS_VERSES,...NT_VERSES]).length;
+  const allN=getNew([...JESUS_VERSES,...NT_VERSES]).length;
+  const streak=loadStreak();
+  document.getElementById('sb-due').textContent=allD;
+  document.getElementById('sb-new').textContent=allN;
+  document.getElementById('sb-streak').textContent=streak.count;
+  document.getElementById('wj-count').textContent=wjD+' due';
+  document.getElementById('nt-count').textContent=ntD+' due';
+  const dl=document.getElementById('due-list');
+  const dList=getDue([...JESUS_VERSES,...NT_VERSES]).slice(0,5);
+  dl.innerHTML=dList.length
+    ?dList.map(v=>`<div class="due-item" onclick="startVerse('${v.ref.replace(/'/g,"\\'")}')"><span class="ref">${v.ref}</span>${v.text.substring(0,38)}…</div>`).join('')
+    :'<div style="padding:8px 12px;font-size:0.72rem;color:var(--faint);font-style:italic;">Nothing due right now</div>';
+}
+
+// ── DASHBOARD ──────────────────────────────────────────
+function renderDash() {
+  const db=loadDB();
+  const wjL=JESUS_VERSES.filter(v=>db[v.ref]&&db[v.ref].reps>=1).length;
+  const ntL=NT_VERSES.filter(v=>db[v.ref]&&db[v.ref].reps>=1).length;
+  const mature=[...JESUS_VERSES,...NT_VERSES].filter(v=>db[v.ref]&&db[v.ref].reps>=4).length;
+  const wjPct=Math.round((wjL/JESUS_VERSES.length)*100);
+  const ntPct=Math.round((ntL/NT_VERSES.length)*100);
+  const otUnlocked=wjPct>=30;
+  const due=getDue([...JESUS_VERSES,...NT_VERSES]).length;
+  const nw=getNew([...JESUS_VERSES,...NT_VERSES]).length;
+  const streak=loadStreak();
+  const sch=getSchedule();
+  const tomorrow=Date.now()+DAY;
+  const comingTomorrow=[...JESUS_VERSES,...NT_VERSES].filter(v=>sch[v.ref]&&sch[v.ref]>Date.now()&&sch[v.ref]<=tomorrow).length;
+  return `
+    <div class="session-header">
+      <div><div class="session-title">Memory Dashboard</div>
+      <div class="session-subtitle">KJV · ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div></div>
+    </div>
+    <div class="science-row">
+      <span class="sci-badge">⟳ Spaced Repetition</span>
+      <span class="sci-badge">◻ 60% Deep Cloze</span>
+      <span class="sci-badge">⚑ Primacy / Recency Guard</span>
+      <span class="sci-badge">✦ Contextual Encoding</span>
+      <span class="sci-badge">◈ Generation Effect</span>
+      <span class="sci-badge">⧖ 7-Day Introduction</span>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card"><div class="dash-val">${due+nw}</div><div class="dash-label">Due Today</div><div class="dash-sub">${due} reviews + ${nw} new</div></div>
+      <div class="dash-card"><div class="dash-val">${wjL+ntL}</div><div class="dash-label">In System</div><div class="dash-sub">${mature} mature cards</div></div>
+      <div class="dash-card"><div class="dash-val">${streak.count}</div><div class="dash-label">Day Streak</div><div class="dash-sub">${comingTomorrow} new tomorrow</div></div>
+    </div>
+    <div style="margin-bottom:28px;">
+      <div style="font-family:'Cinzel',serif;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:16px;">Stage Progress</div>
+      <div class="stage-progress-row">
+        <div class="sp-dot" style="background:var(--accent-bright)"></div>
+        <div class="sp-name">Words of Jesus</div>
+        <div class="sp-bar-wrap"><div class="sp-bar-fill" style="width:${wjPct}%;background:var(--accent-bright)"></div></div>
+        <div class="sp-pct">${wjPct}%</div>
+        <div class="sp-count">${wjL} / ${JESUS_VERSES.length} verses</div>
+      </div>
+      <div class="stage-progress-row">
+        <div class="sp-dot" style="background:var(--accent)"></div>
+        <div class="sp-name">New Testament</div>
+        <div class="sp-bar-wrap"><div class="sp-bar-fill" style="width:${ntPct}%;background:var(--accent)"></div></div>
+        <div class="sp-pct">${ntPct}%</div>
+        <div class="sp-count">${ntL} / ${NT_VERSES.length} verses</div>
+      </div>
+      <div class="stage-progress-row" style="opacity:${otUnlocked?1:0.45}">
+        <div class="sp-dot" style="background:var(--faint)"></div>
+        <div class="sp-name">Old Testament ${otUnlocked?'':'<span style="font-size:0.62rem;color:var(--faint);font-style:italic;">(unlocks at 30% WoJ)</span>'}</div>
+        <div class="sp-bar-wrap"><div class="sp-bar-fill" style="width:0%;background:var(--faint)"></div></div>
+        <div class="sp-pct">—</div>
+        <div class="sp-count">0 / ${OT_VERSES.length}</div>
+      </div>
+    </div>
+    <div class="ornament">✦ ✦ ✦</div>
+    <div class="next-card">
+      <div style="font-size:2rem">✝</div>
+      <div>
+        <div class="next-title">${due+nw>0?`${due+nw} Card${due+nw>1?'s':''} Ready`:'All caught up for today'}</div>
+        <div class="next-desc">${due+nw>0?'Complete today\'s session to maintain your SRS schedule':'New verses unlock daily over 7 days'}</div>
+      </div>
+      <button class="next-btn" onclick="startSession('words')">Begin Study →</button>
+    </div>`;
+}
+
+// ── STUDY ──────────────────────────────────────────────
+function renderStudy() {
+  if(!S.queue.length||S.idx>=S.queue.length) return renderComplete();
+  const verse=S.queue[S.idx]; const card=getCard(verse.ref);
+  const pct=Math.round((S.idx/S.queue.length)*100);
+  return S.phase==='question' ? renderQ(verse,card,pct) : renderR(verse,card,pct);
+}
+
+function renderQ(verse,card,pct) {
+  const {words,blanks}=S.cloze;
+  const bIdxs=Object.keys(blanks).map(Number).sort((a,b)=>a-b);
+  const bNum={};
+  bIdxs.forEach((idx,i)=>bNum[idx]=i+1);
+  const isNew=card.reps===0;
+
+  const verseHTML=words.map((w,i)=>{
+    if(blanks[i]!==undefined){
+      const dashes='─'.repeat(Math.max(3,Math.ceil(w.replace(/[^a-z']/gi,'').length/1.1)));
+      return `<span class="cloze-blank-inline" id="bl-${i}">${dashes}</span>`;
+    }
+    return `<span>${w}</span>`;
+  }).join(' ');
+
+  const inputsHTML=bIdxs.map((idx,i)=>`
+    <div class="blank-wrap">
+      <div class="blank-num">#${i+1}</div>
+      <input class="blank-input" id="bf-${idx}" data-idx="${idx}" placeholder="${i+1}…" autocomplete="off" spellcheck="false" onkeydown="bfKey(event,${idx})"/>
+    </div>`).join('');
+
+  return `
+    <div class="progress-label"><span>Card ${S.idx+1} of ${S.queue.length}</span><span>${pct}%</span></div>
+    <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="session-header">
+      <div><div class="session-title">${isNew?'New Verse':'Review'}</div>
+      <div class="session-subtitle">Fill in ${bIdxs.length} of ${words.length} words — ~60% of this verse</div></div>
+      <div class="mode-chip ${isNew?'chip-new':'chip-review'}">${isNew?'First Encounter':'Deep Recall'}</div>
+    </div>
+    <div class="memory-card">
+      <div class="card-meta"><span>${verse.ref}</span><span class="card-stage-badge badge-words">KJV</span></div>
+      <div class="context-box"><strong>Context</strong>${verse.context}</div>
+      <div class="verse-text">${verseHTML}</div>
+      <div class="verse-ref">— ${verse.ref}</div>
+      <div class="answer-area">
+        <div class="answer-label">Fill the blanks in order — type each missing word</div>
+        <div class="blanks-grid">${inputsHTML}</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="checkAnswers()">Check My Answers</button>
+          <button class="btn btn-reveal btn-sm" onclick="revealAll()">Reveal Full Verse</button>
+        </div>
+        <p class="hint">First 2 and last 2 words are shown as anchors. Fill the rest. Tab moves between fields, Enter submits.</p>
+      </div>
+    </div>`;
+}
+
+function renderR(verse,card,pct) {
+  const {words,blanks}=S.cloze;
+  const score=S.score;
+
+  const verseHTML=words.map((w,i)=>{
+    if(blanks[i]!==undefined){
+      const ua=S.userAnswers[i];
+      if(ua===undefined)return `<span class="cloze-blank-inline shown">${w}</span>`;
+      const match=cw(ua)===cw(w);
+      return `<span class="cloze-blank-inline ${match?'shown':'missed'}" title="${match?'✓ Correct':'✗ You wrote: '+ua}">${w}</span>`;
+    }
+    return `<span>${w}</span>`;
+  }).join(' ');
+
+  const fbClass=score.pct>=80?'fb-correct':score.pct>=50?'fb-partial':'fb-wrong';
+  const fbMsg=score.pct>=80
+    ?`✓ Strong recall — ${score.correct} / ${score.total} words correct (${score.pct}%). Rate your confidence below.`
+    :score.pct>=50
+    ?`${score.correct} / ${score.total} correct (${score.pct}%). Study the red-highlighted words before rating.`
+    :`${score.correct} / ${score.total} correct (${score.pct}%). Read the verse carefully, then press Again.`;
+
+  return `
+    <div class="progress-label"><span>Card ${S.idx+1} of ${S.queue.length}</span><span>${pct}%</span></div>
+    <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="session-header">
+      <div><div class="session-title">Result</div>
+      <div class="session-subtitle">Study the verse carefully, then rate your recall</div></div>
+    </div>
+    <div class="memory-card">
+      <div class="card-meta"><span>${verse.ref}</span></div>
+      <div class="feedback-box ${fbClass}">${fbMsg}</div>
+      <div class="verse-reveal-box">
+        <div class="vr-label">Full Verse — green = correct · red = missed</div>
+        <div class="vr-text">${verseHTML}</div>
+      </div>
+      <div class="verse-ref" style="margin-top:10px;">— ${verse.ref}</div>
+      <div class="context-box" style="margin-top:14px;">
+        <strong>Why this verse matters</strong>${verse.context}
+      </div>
+      <div class="srs-wrap">
+        <div class="srs-label-row">How well did you know this? — This sets your next review date</div>
+        <div class="srs-row">
+          <button class="srs-btn srs-again" onclick="rate(0)">Again<span class="srs-sublabel">Tomorrow</span></button>
+          <button class="srs-btn srs-hard" onclick="rate(1)">Hard<span class="srs-sublabel">+${ivPreview(card,1)}</span></button>
+          <button class="srs-btn srs-good" onclick="rate(2)">Good<span class="srs-sublabel">+${ivPreview(card,2)}</span></button>
+          <button class="srs-btn srs-easy" onclick="rate(3)">Easy<span class="srs-sublabel">+${ivPreview(card,3)}</span></button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderComplete() {
+  updateStreak();
+  return `
+    <div style="text-align:center;padding:60px 20px;animation:cardIn 0.4s ease;">
+      <div style="font-size:3rem;margin-bottom:20px;color:var(--gold)">✝</div>
+      <div style="font-family:'Cinzel',serif;font-size:1.7rem;color:var(--gold);margin-bottom:12px;letter-spacing:0.08em">Session Complete</div>
+      <div style="font-family:'IM Fell English',serif;font-style:italic;color:var(--muted);font-size:1.1rem;margin-bottom:6px">"Thy word have I hid in mine heart, that I might not sin against thee."</div>
+      <div style="font-family:'Cinzel',serif;font-size:0.65rem;color:var(--faint);letter-spacing:0.1em;margin-bottom:36px">— PSALM 119:11</div>
+      <div style="font-size:0.85rem;color:var(--muted);margin-bottom:28px;font-style:italic">Your brain consolidates memory during sleep tonight. Come back tomorrow for your scheduled reviews.</div>
+      <div class="btn-row" style="justify-content:center;gap:16px;">
+        <button class="btn btn-primary" onclick="startSession('words')">Study More</button>
+        <button class="btn btn-outline" onclick="showView('dashboard')">Dashboard</button>
+      </div>
+    </div>`;
+}
+
+function renderBrowse() {
+  const db=loadDB();
+  const verses=[...JESUS_VERSES,...NT_VERSES];
+  return `
+    <div class="session-header"><div><div class="session-title">Browse Verses</div><div class="session-subtitle">All KJV verses · search by reference or text</div></div></div>
+    <input style="width:100%;font-family:'IM Fell English',serif;font-size:1rem;padding:10px 14px;border:1px solid var(--parchment-dark);background:var(--parchment-deep);color:var(--ink);outline:none;margin-bottom:20px;" id="browse-search" placeholder="Search…" oninput="filterBrowse()"/>
+    <div id="browse-list">${verses.map(v=>{
+      const c=db[v.ref]||{};
+      const badge=c.reps>=4?'✓ Mature':c.reps>=1?'~ Learning':isIntroduced(v.ref)?'· New':'⏳ Soon';
+      const col=c.reps>=4?'var(--green)':c.reps>=1?'var(--accent-bright)':isIntroduced(v.ref)?'var(--faint)':'#bbb';
+      return `<div class="browse-row" data-text="${v.ref.toLowerCase()} ${v.text.toLowerCase()}">
+        <div style="min-width:130px;font-family:'Cinzel',serif;font-size:0.68rem;color:var(--accent);letter-spacing:0.08em">${v.ref}</div>
+        <div style="flex:1;font-family:'IM Fell English',serif;font-size:0.88rem;line-height:1.7;color:var(--ink)">${v.text}</div>
+        <div style="min-width:70px;text-align:right;font-size:0.63rem;color:${col};font-style:italic">${badge}</div>
+      </div>`;
+    }).join('')}</div>`;
+}
+
+// ── HANDLERS ───────────────────────────────────────────
+function afterRender() {
+  setTimeout(()=>{ const f=document.querySelector('.blank-input'); if(f)f.focus(); },60);
+}
+
+function bfKey(e,idx) {
+  if(e.key==='Enter'){e.preventDefault();checkAnswers();}
+}
+
+function startSession(stage) {
+  S.queue=buildQueue(stage);
+  S.idx=0; S.phase='question'; S.score=null;
+  loadCloze();
+  showView('study');
+}
+
+function startVerse(ref) {
+  const all=[...JESUS_VERSES,...NT_VERSES,...OT_VERSES];
+  const verse=all.find(v=>v.ref===ref);
+  if(!verse)return;
+  S.queue=[verse]; S.idx=0; S.phase='question'; S.score=null;
+  loadCloze();
+  showView('study');
+}
+
+function loadCloze() {
+  if(S.idx<S.queue.length){ S.cloze=buildCloze(S.queue[S.idx].text); S.userAnswers={}; S.score=null; }
+}
+
+function checkAnswers() {
+  const {words,blanks}=S.cloze;
+  const bIdxs=Object.keys(blanks).map(Number);
+  bIdxs.forEach(idx=>{ const inp=document.getElementById(`bf-${idx}`); S.userAnswers[idx]=inp?inp.value.trim():''; });
+  let correct=0;
+  bIdxs.forEach(idx=>{ if(cw(S.userAnswers[idx])===cw(words[idx]))correct++; });
+  S.score={correct,total:bIdxs.length,pct:Math.round((correct/bIdxs.length)*100)};
+  S.phase='revealed';
+  render();
+}
+
+function revealAll() {
+  S.userAnswers={};
+  S.score={correct:0,total:Object.keys(S.cloze.blanks).length,pct:0};
+  S.phase='revealed';
+  render();
+}
+
+function rate(r) {
+  const verse=S.queue[S.idx]; const card=getCard(verse.ref);
+  scheduleCard(card,r);
+  S.idx++; S.phase='question';
+  loadCloze();
+  render();
+}
+
+function filterBrowse() {
+  const q=(document.getElementById('browse-search')?.value||'').toLowerCase();
+  document.querySelectorAll('.browse-row').forEach(r=>{ r.style.display=r.dataset.text.includes(q)?'flex':'none'; });
+}
+
+function updateStreak() {
+  const streak=loadStreak(); const today=new Date().toDateString();
+  if(streak.lastDate!==today){
+    const yesterday=new Date(Date.now()-DAY).toDateString();
+    streak.count=streak.lastDate===yesterday?streak.count+1:1;
+    streak.lastDate=today; saveStreak(streak);
+  }
+}
+
+// ── INIT ───────────────────────────────────────────────
+initSchedule();
+render();
+</script>
+</body>
+</html>
