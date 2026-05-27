@@ -4,24 +4,32 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0c0d14">
-  <title>DeeCadence</title>
+  <title>DeeCee</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./src/styles/theme.css">
 </head>
 <body>
+  <script>
+    (function () {
+      var theme = localStorage.getItem("dc_theme") || "system";
+      var light = theme === "light" || (theme === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+      document.body.classList.toggle("light", light);
+      document.body.dataset.themeChoice = theme;
+    })();
+  </script>
   <main id="app" class="app-shell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">DEE_CISTEM</p>
-        <h1 id="screenTitle">Today</h1>
+      <strong class="brand-mark">DeeCee</strong>
+      <h1 id="screenTitle">Today</h1>
+      <div class="topbar-actions">
+        <button id="activeFocusPill" class="focus-pill" type="button" data-route="focus" hidden>
+          <span>Focus Running</span>
+          <strong data-focus-pill-timer>00:00</strong>
+        </button>
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle theme">Dark</button>
       </div>
-      <button id="activeFocusPill" class="focus-pill" type="button" data-route="focus" hidden>
-        <span>Focus Running</span>
-        <strong data-focus-pill-timer>00:00</strong>
-      </button>
-      <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle theme">Dark</button>
     </header>
 
     <section id="screen" class="screen" aria-live="polite"></section>
@@ -34,6 +42,8 @@
     </nav>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./src/config.js"></script>
   <script defer src="./src/app.js"></script>
 </body>
 </html>

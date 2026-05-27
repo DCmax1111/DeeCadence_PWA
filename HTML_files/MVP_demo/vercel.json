@@ -1,0 +1,47 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "nodeVersion": "18.x",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": {
+      "type": "plaintext"
+    },
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": {
+      "type": "plaintext"
+    },
+    "SUPABASE_SERVICE_ROLE_KEY": {
+      "type": "secret"
+    },
+    "CLEVA_API_KEY": {
+      "type": "secret"
+    },
+    "CLEVA_WEBHOOK_SECRET": {
+      "type": "secret"
+    },
+    "MONIEPOINT_API_KEY": {
+      "type": "secret"
+    },
+    "MONIEPOINT_WEBHOOK_SECRET": {
+      "type": "secret"
+    },
+    "PALMPAY_API_KEY": {
+      "type": "secret"
+    },
+    "PALMPAY_WEBHOOK_SECRET": {
+      "type": "secret"
+    },
+    "NEXT_PUBLIC_APP_URL": {
+      "type": "plaintext"
+    },
+    "SENTRY_DSN": {
+      "type": "secret"
+    }
+  },
+  "regions": ["iad1"],
+  "buildCache": {
+    "node_modules": true,
+    ".next/cache": true
+  }
+}

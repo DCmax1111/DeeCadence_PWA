@@ -1,0 +1,13 @@
+{
+  "name": "deecee-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/manualCheckoutCore.test.cjs && node tests/staticLeak.test.cjs",
+    "check:api": "node --check api/checkout.js && node --check api/subscription.js && node --check api/admin/payments.js && node --check server/manualCheckoutCore.cjs",
+    "check": "npm run check:api && npm test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.24.0"
+  }
+}

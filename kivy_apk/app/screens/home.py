@@ -35,12 +35,12 @@ class HomeScreen(MDScreen):
         )
 
         root.add_widget(MDLabel(
-            text="DEE_CISTEM",
-            font_style="Overline",
+            text="DeeCee",
+            font_style="H5",
             theme_text_color="Custom",
             text_color=(0.31, 0.56, 0.97, 1),
             size_hint_y=None,
-            height=dp(22),
+            height=dp(36),
         ))
         root.add_widget(MDLabel(
             text="Today",
@@ -81,4 +81,3 @@ class HomeScreen(MDScreen):
             text_color=(0.61, 0.64, 0.77, 1),
         ))
         return card
-

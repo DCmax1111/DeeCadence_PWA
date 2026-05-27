@@ -1,20 +1,67 @@
 const STORAGE_KEY = "dc_web_state_v1";
+const BACKUP_SCHEMA_VERSION = 1;
+const MAX_LOGS_PER_MODULE = 240;
+const MAX_ACTIVITY_ITEMS = 100;
+const MAX_FOCUS_SESSIONS = 160;
 
 const STAT_NAMES = ["Body", "Mind", "Spirit", "Knowledge", "Financial", "Dexterity"];
 
 const MODULES = [
   { id: "financial", name: "Financial", stat: "Financial", color: "financial", desc: "Income, expenses, and cashflow" },
   { id: "spirit", name: "Spirit", stat: "Spirit", color: "spirit", desc: "Prayer, Bible, reflection, and leadership" },
-  { id: "mind", name: "Mind", stat: "Mind", color: "mind", desc: "Focus, mood, and DeeCadence" },
+  { id: "mind", name: "Mind", stat: "Mind", color: "mind", desc: "Focus, mood, and DeeCee" },
   { id: "energy", name: "Energy", stat: "Body", color: "energy", desc: "Sleep, water, exercise, and body care" },
   { id: "knowledge", name: "Knowledge", stat: "Knowledge", color: "knowledge", desc: "Reading, vocabulary, and skill practice" },
   { id: "dexterity", name: "Dexterity", stat: "Dexterity", color: "dexterity", desc: "Creative skill, craft, and VoxScope" }
 ];
 
+const QUESTS = [
+  { id: "financial", title: "Log one expense", module: "Financial", route: "financial", target: 1 },
+  { id: "spirit", title: "Log one prayer/reflection", module: "Spirit", route: "spirit", target: 1 },
+  { id: "mind", title: "Complete one focus checkpoint", module: "Mind", route: "focus", target: 1 },
+  { id: "energy", title: "Log water, sleep, or exercise", module: "Energy", route: "energy", target: 1 },
+  { id: "knowledge", title: "Save one word or reading log", module: "Knowledge", route: "knowledge", target: 1 },
+  { id: "dexterity", title: "Log one creative action", module: "Dexterity", route: "dexterity", target: 1 }
+];
+
+const PREMIUM_FEATURES = [
+  "Cloud sync and account recovery",
+  "Advanced trend analytics",
+  "Expanded DeeCodex quizzes",
+  "Full VoxScope training plans"
+];
+
+const PUBLIC_PLANS = [
+  { id: "starter", title: "Starter", amountUsd: 9.99, description: "Solo cadence tracking, local backup, and core stats" },
+  { id: "growth", title: "Growth", amountUsd: 19.99, description: "Advanced quests, richer logs, and priority tools" },
+  { id: "operator", title: "Operator", amountUsd: 39.99, description: "Full DeeCee operator layer and premium lab access" }
+];
+
 const DEFAULT_STATE = {
   route: "home",
   theme: localStorage.getItem("dc_theme") || "system",
-  settings: { name: localStorage.getItem("dc_name") || "DC" },
+  settings: {
+    name: localStorage.getItem("dc_name") || "DC",
+    onboardingComplete: false,
+    priorityModules: [],
+    mode: "Balanced"
+  },
+  subscription: { tier: "free", active: false },
+  auth: {
+    ready: false,
+    configured: false,
+    user: null,
+    message: ""
+  },
+  checkout: {
+    config: null,
+    payment: null,
+    message: "",
+    loading: false,
+    remaining: 0,
+    adminPayments: [],
+    adminMessage: ""
+  },
   stats: { Body: 1, Mind: 1, Spirit: 1, Knowledge: 1, Financial: 1, Dexterity: 1 },
   logs: {
     financial: [],
@@ -39,7 +86,9 @@ const DEFAULT_STATE = {
     flashIndex: 0,
     flashShow: false,
     quizIndex: 0,
-    quizFeedback: ""
+    quizFeedback: "",
+    activityExpanded: false,
+    selectedPlanId: ""
   }
 };
 
@@ -47,36 +96,67 @@ const screen = document.querySelector("#screen");
 const title = document.querySelector("#screenTitle");
 const themeToggle = document.querySelector("#themeToggle");
 const activeFocusPill = document.querySelector("#activeFocusPill");
+const publicConfig = window.DEECEE_CONFIG || {};
 
 let state = loadState();
 let shouldScrollTop = false;
 let focusTimerInterval = null;
+let checkoutTimerInterval = null;
+let supabaseClient = null;
 
 function loadState() {
   const saved = safeJson(localStorage.getItem(STORAGE_KEY));
   const migratedStats = safeJson(localStorage.getItem("dc_stats"));
   const base = clone(DEFAULT_STATE);
   if (migratedStats) base.stats = { ...base.stats, ...migratedStats };
-  return mergeState(base, saved || {});
+  return mergeState(base, unwrapBackup(saved) || {});
 }
 
 function mergeState(base, patch) {
+  const mergedLogs = { ...base.logs };
+  Object.keys(base.logs).forEach((key) => {
+    mergedLogs[key] = Array.isArray(patch.logs?.[key]) ? patch.logs[key].slice(-MAX_LOGS_PER_MODULE) : base.logs[key];
+  });
+  const mergedStats = { ...base.stats };
+  STAT_NAMES.forEach((name) => {
+    const value = Number(patch.stats?.[name]);
+    if (Number.isFinite(value)) mergedStats[name] = clampStat(value);
+  });
   return {
     ...base,
     ...patch,
     settings: { ...base.settings, ...(patch.settings || {}) },
-    stats: { ...base.stats, ...(patch.stats || {}) },
-    logs: { ...base.logs, ...(patch.logs || {}) },
+    subscription: { ...base.subscription, ...(patch.subscription || {}) },
+    auth: { ...base.auth },
+    checkout: { ...base.checkout },
+    stats: mergedStats,
+    logs: mergedLogs,
     ui: { ...base.ui, ...(patch.ui || {}) },
-    activity: Array.isArray(patch.activity) ? patch.activity : base.activity,
-    focusSessions: Array.isArray(patch.focusSessions) ? patch.focusSessions : base.focusSessions,
+    activity: Array.isArray(patch.activity) ? patch.activity.slice(0, MAX_ACTIVITY_ITEMS) : base.activity,
+    focusSessions: Array.isArray(patch.focusSessions) ? patch.focusSessions.slice(-MAX_FOCUS_SESSIONS) : base.focusSessions,
     focusDebt: Number.isFinite(patch.focusDebt) ? patch.focusDebt : base.focusDebt,
     activeFocus: patch.activeFocus || base.activeFocus
   };
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  trimState();
+  try {
+    const persisted = clone(state);
+    persisted.auth = clone(DEFAULT_STATE.auth);
+    persisted.checkout = clone(DEFAULT_STATE.checkout);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+  } catch (error) {
+    console.warn("DeeCee could not save local state.", error);
+  }
+}
+
+function trimState() {
+  Object.keys(state.logs || {}).forEach((key) => {
+    if (Array.isArray(state.logs[key])) state.logs[key] = state.logs[key].slice(-MAX_LOGS_PER_MODULE);
+  });
+  if (Array.isArray(state.activity)) state.activity = state.activity.slice(0, MAX_ACTIVITY_ITEMS);
+  if (Array.isArray(state.focusSessions)) state.focusSessions = state.focusSessions.slice(-MAX_FOCUS_SESSIONS);
 }
 
 function safeJson(value) {
@@ -89,6 +169,11 @@ function safeJson(value) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function unwrapBackup(value) {
+  if (!value) return null;
+  return value.state && value.meta ? value.state : value;
 }
 
 function uid() {
@@ -116,7 +201,12 @@ function escapeHtml(value) {
 }
 
 function clampStat(value) {
-  return Math.max(1, Math.min(100, Math.round(value)));
+  return Math.max(1, Math.min(100, Math.round(value * 100) / 100));
+}
+
+function formatStat(value) {
+  const n = Number(value || 0);
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function rank(value) {
@@ -127,6 +217,33 @@ function rank(value) {
   if (value >= 35) return "C";
   if (value >= 20) return "D";
   return "E";
+}
+
+function nextRankTarget(value) {
+  if (value < 20) return 20;
+  if (value < 35) return 35;
+  if (value < 50) return 50;
+  if (value < 65) return 65;
+  if (value < 80) return 80;
+  if (value < 95) return 95;
+  return 100;
+}
+
+function currentRankFloor(value) {
+  if (value >= 95) return 95;
+  if (value >= 80) return 80;
+  if (value >= 65) return 65;
+  if (value >= 50) return 50;
+  if (value >= 35) return 35;
+  if (value >= 20) return 20;
+  return 1;
+}
+
+function rankProgress(value) {
+  const floor = currentRankFloor(value);
+  const target = nextRankTarget(value);
+  if (target === floor) return 100;
+  return Math.max(0, Math.min(100, ((value - floor) / (target - floor)) * 100));
 }
 
 function averageStats() {
@@ -159,6 +276,242 @@ function formatNaira(value) {
   return `NGN ${Number(value || 0).toLocaleString()}`;
 }
 
+function formatMoney(value, currency) {
+  const amount = Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return currency === "USD" ? `$${amount}` : `NGN ${amount}`;
+}
+
+function hasSupabaseConfig() {
+  return Boolean(publicConfig.supabaseUrl && publicConfig.supabaseAnonKey && window.supabase);
+}
+
+function getSupabaseClient() {
+  if (!hasSupabaseConfig()) return null;
+  if (!supabaseClient) {
+    supabaseClient = window.supabase.createClient(publicConfig.supabaseUrl, publicConfig.supabaseAnonKey);
+  }
+  return supabaseClient;
+}
+
+async function authHeaders() {
+  const client = getSupabaseClient();
+  if (!client) return {};
+  const { data } = await client.auth.getSession();
+  const token = data?.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+    ...(await authHeaders())
+  };
+  const response = await fetch(path, { ...options, headers });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "Request failed");
+  return payload;
+}
+
+function checkoutPaymentExpired() {
+  const expiresAt = state.checkout.payment?.expiresAt;
+  return Boolean(expiresAt && new Date(expiresAt).getTime() <= Date.now());
+}
+
+async function initAuth() {
+  const client = getSupabaseClient();
+  state.auth.configured = Boolean(client);
+  if (!client) {
+    state.auth.ready = true;
+    state.auth.message = "Add Supabase URL and anon key in src/config.js to enable hosted checkout.";
+    render();
+    return;
+  }
+
+  const { data } = await client.auth.getSession();
+  syncAuthSession(data?.session || null);
+  client.auth.onAuthStateChange((event, session) => {
+    syncAuthSession(session);
+    if (event === "SIGNED_IN") {
+      loadCloudState();
+    }
+    if (event === "SIGNED_OUT") {
+      state.subscription = { tier: "free", active: false };
+      state.checkout = { ...DEFAULT_STATE.checkout };
+      saveState();
+      render();
+    }
+  });
+  state.auth.ready = true;
+  saveState();
+  render();
+  if (state.auth.user) loadCloudState();
+}
+
+function syncAuthSession(session) {
+  state.auth.configured = true;
+  state.auth.ready = true;
+  state.auth.user = session?.user ? {
+    id: session.user.id,
+    email: session.user.email || ""
+  } : null;
+  state.auth.message = "";
+}
+
+async function signInWithEmail(email) {
+  const client = getSupabaseClient();
+  if (!client) {
+    state.auth.message = "Supabase is not configured yet.";
+    saveState();
+    render();
+    return;
+  }
+  state.auth.message = "Sending secure sign-in link...";
+  render();
+  const redirectTo = publicConfig.appUrl || window.location.href.split("#")[0];
+  const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+  state.auth.message = error ? error.message : "Check your email for the sign-in link.";
+  saveState();
+  render();
+}
+
+async function signOut() {
+  const client = getSupabaseClient();
+  if (client) await client.auth.signOut();
+}
+
+async function loadCloudState() {
+  if (!state.auth.user) return;
+  await Promise.allSettled([loadSubscription(), loadCheckout()]);
+}
+
+async function loadSubscription() {
+  try {
+    const payload = await apiRequest("/api/subscription");
+    state.subscription = payload.subscription || { tier: "free", active: false };
+  } catch (error) {
+    state.auth.message = error.message;
+  }
+  saveState();
+  render();
+}
+
+async function loadCheckout() {
+  if (!state.auth.user) return;
+  state.checkout.loading = true;
+  render();
+  try {
+    const payload = await apiRequest("/api/checkout");
+    state.checkout.config = payload.config || state.checkout.config;
+    state.checkout.payment = payload.payment || null;
+    state.checkout.message = "";
+  } catch (error) {
+    state.checkout.message = error.message;
+  } finally {
+    state.checkout.loading = false;
+    saveState();
+    render();
+  }
+}
+
+async function startCheckout(planId, accountId) {
+  if (!state.auth.user) {
+    state.checkout.message = "Sign in before starting checkout.";
+    saveState();
+    render();
+    return;
+  }
+  state.checkout.loading = true;
+  state.checkout.message = "";
+  render();
+  try {
+    const payload = await apiRequest("/api/checkout", {
+      method: "POST",
+      body: JSON.stringify({ planId, accountId })
+    });
+    state.checkout.config = payload.config || state.checkout.config;
+    state.checkout.payment = payload.payment;
+    state.checkout.message = payload.reused ? "Existing pending transfer restored." : "Fresh OTP generated. Use it in your transfer description.";
+  } catch (error) {
+    state.checkout.message = error.message;
+  } finally {
+    state.checkout.loading = false;
+    saveState();
+    render();
+  }
+}
+
+async function submitCheckoutProof(form) {
+  if (!state.checkout.payment) return;
+  const data = new FormData(form);
+  state.checkout.loading = true;
+  state.checkout.message = "";
+  render();
+  try {
+    const payload = await apiRequest("/api/checkout", {
+      method: "PUT",
+      body: JSON.stringify({
+        paymentId: state.checkout.payment.id,
+        senderName: data.get("senderName"),
+        proofReference: data.get("proofReference"),
+        userNote: data.get("userNote")
+      })
+    });
+    state.checkout.payment = payload.payment;
+    state.checkout.message = "Proof submitted. Your plan is pending owner confirmation.";
+  } catch (error) {
+    state.checkout.message = error.message;
+  } finally {
+    state.checkout.loading = false;
+    saveState();
+    render();
+  }
+}
+
+async function loadAdminPayments(token) {
+  state.checkout.adminMessage = "Loading pending payments...";
+  render();
+  try {
+    const response = await fetch("/api/admin/payments?status=pending", {
+      headers: { "x-owner-token": token }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Could not load admin payments");
+    state.checkout.adminPayments = payload.payments || [];
+    state.checkout.adminMessage = `${state.checkout.adminPayments.length} pending payment${state.checkout.adminPayments.length === 1 ? "" : "s"}.`;
+    sessionStorage.setItem("dc_owner_token", token);
+  } catch (error) {
+    state.checkout.adminMessage = error.message;
+  }
+  saveState();
+  render();
+}
+
+async function verifyAdminPayment(paymentId, status) {
+  const token = sessionStorage.getItem("dc_owner_token") || "";
+  if (!token) {
+    state.checkout.adminMessage = "Enter owner token first.";
+    saveState();
+    render();
+    return;
+  }
+  try {
+    const response = await fetch("/api/admin/payments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-owner-token": token },
+      body: JSON.stringify({ paymentId, status })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Could not verify payment");
+    state.checkout.adminMessage = status === "succeeded" ? "Payment approved." : "Payment failed.";
+    await loadAdminPayments(token);
+  } catch (error) {
+    state.checkout.adminMessage = error.message;
+    saveState();
+    render();
+  }
+}
+
 function statDelta(effects) {
   Object.entries(effects || {}).forEach(([name, delta]) => {
     if (!STAT_NAMES.includes(name)) return;
@@ -167,8 +520,9 @@ function statDelta(effects) {
 }
 
 function applyAction(action) {
-  statDelta(action.effects);
-  queueFloaters(action.effects);
+  const effects = normalizeEffects(action);
+  statDelta(effects);
+  queueFloaters(effects);
 
   if (action.logKey) {
     state.logs[action.logKey].push({
@@ -185,13 +539,21 @@ function applyAction(action) {
     id: uid(),
     module: action.module,
     label: action.label,
-    effects: action.effects || {},
+    effects,
     date: today(),
     createdAt: nowIso()
   });
-  state.activity = state.activity.slice(0, 80);
+  state.activity = state.activity.slice(0, MAX_ACTIVITY_ITEMS);
   saveState();
   render();
+}
+
+function normalizeEffects(action) {
+  const effects = { ...(action.effects || {}) };
+  if (effects.Mind > 0 && !["Mind", "DeeCee Focus"].includes(action.module)) {
+    effects.Mind = Math.max(0.1, Math.round(effects.Mind * 25) / 100);
+  }
+  return effects;
 }
 
 function attentionScore() {
@@ -203,7 +565,14 @@ function attentionScore() {
 }
 
 function suggestedAction() {
-  if (state.focusDebt > 0) return "Clear a little focus debt with a DeeCadence session.";
+  const openQuest = dailyQuests().find((quest) => !quest.done);
+  if (openQuest) return openQuest.title;
+  const priority = state.settings.priorityModules || [];
+  if (priority.length) {
+    const first = MODULES.find((mod) => mod.id === priority[0]);
+    if (first) return `Give ${first.name} a priority win today.`;
+  }
+  if (state.focusDebt > 0) return "Clear a little focus debt with a DeeCee session.";
   const [name] = weakestStat();
   const mod = moduleByStat(name);
   return `Give ${mod.name} a small win today.`;
@@ -211,6 +580,7 @@ function suggestedAction() {
 
 function setRoute(route, pushHash = true) {
   state.route = route;
+  state.ui.activityExpanded = false;
   shouldScrollTop = true;
   if (pushHash && location.hash.slice(1) !== route) {
     location.hash = route;
@@ -237,6 +607,9 @@ function setTitle(value) {
 
 function render() {
   setTheme(state.theme);
+  if (state.auth.user && !state.settings.onboardingComplete && state.route !== "settings") {
+    state.route = "onboarding";
+  }
   document.body.dataset.route = state.route;
   document.body.style.setProperty("--route-accent", routeAccent(state.route));
   document.querySelectorAll(".nav-button").forEach((button) => {
@@ -245,6 +618,7 @@ function render() {
 
   const routes = {
     home: renderHome,
+    onboarding: renderOnboarding,
     stats: renderStats,
     focus: renderFocus,
     settings: renderSettings,
@@ -279,6 +653,7 @@ function afterRender() {
   }
   updateFocusPill();
   syncFocusTimer();
+  syncCheckoutTimer();
 }
 
 function queueFloaters(effects) {
@@ -288,7 +663,7 @@ function queueFloaters(effects) {
   entries.forEach(([name, delta], index) => {
     const chip = document.createElement("div");
     chip.className = `stat-floater ${delta > 0 ? "gain" : "loss"}`;
-    chip.textContent = `${name} ${delta > 0 ? "+" : ""}${delta}`;
+    chip.textContent = `${name} ${delta > 0 ? "+" : ""}${formatStat(delta)}`;
     chip.style.left = `${50 + ((index % 3) - 1) * 16}%`;
     chip.style.animationDelay = `${index * 80}ms`;
     layer.appendChild(chip);
@@ -306,8 +681,27 @@ function createFloatLayer() {
 function focusRemainingSeconds() {
   if (!state.activeFocus) return 0;
   const total = (state.activeFocus.minutes || 0) * 60;
-  const elapsed = Math.floor((Date.now() - new Date(state.activeFocus.startedAt).getTime()) / 1000);
+  const elapsed = focusElapsedSeconds();
   return Math.max(0, total - elapsed);
+}
+
+function focusElapsedSeconds() {
+  if (!state.activeFocus) return 0;
+  const now = state.activeFocus.paused ? new Date(state.activeFocus.pausedAt).getTime() : Date.now();
+  const pausedTotal = state.activeFocus.pausedTotalMs || 0;
+  return Math.max(0, Math.floor((now - new Date(state.activeFocus.startedAt).getTime() - pausedTotal) / 1000));
+}
+
+function focusMindGain(minutes) {
+  return minutes >= 45 ? 3 : minutes >= 25 ? 2 : 1;
+}
+
+function focusSegmentInfo() {
+  if (!state.activeFocus) return { completed: 0, banked: 0, bankable: 0, total: 4 };
+  const totalSeconds = Math.max(1, (state.activeFocus.minutes || 1) * 60);
+  const completed = Math.min(4, Math.floor(focusElapsedSeconds() / (totalSeconds / 4)));
+  const banked = Math.min(4, state.activeFocus.bankedSegments || 0);
+  return { completed, banked, bankable: Math.max(0, completed - banked), total: 4 };
 }
 
 function formatTimer(seconds) {
@@ -329,6 +723,25 @@ function syncFocusTimer() {
   }
 }
 
+function syncCheckoutTimer() {
+  if (checkoutTimerInterval) {
+    clearInterval(checkoutTimerInterval);
+    checkoutTimerInterval = null;
+  }
+  updateCheckoutTimer();
+  if (state.checkout.payment && state.route === "settings") {
+    checkoutTimerInterval = setInterval(updateCheckoutTimer, 1000);
+  }
+}
+
+function updateCheckoutTimer() {
+  const payment = state.checkout.payment;
+  if (!payment?.expiresAt) return;
+  state.checkout.remaining = Math.max(0, Math.floor((new Date(payment.expiresAt).getTime() - Date.now()) / 1000));
+  const node = document.querySelector("[data-checkout-timer]");
+  if (node) node.textContent = state.checkout.remaining <= 0 ? "Expired" : formatTimer(state.checkout.remaining);
+}
+
 function updateFocusTimer() {
   const timer = document.querySelector("[data-focus-timer]");
   const progress = document.querySelector("[data-focus-progress]");
@@ -339,7 +752,12 @@ function updateFocusTimer() {
   const elapsedPct = Math.min(100, ((total - remaining) / total) * 100);
   timer.textContent = formatTimer(remaining);
   if (progress) progress.style.width = `${elapsedPct}%`;
-  if (remaining <= 0) autoCompleteFocus();
+  const segment = focusSegmentInfo();
+  if (segment.bankable > 0 && !state.activeFocus.paused) {
+    bankFocusSegments(segment.bankable, "checkpoint");
+    return;
+  }
+  if (remaining <= 0 && !state.activeFocus.paused) autoCompleteFocus();
 }
 
 function updateFocusPill() {
@@ -352,7 +770,12 @@ function updateFocusPill() {
   const remaining = focusRemainingSeconds();
   if (timer) timer.textContent = formatTimer(remaining);
   if (label) label.textContent = state.activeFocus.task || "Focus Running";
-  if (remaining <= 0) autoCompleteFocus();
+  const segment = focusSegmentInfo();
+  if (segment.bankable > 0 && !state.activeFocus.paused) {
+    bankFocusSegments(segment.bankable, "checkpoint");
+    return;
+  }
+  if (remaining <= 0 && !state.activeFocus.paused) autoCompleteFocus();
 }
 
 function autoCompleteFocus() {
@@ -376,7 +799,7 @@ function activityList(limit = 8) {
   }
   return state.activity.slice(0, limit).map((item) => {
     const effects = Object.entries(item.effects || {})
-      .map(([name, delta]) => `${name} ${delta > 0 ? "+" : ""}${delta}`)
+      .map(([name, delta]) => `${name} ${delta > 0 ? "+" : ""}${formatStat(delta)}`)
       .join(" / ");
     return `
       <article class="log-row">
@@ -396,11 +819,20 @@ function statBar(name, value = state.stats[name]) {
     <article class="stat-row">
       <div class="stat-row-head">
         <strong>${name}</strong>
-        <span style="color: var(--${mod.color})">${value} - Rank ${rank(value)}</span>
+        <span style="color: var(--${mod.color})">${formatStat(value)} - Rank ${rank(value)}</span>
       </div>
       <div class="bar"><span style="width:${value}%; background: var(--${mod.color})"></span></div>
     </article>
   `;
+}
+
+function orderedModules() {
+  const priority = state.settings.priorityModules || [];
+  const selected = priority
+    .map((id) => MODULES.find((mod) => mod.id === id))
+    .filter(Boolean);
+  const rest = MODULES.filter((mod) => !priority.includes(mod.id));
+  return [...selected, ...rest];
 }
 
 function moduleCard(mod) {
@@ -410,10 +842,78 @@ function moduleCard(mod) {
     <button class="module-card" type="button" data-route="${mod.id}" style="--module-color: var(--${mod.color})">
       <span>${mod.name}</span>
       <small>${mod.desc}</small>
-      <b>${value} - Rank ${rank(value)}</b>
+      <b>${formatStat(value)} - Rank ${rank(value)}</b>
       <em>${recent} today</em>
       <i class="bar"><span style="width:${value}%"></span></i>
     </button>
+  `;
+}
+
+function dailyQuests() {
+  const date = today();
+  const financial = state.logs.financial.filter((entry) => entry.date === date && entry.kind === "expense").length;
+  const spirit = state.logs.spirit.filter((entry) => entry.date === date && ["prayer", "bible"].includes(entry.type)).length;
+  const focusMinutes = state.focusSessions
+    .filter((session) => session.date === date)
+    .reduce((sum, session) => sum + (session.minutes || 0), 0);
+  const mind = Math.min(1, (state.focusSessions.filter((session) => session.date === date && session.bankedSegments > 0).length || 0) + (focusMinutes >= 15 ? 1 : 0));
+  const energy = state.logs.energy.filter((entry) => entry.date === date && ["water", "sleep", "exercise"].includes(entry.type)).length;
+  const knowledge = state.logs.knowledge.filter((entry) => entry.date === date && ["vocab", "reading"].includes(entry.type)).length;
+  const dexterity = state.logs.dexterity.filter((entry) => entry.date === date).length;
+  const progress = { financial, spirit, mind, energy, knowledge, dexterity };
+  const priority = state.settings.priorityModules || [];
+  const chosen = priority.length ? priority : ["mind", "knowledge", "financial"];
+  const chosenQuestIds = chosen.map((id) => id === "focus" ? "mind" : id);
+  return QUESTS.filter((quest) => chosenQuestIds.includes(quest.id)).slice(0, 3).map((quest) => ({
+    ...quest,
+    progress: Math.min(quest.target, progress[quest.id] || 0),
+    done: (progress[quest.id] || 0) >= quest.target
+  }));
+}
+
+function questSection() {
+  const quests = dailyQuests();
+  return `
+    <section class="card quest-panel flat">
+      <div class="card-head">
+        <div>
+          <h2>Daily Quests</h2>
+          <p>${quests.filter((quest) => quest.done).length} / ${quests.length} cleared today</p>
+        </div>
+      </div>
+      <div class="quest-list">
+        ${quests.map((quest) => `
+          <button class="quest-line ${quest.done ? "done" : ""}" type="button" data-route="${quest.route}" style="--module-color: ${routeAccent(quest.route)}">
+            <i></i>
+            <span>
+              <small>${escapeHtml(quest.module)}</small>
+              <strong>${escapeHtml(quest.title)}</strong>
+            </span>
+            <em>${quest.progress}/${quest.target}</em>
+          </button>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function rankPlate(value) {
+  const currentRank = rank(value);
+  const target = nextRankTarget(value);
+  return `
+    <section class="rank-plate">
+      <div class="rank-badge">
+        <span>Rank</span>
+        <strong>${currentRank}</strong>
+      </div>
+      <div class="exp-panel">
+        <div class="exp-head">
+          <span>EXP ${formatStat(value)} / ${target}</span>
+          <b>${formatStat(rankProgress(value))}%</b>
+        </div>
+        <div class="exp-bar"><span style="width:${rankProgress(value)}%"></span></div>
+      </div>
+    </section>
   `;
 }
 
@@ -426,37 +926,84 @@ function renderHome() {
   setTitle("Today");
 
   const main = `
+    ${!state.auth.user ? signInFirstBanner() : ""}
     <section class="hero-card">
       <p>${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       <h2>${greeting}, ${escapeHtml(state.settings.name || "DC")}</h2>
-      <div class="hero-metrics">
-        <span>Rank ${rank(avg)}</span>
-        <span>Score ${Math.round(avg)}</span>
-        <span>Debt ${state.focusDebt}m</span>
-      </div>
+      ${rankPlate(avg)}
     </section>
     <section class="insight-strip">
-      <article><span>Weakest</span><strong>${weakName} ${weakValue}</strong></article>
-      <article><span>Strongest</span><strong>${bestName} ${bestValue}</strong></article>
+      <article><span>Weakest</span><strong>${weakName} ${formatStat(weakValue)}</strong></article>
+      <article><span>Strongest</span><strong>${bestName} ${formatStat(bestValue)}</strong></article>
       <article><span>Attention</span><strong>${attentionScore()}</strong></article>
     </section>
-    <section class="card">
+    <section class="module-grid">
+      ${orderedModules().map(moduleCard).join("")}
+    </section>
+  `;
+
+  const expanded = Boolean(state.ui.activityExpanded);
+  const side = `
+    ${questSection()}
+    <section class="card next-move-card">
       <h2>Next Best Move</h2>
       <p>${suggestedAction()}</p>
     </section>
-    <section class="module-grid">
-      ${MODULES.map(moduleCard).join("")}
+    <section class="card recent-panel ${expanded ? "expanded" : ""}">
+      <div class="card-head">
+        <div>
+          <h2>Recent Activity</h2>
+          <p>${expanded ? "Expanded feed" : "Latest 5"}</p>
+        </div>
+        <button class="ghost small" type="button" data-toggle-activity>${expanded ? "Collapse" : "View All"}</button>
+      </div>
+      <div class="stack tight">${activityList(expanded ? 18 : 5)}</div>
     </section>
-  `;
-
-  const side = `
-    <section class="card">
-      <h2>Recent Activity</h2>
-      <div class="stack tight">${activityList(7)}</div>
-    </section>
+    ${expanded ? `<button class="to-top" type="button" data-scroll-top>Top</button>` : ""}
   `;
 
   screen.innerHTML = shellGrid(main, side);
+}
+
+function signInFirstBanner() {
+  return `
+    <section class="card signin-banner">
+      <div>
+        <h2>Sign in first</h2>
+        <p>You can preview DeeCee with default values, but sign-in is required for personal cloud subscription state and checkout.</p>
+      </div>
+      <button class="action" type="button" data-route="settings">Sign In / Create Account</button>
+    </section>
+  `;
+}
+
+function renderOnboarding() {
+  setTitle("Welcome");
+  const selected = state.settings.priorityModules || [];
+  screen.innerHTML = `
+    <section class="onboarding-panel">
+      <h2>Shape your cadence</h2>
+      <p>Choose the modules DeeCee should keep closest to the surface. You can change this later.</p>
+      <form class="stack" data-form="onboarding">
+        <input class="field" name="name" value="${escapeHtml(state.settings.name || "")}" placeholder="What should DeeCee call you?">
+        <div class="choice-grid">
+          ${MODULES.map((mod) => `
+            <button class="choice-card ${selected.includes(mod.id) ? "selected" : ""}" type="button" data-onboard-module="${mod.id}" style="--module-color: var(--${mod.color})">
+              <span>${mod.name}</span>
+              <small>${mod.desc}</small>
+            </button>
+          `).join("")}
+        </div>
+        <select class="field" name="mode">
+          ${["Balanced", "Focus", "Wellness", "Creative", "Scholar"].map((mode) => `<option ${state.settings.mode === mode ? "selected" : ""}>${mode}</option>`).join("")}
+        </select>
+        <div class="button-row two">
+          <button class="action" type="submit">Begin</button>
+          <button class="ghost" type="button" data-skip-onboarding>Skip</button>
+        </div>
+      </form>
+    </section>
+  `;
 }
 
 function renderStats() {
@@ -468,11 +1015,11 @@ function renderStats() {
     <section class="hero-card compact">
       <p>Overall</p>
       <h2>Rank ${rank(avg)}</h2>
-      <div class="hero-metrics"><span>Score ${Math.round(avg)} / 100</span></div>
+      ${rankPlate(avg)}
     </section>
     <section class="insight-strip">
-      <article><span>Best</span><strong>${bestName} ${bestValue}</strong></article>
-      <article><span>Needs care</span><strong>${weakName} ${weakValue}</strong></article>
+      <article><span>Best</span><strong>${bestName} ${formatStat(bestValue)}</strong></article>
+      <article><span>Needs care</span><strong>${weakName} ${formatStat(weakValue)}</strong></article>
       <article><span>Actions</span><strong>${state.activity.length}</strong></article>
     </section>
     <section class="card">
@@ -480,10 +1027,17 @@ function renderStats() {
       <div class="stack tight">${STAT_NAMES.map((name) => statBar(name)).join("")}</div>
     </section>
   `, `
-    <section class="card">
-      <h2>Activity Feed</h2>
-      <div class="stack tight">${activityList(12)}</div>
+    <section class="card activity-feed-card recent-panel ${state.ui.activityExpanded ? "expanded" : ""}">
+      <div class="card-head">
+        <div>
+          <h2>Activity Feed</h2>
+          <p>${state.ui.activityExpanded ? "Expanded feed" : "Latest 5"}</p>
+        </div>
+        <button class="ghost small" type="button" data-toggle-activity>${state.ui.activityExpanded ? "Collapse" : "View All"}</button>
+      </div>
+      <div class="stack tight">${activityList(state.ui.activityExpanded ? 18 : 5)}</div>
     </section>
+    ${state.ui.activityExpanded ? `<button class="to-top" type="button" data-scroll-top>Top</button>` : ""}
   `);
 }
 
@@ -561,7 +1115,7 @@ function renderMind() {
   screen.innerHTML = shellGrid(`
     ${backButton()}
     <button class="feature-card" type="button" data-route="focus">
-      <span>DeeCadence</span>
+      <span>DeeCee Focus</span>
       <strong>Attention ${attentionScore()} - Debt ${state.focusDebt}m</strong>
       <small>Focus sessions, distraction logs, and attention recovery.</small>
     </button>
@@ -725,6 +1279,7 @@ function renderDexterity() {
 function renderFocus() {
   setTitle("Focus");
   const active = state.activeFocus;
+  const segment = focusSegmentInfo();
   const startLauncher = active ? "" : `
     <button class="feature-card" type="button" data-toggle-focus-form>
       <span>New Focus Session</span>
@@ -749,15 +1304,21 @@ function renderFocus() {
   `;
   const activeHtml = active ? `
     <section class="hero-card compact focus-live">
-      <p>${escapeHtml(active.difficulty)} focus</p>
+      <p>${escapeHtml(active.difficulty)} focus${active.paused ? " - paused" : ""}</p>
       <h2>${escapeHtml(active.task)}</h2>
       <div class="timer-num" data-focus-timer>${formatTimer(focusRemainingSeconds())}</div>
       <div class="timer-track"><span data-focus-progress></span></div>
+      ${focusCheckpointTrack(segment)}
       <div class="hero-metrics">
         <span>${active.minutes}m target</span>
         <span>Started ${new Date(active.startedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+        <span>${segment.banked} / 4 banked</span>
       </div>
-      <button class="action danger" type="button" data-complete-focus>Complete Session</button>
+      <div class="button-row focus-actions">
+        <button class="ghost" type="button" data-pause-focus>${active.paused ? "Resume" : "Pause"}</button>
+        <button class="ghost" type="button" data-abandon-focus>Abandon</button>
+        <button class="action danger" type="button" data-complete-focus>Complete</button>
+      </div>
     </section>
   ` : "";
 
@@ -789,9 +1350,24 @@ function renderFocus() {
   `);
 }
 
+function focusCheckpointTrack(segment = focusSegmentInfo()) {
+  return `
+    <div class="checkpoint-row" aria-label="Focus checkpoints">
+      ${[1, 2, 3, 4].map((step) => `
+        <span class="${segment.banked >= step ? "done" : segment.completed >= step ? "ready" : ""}">
+          ${step}/4
+        </span>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderSettings() {
   setTitle("Settings");
   screen.innerHTML = shellGrid(`
+    ${authPanel()}
+    ${subscriptionPanel()}
+    ${checkoutPanel()}
     <section class="card">
       <h2>Display Name</h2>
       <form class="stack" data-form="settings-name">
@@ -808,17 +1384,29 @@ function renderSettings() {
       </div>
     </section>
     <section class="card">
-      <h2>Data</h2>
+      <div class="card-head">
+        <div>
+          <h2>Backup</h2>
+          <p>Export before major changes. Import replaces this browser's local DeeCee data after validation.</p>
+        </div>
+      </div>
       <div class="button-row">
         <button class="action" type="button" data-export>Export JSON</button>
+        <label class="action import-action">Import JSON<input type="file" data-import-file accept="application/json,.json"></label>
         <button class="action danger" type="button" data-reset>Reset Local Data</button>
       </div>
+    </section>
+    <section class="card">
+      <h2>Onboarding</h2>
+      <p>Update your name, priority modules, and preferred mode.</p>
+      <button class="ghost" type="button" data-redo-onboarding>Redo Onboarding</button>
     </section>
   `, `
     <section class="card">
       <h2>Local First</h2>
-      <p>Supabase and auth are intentionally disabled in this pass. Your data is saved in this browser.</p>
+      <p>Your stats, logs, and focus history stay in this browser. Account, checkout, and subscription state come from Supabase when configured.</p>
     </section>
+    ${adminPanel()}
   `);
 }
 
@@ -1027,9 +1615,181 @@ function focusRows() {
         <strong>${escapeHtml(session.task)}</strong>
         <span>${session.minutes}m - ${escapeHtml(session.difficulty)} - ${escapeHtml(session.date)}</span>
       </div>
-      <b>Mind +3</b>
+      <b>Mind +${formatStat(session.mindGain ?? focusMindGain(session.minutes))}</b>
     </article>
   `).join("");
+}
+
+function authPanel() {
+  if (!state.auth.configured) {
+    return `
+      <section class="card subscription-card">
+        <h2>Account Login</h2>
+        <p>Supabase is not configured yet. Add your public Supabase URL and anon key in <code>src/config.js</code>, then deploy with server env vars.</p>
+      </section>
+    `;
+  }
+
+  if (state.auth.user) {
+    return `
+      <section class="card subscription-card">
+        <div class="card-head">
+          <div>
+            <h2>Account</h2>
+            <p>${escapeHtml(state.auth.user.email || "Signed in")}</p>
+          </div>
+          <button class="ghost small" type="button" data-sign-out>Sign Out</button>
+        </div>
+        ${state.auth.message ? `<p class="notice-text">${escapeHtml(state.auth.message)}</p>` : ""}
+      </section>
+    `;
+  }
+
+  return `
+    <section class="card subscription-card">
+      <h2>Account Login</h2>
+      <p>Sign in before checkout so pending transfers and subscription status survive refreshes.</p>
+      <form class="stack" data-form="auth-email">
+        <input class="field" name="email" type="email" placeholder="Email address" required>
+        <button class="action" type="submit">Send Sign-In Link</button>
+      </form>
+      ${state.auth.message ? `<p class="notice-text">${escapeHtml(state.auth.message)}</p>` : ""}
+    </section>
+  `;
+}
+
+function subscriptionPanel() {
+  const tier = state.subscription?.tier || "free";
+  const status = state.subscription?.active ? "Active" : "Free";
+  return `
+    <section class="card tier-card subscription-card">
+      <div class="card-head">
+        <div>
+          <h2>Subscription</h2>
+          <p>${status} tier: ${escapeHtml(tier).toUpperCase()}</p>
+        </div>
+        <span class="locked-badge">${state.subscription?.active ? "Unlocked" : "Locked"}</span>
+      </div>
+      <div class="stack tight">
+        ${PREMIUM_FEATURES.map((feature) => `<article class="locked-row"><span>${escapeHtml(feature)}</span><b>${state.subscription?.active ? "Open" : "Locked"}</b></article>`).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function checkoutPanel() {
+  const config = state.checkout.config || {};
+  const plans = config.plans || PUBLIC_PLANS;
+  const accounts = config.accounts || [];
+  const payment = state.checkout.payment;
+  const selectedPlan = plans.find((plan) => plan.id === state.ui.selectedPlanId) || null;
+  return `
+    <section class="card checkout-card">
+      <div class="card-head">
+        <div>
+          <h2>Checkout</h2>
+          <p>Manual transfer v1. OTP windows last ${config.paymentWindowMinutes || 30} minutes.</p>
+        </div>
+        <button class="ghost small" type="button" data-refresh-checkout ${!state.auth.user ? "disabled" : ""}>Refresh</button>
+      </div>
+      ${state.checkout.message ? `<p class="notice-text">${escapeHtml(state.checkout.message)}</p>` : ""}
+      ${payment ? pendingPaymentPanel(payment) : ""}
+      <div class="plan-grid">
+        ${plans.map((plan) => planCard(plan, accounts, config.usdNgnRate, selectedPlan?.id === plan.id)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function planCard(plan, accounts, usdNgnRate = 1500, selected = false) {
+  const ngn = Math.round(Number(plan.amountUsd || 0) * Number(usdNgnRate || 1500));
+  const buttons = selected && accounts.length
+    ? accounts.map((account) => `
+      <button class="ghost" type="button" data-start-checkout="${escapeHtml(plan.id)}|${escapeHtml(account.id)}" ${state.checkout.loading ? "disabled" : ""}>
+        ${account.currency === "NGN" ? `${formatMoney(ngn, "NGN")} - ` : ""}${account.currency} - ${escapeHtml(account.bankName)}
+      </button>
+    `).join("")
+    : "";
+  return `
+    <article class="plan-card ${selected ? "selected" : ""}">
+      <span>${escapeHtml(plan.title)}</span>
+      <strong>$${Number(plan.amountUsd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo</strong>
+      <small>${escapeHtml(plan.description || "")}</small>
+      ${selected ? `<em>NGN estimate: ${formatMoney(ngn, "NGN")} at ${Number(usdNgnRate || 1500).toLocaleString()}/USD</em>` : ""}
+      <button class="${selected ? "action" : "ghost"}" type="button" data-select-plan="${escapeHtml(plan.id)}" ${!state.auth.user ? "disabled" : ""}>
+        ${!state.auth.user ? "Sign in first" : selected ? "Selected" : "Choose Plan"}
+      </button>
+      ${selected ? `<div class="stack tight">${buttons || `<button class="ghost" type="button" disabled>Refresh checkout accounts</button>`}</div>` : ""}
+    </article>
+  `;
+}
+
+function pendingPaymentPanel(payment) {
+  const expired = checkoutPaymentExpired();
+  const account = payment.account || {};
+  return `
+    <article class="pending-payment ${expired ? "expired" : ""}">
+      <div class="card-head">
+        <div>
+          <h3>${escapeHtml(payment.plan?.title || "Pending transfer")} - ${formatMoney(payment.amount, payment.currency)}</h3>
+          <p>${expired ? "Expired. Start again for a fresh OTP." : `Time left: <span data-checkout-timer>${formatTimer(state.checkout.remaining || 0)}</span>`}</p>
+        </div>
+        <strong>${escapeHtml(payment.otp || "")}</strong>
+      </div>
+      <div class="payment-grid">
+        <span><b>Bank</b>${escapeHtml(account.bankName || "")}</span>
+        <span><b>Account</b>${escapeHtml(account.accountNumber || "")}</span>
+        <span><b>Name</b>${escapeHtml(account.accountName || "")}</span>
+        <span><b>Reference</b>${escapeHtml(payment.reference || "")}</span>
+        <span class="wide"><b>Transfer description</b>${escapeHtml(payment.paymentNote || "")}</span>
+      </div>
+      ${expired ? "" : `
+        <form class="stack" data-form="checkout-proof">
+          <div class="field-row">
+            <input class="field" name="senderName" placeholder="Sender name" value="${escapeHtml(payment.senderName || "")}">
+            <input class="field" name="proofReference" placeholder="Transfer reference / proof ID" value="${escapeHtml(payment.proofReference || "")}">
+          </div>
+          <input class="field" name="userNote" placeholder="Optional note" value="${escapeHtml(payment.userNote || "")}">
+          <button class="action" type="submit" ${state.checkout.loading ? "disabled" : ""}>Submit Proof</button>
+        </form>
+      `}
+    </article>
+  `;
+}
+
+function adminPanel() {
+  const payments = state.checkout.adminPayments || [];
+  return `
+    <section class="card admin-card">
+      <h2>Owner Confirmation</h2>
+      <p>Use the owner token to review pending manual transfers and activate paid plans.</p>
+      <form class="stack" data-form="admin-token">
+        <input class="field" name="token" type="password" placeholder="Owner admin token">
+        <button class="action" type="submit">Load Pending</button>
+      </form>
+      ${state.checkout.adminMessage ? `<p class="notice-text">${escapeHtml(state.checkout.adminMessage)}</p>` : ""}
+      <div class="stack tight">
+        ${payments.length ? payments.map(adminPaymentRow).join("") : `<div class="empty">No pending payments loaded.</div>`}
+      </div>
+    </section>
+  `;
+}
+
+function adminPaymentRow(payment) {
+  const metadata = payment.metadata || {};
+  return `
+    <article class="admin-payment-row">
+      <div>
+        <strong>${escapeHtml(metadata.plan_title || payment.provider_transaction_id)}</strong>
+        <span>${formatMoney(payment.amount, payment.currency)} - ${escapeHtml(metadata.sender_name || "No sender yet")}</span>
+        <small>${escapeHtml(metadata.proof_reference || "No proof reference yet")}</small>
+      </div>
+      <div class="button-row two">
+        <button class="ghost" type="button" data-admin-verify="${escapeHtml(payment.id)}|succeeded">Approve</button>
+        <button class="ghost" type="button" data-admin-verify="${escapeHtml(payment.id)}|failed">Fail</button>
+      </div>
+    </article>
+  `;
 }
 
 function handleForm(form) {
@@ -1061,7 +1821,7 @@ function handleForm(form) {
     const minutes = Number(data.get("minutes"));
     const focusType = String(data.get("focusType"));
     if (!minutes || minutes <= 0) return;
-    const effects = { Mind: Math.min(5, Math.max(1, Math.floor(minutes / 10))) };
+    const effects = { Mind: Math.min(3, Math.max(0.5, Math.round((minutes / 20) * 10) / 10)) };
     if (["Study", "Reading"].includes(focusType)) effects.Knowledge = 1;
     if (focusType === "Creative") effects.Dexterity = 1;
     applyAction({ module: "Mind", type: "focus", label: `${focusType} - ${minutes}m`, logKey: "mind", effects, payload: { minutes, focusType } });
@@ -1134,7 +1894,7 @@ function handleForm(form) {
     if (!hours || hours <= 0) return;
     const minutes = Math.round(hours * 60);
     state.focusDebt += minutes;
-    state.activity.unshift({ id: uid(), module: "DeeCadence", label: `Distraction - ${kind} (${minutes}m debt)`, effects: {}, date: today(), createdAt: nowIso() });
+    state.activity.unshift({ id: uid(), module: "DeeCee Focus", label: `Distraction - ${kind} (${minutes}m debt)`, effects: {}, date: today(), createdAt: nowIso() });
     saveState();
     render();
   }
@@ -1146,15 +1906,50 @@ function handleForm(form) {
     saveState();
     render();
   }
+
+  if (type === "auth-email") {
+    const email = String(data.get("email") || "").trim();
+    if (email) signInWithEmail(email);
+  }
+
+  if (type === "checkout-proof") {
+    submitCheckoutProof(form);
+  }
+
+  if (type === "admin-token") {
+    const token = String(data.get("token") || "").trim();
+    if (token) loadAdminPayments(token);
+  }
+
+  if (type === "onboarding") {
+    const name = String(data.get("name") || "DC").trim() || "DC";
+    state.settings.name = name;
+    state.settings.mode = String(data.get("mode") || "Balanced");
+    state.settings.onboardingComplete = true;
+    if (!(state.settings.priorityModules || []).length) {
+      state.settings.priorityModules = ["mind", "knowledge", "financial"];
+    }
+    localStorage.setItem("dc_name", name);
+    state.route = "home";
+    saveState();
+    setRoute("home");
+  }
 }
 
 function completeFocus(mode = "manual") {
   if (!state.activeFocus) return;
+  const bankedSegments = Math.min(4, state.activeFocus.bankedSegments || 0);
+  const remainingSegments = Math.max(0, 4 - bankedSegments);
+  const completedMinutes = Math.round((state.activeFocus.minutes * (remainingSegments / 4)) * 100) / 100;
+  const mindGain = Math.round((focusMindGain(state.activeFocus.minutes) * (remainingSegments / 4)) * 100) / 100;
   const session = {
     id: uid(),
     task: state.activeFocus.task,
-    minutes: state.activeFocus.minutes,
+    minutes: completedMinutes,
+    targetMinutes: state.activeFocus.minutes,
     difficulty: state.activeFocus.difficulty,
+    mindGain,
+    bankedSegments,
     createdAt: nowIso(),
     date: today()
   };
@@ -1162,10 +1957,10 @@ function completeFocus(mode = "manual") {
   state.focusDebt = Math.max(0, state.focusDebt - session.minutes);
   state.activeFocus = null;
   applyAction({
-    module: "DeeCadence",
+    module: "DeeCee Focus",
     type: "complete",
     label: `${mode === "auto" ? "Auto-completed" : "Completed"} focus - ${session.task} (${session.minutes}m)`,
-    effects: { Mind: 3 }
+    effects: mindGain > 0 ? { Mind: mindGain } : {}
   });
 }
 
@@ -1175,15 +1970,94 @@ function startFocusSession(rawTask) {
     task,
     minutes: state.ui.focusDuration,
     difficulty: state.ui.focusDifficulty,
-    startedAt: nowIso()
+    startedAt: nowIso(),
+    paused: false,
+    pausedAt: null,
+    pausedTotalMs: 0,
+    bankedSegments: 0
   };
   state.ui.showFocusForm = false;
   state.ui.focusTaskDraft = "";
-  applyAction({ module: "DeeCadence", type: "start", label: `Started focus - ${task}`, effects: { Mind: 1 } });
+  applyAction({ module: "DeeCee Focus", type: "start", label: `Started focus - ${task}`, effects: {} });
+}
+
+function pauseFocus() {
+  if (!state.activeFocus) return;
+  if (state.activeFocus.paused) {
+    const pausedAt = new Date(state.activeFocus.pausedAt).getTime();
+    state.activeFocus.pausedTotalMs = (state.activeFocus.pausedTotalMs || 0) + Math.max(0, Date.now() - pausedAt);
+    state.activeFocus.paused = false;
+    state.activeFocus.pausedAt = null;
+  } else {
+    const segment = focusSegmentInfo();
+    if (segment.bankable > 0 && confirm(`Bank ${segment.bankable} focus quarter${segment.bankable > 1 ? "s" : ""} before pausing? This awards proportional Mind EXP now.`)) {
+      bankFocusSegments(segment.bankable);
+    }
+    state.activeFocus.paused = true;
+    state.activeFocus.pausedAt = nowIso();
+  }
+  saveState();
+  render();
+}
+
+function bankFocusSegments(count, reason = "manual") {
+  if (!state.activeFocus || count <= 0) return;
+  const target = state.activeFocus.minutes || 1;
+  const segments = Math.min(count, 4 - (state.activeFocus.bankedSegments || 0));
+  if (segments <= 0) return;
+  const minutes = Math.round((target / 4) * segments * 100) / 100;
+  const mindGain = Math.round((focusMindGain(target) * (segments / 4)) * 100) / 100;
+  state.activeFocus.bankedSegments = (state.activeFocus.bankedSegments || 0) + segments;
+  const bankedTotal = state.activeFocus.bankedSegments;
+  const task = state.activeFocus.task;
+  const difficulty = state.activeFocus.difficulty;
+  state.focusDebt = Math.max(0, state.focusDebt - minutes);
+  state.focusSessions.push({
+    id: uid(),
+    task: `${task} - checkpoint ${bankedTotal}/4`,
+    minutes,
+    difficulty,
+    mindGain,
+    bankedSegments: segments,
+    partial: true,
+    checkpoint: bankedTotal,
+    createdAt: nowIso(),
+    date: today()
+  });
+  if (bankedTotal >= 4) {
+    state.activeFocus = null;
+  }
+  applyAction({
+    module: "DeeCee Focus",
+    type: bankedTotal >= 4 ? "complete" : "focus-checkpoint",
+    label: bankedTotal >= 4
+      ? `${reason === "checkpoint" ? "Auto-completed" : "Completed"} focus - ${task} (${target}m)`
+      : `Focus checkpoint - ${task} (${bankedTotal}/4)`,
+    effects: { Mind: mindGain }
+  });
+}
+
+function abandonFocus() {
+  if (!state.activeFocus) return;
+  if (!confirm("Abandon this focus session? It will not add Mind XP.")) return;
+  const task = state.activeFocus.task;
+  state.activeFocus = null;
+  state.activity.unshift({ id: uid(), module: "DeeCee Focus", label: `Abandoned focus - ${task}`, effects: {}, date: today(), createdAt: nowIso() });
+  state.activity = state.activity.slice(0, MAX_ACTIVITY_ITEMS);
+  saveState();
+  render();
 }
 
 function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const backup = {
+    meta: {
+      app: "DeeCee",
+      schemaVersion: BACKUP_SCHEMA_VERSION,
+      exportedAt: nowIso()
+    },
+    state
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `deecadence-${new Date().toISOString().slice(0, 10)}.json`;
@@ -1191,8 +2065,32 @@ function exportData() {
   URL.revokeObjectURL(a.href);
 }
 
+function importData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const parsed = unwrapBackup(safeJson(String(reader.result || "")));
+    if (!isValidBackupState(parsed)) {
+      alert("That file does not look like a DeeCee backup.");
+      return;
+    }
+    if (!confirm("Import this backup and replace local DeeCee data in this browser?")) return;
+    state = mergeState(clone(DEFAULT_STATE), parsed);
+    saveState();
+    setRoute("home");
+  };
+  reader.readAsText(file);
+}
+
+function isValidBackupState(value) {
+  if (!value || typeof value !== "object") return false;
+  if (!value.stats || typeof value.stats !== "object") return false;
+  if (!value.logs || typeof value.logs !== "object") return false;
+  return STAT_NAMES.every((name) => Number.isFinite(Number(value.stats[name] ?? 1)));
+}
+
 function resetData() {
-  if (!confirm("Reset local DeeCadence data on this browser?")) return;
+  if (!confirm("Reset local DeeCee data on this browser?")) return;
   localStorage.removeItem(STORAGE_KEY);
   state = clone(DEFAULT_STATE);
   saveState();
@@ -1234,7 +2132,7 @@ document.addEventListener("click", (event) => {
   const moodButton = event.target.closest("[data-mood]");
   if (moodButton) {
     const mood = moodButton.dataset.mood;
-    const effects = { Mind: 2 };
+    const effects = { Mind: 1 };
     if (["Good", "Great", "Peak"].includes(mood)) effects.Body = 1;
     applyAction({ module: "Mind", type: "mood", label: `Mood - ${mood}`, logKey: "mind", effects });
   }
@@ -1253,6 +2151,8 @@ document.addEventListener("click", (event) => {
   }
 
   if (event.target.closest("[data-complete-focus]")) completeFocus();
+  if (event.target.closest("[data-pause-focus]")) pauseFocus();
+  if (event.target.closest("[data-abandon-focus]")) abandonFocus();
   const startFocusButton = event.target.closest("[data-start-focus]");
   if (startFocusButton) {
     const form = startFocusButton.closest("[data-form='start-focus']");
@@ -1266,6 +2166,65 @@ document.addEventListener("click", (event) => {
   }
   if (event.target.closest("[data-export]")) exportData();
   if (event.target.closest("[data-reset]")) resetData();
+  if (event.target.closest("[data-sign-out]")) signOut();
+  if (event.target.closest("[data-refresh-checkout]")) loadCloudState();
+
+  const checkoutButton = event.target.closest("[data-start-checkout]");
+  if (checkoutButton) {
+    const [planId, accountId] = checkoutButton.dataset.startCheckout.split("|");
+    startCheckout(planId, accountId);
+  }
+
+  const planButton = event.target.closest("[data-select-plan]");
+  if (planButton) {
+    state.ui.selectedPlanId = planButton.dataset.selectPlan;
+    saveState();
+    render();
+    if (state.auth.user && !state.checkout.config) loadCheckout();
+  }
+
+  const verifyButton = event.target.closest("[data-admin-verify]");
+  if (verifyButton) {
+    const [paymentId, status] = verifyButton.dataset.adminVerify.split("|");
+    verifyAdminPayment(paymentId, status);
+  }
+
+  if (event.target.closest("[data-toggle-activity]")) {
+    state.ui.activityExpanded = !state.ui.activityExpanded;
+    saveState();
+    render();
+  }
+
+  if (event.target.closest("[data-scroll-top]")) {
+    state.ui.activityExpanded = false;
+    saveState();
+    render();
+    requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "smooth" }));
+  }
+
+  const onboardButton = event.target.closest("[data-onboard-module]");
+  if (onboardButton) {
+    const id = onboardButton.dataset.onboardModule;
+    const selected = state.settings.priorityModules || [];
+    state.settings.priorityModules = selected.includes(id)
+      ? selected.filter((item) => item !== id)
+      : [...selected, id].slice(0, 3);
+    saveState();
+    render();
+  }
+
+  if (event.target.closest("[data-skip-onboarding]")) {
+    state.settings.onboardingComplete = true;
+    state.route = "home";
+    saveState();
+    setRoute("home");
+  }
+
+  if (event.target.closest("[data-redo-onboarding]")) {
+    state.settings.onboardingComplete = false;
+    saveState();
+    setRoute("onboarding");
+  }
 
   const themeButton = event.target.closest("[data-theme]");
   if (themeButton) {
@@ -1344,8 +2303,15 @@ document.addEventListener("input", (event) => {
   }
 });
 
+document.addEventListener("change", (event) => {
+  const importFile = event.target.closest("[data-import-file]");
+  if (!importFile) return;
+  importData(importFile.files && importFile.files[0]);
+  importFile.value = "";
+});
+
 themeToggle.addEventListener("click", () => {
-  state.theme = state.theme === "dark" ? "light" : "dark";
+  state.theme = state.theme === "system" ? "dark" : state.theme === "dark" ? "light" : "system";
   saveState();
   render();
 });
@@ -1353,6 +2319,7 @@ themeToggle.addEventListener("click", () => {
 window.addEventListener("hashchange", () => {
   const route = location.hash.slice(1) || "home";
   state.route = route;
+  state.ui.activityExpanded = false;
   shouldScrollTop = true;
   saveState();
   render();
@@ -1365,3 +2332,4 @@ window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", ()
 });
 saveState();
 render();
+initAuth();

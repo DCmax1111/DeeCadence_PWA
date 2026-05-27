@@ -39,8 +39,7 @@ class SubscriptionState:
 
     @property
     def effective_tier(self):
-        return self.tier if self.active else "pro"
+        return self.tier if self.active else "free"
 
     def can_access(self, module_key):
         return MODULE_ACCESS.get(self.effective_tier, {}).get(module_key, False)
-
