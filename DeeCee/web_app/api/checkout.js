@@ -1,16 +1,19 @@
 const { createClient } = require("@supabase/supabase-js");
 const {
+  MANUAL_PROVIDER,
+  SANDBOX_PROVIDER,
   amountFor,
+  configuredProvider,
+  createCheckoutUrl,
+  createPaymentMetadata,
   futureExpiry,
   isExpired,
   makeReference,
-  metadataFor,
-  normalizeProof,
   paymentView,
-  publicConfig,
-  randomCode,
-  validatePlanAndAccount
-} = require("../server/manualCheckoutCore.cjs");
+  publicCheckoutConfig,
+  validateCheckoutChoice
+} = require("../server/paymentCore.cjs");
+const { normalizeProof, randomCode } = require("../server/manualCheckoutCore.cjs");
 
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,11 +49,12 @@ async function ensureProfile(user) {
 }
 
 async function expireOldPending(userId) {
+  const provider = configuredProvider();
   const { data, error } = await supabaseAdmin
     .from("transactions")
     .select("*")
     .eq("user_id", userId)
-    .eq("provider", "manual_bank")
+    .eq("provider", provider)
     .eq("status", "pending");
 
   if (error) throw error;
@@ -64,32 +68,34 @@ async function expireOldPending(userId) {
     })
     .eq("id", row.id)
     .eq("user_id", userId)
-    .eq("provider", "manual_bank")));
+    .eq("provider", provider)));
 }
 
 async function findActivePending(userId, planId, accountId) {
+  const provider = configuredProvider();
   const { data, error } = await supabaseAdmin
     .from("transactions")
     .select("*")
     .eq("user_id", userId)
-    .eq("provider", "manual_bank")
+    .eq("provider", provider)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).find((row) => {
     const metadata = row.metadata || {};
-    return metadata.plan_id === planId && metadata.account && metadata.account.id === accountId && !isExpired(row);
+    const chosen = provider === MANUAL_PROVIDER ? metadata.account && metadata.account.id : metadata.payment_method && metadata.payment_method.id;
+    return metadata.plan_id === planId && chosen === accountId && !isExpired(row);
   });
 }
 
-async function latestPending(userId) {
+async function latestPayment(userId) {
   await expireOldPending(userId);
   const { data, error } = await supabaseAdmin
     .from("transactions")
     .select("*")
     .eq("user_id", userId)
-    .eq("provider", "manual_bank")
-    .eq("status", "pending")
+    .eq("provider", configuredProvider())
+    .in("status", ["pending", "successful", "failed", "abandoned", "refunded", "expired", "succeeded"])
     .order("created_at", { ascending: false })
     .limit(1);
   if (error) throw error;
@@ -128,31 +134,34 @@ async function sendOwnerNotification({ user, payment }) {
 }
 
 async function createPayment(user, planId, accountId) {
-  const validation = validatePlanAndAccount(planId, accountId);
+  const provider = configuredProvider();
+  const validation = validateCheckoutChoice(planId, accountId, USD_NGN_RATE);
   if (validation.error) return { status: 400, body: { error: validation.error } };
 
-  const { plan, account } = validation;
+  const { plan, account, method } = validation;
   await ensureProfile(user);
   await expireOldPending(user.id);
-  const existing = await findActivePending(user.id, plan.id, account.id);
+  const existing = await findActivePending(user.id, plan.id, provider === MANUAL_PROVIDER ? account.id : method.id);
   if (existing) {
-    return { status: 200, body: { payment: paymentView(existing), reused: true, config: publicConfig(USD_NGN_RATE) } };
+    return { status: 200, body: { payment: paymentView(existing), reused: true, config: publicCheckoutConfig(USD_NGN_RATE) } };
   }
 
   const reference = makeReference();
   const otp = randomCode(8);
   const expiresAt = futureExpiry();
-  const amount = amountFor(plan, account, USD_NGN_RATE);
-  const metadata = metadataFor({ plan, account, reference, otp, expiresAt, rawRate: USD_NGN_RATE });
+  const amount = provider === MANUAL_PROVIDER ? amountFor(plan, account, USD_NGN_RATE) : plan.amountUsd;
+  const currency = provider === MANUAL_PROVIDER ? account.currency : "USD";
+  const metadata = createPaymentMetadata({ plan, account, method, reference, otp, expiresAt, rawRate: USD_NGN_RATE });
+  if (provider === SANDBOX_PROVIDER) metadata.authorization_url = createCheckoutUrl(reference);
 
   const { data, error } = await supabaseAdmin
     .from("transactions")
     .insert([{
       user_id: user.id,
-      provider: "manual_bank",
+      provider,
       provider_transaction_id: reference,
       amount,
-      currency: account.currency,
+      currency,
       status: "pending",
       transaction_type: "subscription",
       metadata
@@ -160,10 +169,13 @@ async function createPayment(user, planId, accountId) {
     .select()
     .single();
   if (error) throw error;
-  return { status: 201, body: { payment: paymentView(data), reused: false, config: publicConfig(USD_NGN_RATE) } };
+  return { status: 201, body: { payment: paymentView(data), reused: false, config: publicCheckoutConfig(USD_NGN_RATE), authorizationUrl: metadata.authorization_url || "" } };
 }
 
 async function submitProof(user, body) {
+  if (configuredProvider() !== MANUAL_PROVIDER) {
+    return { status: 400, body: { error: "Proof upload is only used by manual bank transfer checkout." } };
+  }
   const paymentId = String((body && body.paymentId) || "");
   if (!paymentId) return { status: 400, body: { error: "Missing paymentId" } };
 
@@ -172,7 +184,7 @@ async function submitProof(user, body) {
     .select("*")
     .eq("id", paymentId)
     .eq("user_id", user.id)
-    .eq("provider", "manual_bank")
+    .eq("provider", MANUAL_PROVIDER)
     .single();
   if (error || !payment) return { status: 404, body: { error: "Payment request not found" } };
   if (payment.status !== "pending") return { status: 409, body: { error: `Payment is ${payment.status}` } };
@@ -204,7 +216,7 @@ async function submitProof(user, body) {
     .update({ metadata, updated_at: new Date().toISOString() })
     .eq("id", payment.id)
     .eq("user_id", user.id)
-    .eq("provider", "manual_bank")
+    .eq("provider", MANUAL_PROVIDER)
     .select()
     .single();
   if (updateError) throw updateError;
@@ -221,8 +233,8 @@ module.exports = async function handler(req, res) {
     if (!user) return res.status(401).json({ error: "Authentication required" });
 
     if (req.method === "GET") {
-      const payment = await latestPending(user.id);
-      return res.status(200).json({ payment: paymentView(payment), config: publicConfig(USD_NGN_RATE) });
+      const payment = await latestPayment(user.id);
+      return res.status(200).json({ payment: paymentView(payment), config: publicCheckoutConfig(USD_NGN_RATE) });
     }
 
     if (req.method === "POST") {

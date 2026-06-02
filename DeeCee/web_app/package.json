@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "node tests/manualCheckoutCore.test.cjs && node tests/staticLeak.test.cjs",
-    "check:api": "node --check api/checkout.js && node --check api/subscription.js && node --check api/admin/payments.js && node --check server/manualCheckoutCore.cjs",
+    "dev": "vercel dev --listen 3002",
+    "dev:vercel": "vercel dev --listen 3002",
+    "dev:local": "node server/local-dev-server.cjs",
+    "test": "node tests/manualCheckoutCore.test.cjs && node tests/paymentCore.test.cjs && node tests/staticLeak.test.cjs",
+    "check:api": "node --check api/checkout.js && node --check api/subscription.js && node --check api/admin/payments.js && node --check api/sandbox/complete.js && node --check api/webhooks/sandbox-payment.js && node --check server/manualCheckoutCore.cjs && node --check server/paymentCore.cjs && node --check server/local-dev-server.cjs",
     "check": "npm run check:api && npm test"
   },
   "dependencies": {

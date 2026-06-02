@@ -1,0 +1,355 @@
+DeeCee 22-Hour Web App Launch Steps
+===================================
+
+Goal
+----
+Get DeeCee to a Vercel-testable Android-accessible web app with:
+- Supabase sign-in/sign-up
+- Cloud-backed subscription state
+- Sandbox payment checkout
+- Server-side payment verification
+- User-facing payment status
+- Basic notification path
+- Clear deployment setup
+
+This is for the web app only.
+
+
+1. Confirm The Active Project
+-----------------------------
+Use this folder as the Vercel project root:
+
+DeeCee/web_app
+
+Do not deploy the older root web_app folder or MVP_demo folder.
+
+
+2. Supabase Project Decision
+----------------------------
+Choose one:
+
+Option A: Use the existing Supabase project
+- Fastest path.
+- Use this if you already have a Supabase project for DeeCee and do not mind editing it.
+
+Option B: Create a clean new Supabase project
+- Cleaner and safer if the old project has confusing tables, old policies, or old keys.
+- Slightly slower, but better long-term.
+
+What I need from you:
+- Confirm existing Supabase or new Supabase.
+
+
+3. Get Supabase URL And Anon Key
+--------------------------------
+In Supabase:
+
+1. Open your Supabase project.
+2. Go to Project Settings.
+3. Go to API.
+4. Copy:
+   - Project URL
+   - anon public key
+
+These are public browser values.
+
+Put them in:
+
+DeeCee/web_app/src/config.js
+
+Example:
+
+window.DEECEE_CONFIG = {
+  supabaseUrl: "https://your-project-ref.supabase.co",
+  supabaseAnonKey: "your-public-anon-key",
+  appUrl: "https://your-vercel-url.vercel.app"
+};
+
+Also add them to Vercel env vars:
+
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+
+4. Get Supabase Service Role Key
+--------------------------------
+In Supabase:
+
+1. Open Project Settings.
+2. Go to API.
+3. Copy the service_role key.
+
+Important:
+- Do not put this in src/config.js.
+- Do not put this in index.html.
+- Do not send it to the browser.
+- Only put it in Vercel environment variables or local .env.
+
+Set:
+
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+What I need from you:
+- Confirm this has been added to Vercel.
+- If testing locally, add it to DeeCee/web_app/.env.
+
+
+5. Run The DeeCee Database Schema
+---------------------------------
+In Supabase:
+
+1. Open SQL Editor.
+2. Open this local file:
+
+DeeCee/web_app/server/SCHEMA.complete.sql
+
+3. Copy all contents.
+4. Paste into Supabase SQL Editor.
+5. Run it.
+
+This creates/updates:
+- profiles
+- plans
+- subscriptions
+- transactions
+- webhook_events
+- RLS policies
+- DeeCee Starter/Growth/Operator plans
+
+What I need from you:
+- Tell me whether the SQL ran successfully.
+- If it errors, copy the error message and I will fix the schema.
+
+
+6. Configure Supabase Auth Redirect URLs
+----------------------------------------
+In Supabase:
+
+1. Go to Authentication.
+2. Go to URL Configuration.
+3. Add these URLs:
+
+http://localhost:3002
+http://localhost:3002/
+https://your-vercel-preview-url.vercel.app
+https://your-vercel-preview-url.vercel.app/
+
+If you later use a custom domain, add:
+
+https://yourdomain.com
+https://yourdomain.com/
+
+What I need from you:
+- Your actual Vercel URL after deployment.
+- Confirmation that the redirect URLs have been added.
+
+
+7. Create Required Security Secrets
+-----------------------------------
+Create two long random strings.
+
+You can generate them with PowerShell:
+
+[guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")
+
+Create:
+
+PAYMENT_WEBHOOK_SECRET
+OWNER_ADMIN_TOKEN
+
+Use different values for each.
+
+Add both to Vercel environment variables.
+
+Also add them locally if testing with .env:
+
+PAYMENT_WEBHOOK_SECRET=your-long-random-secret
+OWNER_ADMIN_TOKEN=your-long-random-owner-token
+
+What I need from you:
+- Confirm both are set.
+- Do not paste them into chat unless you are intentionally sharing them.
+
+
+8. Configure Sandbox Payment Mode
+---------------------------------
+For the 22-hour launch, use sandbox first.
+
+Set these Vercel environment variables:
+
+PAYMENT_PROVIDER=sandbox
+PAYMENT_SANDBOX_BASE_URL=https://your-vercel-preview-url.vercel.app
+NEXT_PUBLIC_APP_URL=https://your-vercel-preview-url.vercel.app
+
+For local testing:
+
+PAYMENT_PROVIDER=sandbox
+PAYMENT_SANDBOX_BASE_URL=http://localhost:3002
+NEXT_PUBLIC_APP_URL=http://localhost:3002
+
+What this enables:
+- User signs in.
+- User selects Starter, Growth, or Operator.
+- Server creates a pending payment.
+- User opens sandbox checkout.
+- User completes/fails/abandons test payment.
+- Server verifies signed webhook logic.
+- Supabase transaction updates.
+- User sees the final status.
+
+
+9. Optional Email Notifications
+-------------------------------
+Current minimum reliable notification:
+- In-app confirmed payment status.
+
+Optional stronger version:
+- Email notification through Resend.
+
+If using Resend:
+
+1. Create or open a Resend account.
+2. Verify a sender domain or use a valid test sender if available.
+3. Copy your API key.
+4. Add Vercel env vars:
+
+RESEND_API_KEY=your-resend-key
+NOTIFICATION_FROM_EMAIL=DeeCee <verified-sender@your-domain.com>
+OWNER_NOTIFICATION_EMAIL=dominiquecreations24@gmail.com
+
+What I need from you:
+- Decide if in-app notification is enough for this 22-hour launch.
+- If email is required, configure Resend and tell me the sender address.
+
+
+10. Vercel Project Setup
+------------------------
+In Vercel:
+
+1. Open your project.
+2. Set root directory to:
+
+DeeCee/web_app
+
+3. Add environment variables:
+
+NEXT_PUBLIC_APP_URL
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+PAYMENT_PROVIDER
+PAYMENT_WEBHOOK_SECRET
+PAYMENT_SANDBOX_BASE_URL
+OWNER_ADMIN_TOKEN
+OWNER_NOTIFICATION_EMAIL
+USD_NGN_RATE
+RESEND_API_KEY                  optional
+NOTIFICATION_FROM_EMAIL         optional
+
+4. Deploy.
+
+What I need from you:
+- The Vercel preview URL.
+- Any build/deploy error message if deployment fails.
+
+
+11. Local Preflight Before Vercel
+---------------------------------
+From PowerShell:
+
+cd "C:\Users\domin\DC Projects\DeeCadence_PWA\DeeCee\web_app"
+npm.cmd run check
+
+Expected:
+- API syntax checks pass.
+- Payment tests pass.
+- Static leak test passes.
+
+Run local app:
+
+npm.cmd run dev:local
+
+Open:
+
+http://localhost:3002
+
+If you see EADDRINUSE:
+- A server is already running on port 3002.
+- Use the existing browser tab or stop the old process.
+
+
+12. Android Phone Test
+----------------------
+Best path:
+- Use the Vercel preview URL on Android.
+
+On Android:
+
+1. Open the Vercel URL.
+2. Complete onboarding.
+3. Read tutorial.
+4. Sign in/sign up with email.
+5. Click the Supabase magic link from email.
+6. Return to DeeCee.
+7. Go to Settings.
+8. Choose a plan.
+9. Click Pay in Sandbox.
+10. Complete test payment.
+11. Confirm DeeCee shows successful payment.
+12. Refresh the page.
+13. Confirm subscription/payment state persists.
+
+
+13. Acceptance Checklist
+------------------------
+For the 22-hour launch push, DeeCee is acceptable when:
+
+- Vercel deployment loads on Android.
+- Onboarding works.
+- Tutorial works.
+- Supabase sign-in works.
+- User can start sandbox checkout.
+- Payment record is created in Supabase transactions.
+- Sandbox payment can become successful, failed, or abandoned.
+- Successful payment activates subscription.
+- Refresh does not lose payment/subscription state.
+- User sees clear payment status.
+- No service keys or webhook secrets are exposed in browser files.
+- npm.cmd run check passes.
+
+
+14. What I Can Finish After You Provide The Setup
+------------------------------------------------
+Once you provide/confirm the Supabase and Vercel setup items, I can:
+
+- Fix schema errors if any appear.
+- Verify API routes locally.
+- Verify Vercel deployment assumptions.
+- Tighten UI states around sign-in/payment.
+- Add clearer Android test notes if needed.
+- Add a simple owner/admin review page if manual approval is still needed.
+- Prepare live-provider integration plan after sandbox passes.
+
+
+15. What Is Not Required For The 22-Hour Launch
+-----------------------------------------------
+These can wait:
+
+- Kivy APK.
+- Real live payment provider.
+- Automatic bank reconciliation.
+- Full cloud sync for all local logs.
+- Native push notifications.
+- App store packaging.
+
+
+Fastest Path Summary
+--------------------
+1. Run SCHEMA.complete.sql in Supabase.
+2. Add Supabase redirect URLs.
+3. Set Vercel root to DeeCee/web_app.
+4. Add Vercel env vars.
+5. Deploy Vercel preview.
+6. Open preview on Android.
+7. Test onboarding -> tutorial -> sign-in -> sandbox checkout -> payment status.
+

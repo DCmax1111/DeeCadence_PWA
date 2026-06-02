@@ -21,20 +21,46 @@ The browser app must never contain `SUPABASE_SERVICE_ROLE_KEY`,
 may request `/api/checkout`, but the API must run on a serverless host such as
 Vercel with environment variables configured.
 
-Manual checkout state is stored in Supabase `transactions`, so refreshes do not
-reset pending payment windows. OTPs expire after 30 minutes and must be refreshed
-by starting a new checkout.
+Payment state is stored in Supabase `transactions`, so refreshes do not reset
+pending checkout windows. Sandbox checkout is the default; manual transfer can
+be enabled later with `PAYMENT_PROVIDER=manual_bank`.
 
 ## Checkout Setup
 
-1. Copy `.env.example` into the Vercel project environment variables.
+1. Rotate any service-role key that was ever stored in a tracked file.
+2. Copy `.env.example` into the Vercel project environment variables.
 2. Fill the public browser values in `src/config.js`:
    - `supabaseUrl`
    - `supabaseAnonKey`
    - `appUrl`
-3. Run `server/SCHEMA.manual_payments.sql` in Supabase after the base schema.
-4. Deploy `web_app` as the project root so `/api/checkout`, `/api/subscription`,
-   and `/api/admin/payments` are available.
+3. Run `server/SCHEMA.complete.sql` in Supabase SQL Editor.
+4. Set the old Vercel project root directory to this folder: `DeeCee/web_app`.
+5. Deploy `web_app` as the project root so `/api/checkout`, `/api/subscription`,
+   `/api/sandbox/complete`, `/api/webhooks/sandbox-payment`, and
+   `/api/admin/payments` are available.
+6. See `PAYMENTS_SETUP.md` for sandbox payment test steps, webhook verification,
+   and live-provider limitations.
+
+## Local Running
+
+Vercel-style local runtime, closest to production:
+
+```bash
+cd "DeeCee/web_app"
+npm install
+vercel dev --listen 3002
+```
+
+Fallback local runtime, useful if Vercel CLI is not available:
+
+```bash
+cd "DeeCee/web_app"
+copy .env.example .env.local
+npm run dev:local
+```
+
+The fallback server serves `index.html` and the same `/api/*` handlers, but Vercel
+dev should be treated as the primary pre-deploy check.
 
 ## Local Checks
 

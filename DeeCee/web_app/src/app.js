@@ -43,6 +43,7 @@ const DEFAULT_STATE = {
   settings: {
     name: localStorage.getItem("dc_name") || "DC",
     onboardingComplete: false,
+    tutorialComplete: false,
     priorityModules: [],
     mode: "Balanced"
   },
@@ -88,7 +89,8 @@ const DEFAULT_STATE = {
     quizIndex: 0,
     quizFeedback: "",
     activityExpanded: false,
-    selectedPlanId: ""
+    selectedPlanId: "",
+    authEmail: ""
   }
 };
 
@@ -318,6 +320,16 @@ function checkoutPaymentExpired() {
   return Boolean(expiresAt && new Date(expiresAt).getTime() <= Date.now());
 }
 
+function paymentStatusMessage(payment) {
+  if (!payment) return "";
+  if (payment.status === "successful") return "Payment confirmed. Your DeeCee subscription is unlocked.";
+  if (payment.status === "failed") return "Payment failed. Choose a plan again to retry safely.";
+  if (payment.status === "abandoned") return "Payment abandoned. Choose a plan again when you are ready.";
+  if (payment.status === "refunded") return "Payment was refunded. Your subscription access may change after review.";
+  if (payment.status === "expired") return "Payment window expired. Start again for a fresh checkout.";
+  return "";
+}
+
 async function initAuth() {
   const client = getSupabaseClient();
   state.auth.configured = Boolean(client);
@@ -404,7 +416,7 @@ async function loadCheckout() {
     const payload = await apiRequest("/api/checkout");
     state.checkout.config = payload.config || state.checkout.config;
     state.checkout.payment = payload.payment || null;
-    state.checkout.message = "";
+    state.checkout.message = paymentStatusMessage(state.checkout.payment);
   } catch (error) {
     state.checkout.message = error.message;
   } finally {
@@ -431,7 +443,13 @@ async function startCheckout(planId, accountId) {
     });
     state.checkout.config = payload.config || state.checkout.config;
     state.checkout.payment = payload.payment;
-    state.checkout.message = payload.reused ? "Existing pending transfer restored." : "Fresh OTP generated. Use it in your transfer description.";
+    state.checkout.message = payload.reused
+      ? "Existing pending checkout restored."
+      : (payload.authorizationUrl ? "Sandbox checkout opened. Complete the test payment there." : "Fresh OTP generated. Use it in your transfer description.");
+    if (payload.authorizationUrl) {
+      window.location.href = payload.authorizationUrl;
+      return;
+    }
   } catch (error) {
     state.checkout.message = error.message;
   } finally {
@@ -503,7 +521,7 @@ async function verifyAdminPayment(paymentId, status) {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Could not verify payment");
-    state.checkout.adminMessage = status === "succeeded" ? "Payment approved." : "Payment failed.";
+    state.checkout.adminMessage = status === "successful" ? "Payment approved." : "Payment failed.";
     await loadAdminPayments(token);
   } catch (error) {
     state.checkout.adminMessage = error.message;
@@ -607,8 +625,10 @@ function setTitle(value) {
 
 function render() {
   setTheme(state.theme);
-  if (state.auth.user && !state.settings.onboardingComplete && state.route !== "settings") {
+  if (!state.settings.onboardingComplete && state.route !== "onboarding") {
     state.route = "onboarding";
+  } else if (state.settings.onboardingComplete && !state.settings.tutorialComplete && state.route !== "tutorial") {
+    state.route = "tutorial";
   }
   document.body.dataset.route = state.route;
   document.body.style.setProperty("--route-accent", routeAccent(state.route));
@@ -619,6 +639,7 @@ function render() {
   const routes = {
     home: renderHome,
     onboarding: renderOnboarding,
+    tutorial: renderTutorial,
     stats: renderStats,
     focus: renderFocus,
     settings: renderSettings,
@@ -998,10 +1019,38 @@ function renderOnboarding() {
           ${["Balanced", "Focus", "Wellness", "Creative", "Scholar"].map((mode) => `<option ${state.settings.mode === mode ? "selected" : ""}>${mode}</option>`).join("")}
         </select>
         <div class="button-row two">
-          <button class="action" type="submit">Begin</button>
+          <button class="action" type="submit">Continue</button>
           <button class="ghost" type="button" data-skip-onboarding>Skip</button>
         </div>
       </form>
+    </section>
+  `;
+}
+
+function renderTutorial() {
+  setTitle("How It Works");
+  screen.innerHTML = `
+    <section class="onboarding-panel">
+      <h2>DeeCee works like a living system</h2>
+      <p>Log real actions, earn EXP, clear daily quests, and let one module strengthen another. Your local dashboard is usable immediately; account sign-in comes next for cloud subscription and checkout state.</p>
+      <div class="choice-grid tutorial-grid">
+        <article class="choice-card selected">
+          <span>1. Log</span>
+          <small>Income, focus, words, prayer, sleep, and creative actions all create traceable records.</small>
+        </article>
+        <article class="choice-card selected">
+          <span>2. Compound</span>
+          <small>Each action updates its main stat and small connected bonuses across the system.</small>
+        </article>
+        <article class="choice-card selected">
+          <span>3. Unlock</span>
+          <small>Sign in after the tutorial to keep subscription and payment state safely in Supabase.</small>
+        </article>
+      </div>
+      <div class="button-row two">
+        <button class="action" type="button" data-finish-tutorial>Continue to Sign In</button>
+        <button class="ghost" type="button" data-preview-dashboard>Preview Dashboard</button>
+      </div>
     </section>
   `;
 }
@@ -1650,7 +1699,7 @@ function authPanel() {
       <h2>Account Login</h2>
       <p>Sign in before checkout so pending transfers and subscription status survive refreshes.</p>
       <form class="stack" data-form="auth-email">
-        <input class="field" name="email" type="email" placeholder="Email address" required>
+        <input class="field" name="email" type="email" placeholder="Email address" value="${escapeHtml(state.ui.authEmail || "")}" data-auth-email required>
         <button class="action" type="submit">Send Sign-In Link</button>
       </form>
       ${state.auth.message ? `<p class="notice-text">${escapeHtml(state.auth.message)}</p>` : ""}
@@ -1680,33 +1729,36 @@ function subscriptionPanel() {
 function checkoutPanel() {
   const config = state.checkout.config || {};
   const plans = config.plans || PUBLIC_PLANS;
-  const accounts = config.accounts || [];
+  const methods = config.mode === "sandbox" ? (config.paymentMethods || []) : (config.accounts || []);
   const payment = state.checkout.payment;
   const selectedPlan = plans.find((plan) => plan.id === state.ui.selectedPlanId) || null;
+  const modeLabel = config.mode === "manual" ? "Manual transfer fallback" : "Sandbox checkout";
   return `
     <section class="card checkout-card">
       <div class="card-head">
         <div>
           <h2>Checkout</h2>
-          <p>Manual transfer v1. OTP windows last ${config.paymentWindowMinutes || 30} minutes.</p>
+          <p>${modeLabel}. Test mode first; server webhooks confirm status.</p>
         </div>
         <button class="ghost small" type="button" data-refresh-checkout ${!state.auth.user ? "disabled" : ""}>Refresh</button>
       </div>
       ${state.checkout.message ? `<p class="notice-text">${escapeHtml(state.checkout.message)}</p>` : ""}
       ${payment ? pendingPaymentPanel(payment) : ""}
       <div class="plan-grid">
-        ${plans.map((plan) => planCard(plan, accounts, config.usdNgnRate, selectedPlan?.id === plan.id)).join("")}
+        ${plans.map((plan) => planCard(plan, methods, config, selectedPlan?.id === plan.id)).join("")}
       </div>
     </section>
   `;
 }
 
-function planCard(plan, accounts, usdNgnRate = 1500, selected = false) {
+function planCard(plan, methods, config = {}, selected = false) {
+  const usdNgnRate = config.usdNgnRate || 1500;
   const ngn = Math.round(Number(plan.amountUsd || 0) * Number(usdNgnRate || 1500));
-  const buttons = selected && accounts.length
-    ? accounts.map((account) => `
-      <button class="ghost" type="button" data-start-checkout="${escapeHtml(plan.id)}|${escapeHtml(account.id)}" ${state.checkout.loading ? "disabled" : ""}>
-        ${account.currency === "NGN" ? `${formatMoney(ngn, "NGN")} - ` : ""}${account.currency} - ${escapeHtml(account.bankName)}
+  const isSandbox = config.mode !== "manual";
+  const buttons = selected && methods.length
+    ? methods.map((method) => `
+      <button class="ghost" type="button" data-start-checkout="${escapeHtml(plan.id)}|${escapeHtml(method.id)}" ${state.checkout.loading ? "disabled" : ""}>
+        ${isSandbox ? "Pay in Sandbox" : `${method.currency === "NGN" ? `${formatMoney(ngn, "NGN")} - ` : ""}${method.currency} - ${escapeHtml(method.bankName)}`}
       </button>
     `).join("")
     : "";
@@ -1715,11 +1767,12 @@ function planCard(plan, accounts, usdNgnRate = 1500, selected = false) {
       <span>${escapeHtml(plan.title)}</span>
       <strong>$${Number(plan.amountUsd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo</strong>
       <small>${escapeHtml(plan.description || "")}</small>
-      ${selected ? `<em>NGN estimate: ${formatMoney(ngn, "NGN")} at ${Number(usdNgnRate || 1500).toLocaleString()}/USD</em>` : ""}
+      ${selected && !isSandbox ? `<em>NGN estimate: ${formatMoney(ngn, "NGN")} at ${Number(usdNgnRate || 1500).toLocaleString()}/USD</em>` : ""}
+      ${selected && isSandbox ? `<em>Sandbox mode: no real charge. Webhook verification still runs server-side.</em>` : ""}
       <button class="${selected ? "action" : "ghost"}" type="button" data-select-plan="${escapeHtml(plan.id)}" ${!state.auth.user ? "disabled" : ""}>
         ${!state.auth.user ? "Sign in first" : selected ? "Selected" : "Choose Plan"}
       </button>
-      ${selected ? `<div class="stack tight">${buttons || `<button class="ghost" type="button" disabled>Refresh checkout accounts</button>`}</div>` : ""}
+      ${selected ? `<div class="stack tight">${buttons || `<button class="ghost" type="button" disabled>Refresh checkout methods</button>`}</div>` : ""}
     </article>
   `;
 }
@@ -1727,6 +1780,28 @@ function planCard(plan, accounts, usdNgnRate = 1500, selected = false) {
 function pendingPaymentPanel(payment) {
   const expired = checkoutPaymentExpired();
   const account = payment.account || {};
+  const method = payment.method || {};
+  const terminal = ["successful", "failed", "abandoned", "refunded", "expired"].includes(payment.status);
+  if (payment.provider === "sandbox_pay") {
+    return `
+      <article class="pending-payment ${terminal ? payment.status : ""}">
+        <div class="card-head">
+          <div>
+            <h3>${escapeHtml(payment.plan?.title || "Sandbox checkout")} - ${formatMoney(payment.amount, payment.currency)}</h3>
+            <p>Status: ${escapeHtml(payment.status || "pending")}${payment.status === "pending" ? ` - <span data-checkout-timer>${formatTimer(state.checkout.remaining || 0)}</span>` : ""}</p>
+          </div>
+          <strong>${escapeHtml(method.label || "Sandbox")}</strong>
+        </div>
+        <div class="payment-grid">
+          <span><b>Provider</b>Sandbox Pay</span>
+          <span><b>Reference</b>${escapeHtml(payment.reference || "")}</span>
+          <span><b>Mode</b>Test only</span>
+          <span><b>Notice</b>${escapeHtml(payment.userNotification || "in_app")}</span>
+        </div>
+        ${payment.status === "pending" && payment.authorizationUrl ? `<button class="action" type="button" data-open-checkout="${escapeHtml(payment.authorizationUrl)}">Open Sandbox Checkout</button>` : ""}
+      </article>
+    `;
+  }
   return `
     <article class="pending-payment ${expired ? "expired" : ""}">
       <div class="card-head">
@@ -1785,7 +1860,7 @@ function adminPaymentRow(payment) {
         <small>${escapeHtml(metadata.proof_reference || "No proof reference yet")}</small>
       </div>
       <div class="button-row two">
-        <button class="ghost" type="button" data-admin-verify="${escapeHtml(payment.id)}|succeeded">Approve</button>
+        <button class="ghost" type="button" data-admin-verify="${escapeHtml(payment.id)}|successful">Approve</button>
         <button class="ghost" type="button" data-admin-verify="${escapeHtml(payment.id)}|failed">Fail</button>
       </div>
     </article>
@@ -1909,6 +1984,7 @@ function handleForm(form) {
 
   if (type === "auth-email") {
     const email = String(data.get("email") || "").trim();
+    state.ui.authEmail = email;
     if (email) signInWithEmail(email);
   }
 
@@ -1926,13 +2002,14 @@ function handleForm(form) {
     state.settings.name = name;
     state.settings.mode = String(data.get("mode") || "Balanced");
     state.settings.onboardingComplete = true;
+    state.settings.tutorialComplete = false;
     if (!(state.settings.priorityModules || []).length) {
       state.settings.priorityModules = ["mind", "knowledge", "financial"];
     }
     localStorage.setItem("dc_name", name);
-    state.route = "home";
+    state.route = "tutorial";
     saveState();
-    setRoute("home");
+    setRoute("tutorial");
   }
 }
 
@@ -2175,6 +2252,11 @@ document.addEventListener("click", (event) => {
     startCheckout(planId, accountId);
   }
 
+  const openCheckoutButton = event.target.closest("[data-open-checkout]");
+  if (openCheckoutButton) {
+    window.location.href = openCheckoutButton.dataset.openCheckout;
+  }
+
   const planButton = event.target.closest("[data-select-plan]");
   if (planButton) {
     state.ui.selectedPlanId = planButton.dataset.selectPlan;
@@ -2215,6 +2297,21 @@ document.addEventListener("click", (event) => {
 
   if (event.target.closest("[data-skip-onboarding]")) {
     state.settings.onboardingComplete = true;
+    state.settings.tutorialComplete = false;
+    state.route = "tutorial";
+    saveState();
+    setRoute("tutorial");
+  }
+
+  if (event.target.closest("[data-finish-tutorial]")) {
+    state.settings.tutorialComplete = true;
+    state.route = "settings";
+    saveState();
+    setRoute("settings");
+  }
+
+  if (event.target.closest("[data-preview-dashboard]")) {
+    state.settings.tutorialComplete = true;
     state.route = "home";
     saveState();
     setRoute("home");
@@ -2222,6 +2319,7 @@ document.addEventListener("click", (event) => {
 
   if (event.target.closest("[data-redo-onboarding]")) {
     state.settings.onboardingComplete = false;
+    state.settings.tutorialComplete = false;
     saveState();
     setRoute("onboarding");
   }
@@ -2287,6 +2385,13 @@ document.addEventListener("input", (event) => {
   const focusTask = event.target.closest("[data-focus-task]");
   if (focusTask) {
     state.ui.focusTaskDraft = focusTask.value;
+    saveState();
+    return;
+  }
+
+  const authEmail = event.target.closest("[data-auth-email]");
+  if (authEmail) {
+    state.ui.authEmail = authEmail.value;
     saveState();
     return;
   }

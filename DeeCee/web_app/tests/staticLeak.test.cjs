@@ -21,6 +21,7 @@ function publicFiles() {
 const forbidden = [
   "SUPABASE_SERVICE_ROLE_KEY",
   "OWNER_ADMIN_TOKEN",
+  "PAYMENT_WEBHOOK_SECRET",
   "RESEND_API_KEY",
   "101019644",
   "8085318908",
