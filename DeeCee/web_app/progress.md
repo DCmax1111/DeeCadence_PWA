@@ -56,3 +56,35 @@
 - Confirmed the local Supabase fallback bundle is reachable at `/node_modules/@supabase/supabase-js/dist/umd/supabase.js`.
 - Added `state.ui.authEmail` so the email typed into the login form survives re-renders/clicks instead of clearing.
 - Changed the first-run flow to onboarding first, tutorial second, then sign-in/settings.
+
+## 2026-06-06
+
+### Supabase Schema Compatibility
+- Investigated Supabase error `ERROR: 42703: column "id" referenced in foreign key constraint does not exist`.
+- Identified the likely cause as an existing Supabase project with older `profiles`, `plans`, `subscriptions`, or `transactions` tables that do not match DeeCee's expected schema.
+- Updated `server/SCHEMA.complete.sql` with guarded compatibility repairs that add missing `id` and app columns before foreign-key-dependent tables are created.
+- Changed DeeCee plan seeding away from `ON CONFLICT (product, tier)` so it can run even if an older `plans` table does not have that unique constraint yet.
+- Updated `22_HOUR_LAUNCH_STEPS.txt` to clarify publishable Supabase keys versus private service-role keys and explain what to do if the `id` foreign-key error appears.
+
+### Subscription Pricing Update
+- Replaced the old Starter/Growth/Operator plan set with:
+  - 6-Day Pass: $0.99 for 6 days
+  - Monthly: $3.99 for 30 days
+  - Yearly: $39.99 for 365 days
+  - One-Time: $99.99 for long-term access
+- Kept subscription plan cards USD-first by default while allowing NGN estimates and Nigerian bank details through likely-Nigeria detection or an explicit Other Currency button.
+- Updated server plan metadata so subscription activation uses each plan's access duration instead of always granting one month.
+- Updated Supabase plan seeding and browser fallback plans to match the new pricing.
+- Verified `npm.cmd run check` passes after the pricing change.
+
+### Focus And Wiring Audit
+- Re-ran the full web app check suite and verified API syntax, payment tests, static leak checks, and browser bundle parsing.
+- Added `tests/staticWiring.test.cjs` to catch rendered forms that do not have matching `handleForm` branches.
+- Improved DeeCee Focus block tracking:
+  - Sessions are split into four visible blocks.
+  - The active timer now shows `Block X/4`.
+  - Checkpoints display as `Block 1` through `Block 4`.
+  - Ending a session records the block reached and elapsed time.
+  - Cancelling/abandoning a session now creates a focus session record with the block reached and no XP.
+  - Manual ending only awards newly completed/unbanked blocks, preventing unearned remaining-block XP.
+- Verified `npm.cmd run check` passes after the focus and wiring changes.

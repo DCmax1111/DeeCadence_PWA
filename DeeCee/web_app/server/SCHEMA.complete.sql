@@ -28,6 +28,55 @@ CREATE TABLE IF NOT EXISTS public.plans (
   UNIQUE(product, tier)
 );
 
+-- Compatibility repair for older Supabase projects.
+-- If a previous project already created public.profiles or public.plans without
+-- the columns DeeCee needs, CREATE TABLE IF NOT EXISTS will not change it.
+-- These guarded ALTERs add the missing columns before later foreign keys run.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS id UUID;
+
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS display_name TEXT,
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+  ADD COLUMN IF NOT EXISTS subscription_plan TEXT DEFAULT 'free',
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_id_unique
+  ON public.profiles(id);
+
+ALTER TABLE public.plans
+  ADD COLUMN IF NOT EXISTS id INTEGER,
+  ADD COLUMN IF NOT EXISTS product TEXT,
+  ADD COLUMN IF NOT EXISTS tier TEXT,
+  ADD COLUMN IF NOT EXISTS price_monthly DECIMAL(10, 2),
+  ADD COLUMN IF NOT EXISTS price_yearly DECIMAL(10, 2),
+  ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD',
+  ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS max_users INT,
+  ADD COLUMN IF NOT EXISTS max_ledger_entries INT,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+CREATE SEQUENCE IF NOT EXISTS public.plans_id_seq;
+
+ALTER TABLE public.plans
+  ALTER COLUMN id SET DEFAULT nextval('public.plans_id_seq');
+
+UPDATE public.plans
+SET id = nextval('public.plans_id_seq')
+WHERE id IS NULL;
+
+ALTER SEQUENCE public.plans_id_seq
+  OWNED BY public.plans.id;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_id_unique
+  ON public.plans(id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_product_tier_unique
+  ON public.plans(product, tier)
+  WHERE product IS NOT NULL AND tier IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS public.subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -47,6 +96,30 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   UNIQUE(provider, provider_subscription_id)
 );
 
+ALTER TABLE public.subscriptions
+  ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid(),
+  ADD COLUMN IF NOT EXISTS user_id UUID,
+  ADD COLUMN IF NOT EXISTS plan_id INT,
+  ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS provider TEXT,
+  ADD COLUMN IF NOT EXISTS provider_subscription_id TEXT,
+  ADD COLUMN IF NOT EXISTS provider_customer_id TEXT,
+  ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS current_period_start TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS canceled_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS cancel_reason TEXT,
+  ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+UPDATE public.subscriptions
+SET id = gen_random_uuid()
+WHERE id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_id_unique
+  ON public.subscriptions(id);
+
 CREATE TABLE IF NOT EXISTS public.transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -55,7 +128,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   provider_transaction_id TEXT NOT NULL,
   provider_customer_id TEXT,
   amount DECIMAL(15, 2) NOT NULL,
-  currency TEXT DEFAULT 'NGN',
+  currency TEXT DEFAULT 'USD',
   status TEXT DEFAULT 'pending',
   transaction_type TEXT DEFAULT 'subscription',
   metadata JSONB DEFAULT '{}',
@@ -64,6 +137,29 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(provider, provider_transaction_id)
 );
+
+ALTER TABLE public.transactions
+  ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid(),
+  ADD COLUMN IF NOT EXISTS user_id UUID,
+  ADD COLUMN IF NOT EXISTS subscription_id UUID,
+  ADD COLUMN IF NOT EXISTS provider TEXT,
+  ADD COLUMN IF NOT EXISTS provider_transaction_id TEXT,
+  ADD COLUMN IF NOT EXISTS provider_customer_id TEXT,
+  ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 2),
+  ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD',
+  ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS transaction_type TEXT DEFAULT 'subscription',
+  ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS error_message TEXT,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+UPDATE public.transactions
+SET id = gen_random_uuid()
+WHERE id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_id_unique
+  ON public.transactions(id);
 
 DO $$
 BEGIN
@@ -202,12 +298,49 @@ BEGIN
 END $$;
 
 INSERT INTO public.plans (product, tier, price_monthly, currency, features, max_users, max_ledger_entries)
-VALUES
-  ('deecee', 'starter', 9.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "starter"}', 1, NULL),
-  ('deecee', 'growth', 19.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "growth"}', 1, NULL),
-  ('deecee', 'operator', 39.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "operator"}', 1, NULL)
-ON CONFLICT (product, tier) DO UPDATE
-SET price_monthly = EXCLUDED.price_monthly,
-    currency = EXCLUDED.currency,
-    features = EXCLUDED.features,
-    updated_at = now();
+SELECT 'deecee', 'six_day', 0.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "six_day", "billing_label": "6 days", "access_days": 6}', 1, NULL
+WHERE NOT EXISTS (SELECT 1 FROM public.plans WHERE product = 'deecee' AND tier = 'six_day');
+
+INSERT INTO public.plans (product, tier, price_monthly, currency, features, max_users, max_ledger_entries)
+SELECT 'deecee', 'monthly', 3.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "monthly", "billing_label": "month", "access_days": 30}', 1, NULL
+WHERE NOT EXISTS (SELECT 1 FROM public.plans WHERE product = 'deecee' AND tier = 'monthly');
+
+INSERT INTO public.plans (product, tier, price_monthly, currency, features, max_users, max_ledger_entries)
+SELECT 'deecee', 'yearly', 39.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "yearly", "billing_label": "year", "access_days": 365}', 1, NULL
+WHERE NOT EXISTS (SELECT 1 FROM public.plans WHERE product = 'deecee' AND tier = 'yearly');
+
+INSERT INTO public.plans (product, tier, price_monthly, currency, features, max_users, max_ledger_entries)
+SELECT 'deecee', 'lifetime', 99.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "lifetime", "billing_label": "one-time", "access_days": 36500}', 1, NULL
+WHERE NOT EXISTS (SELECT 1 FROM public.plans WHERE product = 'deecee' AND tier = 'lifetime');
+
+UPDATE public.plans
+SET price_monthly = CASE tier
+      WHEN 'six_day' THEN 0.99
+      WHEN 'monthly' THEN 3.99
+      WHEN 'yearly' THEN 39.99
+      WHEN 'lifetime' THEN 99.99
+      ELSE price_monthly
+    END,
+    currency = 'USD',
+    features = jsonb_build_object(
+      'sandbox_checkout', true,
+      'manual_checkout', true,
+      'tier', tier,
+      'billing_label', CASE tier
+        WHEN 'six_day' THEN '6 days'
+        WHEN 'monthly' THEN 'month'
+        WHEN 'yearly' THEN 'year'
+        WHEN 'lifetime' THEN 'one-time'
+        ELSE tier
+      END,
+      'access_days', CASE tier
+        WHEN 'six_day' THEN 6
+        WHEN 'monthly' THEN 30
+        WHEN 'yearly' THEN 365
+        WHEN 'lifetime' THEN 36500
+        ELSE 30
+      END
+    ),
+    updated_at = now()
+WHERE product = 'deecee'
+  AND tier IN ('six_day', 'monthly', 'yearly', 'lifetime');

@@ -50,9 +50,10 @@ ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO public.plans (product, tier, price_monthly, currency, features, max_users, max_ledger_entries)
 VALUES
-  ('deecee', 'starter', 9.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "starter"}', 1, NULL),
-  ('deecee', 'growth', 19.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "growth"}', 1, NULL),
-  ('deecee', 'operator', 39.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "operator"}', 1, NULL)
+  ('deecee', 'six_day', 0.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "six_day", "billing_label": "6 days", "access_days": 6}', 1, NULL),
+  ('deecee', 'monthly', 3.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "monthly", "billing_label": "month", "access_days": 30}', 1, NULL),
+  ('deecee', 'yearly', 39.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "yearly", "billing_label": "year", "access_days": 365}', 1, NULL),
+  ('deecee', 'lifetime', 99.99, 'USD', '{"sandbox_checkout": true, "manual_checkout": true, "tier": "lifetime", "billing_label": "one-time", "access_days": 36500}', 1, NULL)
 ON CONFLICT (product, tier) DO UPDATE
 SET price_monthly = EXCLUDED.price_monthly,
     currency = EXCLUDED.currency,

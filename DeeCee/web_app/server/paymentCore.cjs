@@ -28,20 +28,24 @@ function configuredProvider() {
   return provider === "manual_bank" || provider === "manual" ? MANUAL_PROVIDER : SANDBOX_PROVIDER;
 }
 
-function publicCheckoutConfig(rawRate) {
+function publicCheckoutConfig(rawRate, options = {}) {
   if (configuredProvider() === MANUAL_PROVIDER) {
     return {
-      ...manualPublicConfig(rawRate),
+      ...manualPublicConfig(rawRate, options),
       provider: MANUAL_PROVIDER,
       mode: "manual"
     };
   }
 
+  const manualConfig = manualPublicConfig(rawRate, options);
   return {
     provider: SANDBOX_PROVIDER,
     mode: "sandbox",
     plans: Object.values(PLANS),
     paymentMethods: [SANDBOX_METHOD],
+    otherCurrencyAccounts: options.includeOtherCurrency
+      ? manualConfig.accounts.filter((account) => account.currency !== "USD")
+      : [],
     paymentWindowMinutes: PAYMENT_WINDOW_MINUTES,
     usdNgnRate: safeUsdNgnRate(rawRate)
   };
@@ -56,7 +60,7 @@ function normalizePaymentStatus(status) {
 }
 
 function validateCheckoutChoice(planId, methodId, rawRate) {
-  if (configuredProvider() === MANUAL_PROVIDER) {
+  if (configuredProvider() === MANUAL_PROVIDER || methodId === "lead_usd" || methodId === "moniepoint_ngn" || methodId === "paga_ngn") {
     return validatePlanAndAccount(planId, methodId);
   }
 
@@ -75,6 +79,8 @@ function validateCheckoutChoice(planId, methodId, rawRate) {
       plan_title: plan.title,
       plan_description: plan.description,
       price_usd: plan.amountUsd,
+      billing_label: plan.billingLabel,
+      access_days: plan.accessDays,
       usd_ngn_rate: safeUsdNgnRate(rawRate),
       payment_method: method,
       payment_mode: "sandbox",
@@ -92,6 +98,8 @@ function createPaymentMetadata({ plan, account, reference, otp, expiresAt, rawRa
     plan_title: plan.title,
     plan_description: plan.description,
     price_usd: plan.amountUsd,
+    billing_label: plan.billingLabel,
+    access_days: plan.accessDays,
     usd_ngn_rate: safeUsdNgnRate(rawRate),
     payment_method: method || SANDBOX_METHOD,
     payment_mode: "sandbox",
@@ -139,7 +147,9 @@ function paymentView(row) {
       id: metadata.plan_id,
       title: metadata.plan_title,
       description: metadata.plan_description,
-      priceUsd: metadata.price_usd
+      priceUsd: metadata.price_usd,
+      billingLabel: metadata.billing_label,
+      accessDays: metadata.access_days
     },
     method: metadata.payment_method || SANDBOX_METHOD,
     authorizationUrl: metadata.authorization_url || "",
@@ -171,7 +181,8 @@ async function activateSubscription(supabaseAdmin, transaction, source = SANDBOX
 
   const periodStart = new Date();
   const periodEnd = new Date(periodStart);
-  periodEnd.setMonth(periodEnd.getMonth() + 1);
+  const accessDays = Number(metadata.access_days || 30);
+  periodEnd.setDate(periodEnd.getDate() + Math.max(1, Math.min(36500, accessDays)));
 
   const { error } = await supabaseAdmin
     .from("subscriptions")

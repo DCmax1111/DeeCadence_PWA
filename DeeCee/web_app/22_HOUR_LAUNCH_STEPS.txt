@@ -38,7 +38,7 @@ Option B: Create a clean new Supabase project
 
 What I need from you:
 - Confirm existing Supabase or new Supabase.
-
+It is the old one I'll be using. I can simply delete confusing tables where needed.
 
 3. Get Supabase URL And Anon Key
 --------------------------------
@@ -57,7 +57,7 @@ Put them in:
 
 DeeCee/web_app/src/config.js
 
-Example:
+Example:                 
 
 window.DEECEE_CONFIG = {
   supabaseUrl: "https://your-project-ref.supabase.co",
@@ -114,7 +114,7 @@ This creates/updates:
 - transactions
 - webhook_events
 - RLS policies
-- DeeCee Starter/Growth/Operator plans
+- DeeCee 6-Day, Monthly, Yearly, and One-Time plans
 
 What I need from you:
 - Tell me whether the SQL ran successfully.
@@ -189,7 +189,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3002
 
 What this enables:
 - User signs in.
-- User selects Starter, Growth, or Operator.
+- User selects 6-Day Pass, Monthly, Yearly, or One-Time.
 - Server creates a pending payment.
 - User opens sandbox checkout.
 - User completes/fails/abandons test payment.
@@ -242,9 +242,12 @@ PAYMENT_WEBHOOK_SECRET
 PAYMENT_SANDBOX_BASE_URL
 OWNER_ADMIN_TOKEN
 OWNER_NOTIFICATION_EMAIL
-USD_NGN_RATE
 RESEND_API_KEY                  optional
 NOTIFICATION_FROM_EMAIL         optional
+
+Subscription plan cards show USD by default. NGN/Naira equivalents and Nigerian
+bank details should only appear when the user is likely in Nigeria or clicks
+Other Currency.
 
 4. Deploy.
 
@@ -352,4 +355,3 @@ Fastest Path Summary
 5. Deploy Vercel preview.
 6. Open preview on Android.
 7. Test onboarding -> tutorial -> sign-in -> sandbox checkout -> payment status.
-

@@ -16,7 +16,6 @@ PAYMENT_PROVIDER=sandbox
 PAYMENT_WEBHOOK_SECRET=generate-a-long-random-secret
 PAYMENT_SANDBOX_BASE_URL=http://localhost:3002
 
-USD_NGN_RATE=1400
 OWNER_NOTIFICATION_EMAIL=dominiquecreations24@gmail.com
 RESEND_API_KEY=
 NOTIFICATION_FROM_EMAIL=DeeCee <verified-sender@your-domain.com>
@@ -59,7 +58,7 @@ PowerShell may block `npm`; use `npm.cmd` if you see an execution policy error.
 1. Start the local server.
 2. Sign in with Supabase magic link.
 3. Go to `Settings`.
-4. Pick Starter, Growth, or Operator.
+4. Pick 6-Day Pass, Monthly, Yearly, or One-Time.
 5. Click `Pay in Sandbox`.
 6. The sandbox checkout page opens.
 7. Click `Complete Test Payment`, `Fail Test Payment`, or `Abandon Payment`.
@@ -116,4 +115,4 @@ Manual transfer approval is still owner-token protected through `/api/admin/paym
 
 - `sandbox_pay` is a test provider, not a real card processor.
 - User email notification uses Resend only if `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL` are configured; otherwise DeeCee provides an in-app confirmed payment status.
-- Real provider integration should be added behind the same provider abstraction. For Nigeria/NGN payments, Paystack or Flutterwave are the most natural next candidates; choose one before enabling live mode.
+- Real provider integration should be added behind the same provider abstraction. Keep subscription cards USD-first; local-currency equivalents and Nigerian bank details should appear only through location-aware or explicit Other Currency flows.

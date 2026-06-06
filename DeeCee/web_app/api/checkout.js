@@ -48,8 +48,7 @@ async function ensureProfile(user) {
     );
 }
 
-async function expireOldPending(userId) {
-  const provider = configuredProvider();
+async function expireOldPending(userId, provider = configuredProvider()) {
   const { data, error } = await supabaseAdmin
     .from("transactions")
     .select("*")
@@ -71,8 +70,7 @@ async function expireOldPending(userId) {
     .eq("provider", provider)));
 }
 
-async function findActivePending(userId, planId, accountId) {
-  const provider = configuredProvider();
+async function findActivePending(userId, planId, accountId, provider = configuredProvider()) {
   const { data, error } = await supabaseAdmin
     .from("transactions")
     .select("*")
@@ -89,12 +87,13 @@ async function findActivePending(userId, planId, accountId) {
 }
 
 async function latestPayment(userId) {
-  await expireOldPending(userId);
+  await expireOldPending(userId, configuredProvider());
+  await expireOldPending(userId, MANUAL_PROVIDER);
   const { data, error } = await supabaseAdmin
     .from("transactions")
     .select("*")
     .eq("user_id", userId)
-    .eq("provider", configuredProvider())
+    .in("provider", [configuredProvider(), MANUAL_PROVIDER])
     .in("status", ["pending", "successful", "failed", "abandoned", "refunded", "expired", "succeeded"])
     .order("created_at", { ascending: false })
     .limit(1);
@@ -134,16 +133,18 @@ async function sendOwnerNotification({ user, payment }) {
 }
 
 async function createPayment(user, planId, accountId) {
-  const provider = configuredProvider();
+  const provider = ["lead_usd", "moniepoint_ngn", "paga_ngn"].includes(accountId)
+    ? MANUAL_PROVIDER
+    : configuredProvider();
   const validation = validateCheckoutChoice(planId, accountId, USD_NGN_RATE);
   if (validation.error) return { status: 400, body: { error: validation.error } };
 
   const { plan, account, method } = validation;
   await ensureProfile(user);
-  await expireOldPending(user.id);
-  const existing = await findActivePending(user.id, plan.id, provider === MANUAL_PROVIDER ? account.id : method.id);
+  await expireOldPending(user.id, provider);
+  const existing = await findActivePending(user.id, plan.id, provider === MANUAL_PROVIDER ? account.id : method.id, provider);
   if (existing) {
-    return { status: 200, body: { payment: paymentView(existing), reused: true, config: publicCheckoutConfig(USD_NGN_RATE) } };
+    return { status: 200, body: { payment: paymentView(existing), reused: true, config: publicCheckoutConfig(USD_NGN_RATE, { includeOtherCurrency: true }) } };
   }
 
   const reference = makeReference();
@@ -169,7 +170,7 @@ async function createPayment(user, planId, accountId) {
     .select()
     .single();
   if (error) throw error;
-  return { status: 201, body: { payment: paymentView(data), reused: false, config: publicCheckoutConfig(USD_NGN_RATE), authorizationUrl: metadata.authorization_url || "" } };
+  return { status: 201, body: { payment: paymentView(data), reused: false, config: publicCheckoutConfig(USD_NGN_RATE, { includeOtherCurrency: provider === MANUAL_PROVIDER }), authorizationUrl: metadata.authorization_url || "" } };
 }
 
 async function submitProof(user, body) {
@@ -233,8 +234,9 @@ module.exports = async function handler(req, res) {
     if (!user) return res.status(401).json({ error: "Authentication required" });
 
     if (req.method === "GET") {
+      const includeOtherCurrency = req.query && req.query.otherCurrency === "1";
       const payment = await latestPayment(user.id);
-      return res.status(200).json({ payment: paymentView(payment), config: publicCheckoutConfig(USD_NGN_RATE) });
+      return res.status(200).json({ payment: paymentView(payment), config: publicCheckoutConfig(USD_NGN_RATE, { includeOtherCurrency }) });
     }
 
     if (req.method === "POST") {

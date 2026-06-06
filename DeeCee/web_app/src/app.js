@@ -32,9 +32,10 @@ const PREMIUM_FEATURES = [
 ];
 
 const PUBLIC_PLANS = [
-  { id: "starter", title: "Starter", amountUsd: 9.99, description: "Solo cadence tracking, local backup, and core stats" },
-  { id: "growth", title: "Growth", amountUsd: 19.99, description: "Advanced quests, richer logs, and priority tools" },
-  { id: "operator", title: "Operator", amountUsd: 39.99, description: "Full DeeCee operator layer and premium lab access" }
+  { id: "six_day", title: "6-Day Pass", amountUsd: 0.99, billingLabel: "6 days", description: "Short trial access for testing DeeCee's premium layer" },
+  { id: "monthly", title: "Monthly", amountUsd: 3.99, billingLabel: "month", description: "Monthly DeeCee premium access" },
+  { id: "yearly", title: "Yearly", amountUsd: 39.99, billingLabel: "year", description: "Annual DeeCee premium access" },
+  { id: "lifetime", title: "One-Time", amountUsd: 99.99, billingLabel: "one-time", description: "One-time DeeCee premium access" }
 ];
 
 const DEFAULT_STATE = {
@@ -90,6 +91,7 @@ const DEFAULT_STATE = {
     quizFeedback: "",
     activityExpanded: false,
     selectedPlanId: "",
+    otherCurrencyPlanId: "",
     authEmail: ""
   }
 };
@@ -413,7 +415,7 @@ async function loadCheckout() {
   state.checkout.loading = true;
   render();
   try {
-    const payload = await apiRequest("/api/checkout");
+    const payload = await apiRequest(`/api/checkout${state.ui.otherCurrencyPlanId ? "?otherCurrency=1" : ""}`);
     state.checkout.config = payload.config || state.checkout.config;
     state.checkout.payment = payload.payment || null;
     state.checkout.message = paymentStatusMessage(state.checkout.payment);
@@ -424,6 +426,18 @@ async function loadCheckout() {
     saveState();
     render();
   }
+}
+
+async function loadOtherCurrency(planId) {
+  state.ui.otherCurrencyPlanId = state.ui.otherCurrencyPlanId === planId ? "" : planId;
+  saveState();
+  await loadCheckout();
+}
+
+function isLikelyNigeria() {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  const language = navigator.language || "";
+  return timezone === "Africa/Lagos" || language.toLowerCase().includes("-ng");
 }
 
 async function startCheckout(planId, accountId) {
@@ -718,11 +732,21 @@ function focusMindGain(minutes) {
 }
 
 function focusSegmentInfo() {
-  if (!state.activeFocus) return { completed: 0, banked: 0, bankable: 0, total: 4 };
+  if (!state.activeFocus) return { completed: 0, banked: 0, bankable: 0, current: 1, total: 4, elapsedSeconds: 0, totalSeconds: 1 };
   const totalSeconds = Math.max(1, (state.activeFocus.minutes || 1) * 60);
-  const completed = Math.min(4, Math.floor(focusElapsedSeconds() / (totalSeconds / 4)));
+  const elapsedSeconds = Math.min(totalSeconds, focusElapsedSeconds());
+  const completed = Math.min(4, Math.floor(elapsedSeconds / (totalSeconds / 4)));
   const banked = Math.min(4, state.activeFocus.bankedSegments || 0);
-  return { completed, banked, bankable: Math.max(0, completed - banked), total: 4 };
+  const current = completed >= 4 ? 4 : Math.max(1, completed + 1);
+  return { completed, banked, bankable: Math.max(0, completed - banked), current, total: 4, elapsedSeconds, totalSeconds };
+}
+
+function focusBlockSummary(segment = focusSegmentInfo()) {
+  return `Block ${segment.current}/4`;
+}
+
+function focusElapsedMinutes(segment = focusSegmentInfo()) {
+  return Math.round((segment.elapsedSeconds / 60) * 100) / 100;
 }
 
 function formatTimer(seconds) {
@@ -1355,18 +1379,22 @@ function renderFocus() {
     <section class="hero-card compact focus-live">
       <p>${escapeHtml(active.difficulty)} focus${active.paused ? " - paused" : ""}</p>
       <h2>${escapeHtml(active.task)}</h2>
+      <div class="focus-block-status">
+        <strong>${focusBlockSummary(segment)}</strong>
+        <span>${segment.completed}/4 complete - ${segment.banked}/4 banked</span>
+      </div>
       <div class="timer-num" data-focus-timer>${formatTimer(focusRemainingSeconds())}</div>
       <div class="timer-track"><span data-focus-progress></span></div>
       ${focusCheckpointTrack(segment)}
       <div class="hero-metrics">
         <span>${active.minutes}m target</span>
         <span>Started ${new Date(active.startedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
-        <span>${segment.banked} / 4 banked</span>
+        <span>${focusElapsedMinutes(segment)}m elapsed</span>
       </div>
       <div class="button-row focus-actions">
         <button class="ghost" type="button" data-pause-focus>${active.paused ? "Resume" : "Pause"}</button>
         <button class="ghost" type="button" data-abandon-focus>Abandon</button>
-        <button class="action danger" type="button" data-complete-focus>Complete</button>
+        <button class="action danger" type="button" data-complete-focus>End Session</button>
       </div>
     </section>
   ` : "";
@@ -1404,7 +1432,8 @@ function focusCheckpointTrack(segment = focusSegmentInfo()) {
     <div class="checkpoint-row" aria-label="Focus checkpoints">
       ${[1, 2, 3, 4].map((step) => `
         <span class="${segment.banked >= step ? "done" : segment.completed >= step ? "ready" : ""}">
-          ${step}/4
+          <b>Block ${step}</b>
+          <small>${step}/4</small>
         </span>
       `).join("")}
     </div>
@@ -1662,9 +1691,9 @@ function focusRows() {
     <article class="log-row">
       <div>
         <strong>${escapeHtml(session.task)}</strong>
-        <span>${session.minutes}m - ${escapeHtml(session.difficulty)} - ${escapeHtml(session.date)}</span>
+        <span>${session.minutes}m - ${escapeHtml(session.difficulty)} - ${escapeHtml(session.blockLabel || "")}${session.blockLabel ? " - " : ""}${escapeHtml(session.date)}</span>
       </div>
-      <b>Mind +${formatStat(session.mindGain ?? focusMindGain(session.minutes))}</b>
+      <b>${session.cancelled ? "No XP" : `Mind +${formatStat(session.mindGain ?? focusMindGain(session.minutes))}`}</b>
     </article>
   `).join("");
 }
@@ -1752,27 +1781,44 @@ function checkoutPanel() {
 }
 
 function planCard(plan, methods, config = {}, selected = false) {
-  const usdNgnRate = config.usdNgnRate || 1500;
-  const ngn = Math.round(Number(plan.amountUsd || 0) * Number(usdNgnRate || 1500));
   const isSandbox = config.mode !== "manual";
+  const usdNgnRate = Number(config.usdNgnRate || 1500);
+  const ngn = Math.round(Number(plan.amountUsd || 0) * usdNgnRate);
+  const showOtherCurrency = selected && (state.ui.otherCurrencyPlanId === plan.id || isLikelyNigeria());
+  const otherAccounts = showOtherCurrency ? (config.otherCurrencyAccounts || []) : [];
   const buttons = selected && methods.length
     ? methods.map((method) => `
       <button class="ghost" type="button" data-start-checkout="${escapeHtml(plan.id)}|${escapeHtml(method.id)}" ${state.checkout.loading ? "disabled" : ""}>
-        ${isSandbox ? "Pay in Sandbox" : `${method.currency === "NGN" ? `${formatMoney(ngn, "NGN")} - ` : ""}${method.currency} - ${escapeHtml(method.bankName)}`}
+        ${isSandbox ? "Pay in Sandbox" : `${method.currency} - ${escapeHtml(method.bankName)}`}
       </button>
     `).join("")
     : "";
+  const billingLabel = plan.billingLabel || (plan.id === "lifetime" ? "one-time" : "period");
   return `
     <article class="plan-card ${selected ? "selected" : ""}">
       <span>${escapeHtml(plan.title)}</span>
-      <strong>$${Number(plan.amountUsd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo</strong>
+      <strong>$${Number(plan.amountUsd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${billingLabel === "one-time" ? "" : `/${escapeHtml(billingLabel)}`}</strong>
       <small>${escapeHtml(plan.description || "")}</small>
-      ${selected && !isSandbox ? `<em>NGN estimate: ${formatMoney(ngn, "NGN")} at ${Number(usdNgnRate || 1500).toLocaleString()}/USD</em>` : ""}
-      ${selected && isSandbox ? `<em>Sandbox mode: no real charge. Webhook verification still runs server-side.</em>` : ""}
+      ${selected ? `<em>${isSandbox ? "Sandbox mode: no real charge. " : ""}USD-only checkout.</em>` : ""}
       <button class="${selected ? "action" : "ghost"}" type="button" data-select-plan="${escapeHtml(plan.id)}" ${!state.auth.user ? "disabled" : ""}>
         ${!state.auth.user ? "Sign in first" : selected ? "Selected" : "Choose Plan"}
       </button>
       ${selected ? `<div class="stack tight">${buttons || `<button class="ghost" type="button" disabled>Refresh checkout methods</button>`}</div>` : ""}
+      ${selected ? `
+        <button class="ghost" type="button" data-other-currency="${escapeHtml(plan.id)}" ${!state.auth.user || state.checkout.loading ? "disabled" : ""}>
+          ${showOtherCurrency ? "Hide Other Currency" : "Other Currency"}
+        </button>
+      ` : ""}
+      ${showOtherCurrency ? `
+        <div class="stack tight">
+          <em>NGN estimate: ${formatMoney(ngn, "NGN")} at ${usdNgnRate.toLocaleString()}/USD.</em>
+          ${otherAccounts.length ? otherAccounts.map((account) => `
+            <button class="ghost" type="button" data-start-checkout="${escapeHtml(plan.id)}|${escapeHtml(account.id)}" ${state.checkout.loading ? "disabled" : ""}>
+              ${formatMoney(ngn, "NGN")} - ${escapeHtml(account.bankName)}
+            </button>
+          `).join("") : `<button class="ghost" type="button" disabled>Loading local transfer accounts...</button>`}
+        </div>
+      ` : ""}
     </article>
   `;
 }
@@ -2015,28 +2061,38 @@ function handleForm(form) {
 
 function completeFocus(mode = "manual") {
   if (!state.activeFocus) return;
+  const active = state.activeFocus;
+  const segment = focusSegmentInfo();
   const bankedSegments = Math.min(4, state.activeFocus.bankedSegments || 0);
-  const remainingSegments = Math.max(0, 4 - bankedSegments);
-  const completedMinutes = Math.round((state.activeFocus.minutes * (remainingSegments / 4)) * 100) / 100;
-  const mindGain = Math.round((focusMindGain(state.activeFocus.minutes) * (remainingSegments / 4)) * 100) / 100;
+  const completedBlocks = mode === "auto" ? 4 : segment.completed;
+  const newSegments = Math.min(4 - bankedSegments, Math.max(0, completedBlocks - bankedSegments));
+  const creditedMinutes = Math.round(((active.minutes / 4) * newSegments) * 100) / 100;
+  const elapsedMinutes = mode === "auto" ? active.minutes : focusElapsedMinutes(segment);
+  const mindGain = Math.round((focusMindGain(active.minutes) * (newSegments / 4)) * 100) / 100;
+  const blockLabel = mode === "auto" ? "Block 4/4" : focusBlockSummary(segment);
   const session = {
     id: uid(),
-    task: state.activeFocus.task,
-    minutes: completedMinutes,
-    targetMinutes: state.activeFocus.minutes,
-    difficulty: state.activeFocus.difficulty,
+    task: active.task,
+    minutes: elapsedMinutes,
+    creditedMinutes,
+    targetMinutes: active.minutes,
+    difficulty: active.difficulty,
     mindGain,
-    bankedSegments,
+    bankedSegments: bankedSegments + newSegments,
+    completedBlocks,
+    endedOnBlock: mode === "auto" ? 4 : segment.current,
+    blockLabel,
+    endedReason: mode,
     createdAt: nowIso(),
     date: today()
   };
   state.focusSessions.push(session);
-  state.focusDebt = Math.max(0, state.focusDebt - session.minutes);
+  state.focusDebt = Math.max(0, state.focusDebt - creditedMinutes);
   state.activeFocus = null;
   applyAction({
     module: "DeeCee Focus",
-    type: "complete",
-    label: `${mode === "auto" ? "Auto-completed" : "Completed"} focus - ${session.task} (${session.minutes}m)`,
+    type: mode === "auto" || completedBlocks >= 4 ? "complete" : "ended",
+    label: `${mode === "auto" ? "Auto-completed" : "Ended"} focus - ${session.task} (${blockLabel}, ${formatStat(elapsedMinutes)}m)`,
     effects: mindGain > 0 ? { Mind: mindGain } : {}
   });
 }
@@ -2093,11 +2149,17 @@ function bankFocusSegments(count, reason = "manual") {
     id: uid(),
     task: `${task} - checkpoint ${bankedTotal}/4`,
     minutes,
+    creditedMinutes: minutes,
+    targetMinutes: target,
     difficulty,
     mindGain,
     bankedSegments: segments,
     partial: true,
     checkpoint: bankedTotal,
+    completedBlocks: bankedTotal,
+    endedOnBlock: bankedTotal,
+    blockLabel: `Block ${bankedTotal}/4`,
+    endedReason: reason,
     createdAt: nowIso(),
     date: today()
   });
@@ -2117,10 +2179,31 @@ function bankFocusSegments(count, reason = "manual") {
 function abandonFocus() {
   if (!state.activeFocus) return;
   if (!confirm("Abandon this focus session? It will not add Mind XP.")) return;
-  const task = state.activeFocus.task;
+  const active = state.activeFocus;
+  const segment = focusSegmentInfo();
+  const elapsedMinutes = focusElapsedMinutes(segment);
+  const blockLabel = focusBlockSummary(segment);
   state.activeFocus = null;
-  state.activity.unshift({ id: uid(), module: "DeeCee Focus", label: `Abandoned focus - ${task}`, effects: {}, date: today(), createdAt: nowIso() });
+  state.focusSessions.push({
+    id: uid(),
+    task: active.task,
+    minutes: elapsedMinutes,
+    creditedMinutes: 0,
+    targetMinutes: active.minutes,
+    difficulty: active.difficulty,
+    mindGain: 0,
+    bankedSegments: active.bankedSegments || 0,
+    completedBlocks: segment.completed,
+    endedOnBlock: segment.current,
+    blockLabel,
+    endedReason: "abandoned",
+    cancelled: true,
+    createdAt: nowIso(),
+    date: today()
+  });
+  state.activity.unshift({ id: uid(), module: "DeeCee Focus", label: `Abandoned focus - ${active.task} (${blockLabel}, ${formatStat(elapsedMinutes)}m)`, effects: {}, date: today(), createdAt: nowIso() });
   state.activity = state.activity.slice(0, MAX_ACTIVITY_ITEMS);
+  state.focusSessions = state.focusSessions.slice(-MAX_FOCUS_SESSIONS);
   saveState();
   render();
 }
@@ -2252,6 +2335,11 @@ document.addEventListener("click", (event) => {
     startCheckout(planId, accountId);
   }
 
+  const otherCurrencyButton = event.target.closest("[data-other-currency]");
+  if (otherCurrencyButton) {
+    loadOtherCurrency(otherCurrencyButton.dataset.otherCurrency);
+  }
+
   const openCheckoutButton = event.target.closest("[data-open-checkout]");
   if (openCheckoutButton) {
     window.location.href = openCheckoutButton.dataset.openCheckout;
@@ -2260,9 +2348,10 @@ document.addEventListener("click", (event) => {
   const planButton = event.target.closest("[data-select-plan]");
   if (planButton) {
     state.ui.selectedPlanId = planButton.dataset.selectPlan;
+    if (isLikelyNigeria()) state.ui.otherCurrencyPlanId = planButton.dataset.selectPlan;
     saveState();
     render();
-    if (state.auth.user && !state.checkout.config) loadCheckout();
+    if (state.auth.user && (!state.checkout.config || state.ui.otherCurrencyPlanId)) loadCheckout();
   }
 
   const verifyButton = event.target.closest("[data-admin-verify]");

@@ -676,6 +676,29 @@ body.light .focus-live {
   text-shadow: 0 0 22px color-mix(in srgb, var(--focus) 50%, transparent);
 }
 
+.focus-block-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  margin: 12px 0;
+  border: 1px solid color-mix(in srgb, var(--focus) 42%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--focus) 10%, var(--surface));
+}
+
+.focus-block-status strong {
+  color: var(--focus);
+  font-size: 18px;
+}
+
+.focus-block-status span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
 body.light .timer-num {
   text-shadow: 0 8px 24px rgba(0, 143, 179, 0.18);
 }
@@ -710,15 +733,22 @@ body.light .timer-track {
 }
 
 .checkpoint-row span {
-  min-height: 30px;
+  min-height: 42px;
   display: grid;
   place-items: center;
+  gap: 2px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 78%, transparent);
   color: var(--dim);
   font-size: 11px;
   font-weight: 950;
+}
+
+.checkpoint-row span small {
+  color: inherit;
+  font-size: 10px;
+  opacity: 0.82;
 }
 
 .checkpoint-row span.ready {

@@ -6,23 +6,37 @@ const MIN_USD_NGN_RATE = 100;
 const MAX_USD_NGN_RATE = 10000;
 
 const PLANS = Object.freeze({
-  starter: Object.freeze({
-    id: "starter",
-    title: "Starter",
-    amountUsd: 9.99,
-    description: "Solo cadence tracking, local backup, and core stats"
+  six_day: Object.freeze({
+    id: "six_day",
+    title: "6-Day Pass",
+    amountUsd: 0.99,
+    billingLabel: "6 days",
+    accessDays: 6,
+    description: "Short trial access for testing DeeCee's premium layer"
   }),
-  growth: Object.freeze({
-    id: "growth",
-    title: "Growth",
-    amountUsd: 19.99,
-    description: "Advanced quests, richer logs, and priority tools"
+  monthly: Object.freeze({
+    id: "monthly",
+    title: "Monthly",
+    amountUsd: 3.99,
+    billingLabel: "month",
+    accessDays: 30,
+    description: "Monthly DeeCee premium access"
   }),
-  operator: Object.freeze({
-    id: "operator",
-    title: "Operator",
+  yearly: Object.freeze({
+    id: "yearly",
+    title: "Yearly",
     amountUsd: 39.99,
-    description: "Full DeeCee operator layer and premium lab access"
+    billingLabel: "year",
+    accessDays: 365,
+    description: "Annual DeeCee premium access"
+  }),
+  lifetime: Object.freeze({
+    id: "lifetime",
+    title: "One-Time",
+    amountUsd: 99.99,
+    billingLabel: "one-time",
+    accessDays: 36500,
+    description: "One-time DeeCee premium access"
   })
 });
 
@@ -56,10 +70,11 @@ function safeUsdNgnRate(rawRate) {
   return Math.max(MIN_USD_NGN_RATE, Math.min(MAX_USD_NGN_RATE, Math.round(rate)));
 }
 
-function publicConfig(rawRate) {
+function publicConfig(rawRate, options = {}) {
+  const includeOtherCurrency = Boolean(options.includeOtherCurrency);
   return {
     plans: Object.values(PLANS),
-    accounts: Object.values(BANK_ACCOUNTS),
+    accounts: Object.values(BANK_ACCOUNTS).filter((account) => includeOtherCurrency || account.currency === "USD"),
     paymentWindowMinutes: PAYMENT_WINDOW_MINUTES,
     usdNgnRate: safeUsdNgnRate(rawRate)
   };
@@ -98,6 +113,8 @@ function metadataFor({ plan, account, reference, otp, expiresAt, rawRate }) {
     plan_title: plan.title,
     plan_description: plan.description,
     price_usd: plan.amountUsd,
+    billing_label: plan.billingLabel,
+    access_days: plan.accessDays,
     usd_ngn_rate: usdNgnRate,
     account,
     otp,
@@ -125,7 +142,9 @@ function paymentView(row) {
       id: metadata.plan_id,
       title: metadata.plan_title,
       description: metadata.plan_description,
-      priceUsd: metadata.price_usd
+      priceUsd: metadata.price_usd,
+      billingLabel: metadata.billing_label,
+      accessDays: metadata.access_days
     },
     account: metadata.account,
     otp: metadata.otp,
