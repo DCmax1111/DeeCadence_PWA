@@ -1700,6 +1700,11 @@ code {
   backdrop-filter: blur(16px);
 }
 
+body[data-route="onboarding"] .bottom-nav,
+body[data-route="tutorial"] .bottom-nav {
+  display: none;
+}
+
 body.light .bottom-nav {
   background:
     linear-gradient(180deg, rgba(255, 252, 245, 0.84), rgba(248, 241, 230, 0.94));
