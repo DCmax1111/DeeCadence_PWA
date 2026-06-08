@@ -1707,7 +1707,8 @@ code {
 }
 
 body[data-route="onboarding"] .bottom-nav,
-body[data-route="tutorial"] .bottom-nav {
+body[data-route="tutorial"] .bottom-nav,
+body[data-route="account"] .bottom-nav {
   display: none;
 }
 

@@ -7,6 +7,8 @@ loadEnv(path.join(root, ".env"));
 loadEnv(path.join(root, ".env.local"));
 
 const routes = {
+  "/api/auth/password": require(path.join(root, "api", "auth", "password.js")),
+  "/api/profile": require(path.join(root, "api", "profile.js")),
   "/api/checkout": require(path.join(root, "api", "checkout.js")),
   "/api/subscription": require(path.join(root, "api", "subscription.js")),
   "/api/app-config": require(path.join(root, "api", "app-config.js")),

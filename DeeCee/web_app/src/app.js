@@ -76,6 +76,7 @@ const DEFAULT_STATE = {
     ready: false,
     configured: false,
     user: null,
+    profile: null,
     message: ""
   },
   checkout: {
@@ -125,7 +126,11 @@ const DEFAULT_STATE = {
     activityExpanded: false,
     selectedPlanId: "",
     otherCurrencyPlanId: "",
-    authEmail: ""
+    authEmail: "",
+    authIdentifier: "",
+    authUsername: "",
+    authDisplayName: "",
+    authMode: "register"
   }
 };
 
@@ -337,6 +342,14 @@ function gmailOnlyMessage(email) {
   return "DeeCee currently accepts Gmail addresses only. Please use an address ending in @gmail.com.";
 }
 
+function normalizeUsername(username) {
+  return String(username || "").trim().toLowerCase().replace(/^@+/, "");
+}
+
+function isValidUsername(username) {
+  return /^[a-z0-9_]{3,24}$/.test(normalizeUsername(username));
+}
+
 function getSupabaseClient() {
   if (!hasSupabaseConfig()) return null;
   if (!supabaseClient) {
@@ -363,6 +376,17 @@ async function apiRequest(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "Request failed");
   return payload;
+}
+
+async function passwordAuthRequest(payload) {
+  const response = await fetch("/api/auth/password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Account request failed.");
+  return body;
 }
 
 function checkoutPaymentExpired() {
@@ -395,11 +419,13 @@ async function initAuth() {
   client.auth.onAuthStateChange((event, session) => {
     syncAuthSession(session);
     if (event === "SIGNED_IN") {
+      loadProfile();
       loadCloudState();
     }
     if (event === "SIGNED_OUT") {
       state.subscription = { tier: "free", active: false };
       state.checkout = { ...DEFAULT_STATE.checkout };
+      state.auth.profile = null;
       saveState();
       render();
     }
@@ -408,6 +434,7 @@ async function initAuth() {
   saveState();
   render();
   if (state.auth.user) loadCloudState();
+  if (state.auth.user) loadProfile();
 }
 
 function syncAuthSession(session) {
@@ -440,6 +467,105 @@ async function signInWithEmail(email) {
   const redirectTo = publicConfig.appUrl || window.location.href.split("#")[0];
   const { error } = await client.auth.signInWithOtp({ email: normalizedEmail, options: { emailRedirectTo: redirectTo } });
   state.auth.message = error ? error.message : "Check your email for the sign-in link.";
+  saveState();
+  render();
+}
+
+async function applyAuthSession(session, profile = null) {
+  const client = getSupabaseClient();
+  if (!client || !session?.access_token || !session?.refresh_token) {
+    state.auth.message = "Account created. Sign in with your Gmail and password.";
+    saveState();
+    render();
+    return;
+  }
+  const { error } = await client.auth.setSession({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token
+  });
+  if (error) throw error;
+  syncAuthSession({ user: session.user });
+  if (profile) applyProfile(profile);
+  await loadCloudState();
+}
+
+function applyProfile(profile) {
+  if (!profile) return;
+  state.auth.profile = profile;
+  if (profile.displayName) {
+    state.settings.name = profile.displayName;
+    localStorage.setItem("dc_name", profile.displayName);
+  }
+  state.ui.authUsername = profile.username || state.ui.authUsername || "";
+  state.ui.authDisplayName = profile.displayName || state.ui.authDisplayName || "";
+}
+
+async function loadProfile() {
+  if (!state.auth.user) return;
+  try {
+    const payload = await apiRequest("/api/profile");
+    applyProfile(payload.profile);
+  } catch (error) {
+    state.auth.message = error.message;
+  }
+  saveState();
+  render();
+}
+
+async function registerWithPassword(form) {
+  const data = new FormData(form);
+  const email = normalizeEmail(data.get("email"));
+  const username = normalizeUsername(data.get("username"));
+  const displayName = String(data.get("displayName") || username || "DC").trim();
+  const password = String(data.get("password") || "");
+  const confirm = String(data.get("confirmPassword") || "");
+  if (!isGmailEmail(email)) return setAuthMessage(gmailOnlyMessage(email));
+  if (!isValidUsername(username)) return setAuthMessage("Username must be 3-24 characters using letters, numbers, or underscores.");
+  if (password.length < 8) return setAuthMessage("Password must be at least 8 characters.");
+  if (password !== confirm) return setAuthMessage("Passwords do not match.");
+
+  state.auth.message = "Creating your DeeCee account...";
+  saveState();
+  render();
+  try {
+    const payload = await passwordAuthRequest({ action: "register", email, username, displayName, password });
+    await applyAuthSession(payload.session, payload.profile);
+    state.auth.message = payload.message || "Account ready. Welcome to DeeCee.";
+    state.route = "home";
+    saveState();
+    setRoute("home");
+  } catch (error) {
+    setAuthMessage(error.message);
+  }
+}
+
+async function loginWithPassword(form) {
+  const data = new FormData(form);
+  const identifier = String(data.get("identifier") || "").trim();
+  const password = String(data.get("password") || "");
+  const normalizedIdentifier = normalizeEmail(identifier);
+  const looksLikeEmail = identifier.includes("@");
+  if (looksLikeEmail && !isGmailEmail(normalizedIdentifier)) return setAuthMessage(gmailOnlyMessage(normalizedIdentifier));
+  if (!looksLikeEmail && !isValidUsername(identifier)) return setAuthMessage("Enter your Gmail or a valid username.");
+  if (password.length < 8) return setAuthMessage("Password must be at least 8 characters.");
+
+  state.auth.message = "Signing you in...";
+  saveState();
+  render();
+  try {
+    const payload = await passwordAuthRequest({ action: "login", identifier, password });
+    await applyAuthSession(payload.session, payload.profile);
+    state.auth.message = "Signed in successfully.";
+    state.route = "home";
+    saveState();
+    setRoute("home");
+  } catch (error) {
+    setAuthMessage(error.message);
+  }
+}
+
+function setAuthMessage(message) {
+  state.auth.message = message;
   saveState();
   render();
 }
@@ -773,6 +899,7 @@ function render() {
     home: renderHome,
     onboarding: renderOnboarding,
     tutorial: renderTutorial,
+    account: renderAccount,
     stats: renderStats,
     focus: renderFocus,
     settings: renderSettings,
@@ -1290,10 +1417,55 @@ function renderTutorial() {
         </article>
       </div>
       <div class="button-row two">
-        <button class="action" type="button" data-finish-tutorial>Continue to Sign In</button>
+        <button class="action" type="button" data-finish-tutorial>Continue to Account</button>
         <button class="ghost" type="button" data-preview-dashboard>Preview Dashboard</button>
       </div>
     </section>
+  `;
+}
+
+function renderAccount() {
+  setTitle("Account");
+  const mode = state.ui.authMode || "register";
+  screen.innerHTML = `
+    <section class="onboarding-panel account-panel">
+      <h2>${mode === "login" ? "Welcome back" : "Create your DeeCee account"}</h2>
+      <p>${mode === "login"
+        ? "Sign in with your Gmail or username and password."
+        : "Use Gmail, choose a username, and create a password. DeeCee stores your profile while Supabase protects the password."}</p>
+      <div class="segmented" role="group" aria-label="Account mode">
+        <button type="button" class="${mode === "register" ? "selected" : ""}" data-auth-mode="register">Create Account</button>
+        <button type="button" class="${mode === "login" ? "selected" : ""}" data-auth-mode="login">Sign In</button>
+      </div>
+      ${mode === "login" ? loginForm() : registerForm()}
+      ${state.auth.message ? `<p class="notice-text">${escapeHtml(state.auth.message)}</p>` : ""}
+      <p class="mode-note">Gmail only for now. Usernames are saved to DeeCee profiles; passwords are handled by Supabase Auth.</p>
+    </section>
+  `;
+}
+
+function registerForm() {
+  return `
+    <form class="stack" data-form="auth-register">
+      <input class="field" name="displayName" placeholder="Display name" value="${escapeHtml(state.ui.authDisplayName || state.settings.name || "")}" data-auth-display-name autocomplete="name">
+      <input class="field" name="username" placeholder="Username" value="${escapeHtml(state.ui.authUsername || "")}" data-auth-username autocomplete="username" required>
+      <input class="field" name="email" type="email" inputmode="email" autocomplete="email" placeholder="yourname@gmail.com" pattern="^[A-Za-z0-9._%+-]+@gmail\\.com$" title="Use a Gmail address ending in @gmail.com" value="${escapeHtml(state.ui.authEmail || "")}" data-auth-email required>
+      <div class="field-row">
+        <input class="field" name="password" type="password" autocomplete="new-password" placeholder="Password, 8+ characters" required>
+        <input class="field" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Confirm password" required>
+      </div>
+      <button class="action" type="submit">Create Account</button>
+    </form>
+  `;
+}
+
+function loginForm() {
+  return `
+    <form class="stack" data-form="auth-login">
+      <input class="field" name="identifier" placeholder="Gmail or username" value="${escapeHtml(state.ui.authIdentifier || "")}" data-auth-identifier autocomplete="username" required>
+      <input class="field" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+      <button class="action" type="submit">Sign In</button>
+    </form>
   `;
 }
 
@@ -1927,12 +2099,14 @@ function authPanel() {
   }
 
   if (state.auth.user) {
+    const profile = state.auth.profile || {};
     return `
       <section class="card subscription-card">
         <div class="card-head">
           <div>
             <h2>Account</h2>
-            <p>${escapeHtml(state.auth.user.email || "Signed in")}</p>
+            <p>${escapeHtml(profile.displayName || state.settings.name || "Signed in")} ${profile.username ? `@${escapeHtml(profile.username)}` : ""}</p>
+            <p>${escapeHtml(profile.email || state.auth.user.email || "")}</p>
           </div>
           <button class="ghost small" type="button" data-sign-out>Sign Out</button>
         </div>
@@ -1944,11 +2118,8 @@ function authPanel() {
   return `
     <section class="card subscription-card">
       <h2>Account Login</h2>
-      <p>Use Gmail to sign in before checkout so pending transfers and subscription status survive refreshes.</p>
-      <form class="stack" data-form="auth-email">
-        <input class="field" name="email" type="email" inputmode="email" autocomplete="email" placeholder="yourname@gmail.com" pattern="^[A-Za-z0-9._%+-]+@gmail\\.com$" title="Use a Gmail address ending in @gmail.com" value="${escapeHtml(state.ui.authEmail || "")}" data-auth-email required>
-        <button class="action" type="submit">Send Sign-In Link</button>
-      </form>
+      <p>Create an account or sign in with Gmail/username before checkout so payment and subscription state survive refreshes.</p>
+      <button class="action" type="button" data-route="account">Open Account Portal</button>
       ${state.auth.message ? `<p class="notice-text">${escapeHtml(state.auth.message)}</p>` : ""}
     </section>
   `;
@@ -2250,6 +2421,14 @@ function handleForm(form) {
     const email = String(data.get("email") || "").trim();
     state.ui.authEmail = email;
     if (email) signInWithEmail(email);
+  }
+
+  if (type === "auth-register") {
+    registerWithPassword(form);
+  }
+
+  if (type === "auth-login") {
+    loginWithPassword(form);
   }
 
   if (type === "checkout-proof") {
@@ -2654,9 +2833,9 @@ document.addEventListener("click", (event) => {
 
   if (event.target.closest("[data-finish-tutorial]")) {
     state.settings.tutorialComplete = true;
-    state.route = "settings";
+    state.route = "account";
     saveState();
-    setRoute("settings");
+    setRoute("account");
   }
 
   if (event.target.closest("[data-preview-dashboard]")) {
@@ -2676,6 +2855,14 @@ document.addEventListener("click", (event) => {
   const themeButton = event.target.closest("[data-theme]");
   if (themeButton) {
     state.theme = themeButton.dataset.theme;
+    saveState();
+    render();
+  }
+
+  const authModeButton = event.target.closest("[data-auth-mode]");
+  if (authModeButton) {
+    state.ui.authMode = authModeButton.dataset.authMode;
+    state.auth.message = "";
     saveState();
     render();
   }
@@ -2754,6 +2941,32 @@ document.addEventListener("input", (event) => {
     authEmail.classList.toggle("invalid", invalid);
     authEmail.setAttribute("aria-invalid", invalid ? "true" : "false");
     authEmail.setCustomValidity(invalid ? gmailOnlyMessage(value) : "");
+    saveState();
+    return;
+  }
+
+  const authIdentifier = event.target.closest("[data-auth-identifier]");
+  if (authIdentifier) {
+    state.ui.authIdentifier = authIdentifier.value;
+    saveState();
+    return;
+  }
+
+  const authUsername = event.target.closest("[data-auth-username]");
+  if (authUsername) {
+    const value = normalizeUsername(authUsername.value);
+    state.ui.authUsername = value;
+    const invalid = Boolean(value) && !isValidUsername(value);
+    authUsername.classList.toggle("invalid", invalid);
+    authUsername.setAttribute("aria-invalid", invalid ? "true" : "false");
+    authUsername.setCustomValidity(invalid ? "Username must be 3-24 characters using letters, numbers, or underscores." : "");
+    saveState();
+    return;
+  }
+
+  const authDisplayName = event.target.closest("[data-auth-display-name]");
+  if (authDisplayName) {
+    state.ui.authDisplayName = authDisplayName.value;
     saveState();
     return;
   }

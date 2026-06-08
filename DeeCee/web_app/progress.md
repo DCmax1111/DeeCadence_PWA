@@ -115,3 +115,16 @@
 - Added a short visible mode note so the selector explains what it is doing.
 - Preserved typed onboarding name across mode changes.
 - Verified `npm.cmd run check` and `npm.cmd run build` pass.
+# 2026-06-08 Password Account Portal
+
+- Replaced the magic-link-only path with a dedicated Account route.
+- Added Gmail-only Create Account and Sign In forms.
+- Added username/display name profile persistence through Supabase `profiles`.
+- Added server-side password auth endpoint:
+  - register creates a Supabase Auth user with Gmail/password,
+  - creates/updates `profiles`,
+  - returns a Supabase session for browser persistence.
+- Added username or Gmail sign-in through the server route.
+- Added `SCHEMA.account_profiles.sql` for profile email/username columns, constraints, and indexes.
+- Added auth validation tests and included new auth/profile routes in `npm run check`.
+- Verified `npm.cmd run check` and `npm.cmd run build` pass.

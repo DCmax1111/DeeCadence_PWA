@@ -6,6 +6,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  username TEXT,
   display_name TEXT,
   avatar_url TEXT,
   subscription_plan TEXT DEFAULT 'free',
@@ -37,6 +39,8 @@ ALTER TABLE public.profiles
 
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS display_name TEXT,
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS username TEXT,
   ADD COLUMN IF NOT EXISTS avatar_url TEXT,
   ADD COLUMN IF NOT EXISTS subscription_plan TEXT DEFAULT 'free',
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
@@ -44,6 +48,14 @@ ALTER TABLE public.profiles
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_id_unique
   ON public.profiles(id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_email_unique
+  ON public.profiles(lower(email))
+  WHERE email IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_username_unique
+  ON public.profiles(lower(username))
+  WHERE username IS NOT NULL;
 
 ALTER TABLE public.plans
   ADD COLUMN IF NOT EXISTS id INTEGER,
@@ -193,6 +205,22 @@ BEGIN
       ADD CONSTRAINT transactions_amount_positive_check
       CHECK (amount > 0);
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'profiles_email_gmail_check'
+  ) THEN
+    ALTER TABLE public.profiles
+      ADD CONSTRAINT profiles_email_gmail_check
+      CHECK (email IS NULL OR email ~* '^[A-Z0-9._%+-]+@gmail\.com$');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'profiles_username_format_check'
+  ) THEN
+    ALTER TABLE public.profiles
+      ADD CONSTRAINT profiles_username_format_check
+      CHECK (username IS NULL OR username ~ '^[a-z0-9_]{3,24}$');
+  END IF;
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id
@@ -329,6 +357,17 @@ BEGIN
     CREATE POLICY "users_view_own_profile"
       ON public.profiles FOR SELECT
       USING (auth.uid() = id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'profiles'
+      AND policyname = 'users_insert_own_profile'
+  ) THEN
+    CREATE POLICY "users_insert_own_profile"
+      ON public.profiles FOR INSERT
+      WITH CHECK (auth.uid() = id);
   END IF;
 
   IF NOT EXISTS (
