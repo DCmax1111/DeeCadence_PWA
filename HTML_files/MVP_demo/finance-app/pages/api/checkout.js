@@ -1,12 +1,12 @@
 import crypto from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
 import { withStrictRateLimit } from '../../lib/rateLimit.js';
+import {
+  getAuthenticatedUserFromRequest,
+  getServerSupabase,
+  hasServerSupabaseConfig
+} from '../../lib/serverSupabase.js';
 
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAdmin = supabaseUrl && serviceKey
-  ? createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
-  : null;
+const supabaseAdmin = hasServerSupabaseConfig() ? getServerSupabase() : null;
 
 const PAYMENT_WINDOW_MINUTES = 30;
 const USD_NGN_RATE = Number(process.env.USD_NGN_RATE || 1500);
@@ -14,9 +14,9 @@ const OWNER_EMAIL = process.env.OWNER_NOTIFICATION_EMAIL;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 const PLANS = {
-  starter: { id: 'starter', title: 'Starter', amountUsd: 30, description: 'Solo operators - ledger + export' },
-  growth: { id: 'growth', title: 'Growth', amountUsd: 65, description: 'SMBs - multi-business + templates' },
-  operator: { id: 'operator', title: 'Operator', amountUsd: 120, description: 'Agencies - audit & white-label' }
+  starter: { id: 'starter', title: 'Starter', amountUsd: 19.99, description: 'Solo operators - ledger + export' },
+  growth: { id: 'growth', title: 'Growth', amountUsd: 39.99, description: 'SMBs - multi-business + templates' },
+  operator: { id: 'operator', title: 'Operator', amountUsd: 99.99, description: 'Agencies - audit & white-label' }
 };
 
 const BANK_ACCOUNTS = {
@@ -44,13 +44,7 @@ const BANK_ACCOUNTS = {
 };
 
 async function getAuthenticatedUser(req) {
-  if (!supabaseAdmin) return null;
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token) return null;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) return null;
-  return data.user;
+  return getAuthenticatedUserFromRequest(req);
 }
 
 function publicConfig() {

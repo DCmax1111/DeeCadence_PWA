@@ -5,9 +5,14 @@ if (supabaseHost) {
   connectSrc.push(`wss://${supabaseHost}`);
 }
 
+const scriptSrc = ["'self'", "'unsafe-inline'"];
+if (process.env.NODE_ENV !== 'production') {
+  scriptSrc.push("'unsafe-eval'");
+}
+
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src ${scriptSrc.join(' ')}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",

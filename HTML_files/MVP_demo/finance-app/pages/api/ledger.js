@@ -1,22 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
 import { withStrictRateLimit } from '../../lib/rateLimit.js';
 import { logAudit, buildAuditRecord } from '../../lib/auditLog.js';
-
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const supabaseAdmin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+import {
+  getAuthenticatedUserFromRequest,
+  getServerSupabase,
+  hasServerSupabaseConfig
+} from '../../lib/serverSupabase.js';
 
 const ENTRY_TYPES = new Set(['income', 'expense', 'transfer']);
-
-async function getAuthenticatedUser(req) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token) return null;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) return null;
-  return data.user;
-}
 
 function sanitizeEntry(input, userId) {
   const amount = Number(input.amount);
@@ -44,12 +34,14 @@ function sanitizeEntry(input, userId) {
 
 async function handler(req, res) {
   try {
-    if (!supabaseUrl || !serviceKey) {
+    if (!hasServerSupabaseConfig()) {
       return res.status(500).json({ error: 'Supabase server environment is not configured' });
     }
-    const user = await getAuthenticatedUser(req);
+
+    const user = await getAuthenticatedUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Authentication required' });
 
+    const supabaseAdmin = getServerSupabase();
     const { method } = req;
     if (method === 'GET') {
       const { data, error } = await supabaseAdmin

@@ -8,9 +8,9 @@ const FALLBACK_CONFIG = {
   paymentWindowMinutes: 30,
   usdNgnRate: 1500,
   plans: [
-    { id: 'starter', title: 'Starter', amountUsd: 30, description: 'Solo operators - ledger + export' },
-    { id: 'growth', title: 'Growth', amountUsd: 65, description: 'SMBs - multi-business + templates' },
-    { id: 'operator', title: 'Operator', amountUsd: 120, description: 'Agencies - audit & white-label' }
+    { id: 'starter', title: 'Starter', amountUsd: 19.99, description: 'Solo operators - ledger + export' },
+    { id: 'growth', title: 'Growth', amountUsd: 39.99, description: 'SMBs - multi-business + templates' },
+    { id: 'operator', title: 'Operator', amountUsd: 99.99, description: 'Agencies - audit & white-label' }
   ],
   accounts: [
     { id: 'lead_usd', bankName: 'Lead Bank', accountNumber: '101019644', accountName: 'Dominion Chinecherem Clinton', currency: 'USD' },

@@ -17,6 +17,14 @@ out/
 .env.local
 .env.*.local
 
+# keep example env templates in source control
+!.env.local.example
+
+# MD Files
+SECURITY_THREAT_MODEL.md
+fin_app_progress.md
+GIT_SECURITY.md
+
 # IDE
 .vscode/
 .idea/

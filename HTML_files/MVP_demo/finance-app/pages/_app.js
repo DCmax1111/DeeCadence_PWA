@@ -12,13 +12,28 @@ function MyApp({ Component, pageProps }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') root.classList.add('theme-dark');
-    else root.classList.remove('theme-dark');
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function applyTheme(value) {
+      root.classList.remove('theme-dark', 'theme-light');
+      if (value === 'dark') root.classList.add('theme-dark');
+      else if (value === 'light') root.classList.add('theme-light');
+      else if (mq.matches) root.classList.add('theme-dark');
+      else root.classList.add('theme-light');
+    }
+
+    applyTheme(theme);
     localStorage.setItem('theme', theme);
+
+    if (theme === 'system') {
+      const handleChange = () => applyTheme('system');
+      mq.addEventListener('change', handleChange);
+      return () => mq.removeEventListener('change', handleChange);
+    }
   }, [theme]);
 
   return (
-    <div className={clsx('app-root', theme === 'dark' ? 'dark' : 'light')}>
+    <div className="app-root">
       <Component {...pageProps} theme={theme} setTheme={setTheme} />
     </div>
   );

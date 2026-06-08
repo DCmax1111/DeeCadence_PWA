@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import { withStrictRateLimit } from '../../../lib/rateLimit.js';
+import { getServerSupabase, hasServerSupabaseConfig } from '../../../lib/serverSupabase.js';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+const supabaseAdmin = hasServerSupabaseConfig() ? getServerSupabase() : null;
 
 const VALID_OUTCOMES = new Set(['succeeded', 'failed']);
 
@@ -152,6 +149,10 @@ async function verifyPayment(req, res) {
 }
 
 export default withStrictRateLimit(async function handler(req, res) {
+  if (!hasServerSupabaseConfig()) {
+    return res.status(500).json({ error: 'Supabase server environment is not configured' });
+  }
+
   if (!isOwnerRequest(req)) {
     return unauthorized(res);
   }

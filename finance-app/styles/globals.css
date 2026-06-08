@@ -1,26 +1,43 @@
 :root{
   --bg: #071026;
-  --surface: rgba(255,255,255,0.02);
+  --surface: rgba(15,23,42,0.76);
+  --surface-strong: rgba(8,14,29,0.92);
   --text: #eaf2ff;
   --muted: #9fb6d6;
   --accent: #0ea5ff; /* major blue */
+  --border: rgba(255,255,255,0.08);
 }
 
 html,body,#__next{height:100%;}
-body{margin:0;background:linear-gradient(180deg,#041025 0%, #071026 60%);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+body{margin:0;min-height:100%;color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;background-color:var(--bg);background-image:radial-gradient(circle at 20% 15%, rgba(14,165,255,0.16), transparent 22%),radial-gradient(circle at 85% 10%, rgba(59,130,246,0.12), transparent 18%),radial-gradient(circle at 70% 85%, rgba(56,189,248,0.08), transparent 24%);background-attachment:fixed;}
 
-.app-root{min-height:100%;}
-.container{max-width:1100px;margin:28px auto;padding:0 20px;}
-.page-title{font-size:1.6rem;margin:12px 0 18px;font-weight:700;}
+.app-root{min-height:100%;position:relative;}
+.container{max-width:1100px;margin:32px auto;padding:0 24px;}
+.page-title{font-size:2.2rem;margin:0 0 10px;font-weight:800;letter-spacing:-0.03em;}
+.page-copy{max-width:680px;font-size:1rem;line-height:1.8;color:var(--muted);margin:8px 0 0;}
+.page-card{background:var(--surface);border:1px solid var(--border);box-shadow:0 40px 120px rgba(0,0,0,0.18);backdrop-filter:blur(22px);border-radius:32px;padding:34px;}
+.page-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:28px;}
 
 /* light theme overrides */
-:root.theme-light{ --bg: #f6fbff; --surface: #ffffff; --text: #061427; --muted:#546b86; }
+:root.theme-light{ --bg: #f6fbff; --surface: rgba(255,255,255,0.96); --surface-strong: rgba(255,255,255,1); --text: #061427; --muted: #546b86; --accent: #2563eb; --border: rgba(15,23,42,0.08); }
 
-/* dark theme (applied by class) */
-.theme-dark{ --bg: #041025; }
+/* dark theme */
+.theme-dark{ --bg: #041025; --surface: rgba(12,18,34,0.88); --surface-strong: rgba(8,14,29,0.96); }
 
-/* small utility */
-.card{ background:var(--surface); }
+.card{background:var(--surface);border-radius:24px;border:1px solid var(--border);box-shadow:0 18px 38px rgba(0,0,0,0.14);}
 
-/* responsive */
-@media (max-width:720px){ .entry-form{ grid-template-columns: 1fr; } }
+@media (max-width:720px){
+  .container{padding:0 18px;}
+  .page-card{padding:24px;}
+  .page-hero{flex-direction:column;}
+  .page-title{font-size:1.9rem;}
+}
+
+/* Accessibility and focus */
+:focus-visible { outline: 3px solid rgba(99,102,241,0.9); outline-offset: 2px; }
+.btn-primary, .btn-sm { touch-action: manipulation; }
+
+@media (max-width:420px){
+  .page-title{font-size:1.6rem;}
+  .container{margin:18px auto;}
+}
