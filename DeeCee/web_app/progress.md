@@ -103,3 +103,15 @@
 - Added a responsive premium SVG Focus Strength line graph with weekly/monthly toggle.
 - Added tests for the Focus Strength formula and grouping.
 - Verified `npm.cmd run check` passes after the Focus Strength and beta mode changes.
+# 2026-06-08 Onboarding Continue Fix
+
+- Fixed onboarding Continue by routing both button click and form submit through one `finishOnboarding()` function.
+- Added immediate cadence-mode behavior:
+  - Balanced selects Financial, Mind, Knowledge.
+  - Focus selects Mind, Energy, Knowledge.
+  - Wellness selects Mind, Energy, Spirit.
+  - Creative selects Mind, Dexterity, Knowledge.
+  - Scholar selects Mind, Knowledge, Spirit.
+- Added a short visible mode note so the selector explains what it is doing.
+- Preserved typed onboarding name across mode changes.
+- Verified `npm.cmd run check` and `npm.cmd run build` pass.

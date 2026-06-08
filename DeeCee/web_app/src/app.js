@@ -15,6 +15,29 @@ const MODULES = [
   { id: "dexterity", name: "Dexterity", stat: "Dexterity", color: "dexterity", desc: "Creative skill, craft, and VoxScope" }
 ];
 
+const ONBOARDING_MODES = {
+  Balanced: {
+    modules: ["financial", "mind", "knowledge"],
+    note: "Balanced keeps money clarity, focus, and learning close to the surface."
+  },
+  Focus: {
+    modules: ["mind", "energy", "knowledge"],
+    note: "Focus prioritizes attention, body fuel, and learning momentum."
+  },
+  Wellness: {
+    modules: ["mind", "energy", "spirit"],
+    note: "Wellness keeps Mind constant while lifting body care and reflection."
+  },
+  Creative: {
+    modules: ["mind", "dexterity", "knowledge"],
+    note: "Creative supports focus, skill practice, and original output."
+  },
+  Scholar: {
+    modules: ["mind", "knowledge", "spirit"],
+    note: "Scholar keeps focus, study, and reflection in the foreground."
+  }
+};
+
 const QUESTS = [
   { id: "financial", title: "Log one expense", module: "Financial", route: "financial", target: 1 },
   { id: "spirit", title: "Log one prayer/reflection", module: "Spirit", route: "spirit", target: 1 },
@@ -1194,12 +1217,14 @@ function focusStrengthGraph(scores = []) {
 function renderOnboarding() {
   setTitle("Welcome");
   const selected = state.settings.priorityModules || [];
+  const modes = Object.keys(ONBOARDING_MODES);
+  const currentMode = ONBOARDING_MODES[state.settings.mode] ? state.settings.mode : "Balanced";
   screen.innerHTML = `
     <section class="onboarding-panel">
       <h2>Shape your cadence</h2>
       <p>Choose the modules DeeCee should keep closest to the surface. You can change this later.</p>
       <form class="stack" data-form="onboarding">
-        <input class="field" name="name" value="${escapeHtml(state.settings.name || "")}" placeholder="What should DeeCee call you?">
+        <input class="field" name="name" value="${escapeHtml(state.settings.name || "")}" placeholder="What should DeeCee call you?" data-onboarding-name>
         <div class="choice-grid">
           ${MODULES.map((mod) => `
             <button class="choice-card ${selected.includes(mod.id) ? "selected" : ""}" type="button" data-onboard-module="${mod.id}" style="--module-color: var(--${mod.color})">
@@ -1208,11 +1233,15 @@ function renderOnboarding() {
             </button>
           `).join("")}
         </div>
-        <select class="field" name="mode">
-          ${["Balanced", "Focus", "Wellness", "Creative", "Scholar"].map((mode) => `<option ${state.settings.mode === mode ? "selected" : ""}>${mode}</option>`).join("")}
-        </select>
+        <label class="field-label">
+          <span>Preferred cadence</span>
+          <select class="field" name="mode" data-onboarding-mode>
+            ${modes.map((mode) => `<option ${currentMode === mode ? "selected" : ""}>${mode}</option>`).join("")}
+          </select>
+        </label>
+        <p class="mode-note">${escapeHtml(ONBOARDING_MODES[currentMode].note)}</p>
         <div class="button-row two">
-          <button class="action" type="submit">Continue</button>
+          <button class="action" type="button" data-continue-onboarding>Continue</button>
           <button class="ghost" type="button" data-skip-onboarding>Skip</button>
         </div>
       </form>
@@ -2213,18 +2242,7 @@ function handleForm(form) {
   }
 
   if (type === "onboarding") {
-    const name = String(data.get("name") || "DC").trim() || "DC";
-    state.settings.name = name;
-    state.settings.mode = String(data.get("mode") || "Balanced");
-    state.settings.onboardingComplete = true;
-    state.settings.tutorialComplete = false;
-    if (!(state.settings.priorityModules || []).length) {
-      state.settings.priorityModules = ["mind", "knowledge", "financial"];
-    }
-    localStorage.setItem("dc_name", name);
-    state.route = "tutorial";
-    saveState();
-    setRoute("tutorial");
+    finishOnboarding(form);
   }
 }
 
@@ -2444,6 +2462,31 @@ function resetData() {
   setRoute("home");
 }
 
+function applyOnboardingMode(mode) {
+  const preset = ONBOARDING_MODES[mode] || ONBOARDING_MODES.Balanced;
+  state.settings.mode = ONBOARDING_MODES[mode] ? mode : "Balanced";
+  state.settings.priorityModules = [...preset.modules];
+  saveState();
+  render();
+}
+
+function finishOnboarding(form) {
+  const data = form ? new FormData(form) : new FormData();
+  const name = String(data.get("name") || state.settings.name || "DC").trim() || "DC";
+  const mode = String(data.get("mode") || state.settings.mode || "Balanced");
+  state.settings.name = name;
+  state.settings.mode = ONBOARDING_MODES[mode] ? mode : "Balanced";
+  if (!(state.settings.priorityModules || []).length) {
+    state.settings.priorityModules = [...ONBOARDING_MODES[state.settings.mode].modules];
+  }
+  state.settings.onboardingComplete = true;
+  state.settings.tutorialComplete = false;
+  localStorage.setItem("dc_name", name);
+  state.route = "tutorial";
+  saveState();
+  setRoute("tutorial");
+}
+
 document.addEventListener("click", (event) => {
   if (event.target.closest("input, textarea, select, option")) return;
 
@@ -2576,6 +2619,11 @@ document.addEventListener("click", (event) => {
     render();
   }
 
+  const continueOnboarding = event.target.closest("[data-continue-onboarding]");
+  if (continueOnboarding) {
+    finishOnboarding(continueOnboarding.closest("[data-form='onboarding']"));
+  }
+
   if (event.target.closest("[data-skip-onboarding]")) {
     state.settings.onboardingComplete = true;
     state.settings.tutorialComplete = false;
@@ -2663,6 +2711,14 @@ document.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  const onboardingName = event.target.closest("[data-onboarding-name]");
+  if (onboardingName) {
+    state.settings.name = onboardingName.value;
+    localStorage.setItem("dc_name", onboardingName.value || "DC");
+    saveState();
+    return;
+  }
+
   const focusTask = event.target.closest("[data-focus-task]");
   if (focusTask) {
     state.ui.focusTaskDraft = focusTask.value;
@@ -2690,6 +2746,12 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  const modeSelect = event.target.closest("[data-onboarding-mode]");
+  if (modeSelect) {
+    applyOnboardingMode(modeSelect.value);
+    return;
+  }
+
   const importFile = event.target.closest("[data-import-file]");
   if (!importFile) return;
   importData(importFile.files && importFile.files[0]);
