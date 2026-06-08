@@ -1,5 +1,40 @@
 # DeeCee Web App
 
+## Vercel Deployment Notes
+
+DeeCee's production web app should be deployed from this folder:
+
+```text
+DeeCee/web_app
+```
+
+In Vercel, set the project **Root Directory** to `DeeCee/web_app`. If another old Vercel project is still connected to this repository and points to a removed folder such as `admin_web`, disconnect that old project or update its root directory. Otherwise GitHub may show a failed Vercel check even when the real DeeCee deployment succeeds.
+
+Environment variables are managed inside **Project Settings -> Environments -> Production -> Environment Variables** in the current Vercel dashboard. Public browser keys may use the `NEXT_PUBLIC_` prefix, but private server keys must not.
+
+Safe public variables:
+
+```env
+NEXT_PUBLIC_APP_URL
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+Server-only variables:
+
+```env
+SUPABASE_SERVICE_ROLE_KEY
+PAYMENT_PROVIDER
+PAYMENT_WEBHOOK_SECRET
+PAYMENT_SANDBOX_BASE_URL
+OWNER_ADMIN_TOKEN
+OWNER_NOTIFICATION_EMAIL
+RESEND_API_KEY
+NOTIFICATION_FROM_EMAIL
+```
+
+After changing Vercel environment variables or the root directory, redeploy the latest deployment so the changes take effect.
+
 DeeCee is the main local-first browser app. It still opens directly from
 `index.html`, while server-only payment work lives outside the public `src/`
 bundle.
