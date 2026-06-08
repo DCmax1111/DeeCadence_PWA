@@ -324,6 +324,19 @@ function hasSupabaseConfig() {
   return Boolean(publicConfig.supabaseUrl && publicConfig.supabaseAnonKey && window.supabase);
 }
 
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function isGmailEmail(email) {
+  return /^[a-z0-9._%+-]+@gmail\.com$/i.test(normalizeEmail(email));
+}
+
+function gmailOnlyMessage(email) {
+  if (!String(email || "").trim()) return "Enter your Gmail address to continue.";
+  return "DeeCee currently accepts Gmail addresses only. Please use an address ending in @gmail.com.";
+}
+
 function getSupabaseClient() {
   if (!hasSupabaseConfig()) return null;
   if (!supabaseClient) {
@@ -408,6 +421,13 @@ function syncAuthSession(session) {
 }
 
 async function signInWithEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!isGmailEmail(normalizedEmail)) {
+    state.auth.message = gmailOnlyMessage(normalizedEmail);
+    saveState();
+    render();
+    return;
+  }
   const client = getSupabaseClient();
   if (!client) {
     state.auth.message = "Supabase is not configured yet.";
@@ -418,7 +438,7 @@ async function signInWithEmail(email) {
   state.auth.message = "Sending secure sign-in link...";
   render();
   const redirectTo = publicConfig.appUrl || window.location.href.split("#")[0];
-  const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+  const { error } = await client.auth.signInWithOtp({ email: normalizedEmail, options: { emailRedirectTo: redirectTo } });
   state.auth.message = error ? error.message : "Check your email for the sign-in link.";
   saveState();
   render();
@@ -1924,9 +1944,9 @@ function authPanel() {
   return `
     <section class="card subscription-card">
       <h2>Account Login</h2>
-      <p>Sign in before checkout so pending transfers and subscription status survive refreshes.</p>
+      <p>Use Gmail to sign in before checkout so pending transfers and subscription status survive refreshes.</p>
       <form class="stack" data-form="auth-email">
-        <input class="field" name="email" type="email" placeholder="Email address" value="${escapeHtml(state.ui.authEmail || "")}" data-auth-email required>
+        <input class="field" name="email" type="email" inputmode="email" autocomplete="email" placeholder="yourname@gmail.com" pattern="^[A-Za-z0-9._%+-]+@gmail\\.com$" title="Use a Gmail address ending in @gmail.com" value="${escapeHtml(state.ui.authEmail || "")}" data-auth-email required>
         <button class="action" type="submit">Send Sign-In Link</button>
       </form>
       ${state.auth.message ? `<p class="notice-text">${escapeHtml(state.auth.message)}</p>` : ""}
@@ -2729,6 +2749,11 @@ document.addEventListener("input", (event) => {
   const authEmail = event.target.closest("[data-auth-email]");
   if (authEmail) {
     state.ui.authEmail = authEmail.value;
+    const value = normalizeEmail(authEmail.value);
+    const invalid = Boolean(value) && !isGmailEmail(value);
+    authEmail.classList.toggle("invalid", invalid);
+    authEmail.setAttribute("aria-invalid", invalid ? "true" : "false");
+    authEmail.setCustomValidity(invalid ? gmailOnlyMessage(value) : "");
     saveState();
     return;
   }

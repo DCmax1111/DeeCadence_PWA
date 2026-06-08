@@ -1002,6 +1002,12 @@ textarea.field {
   border-color: var(--accent);
 }
 
+.field.invalid,
+.field:invalid:not(:placeholder-shown) {
+  border-color: color-mix(in srgb, var(--danger) 72%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
 .field-row,
 .button-row,
 .segmented {
