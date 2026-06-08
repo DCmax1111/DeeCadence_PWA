@@ -13,6 +13,7 @@ const routes = {
   "/api/subscription": require(path.join(root, "api", "subscription.js")),
   "/api/app-config": require(path.join(root, "api", "app-config.js")),
   "/api/focus-strength": require(path.join(root, "api", "focus-strength.js")),
+  "/api/admin/me": require(path.join(root, "api", "admin", "me.js")),
   "/api/admin/payments": require(path.join(root, "api", "admin", "payments.js")),
   "/api/sandbox/complete": require(path.join(root, "api", "sandbox", "complete.js")),
   "/api/webhooks/sandbox-payment": require(path.join(root, "api", "webhooks", "sandbox-payment.js"))

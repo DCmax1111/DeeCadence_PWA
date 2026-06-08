@@ -19,6 +19,9 @@ assert.equal(isValidUsername("bad-name"), false);
 assert.equal(isValidUsername("this_username_is_far_too_long_for_deecee"), false);
 
 assert.equal(validatePassword("1234567"), "Password must be at least 8 characters.");
-assert.equal(validatePassword("12345678"), "");
+assert.equal(validatePassword("12345678"), "Password must include at least one letter.");
+assert.equal(validatePassword("abcdefgh"), "Password must include at least one number.");
+assert.equal(validatePassword("abcd1234"), "Password must include at least one symbol.");
+assert.equal(validatePassword("abcd1234!"), "");
 
 console.log("ok - account auth validation is strict and Gmail-only");

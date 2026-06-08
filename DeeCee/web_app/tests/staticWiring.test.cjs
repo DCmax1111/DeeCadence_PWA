@@ -3,7 +3,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const appPath = path.resolve(__dirname, "..", "src", "app.js");
+const indexPath = path.resolve(__dirname, "..", "index.html");
 const source = fs.readFileSync(appPath, "utf8");
+const shellSource = fs.readFileSync(indexPath, "utf8");
 
 function unique(matches) {
   return Array.from(new Set(matches));
@@ -37,6 +39,20 @@ const requiredFocusActions = [
 
 for (const token of requiredFocusActions) {
   assert.equal(source.includes(token), true, `Focus wiring is missing ${token}`);
+}
+
+const requiredAuthTokens = [
+  "data-form=\"auth-register\"",
+  "data-form=\"auth-login\"",
+  "data-auth-confirm-password",
+  "passwordChecklist",
+  "syncPasswordFields",
+  "loadOwnerAccess",
+  "data-route=\"account\""
+];
+
+for (const token of requiredAuthTokens) {
+  assert.equal((source + shellSource).includes(token), true, `Account/security wiring is missing ${token}`);
 }
 
 console.log("ok - rendered forms and focus actions are wired");

@@ -26,6 +26,9 @@ function validatePassword(password) {
   const value = String(password || "");
   if (value.length < 8) return "Password must be at least 8 characters.";
   if (value.length > 128) return "Password is too long.";
+  if (!/[A-Za-z]/.test(value)) return "Password must include at least one letter.";
+  if (!/[0-9]/.test(value)) return "Password must include at least one number.";
+  if (!/[^A-Za-z0-9]/.test(value)) return "Password must include at least one symbol.";
   return "";
 }
 

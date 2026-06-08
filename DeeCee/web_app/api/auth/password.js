@@ -128,11 +128,7 @@ async function handleRegister(req, res) {
     .single();
   if (profileError) throw profileError;
 
-  const result = await passwordGrant(email, password);
-  if (result.error) {
-    return res.status(201).json({ profile: publicProfile(profile), message: "Account created. Sign in with your Gmail and password." });
-  }
-  return res.status(201).json({ session: result.session, profile: publicProfile(profile) });
+  return res.status(201).json({ profile: publicProfile(profile), message: "Account created. Sign in with your Gmail or username and password." });
 }
 
 module.exports = async function handler(req, res) {

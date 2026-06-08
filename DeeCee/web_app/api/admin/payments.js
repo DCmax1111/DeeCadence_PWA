@@ -12,13 +12,16 @@ function getSupabaseAdmin() {
 }
 
 const { activateSubscription, MANUAL_PROVIDER, normalizePaymentStatus } = require("../../server/paymentCore.cjs");
+const { ownerProfile } = require("./me.js");
 
 const VALID_OUTCOMES = new Set(["successful", "failed"]);
 
-function isOwnerRequest(req) {
+async function isOwnerRequest(req, supabaseAdmin) {
   const expectedToken = process.env.OWNER_ADMIN_TOKEN;
   const receivedToken = req.headers["x-owner-token"];
-  return Boolean(expectedToken && receivedToken && receivedToken === expectedToken);
+  if (!expectedToken || !receivedToken || receivedToken !== expectedToken) return false;
+  const owner = await ownerProfile(req, supabaseAdmin);
+  return Boolean(owner.isOwner);
 }
 
 function safeNote(value) {
@@ -112,7 +115,8 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: "Supabase server environment is not configured" });
   }
 
-  if (!isOwnerRequest(req)) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!await isOwnerRequest(req, supabaseAdmin)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 

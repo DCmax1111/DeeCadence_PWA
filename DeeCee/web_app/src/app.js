@@ -77,6 +77,7 @@ const DEFAULT_STATE = {
     configured: false,
     user: null,
     profile: null,
+    isOwner: false,
     message: ""
   },
   checkout: {
@@ -145,6 +146,11 @@ let shouldScrollTop = false;
 let focusTimerInterval = null;
 let checkoutTimerInterval = null;
 let supabaseClient = null;
+let authDraft = {
+  registerPassword: "",
+  registerConfirm: "",
+  loginPassword: ""
+};
 
 function loadState() {
   const saved = safeJson(localStorage.getItem(STORAGE_KEY));
@@ -426,6 +432,7 @@ async function initAuth() {
       state.subscription = { tier: "free", active: false };
       state.checkout = { ...DEFAULT_STATE.checkout };
       state.auth.profile = null;
+      state.auth.isOwner = false;
       saveState();
       render();
     }
@@ -522,6 +529,9 @@ async function registerWithPassword(form) {
   if (!isGmailEmail(email)) return setAuthMessage(gmailOnlyMessage(email));
   if (!isValidUsername(username)) return setAuthMessage("Username must be 3-24 characters using letters, numbers, or underscores.");
   if (password.length < 8) return setAuthMessage("Password must be at least 8 characters.");
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+    return setAuthMessage("Password must include letters, numbers, and at least one symbol.");
+  }
   if (password !== confirm) return setAuthMessage("Passwords do not match.");
 
   state.auth.message = "Creating your DeeCee account...";
@@ -529,11 +539,13 @@ async function registerWithPassword(form) {
   render();
   try {
     const payload = await passwordAuthRequest({ action: "register", email, username, displayName, password });
-    await applyAuthSession(payload.session, payload.profile);
-    state.auth.message = payload.message || "Account ready. Welcome to DeeCee.";
-    state.route = "home";
+    applyProfile(payload.profile);
+    authDraft = { registerPassword: "", registerConfirm: "", loginPassword: "" };
+    state.ui.authMode = "login";
+    state.ui.authIdentifier = username || email;
+    state.auth.message = payload.message || "Account created. Sign in with your Gmail or username and password.";
     saveState();
-    setRoute("home");
+    render();
   } catch (error) {
     setAuthMessage(error.message);
   }
@@ -577,7 +589,23 @@ async function signOut() {
 
 async function loadCloudState() {
   if (!state.auth.user) return;
-  await Promise.allSettled([loadSubscription(), loadCheckout(), loadFocusStrength()]);
+  await Promise.allSettled([loadSubscription(), loadCheckout(), loadFocusStrength(), loadOwnerAccess()]);
+}
+
+async function loadOwnerAccess() {
+  if (!state.auth.user) {
+    state.auth.isOwner = false;
+    return;
+  }
+  try {
+    const payload = await apiRequest("/api/admin/me");
+    state.auth.isOwner = Boolean(payload.isOwner);
+    if (payload.profile) applyProfile(payload.profile);
+  } catch {
+    state.auth.isOwner = false;
+  }
+  saveState();
+  render();
 }
 
 async function loadSubscription() {
@@ -749,8 +777,9 @@ async function loadAdminPayments(token) {
   state.checkout.adminMessage = "Loading pending payments...";
   render();
   try {
+    const headers = await authHeaders();
     const response = await fetch("/api/admin/payments?status=pending", {
-      headers: { "x-owner-token": token }
+      headers: { ...headers, "x-owner-token": token }
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Could not load admin payments");
@@ -773,9 +802,10 @@ async function verifyAdminPayment(paymentId, status) {
     return;
   }
   try {
+    const headers = await authHeaders();
     const response = await fetch("/api/admin/payments", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-owner-token": token },
+      headers: { ...headers, "Content-Type": "application/json", "x-owner-token": token },
       body: JSON.stringify({ paymentId, status })
     });
     const payload = await response.json().catch(() => ({}));
@@ -888,8 +918,12 @@ function render() {
     state.route = "onboarding";
   } else if (state.settings.onboardingComplete && !state.settings.tutorialComplete && state.route !== "tutorial") {
     state.route = "tutorial";
+  } else if (!state.auth.user && state.route === "settings") {
+    state.route = "account";
   }
   document.body.dataset.route = state.route;
+  document.body.dataset.auth = state.auth.user ? "signed-in" : "signed-out";
+  document.body.dataset.owner = state.auth.isOwner ? "true" : "false";
   document.body.style.setProperty("--route-accent", routeAccent(state.route));
   document.querySelectorAll(".nav-button").forEach((button) => {
     button.classList.toggle("active", button.dataset.route === state.route);
@@ -1265,7 +1299,7 @@ function signInFirstBanner() {
         <h2>Sign in first</h2>
         <p>You can preview DeeCee with default values, but sign-in is required for personal cloud subscription state and checkout.</p>
       </div>
-      <button class="action" type="button" data-route="settings">Sign In / Create Account</button>
+      <button class="action" type="button" data-route="account">Sign In / Create Account</button>
     </section>
   `;
 }
@@ -1445,15 +1479,18 @@ function renderAccount() {
 }
 
 function registerForm() {
+  const password = authDraft.registerPassword || "";
+  const confirm = authDraft.registerConfirm || "";
   return `
     <form class="stack" data-form="auth-register">
       <input class="field" name="displayName" placeholder="Display name" value="${escapeHtml(state.ui.authDisplayName || state.settings.name || "")}" data-auth-display-name autocomplete="name">
       <input class="field" name="username" placeholder="Username" value="${escapeHtml(state.ui.authUsername || "")}" data-auth-username autocomplete="username" required>
       <input class="field" name="email" type="email" inputmode="email" autocomplete="email" placeholder="yourname@gmail.com" pattern="^[A-Za-z0-9._%+-]+@gmail\\.com$" title="Use a Gmail address ending in @gmail.com" value="${escapeHtml(state.ui.authEmail || "")}" data-auth-email required>
       <div class="field-row">
-        <input class="field" name="password" type="password" autocomplete="new-password" placeholder="Password, 8+ characters" required>
-        <input class="field" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Confirm password" required>
+        <input class="field" name="password" type="password" autocomplete="new-password" placeholder="Password: 8+ chars, letters, numbers, symbol" value="${escapeHtml(password)}" data-auth-password="register" required>
+        <input class="field" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Confirm password" value="${escapeHtml(confirm)}" data-auth-confirm-password required>
       </div>
+      ${passwordChecklist(password, confirm)}
       <button class="action" type="submit">Create Account</button>
     </form>
   `;
@@ -1463,10 +1500,52 @@ function loginForm() {
   return `
     <form class="stack" data-form="auth-login">
       <input class="field" name="identifier" placeholder="Gmail or username" value="${escapeHtml(state.ui.authIdentifier || "")}" data-auth-identifier autocomplete="username" required>
-      <input class="field" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+      <input class="field" name="password" type="password" autocomplete="current-password" placeholder="Password" value="${escapeHtml(authDraft.loginPassword || "")}" data-auth-password="login" required>
       <button class="action" type="submit">Sign In</button>
     </form>
   `;
+}
+
+function passwordChecklist(password, confirm) {
+  const checks = [
+    { ok: password.length >= 8, label: "8 or more characters" },
+    { ok: /[A-Za-z]/.test(password), label: "Has a letter" },
+    { ok: /[0-9]/.test(password), label: "Has a number" },
+    { ok: /[^A-Za-z0-9]/.test(password), label: "Has a symbol" },
+    { ok: Boolean(password) && password === confirm, label: "Passwords match" }
+  ];
+  return `
+    <div class="password-rules" aria-live="polite">
+      ${checks.map((check) => `<span class="${check.ok ? "ok" : ""}"><i></i>${escapeHtml(check.label)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function syncPasswordFields() {
+  const password = authDraft.registerPassword || "";
+  const confirm = authDraft.registerConfirm || "";
+  const passwordInput = document.querySelector("[data-auth-password='register']");
+  const confirmInput = document.querySelector("[data-auth-confirm-password]");
+  const mismatch = Boolean(confirm) && password !== confirm;
+  if (confirmInput) {
+    confirmInput.classList.toggle("invalid", mismatch);
+    confirmInput.setAttribute("aria-invalid", mismatch ? "true" : "false");
+    confirmInput.setCustomValidity(mismatch ? "Passwords do not match." : "");
+  }
+  if (passwordInput) {
+    const invalid = Boolean(password) && (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password) || password.length < 8);
+    passwordInput.classList.toggle("invalid", invalid);
+    passwordInput.setAttribute("aria-invalid", invalid ? "true" : "false");
+  }
+  const rules = document.querySelectorAll(".password-rules span");
+  const checks = [
+    password.length >= 8,
+    /[A-Za-z]/.test(password),
+    /[0-9]/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+    Boolean(password) && password === confirm
+  ];
+  rules.forEach((rule, index) => rule.classList.toggle("ok", Boolean(checks[index])));
 }
 
 function renderStats() {
@@ -1874,7 +1953,7 @@ function renderSettings() {
       <h2>Local First</h2>
       <p>Your stats, logs, and focus history stay in this browser. Account, checkout, and subscription state come from Supabase when configured.</p>
     </section>
-    ${adminPanel()}
+    ${state.auth.isOwner ? adminPanel() : ""}
   `);
 }
 
@@ -2968,6 +3047,24 @@ document.addEventListener("input", (event) => {
   if (authDisplayName) {
     state.ui.authDisplayName = authDisplayName.value;
     saveState();
+    return;
+  }
+
+  const authPassword = event.target.closest("[data-auth-password]");
+  if (authPassword) {
+    if (authPassword.dataset.authPassword === "login") {
+      authDraft.loginPassword = authPassword.value;
+      return;
+    }
+    authDraft.registerPassword = authPassword.value;
+    syncPasswordFields();
+    return;
+  }
+
+  const authConfirm = event.target.closest("[data-auth-confirm-password]");
+  if (authConfirm) {
+    authDraft.registerConfirm = authConfirm.value;
+    syncPasswordFields();
     return;
   }
 

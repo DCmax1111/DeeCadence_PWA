@@ -128,3 +128,20 @@
 - Added `SCHEMA.account_profiles.sql` for profile email/username columns, constraints, and indexes.
 - Added auth validation tests and included new auth/profile routes in `npm run check`.
 - Verified `npm.cmd run check` and `npm.cmd run build` pass.
+# 2026-06-09 Account Flow And Admin Gate Hardening
+
+- Hid Settings from signed-out users; signed-out navigation now uses Account instead.
+- Settings route now redirects to Account unless the user is signed in.
+- Admin panel is hidden unless `/api/admin/me` confirms the signed-in account matches owner env values.
+- Admin payment endpoints now require both:
+  - authenticated owner session,
+  - valid `OWNER_ADMIN_TOKEN`.
+- Added stronger password rules:
+  - 8+ characters,
+  - at least one letter,
+  - at least one number,
+  - at least one symbol.
+- Added live password checklist and confirm-password matching without saving passwords to localStorage.
+- Create Account now creates the Supabase Auth user/profile and then moves to Sign In instead of silently auto-logging in.
+- Subscription plan price typography is now more minimal and numeric.
+- Verified local smoke check, `npm.cmd run check`, and `npm.cmd run build`.
