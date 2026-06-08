@@ -112,9 +112,16 @@ This creates/updates:
 - plans
 - subscriptions
 - transactions
+- focus_sessions
+- app_config
 - webhook_events
 - RLS policies
 - DeeCee 6-Day, Monthly, Yearly, and One-Time plans
+
+If the base schema already ran and you only need the Focus Strength + beta flag
+update, run:
+
+DeeCee/web_app/server/SCHEMA.focus_strength_and_app_config.sql
 
 What I need from you:
 - Tell me whether the SQL ran successfully.

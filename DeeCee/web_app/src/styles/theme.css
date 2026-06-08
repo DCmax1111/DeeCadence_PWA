@@ -839,6 +839,106 @@ body.light .timer-track {
     color-mix(in srgb, var(--surface) 76%, transparent);
 }
 
+.beta-marquee {
+  position: relative;
+  overflow: hidden;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%),
+    color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--accent);
+  box-shadow: 0 14px 38px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.beta-marquee span {
+  flex: 0 0 auto;
+  min-width: 100%;
+  padding: 0 28px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: marquee-left 18s linear infinite;
+}
+
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+.focus-strength-card {
+  overflow: hidden;
+}
+
+.focus-strength-card .card-head strong {
+  color: var(--focus);
+  font-size: 28px;
+}
+
+.focus-chart {
+  color: var(--focus);
+  width: 100%;
+  aspect-ratio: 2.9 / 1;
+  min-height: 180px;
+  margin: 6px 0 12px;
+}
+
+.focus-chart svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.focus-chart line {
+  stroke: color-mix(in srgb, var(--border) 82%, transparent);
+  stroke-width: 1.5;
+}
+
+.focus-chart .chart-area {
+  fill: url("#focusStrengthFill");
+}
+
+.focus-chart .chart-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--focus) 36%, transparent));
+}
+
+.focus-chart circle {
+  fill: var(--bg);
+  stroke: currentColor;
+  stroke-width: 3;
+}
+
+.focus-chart text {
+  fill: var(--muted);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.focus-strength-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.focus-strength-meta span {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
 body.light .activity-feed-card {
   background:
     radial-gradient(circle at 100% 0%, rgba(155, 106, 33, 0.14), transparent 34%),

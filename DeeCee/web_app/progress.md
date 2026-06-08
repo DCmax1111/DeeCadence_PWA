@@ -88,3 +88,18 @@
   - Cancelling/abandoning a session now creates a focus session record with the block reached and no XP.
   - Manual ending only awards newly completed/unbanked blocks, preventing unearned remaining-block XP.
 - Verified `npm.cmd run check` passes after the focus and wiring changes.
+
+### Focus Strength And Beta Testing Mode
+- Added Supabase schema support for `focus_sessions` with block/duration check constraints.
+- Added Supabase schema support for global `app_config` with `beta_testing_active` initialized to `true`.
+- Added standalone SQL file `server/SCHEMA.focus_strength_and_app_config.sql` so this feature can be applied without rerunning the complete schema.
+- Added `api/focus-strength.js`:
+  - `POST` records signed-in user focus sessions with attempted/completed blocks.
+  - `GET ?group=week|month` returns chart-ready Focus Strength scores.
+- Added `api/app-config.js` with short-lived server-side caching for the beta testing flag.
+- Updated `api/subscription.js` so beta testing mode grants signed-in users full access without standard subscription validation.
+- Added `server/beta_access.py` for Python services using `supabase-py`, with TTL caching and a subscription-bypass helper.
+- Added a Home dashboard beta marquee that appears only when backend `beta_testing_active` is true.
+- Added a responsive premium SVG Focus Strength line graph with weekly/monthly toggle.
+- Added tests for the Focus Strength formula and grouping.
+- Verified `npm.cmd run check` passes after the Focus Strength and beta mode changes.

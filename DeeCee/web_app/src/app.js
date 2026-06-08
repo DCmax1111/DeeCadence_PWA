@@ -64,6 +64,16 @@ const DEFAULT_STATE = {
     adminPayments: [],
     adminMessage: ""
   },
+  appConfig: {
+    betaTestingActive: false,
+    loaded: false
+  },
+  focusStrength: {
+    group: "week",
+    scores: [],
+    loading: false,
+    message: ""
+  },
   stats: { Body: 1, Mind: 1, Spirit: 1, Knowledge: 1, Financial: 1, Dexterity: 1 },
   logs: {
     financial: [],
@@ -133,6 +143,8 @@ function mergeState(base, patch) {
     subscription: { ...base.subscription, ...(patch.subscription || {}) },
     auth: { ...base.auth },
     checkout: { ...base.checkout },
+    appConfig: { ...base.appConfig },
+    focusStrength: { ...base.focusStrength },
     stats: mergedStats,
     logs: mergedLogs,
     ui: { ...base.ui, ...(patch.ui || {}) },
@@ -396,7 +408,7 @@ async function signOut() {
 
 async function loadCloudState() {
   if (!state.auth.user) return;
-  await Promise.allSettled([loadSubscription(), loadCheckout()]);
+  await Promise.allSettled([loadSubscription(), loadCheckout(), loadFocusStrength()]);
 }
 
 async function loadSubscription() {
@@ -425,6 +437,70 @@ async function loadCheckout() {
     state.checkout.loading = false;
     saveState();
     render();
+  }
+}
+
+async function loadAppConfig() {
+  try {
+    const response = await fetch("/api/app-config");
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Could not load app config");
+    state.appConfig = {
+      betaTestingActive: Boolean(payload.betaTestingActive),
+      loaded: true,
+      updatedAt: payload.updatedAt || null
+    };
+  } catch (error) {
+    state.appConfig = { betaTestingActive: false, loaded: true, error: error.message };
+  }
+  saveState();
+  render();
+}
+
+async function loadFocusStrength(group = state.focusStrength.group || "week") {
+  if (!state.auth.user) return;
+  state.focusStrength.loading = true;
+  state.focusStrength.group = group;
+  render();
+  try {
+    const payload = await apiRequest(`/api/focus-strength?group=${encodeURIComponent(group)}`);
+    state.focusStrength.scores = Array.isArray(payload.scores) ? payload.scores : [];
+    state.focusStrength.message = "";
+  } catch (error) {
+    state.focusStrength.message = error.message;
+  } finally {
+    state.focusStrength.loading = false;
+    saveState();
+    render();
+  }
+}
+
+async function recordCloudFocusSession(session) {
+  if (!state.auth.user || !session) return;
+  const attempted = Math.max(0, Math.min(4, Number(session.endedOnBlock || session.completedBlocks || 0)));
+  const completed = Math.max(0, Math.min(attempted, Number(session.completedBlocks || session.bankedSegments || 0)));
+  try {
+    await apiRequest("/api/focus-strength", {
+      method: "POST",
+      body: JSON.stringify({
+        totalBlocksAttempted: attempted,
+        totalBlocksCompleted: completed,
+        durationMinutes: session.minutes || 0,
+        targetMinutes: session.targetMinutes || session.minutes || 0,
+        task: session.task || "",
+        difficulty: session.difficulty || "",
+        endedReason: session.endedReason || "local",
+        metadata: {
+          localId: session.id,
+          blockLabel: session.blockLabel || "",
+          creditedMinutes: session.creditedMinutes || 0,
+          cancelled: Boolean(session.cancelled)
+        }
+      })
+    });
+    loadFocusStrength();
+  } catch (error) {
+    console.warn("Cloud focus session sync failed", error);
   }
 }
 
@@ -971,6 +1047,7 @@ function renderHome() {
   setTitle("Today");
 
   const main = `
+    ${betaBanner()}
     ${!state.auth.user ? signInFirstBanner() : ""}
     <section class="hero-card">
       <p>${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
@@ -985,6 +1062,7 @@ function renderHome() {
     <section class="module-grid">
       ${orderedModules().map(moduleCard).join("")}
     </section>
+    ${focusStrengthCard()}
   `;
 
   const expanded = Boolean(state.ui.activityExpanded);
@@ -1019,6 +1097,97 @@ function signInFirstBanner() {
       </div>
       <button class="action" type="button" data-route="settings">Sign In / Create Account</button>
     </section>
+  `;
+}
+
+function betaBanner() {
+  if (!state.appConfig?.betaTestingActive) return "";
+  return `
+    <section class="beta-marquee" aria-label="Beta testing notice">
+      <span>Beta Testing Mode Active. Your feedback helps build DeeCadence!</span>
+      <span aria-hidden="true">Beta Testing Mode Active. Your feedback helps build DeeCadence!</span>
+    </section>
+  `;
+}
+
+function focusStrengthCard() {
+  const scores = state.focusStrength.scores || [];
+  const latest = scores[scores.length - 1] || null;
+  const latestScore = latest ? latest.focusStrengthScore : 0;
+  const message = latest
+    ? latest.message
+    : "Complete one focus block to start building your Focus Strength graph.";
+  return `
+    <section class="card focus-strength-card">
+      <div class="card-head">
+        <div>
+          <h2>Focus Strength</h2>
+          <p>${escapeHtml(message)}</p>
+        </div>
+        <strong>${latest ? `${latestScore}/100` : "--"}</strong>
+      </div>
+      <div class="segmented mini-tabs" role="group" aria-label="Focus Strength range">
+        ${["week", "month"].map((group) => `
+          <button type="button" class="${state.focusStrength.group === group ? "selected" : ""}" data-focus-strength-group="${group}">
+            ${group === "week" ? "Weekly" : "Monthly"}
+          </button>
+        `).join("")}
+      </div>
+      ${focusStrengthGraph(scores)}
+      <div class="focus-strength-meta">
+        <span>Completion ${latest ? latest.completionRate : 0}%</span>
+        <span>Consistency ${latest ? latest.consistencyRate : 0}%</span>
+        <span>${state.focusStrength.loading ? "Loading..." : `${scores.length} points`}</span>
+      </div>
+      ${state.auth.user ? "" : `<p class="notice-text">Sign in to sync Focus Strength across devices.</p>`}
+    </section>
+  `;
+}
+
+function focusStrengthGraph(scores = []) {
+  const width = 640;
+  const height = 220;
+  const pad = 28;
+  const usableWidth = width - pad * 2;
+  const usableHeight = height - pad * 2;
+  if (!scores.length) {
+    return `
+      <div class="focus-chart empty-chart">
+        <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Empty Focus Strength chart">
+          <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" />
+          <text x="${width / 2}" y="${height / 2}" text-anchor="middle">No cloud focus data yet</text>
+        </svg>
+      </div>
+    `;
+  }
+  const points = scores.map((item, index) => {
+    const x = scores.length === 1 ? width / 2 : pad + (index / (scores.length - 1)) * usableWidth;
+    const y = height - pad - (Number(item.focusStrengthScore || 0) / 100) * usableHeight;
+    return { x, y, item };
+  });
+  const path = points.map((point, index) => {
+    if (index === 0) return `M ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+    const prev = points[index - 1];
+    const midX = (prev.x + point.x) / 2;
+    return `C ${midX.toFixed(2)} ${prev.y.toFixed(2)}, ${midX.toFixed(2)} ${point.y.toFixed(2)}, ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+  }).join(" ");
+  const area = `${path} L ${points[points.length - 1].x.toFixed(2)} ${height - pad} L ${points[0].x.toFixed(2)} ${height - pad} Z`;
+  return `
+    <div class="focus-chart">
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Focus Strength over time">
+        <defs>
+          <linearGradient id="focusStrengthFill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="currentColor" stop-opacity="0.22" />
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" />
+        <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" />
+        <path class="chart-area" d="${area}" />
+        <path class="chart-line" d="${path}" />
+        ${points.map((point) => `<circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="4"><title>${escapeHtml(point.item.periodStart)}: ${point.item.focusStrengthScore}/100</title></circle>`).join("")}
+      </svg>
+    </div>
   `;
 }
 
@@ -2095,6 +2264,7 @@ function completeFocus(mode = "manual") {
     label: `${mode === "auto" ? "Auto-completed" : "Ended"} focus - ${session.task} (${blockLabel}, ${formatStat(elapsedMinutes)}m)`,
     effects: mindGain > 0 ? { Mind: mindGain } : {}
   });
+  recordCloudFocusSession(session);
 }
 
 function startFocusSession(rawTask) {
@@ -2164,6 +2334,22 @@ function bankFocusSegments(count, reason = "manual") {
     date: today()
   });
   if (bankedTotal >= 4) {
+    recordCloudFocusSession({
+      id: uid(),
+      task,
+      minutes: target,
+      creditedMinutes: target,
+      targetMinutes: target,
+      difficulty,
+      mindGain: focusMindGain(target),
+      bankedSegments: 4,
+      completedBlocks: 4,
+      endedOnBlock: 4,
+      blockLabel: "Block 4/4",
+      endedReason: reason === "checkpoint" ? "auto" : reason,
+      createdAt: nowIso(),
+      date: today()
+    });
     state.activeFocus = null;
   }
   applyAction({
@@ -2206,6 +2392,7 @@ function abandonFocus() {
   state.focusSessions = state.focusSessions.slice(-MAX_FOCUS_SESSIONS);
   saveState();
   render();
+  recordCloudFocusSession(state.focusSessions[state.focusSessions.length - 1]);
 }
 
 function exportData() {
@@ -2373,6 +2560,11 @@ document.addEventListener("click", (event) => {
     requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "smooth" }));
   }
 
+  const focusStrengthGroup = event.target.closest("[data-focus-strength-group]");
+  if (focusStrengthGroup) {
+    loadFocusStrength(focusStrengthGroup.dataset.focusStrengthGroup);
+  }
+
   const onboardButton = event.target.closest("[data-onboard-module]");
   if (onboardButton) {
     const id = onboardButton.dataset.onboardModule;
@@ -2526,4 +2718,5 @@ window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", ()
 });
 saveState();
 render();
+loadAppConfig();
 initAuth();

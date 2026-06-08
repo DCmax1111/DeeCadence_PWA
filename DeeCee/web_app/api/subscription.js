@@ -32,6 +32,26 @@ function subscriptionView(row) {
   };
 }
 
+let betaCache = null;
+
+async function betaTestingActive() {
+  const now = Date.now();
+  if (betaCache && betaCache.expiresAt > now) return betaCache.value;
+  const { data, error } = await supabaseAdmin
+    .from("app_config")
+    .select("value")
+    .eq("key", "beta_testing_active")
+    .maybeSingle();
+  if (error) {
+    console.warn("Beta testing flag lookup failed", error.message);
+    betaCache = { value: false, expiresAt: now + 30000 };
+    return false;
+  }
+  const value = Boolean(data && data.value);
+  betaCache = { value, expiresAt: now + 30000 };
+  return value;
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (!supabaseAdmin) {
@@ -44,6 +64,18 @@ module.exports = async function handler(req, res) {
     if (req.method !== "GET") {
       res.setHeader("Allow", ["GET"]);
       return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    if (await betaTestingActive()) {
+      return res.status(200).json({
+        subscription: {
+          tier: "beta_testing",
+          active: true,
+          status: "active",
+          provider: "app_config",
+          betaTestingActive: true
+        }
+      });
     }
 
     const { data, error } = await supabaseAdmin
