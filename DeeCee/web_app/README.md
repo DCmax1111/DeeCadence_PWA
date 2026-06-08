@@ -1,106 +1,108 @@
-# DeeCee Web App
+# DeeCee
 
-## Vercel Deployment Notes
+DeeCee is a personal growth web app built around one core idea: your habits should connect. Money discipline should sharpen mental clarity. Focus sessions should improve your Mind score. Reading should build Knowledge and quietly support your overall cadence.
 
-DeeCee's production web app should be deployed from this folder:
+The app combines a local-first life dashboard, gamified module progression, DeeCadence focus training, vocabulary tools, daily quests, and subscription-ready cloud checkout into one responsive web experience.
+
+## What DeeCee Does
+
+DeeCee tracks six connected life modules:
+
+- **Financial**: income, expenses, cashflow, and intentional money logs.
+- **Spirit**: prayer, reflection, Bible study, and leadership habits.
+- **Mind**: focus, mood, DeeCadence sessions, and Focus Strength.
+- **Energy**: sleep, water, movement, and body-care logs.
+- **Knowledge**: reading, vocabulary, skills, flashcards, quizzes, and DeeCodex.
+- **Dexterity**: creative practice, craft sessions, and VoxScope-style creative growth.
+
+Each action updates its primary module and can trigger smaller cross-module bonuses. The result is a system where the user is not just filling forms, but building a visible personal rank over time.
+
+## Core Experience
+
+- Responsive dashboard for phone, tablet, and laptop screens.
+- Local-first logs and stats for fast private use.
+- Gamified EXP, rank, daily quests, and upgrade animations.
+- DeeCadence focus timer with four progress blocks.
+- Focus Strength score based on weekly/monthly completion and consistency.
+- DeeCodex knowledge lab with saved vocabulary, flashcards, quizzes, and browse mode.
+- Theme support for dark, light, and system preference.
+- Supabase-backed authentication, subscription status, and payment records.
+- Vercel-ready serverless API routes for checkout, webhooks, app config, and focus analytics.
+
+## Subscription Checkout
+
+DeeCee is prepared for sandbox-first subscription testing. The checkout flow is designed so payment state cannot be faked from the browser:
+
+- Users sign in before starting checkout.
+- Payment records are stored server-side.
+- Webhooks verify signatures before changing payment status.
+- The app shows pending, successful, failed, abandoned, expired, or refunded states.
+- Beta Testing Mode can be toggled from Supabase using the `app_config` table.
+
+Current plans:
+
+- **6-Day**: `$0.99`
+- **Monthly**: `$3.99`
+- **Yearly**: `$39.99`
+- **Lifetime**: `$99.99`
+
+## Project Structure
+
+```text
+web_app/
+  index.html
+  src/
+    app.js
+    config.js
+    styles/
+  api/
+    checkout.js
+    payment-status.js
+    subscription.js
+    focus-strength.js
+    app-config.js
+    webhooks/
+  server/
+    SCHEMA.complete.sql
+    SCHEMA.focus_strength_and_app_config.sql
+    local-dev-server.cjs
+    paymentCore.cjs
+    focusStrengthCore.cjs
+  tests/
+```
+
+## Local Development
+
+```powershell
+cd DeeCee/web_app
+npm install
+npm run dev:local
+```
+
+Then open:
+
+```text
+http://localhost:3002
+```
+
+Run checks:
+
+```powershell
+npm run check
+```
+
+## Deployment
+
+The web app is designed to deploy on Vercel from:
 
 ```text
 DeeCee/web_app
 ```
 
-In Vercel, set the project **Root Directory** to `DeeCee/web_app`. If another old Vercel project is still connected to this repository and points to a removed folder such as `admin_web`, disconnect that old project or update its root directory. Otherwise GitHub may show a failed Vercel check even when the real DeeCee deployment succeeds.
+Database setup is handled through Supabase SQL files in `server/`. Environment variables are required for Supabase, payment verification, owner access, and optional email notifications.
 
-Environment variables are managed inside **Project Settings -> Environments -> Production -> Environment Variables** in the current Vercel dashboard. Public browser keys may use the `NEXT_PUBLIC_` prefix, but private server keys must not.
+Private deployment notes and environment-variable guidance should stay out of the public README and out of Git history.
 
-Safe public variables:
+## Status
 
-```env
-NEXT_PUBLIC_APP_URL
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-```
-
-Server-only variables:
-
-```env
-SUPABASE_SERVICE_ROLE_KEY
-PAYMENT_PROVIDER
-PAYMENT_WEBHOOK_SECRET
-PAYMENT_SANDBOX_BASE_URL
-OWNER_ADMIN_TOKEN
-OWNER_NOTIFICATION_EMAIL
-RESEND_API_KEY
-NOTIFICATION_FROM_EMAIL
-```
-
-After changing Vercel environment variables or the root directory, redeploy the latest deployment so the changes take effect.
-
-DeeCee is the main local-first browser app. It still opens directly from
-`index.html`, while server-only payment work lives outside the public `src/`
-bundle.
-
-## Shape
-
-- `index.html` is the app shell.
-- `src/styles/theme.css` holds the design system.
-- `src/app.js` holds routing, local state, scoring, focus, and module rendering.
-- `api/` holds deploy-time serverless functions. Do not expose these as static files.
-- `server/` holds shared backend-only checkout logic and SQL support files.
-- `tests/` holds Node tests for server logic.
-- `public/` is reserved for icons, manifest, and static assets.
-
-## Security Boundary
-
-The browser app must never contain `SUPABASE_SERVICE_ROLE_KEY`,
-`OWNER_ADMIN_TOKEN`, `RESEND_API_KEY`, or bank-verification logic. The browser
-may request `/api/checkout`, but the API must run on a serverless host such as
-Vercel with environment variables configured.
-
-Payment state is stored in Supabase `transactions`, so refreshes do not reset
-pending checkout windows. Sandbox checkout is the default; manual transfer can
-be enabled later with `PAYMENT_PROVIDER=manual_bank`.
-
-## Checkout Setup
-
-1. Rotate any service-role key that was ever stored in a tracked file.
-2. Copy `.env.example` into the Vercel project environment variables.
-2. Fill the public browser values in `src/config.js`:
-   - `supabaseUrl`
-   - `supabaseAnonKey`
-   - `appUrl`
-3. Run `server/SCHEMA.complete.sql` in Supabase SQL Editor.
-4. Set the old Vercel project root directory to this folder: `DeeCee/web_app`.
-5. Deploy `web_app` as the project root so `/api/checkout`, `/api/subscription`,
-   `/api/sandbox/complete`, `/api/webhooks/sandbox-payment`, and
-   `/api/admin/payments` are available.
-6. See `PAYMENTS_SETUP.md` for sandbox payment test steps, webhook verification,
-   and live-provider limitations.
-
-## Local Running
-
-Vercel-style local runtime, closest to production:
-
-```bash
-cd "DeeCee/web_app"
-npm install
-vercel dev --listen 3002
-```
-
-Fallback local runtime, useful if Vercel CLI is not available:
-
-```bash
-cd "DeeCee/web_app"
-copy .env.example .env.local
-npm run dev:local
-```
-
-The fallback server serves `index.html` and the same `/api/*` handlers, but Vercel
-dev should be treated as the primary pre-deploy check.
-
-## Local Checks
-
-```bash
-npm run check
-```
-
-This validates the serverless API syntax and runs the checkout core tests.
+DeeCee is currently in production-readiness testing for the authenticated web app, sandbox checkout flow, focus analytics, and Supabase-backed feature flags.

@@ -1,6 +1,6 @@
 .env
 .env.local
-.env.example
+.env.deployment-notes
 .env.*.local
 node_modules/
 .vercel/

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "build": "node server/build-static.cjs",
     "dev": "vercel dev --listen 3002",
     "dev:vercel": "vercel dev --listen 3002",
     "dev:local": "node server/local-dev-server.cjs",
