@@ -146,3 +146,4 @@
 - Subscription plan price typography is now more minimal and numeric.
 - Verified local smoke check, `npm.cmd run check`, and `npm.cmd run build`.
 - Encountered some errors in Vercel and notived there were two different projects connected to one single repo. Disconnected one.
+

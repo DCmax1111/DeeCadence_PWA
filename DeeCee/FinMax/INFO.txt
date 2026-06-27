@@ -1,2 +1,0 @@
-We'll be using index.html that's in the `FinMax` folder, not the fallback.
-It has the updated version of what we have done so far.
