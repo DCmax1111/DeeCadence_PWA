@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c0d14">
+  <title>DeeCee</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles/theme.css">
+</head>
+<body>
+  <script>
+    (function () {
+      var theme = localStorage.getItem("dc_theme") || "system";
+      var light = theme === "light" || (theme === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+      document.body.classList.toggle("light", light);
+      document.body.dataset.themeChoice = theme;
+    })();
+  </script>
+  <main id="app" class="app-shell">
+    <header class="topbar">
+      <strong class="brand-mark">DeeCee</strong>
+      <h1 id="screenTitle">Today</h1>
+      <div class="topbar-actions">
+        <button id="activeFocusPill" class="focus-pill" type="button" data-route="focus" hidden>
+          <span>Focus Running</span>
+          <strong data-focus-pill-timer>00:00</strong>
+        </button>
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle theme">Dark</button>
+      </div>
+    </header>
+
+    <section id="screen" class="screen" aria-live="polite"></section>
+
+    <nav class="bottom-nav" aria-label="Primary">
+      <button class="nav-button active" type="button" data-route="home">Home</button>
+      <button class="nav-button" type="button" data-route="stats">Stats</button>
+      <button class="nav-button" type="button" data-route="focus">Focus</button>
+      <button class="nav-button auth-nav" type="button" data-route="account">Account</button>
+      <button class="nav-button settings-nav" type="button" data-route="settings">Settings</button>
+    </nav>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="document.write('<script src=&quot;./node_modules/@supabase/supabase-js/dist/umd/supabase.js&quot;><\/script>')"></script>
+  <script src="./src/config.js"></script>
+  <script defer src="./src/app.js"></script>
+</body>
+</html>

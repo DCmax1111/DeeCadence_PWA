@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131a">
+  <title>DeeCadence Early Access Survey</title>
+  <style>
+    :root{
+      --bg:#f4f5f8;--surface:#ffffff;--surface-2:#f8f8fb;--text:#161820;--muted:#676d7a;
+      --line:#dfe2e9;--violet:#7137ee;--violet-2:#9b63ff;--violet-soft:#efe8ff;
+      --green:#13836d;--amber:#b87713;--red:#ca484f;--shadow:0 22px 60px rgba(28,31,42,.1);
+      --font:Inter,"Segoe UI",Arial,sans-serif;--display:Georgia,"Times New Roman",serif;
+    }
+    [data-theme="dark"]{
+      --bg:#0c0f15;--surface:#131821;--surface-2:#191f2a;--text:#f4f4f7;--muted:#a5abb7;
+      --line:#2a313e;--violet:#9a63ff;--violet-2:#bd99ff;--violet-soft:#2a1d45;
+      --green:#4bc5a5;--amber:#efb65d;--red:#ff7b82;--shadow:none;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;letter-spacing:0}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    button:focus-visible,input:focus-visible,textarea:focus-visible,label.choice:has(input:focus-visible){outline:3px solid color-mix(in srgb,var(--violet) 45%,transparent);outline-offset:2px}
+    .page{min-height:100vh;display:grid;grid-template-columns:minmax(300px,420px) minmax(0,760px);justify-content:center;gap:clamp(28px,6vw,84px);padding:clamp(22px,5vw,68px)}
+    .intro{position:sticky;top:40px;align-self:start;min-height:calc(100vh - 80px);display:flex;flex-direction:column}
+    .brand{display:flex;align-items:center;gap:11px;font-weight:850}.mark{width:40px;height:40px;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--violet) 55%,var(--line));border-radius:8px;background:var(--violet-soft);color:var(--violet);font-family:var(--display);font-size:24px}
+    .brand span small{display:block;margin-top:2px;color:var(--muted);font-size:9px;text-transform:uppercase}
+    .intro-copy{margin:auto 0}.kicker{color:var(--violet);font-size:11px;font-weight:850;text-transform:uppercase}.intro h1{max-width:390px;margin:14px 0 16px;font-family:var(--display);font-size:48px;line-height:1.03;font-weight:700}.intro p{max-width:380px;color:var(--muted);font-size:17px;line-height:1.65}
+    .promise{display:grid;gap:11px;margin:28px 0 0;padding:0;list-style:none}.promise li{display:flex;align-items:center;gap:10px;color:var(--muted)}.promise i{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:var(--violet-soft);color:var(--violet);font-style:normal;font-size:11px;font-weight:900}
+    .intro-foot{padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:11px}.theme-dock{position:fixed;top:16px;right:18px;z-index:40}.theme-toggle{min-width:74px;height:40px;padding:0 13px;border:1px solid var(--line);border-radius:7px;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--text);box-shadow:var(--shadow);backdrop-filter:blur(16px);font-weight:800}
+    .survey{min-width:0}.survey-bar{position:sticky;top:16px;z-index:10;margin-bottom:14px;padding:15px 17px;border:1px solid var(--line);border-radius:8px;background:color-mix(in srgb,var(--surface) 90%,transparent);box-shadow:var(--shadow);backdrop-filter:blur(18px)}
+    .bar-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}.bar-top strong{font-size:12px}.bar-top span{color:var(--muted);font-size:11px}.progress{height:6px;overflow:hidden;border-radius:99px;background:var(--line)}.progress i{display:block;width:20%;height:100%;border-radius:inherit;background:var(--violet);transition:width .3s ease}
+    .form-shell{border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:var(--shadow)}
+    .step{display:none;padding:clamp(24px,5vw,46px)}.step.active{display:block;animation:enter .26s ease both}.step-count{display:inline-flex;align-items:center;gap:7px;color:var(--violet);font-size:10px;font-weight:850;text-transform:uppercase}.step-count:before{content:"";width:18px;height:2px;background:var(--violet)}
+    .step h2{margin:12px 0 8px;font-family:var(--display);font-size:31px}.step>.lead{max-width:610px;margin:0 0 34px;color:var(--muted);line-height:1.6}
+    .question{margin:0;padding:25px 0;border:0;border-top:1px solid var(--line)}.question:first-of-type{border-top:0;padding-top:0}.question legend,.question>label{display:block;width:100%;margin-bottom:8px;font-weight:800}.question .help{display:block;margin-bottom:14px;color:var(--muted);font-size:12px;line-height:1.5}.required{color:var(--red)}
+    input[type="text"],input[type="email"],textarea{width:100%;min-height:48px;padding:12px 14px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);color:var(--text)}textarea{min-height:105px;resize:vertical;line-height:1.5}
+    .choices{display:grid;gap:9px}.choices.two{grid-template-columns:repeat(2,minmax(0,1fr))}.choices.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .choice{position:relative;min-width:0;display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);cursor:pointer;transition:border-color .16s ease,background .16s ease,transform .16s ease}.choice:hover{border-color:color-mix(in srgb,var(--violet) 52%,var(--line));transform:translateY(-1px)}.choice:has(input:checked){border-color:var(--violet);background:var(--violet-soft)}.choice input{flex:0 0 auto;margin:2px 0 0;accent-color:var(--violet)}.choice span{min-width:0;line-height:1.38}.choice small{display:block;margin-top:3px;color:var(--muted);font-size:10px}
+    .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.scale .choice{min-height:64px;align-items:center;justify-content:center;padding:8px;text-align:center}.scale .choice input{position:absolute;opacity:0}.scale strong{display:block;font-size:18px}.scale small{margin:2px 0 0}
+    .concept{margin:8px 0 28px;padding:19px;border-left:3px solid var(--violet);background:linear-gradient(120deg,var(--violet-soft),var(--surface-2))}.concept strong{display:block;margin-bottom:6px}.concept p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+    .timer-picture{display:grid;grid-template-columns:minmax(0,.8fr) auto minmax(0,1.35fr);align-items:center;gap:16px;margin:8px 0 32px;padding:20px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}.timer-choice,.timer-result{padding:16px;border:1px solid var(--line);border-radius:7px;background:var(--surface)}.timer-choice span,.timer-result>span{display:block;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase}.timer-choice strong{display:block;margin-top:8px;font-size:28px}.timer-arrow{color:var(--violet);font-size:26px}.timer-result strong{display:block;margin:7px 0 13px}.four-parts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.four-parts i{display:grid;place-items:center;min-height:54px;padding:6px;border:1px solid color-mix(in srgb,var(--violet) 42%,var(--line));border-radius:6px;background:var(--violet-soft);color:var(--violet);font-style:normal;font-size:10px;font-weight:850;text-align:center}.four-parts i b{display:block;font-size:14px}.picture-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px;line-height:1.5;text-align:center}
+    .conditional{display:none}.conditional.visible{display:block;animation:enter .22s ease both}
+    .actions{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px clamp(24px,5vw,46px);border-top:1px solid var(--line)}.btn{min-height:44px;padding:0 17px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--text);font-weight:800;text-decoration:none}.btn:hover{border-color:var(--violet);color:var(--violet)}.btn.primary{border-color:var(--violet);background:var(--violet);color:white}.btn.primary:hover{background:var(--violet-2);color:white}.btn[hidden]{display:none}
+    .error{min-height:20px;margin:0;padding:0 46px 12px;color:var(--red);font-size:12px;font-weight:750}
+    .success{display:none;padding:clamp(34px,7vw,70px);text-align:center}.success.visible{display:block}.success-mark{width:72px;height:72px;margin:0 auto 24px;display:grid;place-items:center;border-radius:50%;background:var(--violet-soft);color:var(--violet);font-size:30px}.success h2{font-family:var(--display);font-size:36px}.success p{max-width:530px;margin:0 auto 24px;color:var(--muted);line-height:1.65}.success-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:28px 0;text-align:left}.success-summary div{padding:15px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.success-summary span,.success-summary strong{display:block}.success-summary span{margin-bottom:5px;color:var(--muted);font-size:10px;text-transform:uppercase}.download-panel{max-width:520px;margin:26px auto 14px;padding:20px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);text-align:left}.download-panel strong,.download-panel span{display:block}.download-panel span{margin:6px 0 15px;color:var(--muted);font-size:12px;line-height:1.5}.download-panel .btn{width:100%}
+    .modal-backdrop{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:18px;background:rgba(8,10,15,.7);backdrop-filter:blur(8px)}.modal-backdrop[hidden]{display:none}.share-modal{width:min(500px,100%);padding:26px;border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:0 34px 100px rgba(0,0,0,.3)}.share-modal h2{margin:10px 0 8px;font-family:var(--display);font-size:28px}.share-modal p{color:var(--muted);line-height:1.55}.contact-line{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;margin:22px 0 12px;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2)}.contact-line strong{padding-left:7px}.share-note{font-size:11px}.modal-close{float:right;width:36px;height:36px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--text);font-size:20px}
+    .toast{position:fixed;right:20px;top:20px;z-index:50;max-width:350px;padding:13px 16px;border:1px solid var(--line);border-radius:7px;background:var(--surface);box-shadow:var(--shadow);animation:toast 2.8s ease forwards}
+    @keyframes enter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}@keyframes toast{0%{opacity:0;transform:translateY(-8px)}12%,82%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px)}}
+    @media(max-width:900px){.page{grid-template-columns:1fr;gap:24px;padding:24px}.intro{position:static;min-height:0}.intro-copy{margin:42px 0 12px}.intro h1{font-size:40px}.intro-foot{margin-top:30px}.survey-bar{top:8px}}
+    @media(max-width:600px){.page{padding:12px}.intro{padding:8px 52px 8px 8px}.intro h1{font-size:34px}.intro p{font-size:15px}.promise{display:none}.choices.two,.choices.three,.scale{grid-template-columns:1fr}.scale{overflow:visible}.scale .choice{min-height:52px;justify-content:flex-start;text-align:left}.step{padding:25px 18px}.step h2{font-size:27px}.actions{padding:15px 18px}.error{padding:0 18px 10px}.success-summary{grid-template-columns:1fr}.bar-top span{display:none}.timer-picture{grid-template-columns:1fr}.timer-arrow{transform:rotate(90deg);text-align:center}.contact-line{grid-template-columns:1fr 1fr}.contact-line strong{grid-column:1/-1}.theme-dock{top:10px;right:10px}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <div class="theme-dock"><button class="theme-toggle" id="themeToggle" type="button" aria-label="Change colour theme">Dark</button></div>
+  <main class="page">
+    <aside class="intro">
+      <div class="brand"><span class="mark">D</span><span>DeeCadence<small>Focus habits survey</small></span></div>
+      <div class="intro-copy">
+        <span class="kicker">Tell us what you really think</span>
+        <h1>Could a simpler timer help you focus more consistently?</h1>
+        <p>DeeCadence is a focus timer that divides a session into smaller parts, saves the work you complete, and helps you understand your focus patterns over time.</p>
+        <ul class="promise">
+          <li><i>1</i> About four minutes</li>
+          <li><i>2</i> There are no wrong answers</li>
+          <li><i>3</i> Contact details are optional</li>
+        </ul>
+      </div>
+      <div class="intro-foot">This survey does not request payment. You may leave at any time.</div>
+    </aside>
+
+    <section class="survey" aria-label="DeeCadence interest survey">
+      <div class="survey-bar">
+        <div class="bar-top"><strong id="progressTitle">Your focus habits</strong><span id="progressText">Section 1 of 5 · 0% complete</span></div>
+        <div class="progress" aria-hidden="true"><i id="progressFill"></i></div>
+      </div>
+
+      <form id="surveyForm" class="form-shell" novalidate>
+        <section class="step active" data-title="Your focus habits">
+          <span class="step-count">Section 1 of 5</span>
+          <h2>First, tell us about your usual routine.</h2>
+          <p class="lead">Choose the answer that best matches your real experience. If none fits exactly, use “Something else” or “Not sure.”</p>
+
+          <div class="question"><label for="name">What should we call you? <span class="help">Optional</span></label><input id="name" name="name" type="text" autocomplete="name" placeholder="First name or nickname"></div>
+
+          <fieldset class="question" data-required><legend>Which option best describes how you spend most of your time? <span class="required">*</span></legend><span class="help">If more than one applies, choose your main activity.</span><div class="choices two">
+            <label class="choice"><input type="radio" name="life_stage" value="Student"><span>Studying or training</span></label>
+            <label class="choice"><input type="radio" name="life_stage" value="Employed"><span>Working for an employer</span></label>
+            <label class="choice"><input type="radio" name="life_stage" value="Self-employed"><span>Running a business or freelancing</span></label>
+            <label class="choice"><input type="radio" name="life_stage" value="Caregiving"><span>Caregiving or managing a household</span></label>
+            <label class="choice"><input type="radio" name="life_stage" value="Not currently working"><span>Not currently working or studying</span></label>
+            <label class="choice"><input type="radio" name="life_stage" value="Other or prefer not to say"><span>Something else / Prefer not to say</span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>What do you currently use when you want to focus? <span class="required">*</span></legend><span class="help">Choose every option you use, even occasionally.</span><div class="choices two">
+            <label class="choice"><input type="checkbox" name="current_tools" value="Phone timer"><span>Phone timer</span></label>
+            <label class="choice"><input type="checkbox" name="current_tools" value="Focus timer app"><span>An app made for focus</span></label>
+            <label class="choice"><input type="checkbox" name="current_tools" value="To-do list or calendar"><span>To-do list or calendar</span></label>
+            <label class="choice"><input type="checkbox" name="current_tools" value="Paper notes"><span>Paper notes or a physical planner</span></label>
+            <label class="choice"><input type="checkbox" name="current_tools" value="Music or environment"><span>Music, background sound, or a quiet space</span></label>
+            <label class="choice"><input type="checkbox" name="current_tools" value="Nothing consistently"><span>I do not use any method consistently</span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>What most often interrupts a focus session? <span class="required">*</span></legend><span class="help">Choose the single most common reason.</span><div class="choices two">
+            <label class="choice"><input type="radio" name="focus_breaker" value="Phone and notifications"><span>Phone and notifications</span></label>
+            <label class="choice"><input type="radio" name="focus_breaker" value="Starting feels difficult"><span>Starting feels difficult</span></label>
+            <label class="choice"><input type="radio" name="focus_breaker" value="I tire quickly"><span>I tire quickly</span></label>
+            <label class="choice"><input type="radio" name="focus_breaker" value="Interruptions and responsibilities"><span>Interruptions and responsibilities</span></label>
+            <label class="choice"><input type="radio" name="focus_breaker" value="I lose track of progress"><span>I lose track of progress</span></label>
+            <label class="choice"><input type="radio" name="focus_breaker" value="No common interruption"><span>I do not usually struggle to continue</span></label>
+            <label class="choice"><input type="radio" name="focus_breaker" value="Other or unsure"><span>Something else / Not sure</span></label>
+          </div></fieldset>
+        </section>
+
+        <section class="step" data-title="The focus timer">
+          <span class="step-count">Section 2 of 5</span>
+          <h2>Now imagine using DeeCadence.</h2>
+          <p class="lead">You choose a total focus time. DeeCadence divides it into four equal parts and saves each part you complete.</p>
+          <div class="timer-picture" role="img" aria-label="A forty-minute focus session divided into four parts of ten minutes each">
+            <div class="timer-choice"><span>You choose</span><strong>40 minutes</strong></div><div class="timer-arrow">→</div>
+            <div class="timer-result"><span>DeeCadence shows</span><strong>4 smaller parts</strong><div class="four-parts"><i><span>Part 1<b>10 min</b></span></i><i><span>Part 2<b>10 min</b></span></i><i><span>Part 3<b>10 min</b></span></i><i><span>Part 4<b>10 min</b></span></i></div></div>
+            <p class="picture-note">If you finish only the first two parts, the app still saves those 20 minutes instead of treating the whole session as a failure.</p>
+          </div>
+
+          <fieldset class="question" data-required><legend>Would dividing a session into four smaller parts make it feel easier to complete? <span class="required">*</span></legend><div class="scale">
+            <label class="choice"><input type="radio" name="block_appeal" value="1"><span><strong>1</strong><small>Definitely not</small></span></label>
+            <label class="choice"><input type="radio" name="block_appeal" value="2"><span><strong>2</strong><small>Probably not</small></span></label>
+            <label class="choice"><input type="radio" name="block_appeal" value="3"><span><strong>3</strong><small>Not sure</small></span></label>
+            <label class="choice"><input type="radio" name="block_appeal" value="4"><span><strong>4</strong><small>Probably yes</small></span></label>
+            <label class="choice"><input type="radio" name="block_appeal" value="5"><span><strong>5</strong><small>Definitely yes</small></span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>Which total session lengths would you realistically use? <span class="required">*</span></legend><span class="help">Choose all that apply.</span><div class="choices three">
+            <label class="choice"><input type="checkbox" name="durations" value="Under 15 minutes"><span>Under 15 minutes</span></label>
+            <label class="choice"><input type="checkbox" name="durations" value="15 minutes"><span>15 minutes</span></label>
+            <label class="choice"><input type="checkbox" name="durations" value="25 minutes"><span>25 minutes</span></label>
+            <label class="choice"><input type="checkbox" name="durations" value="45 minutes"><span>45 minutes</span></label>
+            <label class="choice"><input type="checkbox" name="durations" value="60 minutes"><span>60 minutes</span></label>
+            <label class="choice"><input type="checkbox" name="durations" value="Over 60 minutes"><span>More than 60 minutes</span></label>
+            <label class="choice"><input type="checkbox" name="durations" value="Custom"><span>A custom length</span></label>
+            <label class="choice"><input type="checkbox" name="durations" value="Unsure"><span>Not sure yet</span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>If you stop halfway, what should the app save? <span class="required">*</span></legend><div class="choices">
+            <label class="choice"><input type="radio" name="pause_behaviour" value="Keep exact elapsed time"><span>Save every minute I completed and let me continue later</span></label>
+            <label class="choice"><input type="radio" name="pause_behaviour" value="Save completed parts only"><span>Save only the smaller parts I fully completed<small>Example: save 20 minutes after finishing two 10-minute parts</small></span></label>
+            <label class="choice"><input type="radio" name="pause_behaviour" value="Ask every time"><span>Ask me what to save each time I stop</span></label>
+            <label class="choice"><input type="radio" name="pause_behaviour" value="Save nothing"><span>Do not save an unfinished session</span></label>
+            <label class="choice"><input type="radio" name="pause_behaviour" value="Unsure"><span>Not sure — I would need to try it</span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>Which timer features would help you most? <span class="required">*</span></legend><span class="help">Choose up to three.</span><div class="choices two" data-limit="3">
+            <label class="choice"><input type="checkbox" name="timer_features" value="Timer stays visible"><span>Keep the timer visible while I use another screen, where my device allows it</span></label>
+            <label class="choice"><input type="checkbox" name="timer_features" value="Current part"><span>Show which part I am on<small>Example: Part 3 of 4</small></span></label>
+            <label class="choice"><input type="checkbox" name="timer_features" value="Pause and end"><span>Clear Pause and End buttons</span></label>
+            <label class="choice"><input type="checkbox" name="timer_features" value="Note distraction"><span>A quick button to note what distracted me</span></label>
+            <label class="choice"><input type="checkbox" name="timer_features" value="Sound and vibration"><span>A sound or vibration when each part ends</span></label>
+            <label class="choice"><input type="checkbox" name="timer_features" value="Automatic saving"><span>Automatically save each part I finish</span></label>
+          </div></fieldset>
+        </section>
+
+        <section class="step" data-title="Progress and recovery">
+          <span class="step-count">Section 3 of 5</span>
+          <h2>What would you like to see after focusing?</h2>
+          <p class="lead">The app would show simple results to help you know whether you are improving.</p>
+          <div class="concept"><strong>Focus Score: a simple number from 0 to 100</strong><p>A higher score would mean that you completed more of the timer parts you started and focused on more days. It would describe recent activity, not your intelligence or worth.</p></div>
+
+          <fieldset class="question" data-required><legend>How useful would a Focus Score be to you? <span class="required">*</span></legend><div class="scale">
+            <label class="choice"><input type="radio" name="score_appeal" value="1"><span><strong>1</strong><small>Not useful</small></span></label>
+            <label class="choice"><input type="radio" name="score_appeal" value="2"><span><strong>2</strong><small>Slightly useful</small></span></label>
+            <label class="choice"><input type="radio" name="score_appeal" value="3"><span><strong>3</strong><small>Moderately useful</small></span></label>
+            <label class="choice"><input type="radio" name="score_appeal" value="4"><span><strong>4</strong><small>Useful</small></span></label>
+            <label class="choice"><input type="radio" name="score_appeal" value="5"><span><strong>5</strong><small>Very useful</small></span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>Which results would make you want to return each week? <span class="required">*</span></legend><span class="help">Choose up to three.</span><div class="choices two" data-limit="3">
+            <label class="choice"><input type="checkbox" name="tracker_features" value="Focus Score changes"><span>Whether my Focus Score went up or down</span></label>
+            <label class="choice"><input type="checkbox" name="tracker_features" value="Total focus time"><span>The total number of minutes I focused</span></label>
+            <label class="choice"><input type="checkbox" name="tracker_features" value="Days active"><span>How many days I focused this week</span></label>
+            <label class="choice"><input type="checkbox" name="tracker_features" value="Common distractions"><span>What distracts me most often</span></label>
+            <label class="choice"><input type="checkbox" name="tracker_features" value="Parts completed"><span>How many timer parts I completed</span></label>
+            <label class="choice"><input type="checkbox" name="tracker_features" value="Points and levels"><span>Points and levels for progress</span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>If you stop early, which message would feel best? <span class="required">*</span></legend><div class="choices">
+            <label class="choice"><input type="radio" name="interruption_tone" value="Neutral"><span>Simple<small>“You stopped during Part 2 of 4.”</small></span></label>
+            <label class="choice"><input type="radio" name="interruption_tone" value="Encouraging"><span>Encouraging<small>“You finished one part. You can return when ready.”</small></span></label>
+            <label class="choice"><input type="radio" name="interruption_tone" value="Direct"><span>Direct<small>“You have three parts left.”</small></span></label>
+            <label class="choice"><input type="radio" name="interruption_tone" value="No message"><span>No message<small>Save the session without commenting on it.</small></span></label>
+          </div></fieldset>
+        </section>
+
+        <section class="step" data-title="Value and objections">
+          <span class="step-count">Section 4 of 5</span>
+          <h2>Would DeeCadence earn a place in your routine?</h2>
+          <p class="lead">Please answer honestly. Low interest and concerns are just as useful as positive feedback.</p>
+
+          <fieldset class="question" data-required><legend>How interested are you in trying this concept? <span class="required">*</span></legend><div class="scale">
+            <label class="choice"><input type="radio" name="interest" value="1"><span><strong>1</strong><small>Not interested</small></span></label>
+            <label class="choice"><input type="radio" name="interest" value="2"><span><strong>2</strong><small>Slightly interested</small></span></label>
+            <label class="choice"><input type="radio" name="interest" value="3"><span><strong>3</strong><small>Unsure</small></span></label>
+            <label class="choice"><input type="radio" name="interest" value="4"><span><strong>4</strong><small>Interested</small></span></label>
+            <label class="choice"><input type="radio" name="interest" value="5"><span><strong>5</strong><small>Very interested</small></span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>What would be the main reason to use it? <span class="required">*</span></legend><div class="choices two">
+            <label class="choice"><input type="radio" name="main_value" value="Starting"><span>It could help me start</span></label>
+            <label class="choice"><input type="radio" name="main_value" value="Staying"><span>It could help me stay focused</span></label>
+            <label class="choice"><input type="radio" name="main_value" value="Returning"><span>It could help me return after interruptions</span></label>
+            <label class="choice"><input type="radio" name="main_value" value="Tracking"><span>It could show whether I am improving</span></label>
+            <label class="choice"><input type="radio" name="main_value" value="Gamification"><span>The ranks and progress could motivate me</span></label>
+            <label class="choice"><input type="radio" name="main_value" value="No strong value"><span>I do not see a strong reason yet</span></label>
+          </div></fieldset>
+
+          <div class="question"><label for="concern">What could make you avoid or stop using DeeCadence? <span class="help">Optional</span></label><span class="help">For example: too many notifications, pressure, confusing scores, privacy, price, accessibility, or simply forgetting.</span><textarea id="concern" name="concern" placeholder="Share any concern in your own words"></textarea></div>
+          <div class="question"><label for="missing">What is one feature or detail you think is missing? <span class="help">Optional</span></label><textarea id="missing" name="missing" placeholder="If nothing comes to mind, leave this blank"></textarea></div>
+        </section>
+
+        <section class="step" data-title="Early access">
+          <span class="step-count">Section 5 of 5</span>
+          <h2>Last step: what would you realistically do next?</h2>
+          <p class="lead">Choose the one option closest to what you would do today. This does not commit you to a purchase.</p>
+
+          <fieldset class="question" data-required><legend>If DeeCadence worked as described, which is closest to your response? <span class="required">*</span></legend><div class="choices">
+            <label class="choice"><input type="radio" name="intent" value="Test beta"><span>I am ready to test a free beta and give feedback</span></label>
+            <label class="choice"><input type="radio" name="intent" value="Join waitlist"><span>I want product updates, but I am not ready to test yet</span></label>
+            <label class="choice"><input type="radio" name="intent" value="See demonstration"><span>I might be interested after seeing a working demonstration</span></label>
+            <label class="choice"><input type="radio" name="intent" value="Recommend"><span>It may suit someone I know, but not me</span></label>
+            <label class="choice"><input type="radio" name="intent" value="No action"><span>I am unlikely to use or recommend it</span></label>
+          </div></fieldset>
+
+          <fieldset class="question" data-required><legend>After a free trial, what monthly price could feel reasonable if DeeCadence genuinely helped you focus? <span class="required">*</span></legend><span class="help">Prices are in US dollars or the approximate equivalent in your local currency.</span><div class="choices two">
+            <label class="choice"><input type="radio" name="price" value="Free only"><span>I would only use a free version</span></label>
+            <label class="choice"><input type="radio" name="price" value="Under $2"><span>Less than $2 per month</span></label>
+            <label class="choice"><input type="radio" name="price" value="$2-$5"><span>$2–$5 per month</span></label>
+            <label class="choice"><input type="radio" name="price" value="$6-$10"><span>$6–$10 per month</span></label>
+            <label class="choice"><input type="radio" name="price" value="Over $10"><span>More than $10 per month</span></label>
+            <label class="choice"><input type="radio" name="price" value="Unsure"><span>Not sure until I try it</span></label>
+          </div></fieldset>
+
+          <div class="question conditional" id="emailQuestion"><label for="email">What email address may we use for DeeCadence updates? <span class="required">*</span></label><span class="help">We will use it only for early access, product updates, or research you agree to.</span><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+
+          <fieldset class="question"><legend>May we invite you to an optional 10–15 minute follow-up conversation?</legend><span class="help">Choosing yes does not require you to accept an invitation later.</span><div class="choices two">
+            <label class="choice"><input type="radio" name="follow_up" value="Yes"><span>Yes, you may invite me</span></label>
+            <label class="choice"><input type="radio" name="follow_up" value="Maybe"><span>Maybe — ask me later</span></label>
+            <label class="choice"><input type="radio" name="follow_up" value="No"><span>No, please do not contact me for an interview</span></label>
+          </div></fieldset>
+        </section>
+
+        <p class="error" id="formError" role="alert" aria-live="polite"></p>
+        <div class="actions" id="formActions"><button class="btn" id="backBtn" type="button" hidden>Back</button><button class="btn primary" id="nextBtn" type="button">Continue</button></div>
+
+        <section class="success" id="success" aria-live="polite">
+          <div class="success-mark">✓</div><span class="kicker">Response complete</span><h2>Thank you for helping shape DeeCadence.</h2>
+          <p>Your answers help us understand whether DeeCadence would solve a real focus problem and what it must do to earn people’s trust.</p>
+          <div class="success-summary" id="successSummary"></div>
+          <div class="download-panel"><strong>Keep and share your response</strong><span>Download a readable copy of your answers. Your file stays on your device until you choose to share it.</span><button class="btn primary" type="button" id="downloadResponse">Download my responses</button></div>
+          <button class="btn" type="button" id="editResponse">Edit my response</button>
+        </section>
+      </form>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="shareBackdrop" hidden>
+    <section class="share-modal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+      <button class="modal-close" id="closeShare" type="button" aria-label="Close">×</button>
+      <span class="kicker">File downloaded</span><h2 id="shareTitle">Send it to the DeeCadence team</h2>
+      <p>Open WhatsApp, then attach the DeeCadence response file from your Downloads folder. Nothing is sent automatically.</p>
+      <div class="contact-line"><strong>+234 808 531 8908</strong><button class="btn" id="copyNumber" type="button">Copy</button><a class="btn primary" id="openWhatsapp" href="https://wa.me/2348085318908?text=Hello%2C%20I%20completed%20the%20DeeCadence%20focus%20survey%20and%20would%20like%20to%20share%20my%20response%20file." target="_blank" rel="noopener">Open chat</a></div>
+      <p class="share-note">WhatsApp does not allow websites to attach a file automatically. You remain in control of what you send.</p>
+    </section>
+  </div>
+
+  <script>
+    const form=document.querySelector("#surveyForm"),steps=[...document.querySelectorAll(".step")];
+    const backBtn=document.querySelector("#backBtn"),nextBtn=document.querySelector("#nextBtn"),error=document.querySelector("#formError");
+    const progressTitle=document.querySelector("#progressTitle"),progressText=document.querySelector("#progressText"),progressFill=document.querySelector("#progressFill");
+    const emailQuestion=document.querySelector("#emailQuestion"),email=document.querySelector("#email"),DRAFT_KEY="deecadence_focus_survey_draft_v2";
+    let current=0;
+
+    function applyTheme(value){document.documentElement.dataset.theme=value;localStorage.setItem("deecadence_survey_theme",value);const toggle=document.querySelector("#themeToggle");toggle.textContent=value==="dark"?"Light":"Dark";toggle.setAttribute("aria-label",`Switch to ${value==="dark"?"light":"dark"} theme`)}
+    applyTheme(localStorage.getItem("deecadence_survey_theme")||((matchMedia("(prefers-color-scheme:dark)").matches)?"dark":"light"));
+    document.querySelector("#themeToggle").addEventListener("click",()=>applyTheme(document.documentElement.dataset.theme==="dark"?"light":"dark"));
+
+    function toast(message){const node=document.createElement("div");node.className="toast";node.textContent=message;document.body.append(node);setTimeout(()=>node.remove(),2850)}
+    function selected(name){return [...form.querySelectorAll(`[name="${name}"]:checked`)].map(x=>x.value)}
+    function refreshConditional(){const intent=selected("intent")[0],show=["Test beta","Join waitlist","See demonstration"].includes(intent);emailQuestion.classList.toggle("visible",show);email.required=show;if(!show)email.value=""}
+    function update(){steps.forEach((step,index)=>step.classList.toggle("active",index===current));const pct=Math.round(current/steps.length*100);progressTitle.textContent=steps[current]?.dataset.title||"Complete";progressText.textContent=`Section ${current+1} of ${steps.length} · ${pct}% complete`;progressFill.style.width=`${Math.max(5,(current+1)/steps.length*100)}%`;backBtn.hidden=current===0;nextBtn.textContent=current===steps.length-1?"Submit response":"Continue";error.textContent="";window.scrollTo({top:0,behavior:"smooth"})}
+    function validateStep(){const step=steps[current];for(const group of step.querySelectorAll("[data-required]")){if(!group.querySelector("input:checked")){const label=group.querySelector("legend")?.textContent.replace("*","").trim()||"this question";error.textContent=`Please answer: ${label}`;group.scrollIntoView({behavior:"smooth",block:"center"});return false}}for(const input of step.querySelectorAll("input[required]")){if(!input.value.trim()||!input.checkValidity()){error.textContent=input.type==="email"?"Please enter a valid email address so the team can contact you.":"Please complete the required field.";input.focus();return false}}return true}
+    function saveDraft(){const data={};new FormData(form).forEach((value,key)=>{if(data[key])data[key]=[].concat(data[key],value);else data[key]=value});localStorage.setItem(DRAFT_KEY,JSON.stringify(data))}
+    function restoreDraft(){try{const data=JSON.parse(localStorage.getItem(DRAFT_KEY)||"{}");Object.entries(data).forEach(([name,value])=>{const values=[].concat(value);for(const input of form.querySelectorAll(`[name="${name}"]`)){if(["radio","checkbox"].includes(input.type))input.checked=values.includes(input.value);else input.value=values[0]||""}});refreshConditional()}catch{localStorage.removeItem(DRAFT_KEY)}}
+    function finish(){saveDraft();document.querySelector("#formActions").hidden=true;steps.forEach(x=>x.classList.remove("active"));error.textContent="";const interest=selected("interest")[0]||"—",intent=selected("intent")[0]||"—",price=selected("price")[0]||"—";document.querySelector("#successSummary").innerHTML=`<div><span>Interest</span><strong>${interest}/5</strong></div><div><span>Next action</span><strong>${intent}</strong></div><div><span>Preferred offer</span><strong>${price}</strong></div>`;document.querySelector("#success").classList.add("visible");progressTitle.textContent="Response complete";progressText.textContent="100% complete";progressFill.style.width="100%";window.scrollTo({top:0,behavior:"smooth"})}
+
+    nextBtn.addEventListener("click",()=>{if(!validateStep())return;saveDraft();if(current===steps.length-1)return finish();current++;update()});
+    backBtn.addEventListener("click",()=>{if(current>0){saveDraft();current--;update()}});
+    form.addEventListener("change",event=>{if(event.target.name==="intent")refreshConditional();enforceExclusiveChoice(event.target,"current_tools","Nothing consistently");enforceExclusiveChoice(event.target,"durations","Unsure");const limited=event.target.closest("[data-limit]");if(limited&&event.target.checked){const checked=limited.querySelectorAll("input:checked"),limit=Number(limited.dataset.limit);if(checked.length>limit){event.target.checked=false;toast(`Choose up to ${limit} options`)}}saveDraft()});
+    form.addEventListener("input",saveDraft);
+    form.addEventListener("submit",event=>event.preventDefault());
+    document.querySelector("#editResponse").addEventListener("click",()=>{current=0;document.querySelector("#success").classList.remove("visible");document.querySelector("#formActions").hidden=false;update()});
+    document.querySelector("#downloadResponse").addEventListener("click",downloadResponse);
+    document.querySelector("#closeShare").addEventListener("click",closeShare);
+    document.querySelector("#shareBackdrop").addEventListener("click",event=>{if(event.target.id==="shareBackdrop")closeShare()});
+    document.querySelector("#copyNumber").addEventListener("click",async()=>{try{await navigator.clipboard.writeText("+2348085318908");toast("WhatsApp number copied")}catch{fallbackCopy("+2348085318908");toast("WhatsApp number copied")}});
+    document.addEventListener("keydown",event=>{if(event.key==="Escape")closeShare()});
+
+    function enforceExclusiveChoice(target,name,exclusiveValue){if(target.name!==name||!target.checked)return;for(const input of form.querySelectorAll(`[name="${name}"]`)){if(target.value===exclusiveValue&&input!==target)input.checked=false;else if(target.value!==exclusiveValue&&input.value===exclusiveValue)input.checked=false}}
+    function downloadResponse(){const lines=["DEECADENCE FOCUS SURVEY RESPONSE",`Exported: ${new Date().toLocaleString()}`,"","This file was created on the respondent's device and was not sent automatically.",""];form.querySelectorAll(".question").forEach((question,index)=>{const title=(question.querySelector("legend")||question.querySelector("label"))?.childNodes[0]?.textContent.trim()||`Question ${index+1}`;const answers=[...question.querySelectorAll("input,textarea")].filter(input=>(!['radio','checkbox'].includes(input.type)||input.checked)&&input.value.trim()).map(input=>input.value.trim());lines.push(`${index+1}. ${title}`,`   ${answers.length?answers.join(", "):"No response"}`,"")});const blob=new Blob([lines.join("\n")],{type:"text/plain;charset=utf-8"}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=`deecadence-response-${new Date().toISOString().slice(0,10)}.txt`;document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);document.querySelector("#shareBackdrop").hidden=false;document.body.style.overflow="hidden"}
+    function closeShare(){document.querySelector("#shareBackdrop").hidden=true;document.body.style.overflow=""}
+    function fallbackCopy(value){const area=document.createElement("textarea");area.value=value;document.body.append(area);area.select();document.execCommand("copy");area.remove()}
+    restoreDraft();update();
+  </script>
+</body>
+</html>

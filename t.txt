@@ -1,0 +1,49 @@
+3.) What is the usage of the different components of the system.
+What is the voltage that goes into the components of the system.
+# PSU (Power Supply Unit), PCB (Printed Circuit Board)
+
+4.) Typical exam question:
+With a typical diagram, identify the components of a motherboard and explain their functions.
+
+5.) How do you mount a processor and what method do you use? (zif)
+
+6.) What is thermal paste?
+Thermal paste is a conductive material applied between the CPU and its heatsink to improve heat transfer and prevent air gaps that could impede cooling.
+Before the fan, after the CPU, the heatsink is mounted on top of the CPU, and thermal paste is applied to ensure efficient heat dissipation from the CPU to the heatsink.
+
+7.) With reference to
+- cost
+- capacity
+- speed
+- access time
+- and a simple diagram, discuss the Memory hierarchy.
+
+8.) Find the difference between the HDD and SSD.
+
+EEPROM means: Electrically Erasable Programmable Read-Only Memory. It is a type of non-volatile memory that can be electrically erased and reprogrammed. EEPROM is used to store small amounts of data that must be saved when power is removed, such as configuration settings or firmware.
+The way to format it is to use specific programming tools or software that can communicate with the EEPROM chip, allowing you to erase and write new data to it. The process typically involves connecting the EEPROM to a programmer device, selecting the appropriate memory address, and executing the erase/write commands.
+
+Components of a motherboard include:
+1. **CPU (Central Processing Unit)**: The brain of the computer that performs calculations and executes instructions. It processes data and controls other components.
+2. **RAM (Random Access Memory)**: Temporary storage that holds data and instructions that the CPU needs while performing tasks. It allows for quick access to data and improves system performance.
+3. **GPU (Graphics Processing Unit)**: Responsible for rendering images, videos, and animations. It offloads graphical processing tasks from the CPU.
+4. **PSU (Power Supply Unit)**: Converts electrical power from an outlet into a usable form for the computer components. It provides the necessary voltage and current to the motherboard and other components.
+5. **PCB (Printed Circuit Board)**: The physical board that houses and connects all the electronic components of the motherboard. It provides the necessary pathways for electrical signals to travel between components.
+6. **Storage Devices (HDD/SSD)**: These are used to store data permanently. HDDs (Hard Disk Drives) use spinning disks to read/write data, while SSDs (Solid State Drives) use flash memory for faster access times.
+7. **Chipset**: A set of integrated circuits that manage data flow between the CPU, memory, and peripheral devices. It determines the compatibility and performance of the motherboard.
+
+CPU socket is the physical interface on the motherboard where the CPU is installed.
+It provides electrical connections and mechanical support for the CPU.
+
+Function of the processor is to execute instructions from programs and perform calculations. It processes data, manages tasks, and communicates with other components to ensure the smooth operation of the computer system. The CPU interprets and executes instructions from software applications, making it a critical component for overall system performance.
+
+
+Summary of the volatile and non-volatile memory:
+- **Volatile Memory**: This type of memory loses its data when the power is turned off. Examples include RAM (Random Access Memory) and cache memory. It is used for temporary storage of data and instructions that the CPU needs to access quickly.
+- **Non-Volatile Memory**: This type of memory retains its data even when the power is turned off. Examples include ROM (Read-Only Memory), EEPROM (Electrically Erasable Programmable Read-Only Memory), and flash memory. It is used for permanent storage of data and instructions, such as the BIOS firmware and operating system files.
+
+Summary of storage and gpu:
+- **Storage Devices**: These are used to store data permanently. Hard Disk Drives (HDDs) use spinning disks to read/write data, while Solid State Drives (SSDs) use flash memory for faster access times. Storage devices are essential for saving files, applications, and the operating system.
+
+What is thermal paste?
+Thermal paste 

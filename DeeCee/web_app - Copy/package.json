@@ -1,0 +1,17 @@
+{
+  "name": "deecee-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node server/build-static.cjs",
+    "dev": "vercel dev --listen 3002",
+    "dev:vercel": "vercel dev --listen 3002",
+    "dev:local": "node server/local-dev-server.cjs",
+    "test": "node tests/authCore.test.cjs && node tests/manualCheckoutCore.test.cjs && node tests/paymentCore.test.cjs && node tests/focusStrengthCore.test.cjs && node tests/staticLeak.test.cjs && node tests/staticWiring.test.cjs",
+    "check:api": "node --check api/auth/password.js && node --check api/profile.js && node --check api/checkout.js && node --check api/subscription.js && node --check api/app-config.js && node --check api/focus-strength.js && node --check api/admin/me.js && node --check api/admin/payments.js && node --check api/sandbox/complete.js && node --check api/webhooks/sandbox-payment.js && node --check server/authCore.cjs && node --check server/manualCheckoutCore.cjs && node --check server/paymentCore.cjs && node --check server/focusStrengthCore.cjs && node --check server/local-dev-server.cjs",
+    "check": "npm run check:api && npm test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.24.0"
+  }
+}

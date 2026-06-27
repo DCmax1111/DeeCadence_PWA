@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#18352a" />
+  <title>Orbit Interest Survey</title>
+  <style>
+    :root {
+      --forest: #18352a;
+      --forest-2: #285541;
+      --leaf: #bcd58b;
+      --cream: #f4f1e8;
+      --paper: #fffdf8;
+      --ink: #1f2923;
+      --muted: #6f7a72;
+      --line: #dcded6;
+      --coral: #db795e;
+      --blue: #6d95a7;
+      --shadow: 0 20px 60px rgba(24, 53, 42, .09);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: var(--cream); font-family: "Trebuchet MS", "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid rgba(188, 213, 139, .65); outline-offset: 2px; }
+
+    .progress-track { position: fixed; inset: 0 0 auto; z-index: 20; height: 4px; background: rgba(255,255,255,.6); }
+    .progress-bar { width: 0; height: 100%; background: linear-gradient(90deg, var(--forest-2), var(--coral)); transition: width .25s ease; }
+    .shell { display: grid; grid-template-columns: 340px minmax(0, 720px); justify-content: center; gap: 46px; width: min(1150px, calc(100% - 44px)); margin: 0 auto; padding: 54px 0 80px; }
+
+    .context { position: sticky; top: 34px; align-self: start; min-height: calc(100vh - 68px); padding: 34px; overflow: hidden; border-radius: 26px; color: #eef5ef; background: var(--forest); box-shadow: var(--shadow); }
+    .context::before { content: ""; position: absolute; width: 260px; height: 260px; right: -115px; top: 140px; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; box-shadow: 0 0 0 55px rgba(255,255,255,.025), 0 0 0 110px rgba(255,255,255,.018); }
+    .brand { position: relative; display: flex; align-items: center; gap: 11px; margin-bottom: 52px; }
+    .brand-mark { position: relative; width: 28px; height: 28px; }
+    .brand-mark i { position: absolute; width: 14px; height: 14px; border: 2px solid var(--leaf); border-radius: 50%; }
+    .brand-mark i:nth-child(1) { left: 0; top: 7px; }.brand-mark i:nth-child(2) { right: 0; top: 0; }.brand-mark i:nth-child(3) { right: 0; bottom: 0; }
+    .brand strong { font: 700 20px/1 "Iowan Old Style", Georgia, serif; letter-spacing: -.03em; }.brand small { display: block; margin-top: 3px; color: #8fa197; font-size: 8px; letter-spacing: .18em; }
+    .eyebrow { margin: 0 0 12px; color: var(--forest-2); font-size: 9px; font-weight: 800; letter-spacing: .17em; text-transform: uppercase; }
+    .context .eyebrow { color: var(--leaf); }
+    .context h1 { position: relative; max-width: 280px; margin: 0 0 17px; font: 700 37px/1.07 "Iowan Old Style", Georgia, serif; letter-spacing: -.035em; }
+    .context > p { position: relative; margin-bottom: 29px; color: #abbcb2; font-size: 12px; line-height: 1.65; }
+    .promise-list { position: relative; display: grid; gap: 14px; margin: 0 0 32px; padding: 0; list-style: none; }
+    .promise-list li { display: flex; gap: 10px; color: #d8e2dc; font-size: 11px; line-height: 1.45; }.promise-list span { display: grid; flex: 0 0 21px; height: 21px; place-items: center; border-radius: 7px; color: var(--leaf); background: rgba(188,213,139,.1); font-size: 9px; }
+    .copy-button { position: relative; display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 13px 14px; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; color: #f4f7f4; background: rgba(255,255,255,.06); font-size: 10px; font-weight: 700; }.copy-button:hover { background: rgba(255,255,255,.1); }.copy-button b { color: var(--leaf); font-size: 16px; }
+    .builder-note { position: relative; margin-top: 13px !important; color: #82968a !important; font-size: 9px !important; }
+
+    .form-column { min-width: 0; }
+    .form-intro { padding: 8px 5px 29px; }
+    .form-intro h2 { margin: 0 0 10px; font: 700 clamp(31px, 5vw, 48px)/1.05 "Iowan Old Style", Georgia, serif; letter-spacing: -.04em; }.form-intro > p { max-width: 620px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }.meta-row span { padding: 6px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.5); font-size: 9px; }
+    .section { margin-bottom: 18px; padding: 27px 28px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 5px 24px rgba(30,45,36,.025); }
+    .section-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 25px; }.section-number { display: grid; flex: 0 0 31px; height: 31px; place-items: center; border-radius: 9px; color: var(--forest); background: #e4ecd7; font-size: 10px; font-weight: 800; }.section-head h3 { margin: 0 0 4px; font: 700 19px/1.2 "Iowan Old Style", Georgia, serif; }.section-head p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .question { margin-top: 24px; }.question:first-of-type { margin-top: 0; }.question-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 13px; margin-bottom: 11px; }.question-title label, .question-title > span:first-child { font-size: 12px; font-weight: 700; line-height: 1.45; }.required { color: var(--coral); }.type-chip { flex: 0 0 auto; padding: 4px 6px; border-radius: 5px; color: #768178; background: #eeeee8; font-size: 7px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .helper { margin: -5px 0 11px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .text-input, textarea { width: 100%; padding: 12px 13px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: #fbfaf6; font-size: 11px; transition: border .15s, box-shadow .15s; }.text-input:focus, textarea:focus { border-color: var(--forest-2); box-shadow: 0 0 0 3px rgba(40,85,65,.08); }.text-input::placeholder, textarea::placeholder { color: #a0a69f; } textarea { min-height: 90px; resize: vertical; line-height: 1.55; }
+    .options { display: grid; gap: 8px; }.option { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; color: #4d5951; background: #fffefa; font-size: 10px; line-height: 1.4; transition: .15s ease; }.option:hover { border-color: #aebbaa; background: #fbfcf7; }.option input { position: absolute; opacity: 0; pointer-events: none; }.control { display: grid; flex: 0 0 17px; height: 17px; place-items: center; border: 1px solid #bfc6bf; border-radius: 50%; background: white; }.checkbox .control { border-radius: 5px; }.option input:checked + .control { border-color: var(--forest-2); background: var(--forest-2); }.option input:checked + .control::after { content: ""; width: 5px; height: 5px; border-radius: inherit; background: white; }.checkbox input:checked + .control::after { width: 7px; height: 4px; margin-top: -2px; border: solid white; border-width: 0 0 2px 2px; border-radius: 0; background: transparent; transform: rotate(-45deg); }
+    .option:has(input:checked) { border-color: #95ad98; background: #f0f5ea; }
+    .option-grid { grid-template-columns: 1fr 1fr; }
+    .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }.scale .option { display: grid; place-items: center; padding: 11px 5px; text-align: center; }.scale .control { display: none; }.scale strong { display: block; margin-bottom: 3px; color: var(--forest); font-size: 13px; }.scale small { color: var(--muted); font-size: 7px; }.scale .option:has(input:checked) { color: white; border-color: var(--forest-2); background: var(--forest-2); }.scale .option:has(input:checked) strong, .scale .option:has(input:checked) small { color: white; }
+    .concept-card { position: relative; margin: 5px 0 28px; padding: 24px; overflow: hidden; border-radius: 15px; color: #f2f6f2; background: var(--forest); }.concept-card::after { content: ""; position: absolute; width: 140px; height: 140px; right: -55px; bottom: -70px; border: 1px solid rgba(255,255,255,.15); border-radius: 50%; box-shadow: 0 0 0 30px rgba(255,255,255,.025); }.concept-card span { color: var(--leaf); font-size: 8px; font-weight: 800; letter-spacing: .15em; }.concept-card h4 { max-width: 540px; margin: 10px 0 8px; font: 700 21px/1.25 "Iowan Old Style", Georgia, serif; }.concept-card p { max-width: 570px; margin: 0; color: #adbbb2; font-size: 10px; line-height: 1.6; }
+    .conditional { display: none; margin-top: 18px; padding: 18px; border-left: 3px solid var(--leaf); border-radius: 0 10px 10px 0; background: #f1f4eb; }.conditional.visible { display: block; animation: reveal .2s ease; }@keyframes reveal { from { opacity: 0; transform: translateY(-4px); } }
+    .count-note { margin-top: 7px; color: var(--muted); font-size: 8px; text-align: right; }.count-note.warning { color: var(--coral); font-weight: 700; }
+    .privacy { display: flex; gap: 10px; margin: 20px 0; padding: 13px; border-radius: 10px; color: var(--muted); background: #ecefe7; font-size: 9px; line-height: 1.5; }.privacy span { color: var(--forest-2); font-size: 15px; }
+    .submit-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 11px 5px 0; }.submit-row p { margin: 0; color: var(--muted); font-size: 9px; }.submit-button { display: inline-flex; align-items: center; gap: 10px; padding: 13px 19px; border: 0; border-radius: 10px; color: white; background: var(--forest-2); font-size: 11px; font-weight: 800; box-shadow: 0 10px 24px rgba(40,85,65,.18); }.submit-button:hover { background: var(--forest); transform: translateY(-1px); }
+    .success { display: none; padding: 45px 32px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); text-align: center; box-shadow: var(--shadow); }.success.visible { display: block; animation: reveal .3s ease; }.success-icon { display: grid; width: 56px; height: 56px; place-items: center; margin: 0 auto 18px; border-radius: 18px; color: var(--forest); background: #e4ecd7; font-size: 23px; }.success h2 { margin-bottom: 9px; font: 700 29px "Iowan Old Style", Georgia, serif; }.success p { max-width: 450px; margin: 0 auto 20px; color: var(--muted); font-size: 11px; line-height: 1.6; }.success button { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; color: var(--forest); background: transparent; font-size: 10px; font-weight: 700; }
+    .export-card { max-width: 520px; margin: 25px auto 18px; padding: 19px; border: 1px solid var(--line); border-radius: 14px; background: #f5f6ef; text-align: left; }.export-card-head { display: flex; align-items: center; gap: 12px; }.export-icon { display: grid; flex: 0 0 38px; height: 38px; place-items: center; border-radius: 11px; color: var(--forest); background: #e1ead5; font-size: 18px; }.export-card h3 { margin: 0 0 4px; font: 700 14px "Iowan Old Style", Georgia, serif; }.export-card p { margin: 0; font-size: 9px; text-align: left; }.success .export-button { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; margin-top: 15px; padding: 11px 14px; border: 0; color: white; background: var(--forest-2); }.success .export-button:hover { background: var(--forest); }
+    .whatsapp-handoff { display: none; max-width: 520px; margin: 0 auto 18px; padding: 18px; border: 1px solid #bcd4bd; border-radius: 14px; background: #ebf4e8; text-align: left; }.whatsapp-handoff.visible { display: block; animation: reveal .25s ease; }.whatsapp-kicker { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; color: #376847; font-size: 8px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }.whatsapp-kicker i { width: 7px; height: 7px; border-radius: 50%; background: #39a85a; }.whatsapp-handoff h3 { margin: 0 0 6px; font: 700 17px "Iowan Old Style", Georgia, serif; }.whatsapp-handoff > p { margin: 0 0 13px; text-align: left; }.whatsapp-number { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border: 1px solid #c8dac7; border-radius: 9px; background: rgba(255,255,255,.65); }.whatsapp-number strong { color: #285b3a; font-size: 12px; letter-spacing: .02em; }.whatsapp-actions { display: flex; gap: 8px; }.success .whatsapp-actions button, .success .whatsapp-actions a { display: inline-flex; align-items: center; justify-content: center; padding: 8px 10px; border: 1px solid #b9cfba; border-radius: 7px; color: #285b3a; background: white; font-size: 9px; font-weight: 700; text-decoration: none; }.success .whatsapp-actions a { color: white; border-color: #2f8f4c; background: #2f8f4c; }.handoff-note { margin: 10px 0 0 !important; color: #718275 !important; font-size: 8px !important; }
+    .type-chip { display: none !important; }
+    .toast { position: fixed; right: 22px; bottom: 22px; z-index: 40; padding: 12px 15px; border-radius: 10px; color: white; background: var(--forest); box-shadow: var(--shadow); font-size: 10px; animation: reveal .2s ease; }
+
+    @media (max-width: 900px) { .shell { grid-template-columns: 1fr; width: min(720px, calc(100% - 28px)); gap: 24px; padding-top: 28px; }.context { position: relative; top: 0; min-height: auto; padding: 27px; }.context .brand { margin-bottom: 30px; }.context h1 { max-width: 560px; font-size: 34px; }.promise-list { grid-template-columns: 1fr 1fr; }.copy-button { max-width: 300px; } }
+    @media (max-width: 560px) { .shell { width: calc(100% - 18px); }.section { padding: 22px 17px; }.option-grid { grid-template-columns: 1fr; }.scale { grid-template-columns: 1fr; }.scale .option { display: flex; justify-content: space-between; text-align: left; }.promise-list { grid-template-columns: 1fr; }.submit-row { align-items: stretch; flex-direction: column; }.submit-button { justify-content: center; }.type-chip { display: none; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progressBar"></div></div>
+  <main class="shell">
+    <aside class="context">
+      <div class="brand"><div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div><div><strong>orbit</strong><small>POLYMATH OS</small></div></div>
+      <p class="eyebrow">Early interest survey</p>
+      <h1>Help shape a kinder system for ambitious minds.</h1>
+      <p>We’re exploring a platform for people balancing learning, health, creativity, work, faith, and relationships without wanting life to become one giant checklist.</p>
+      <ul class="promise-list">
+        <li><span>01</span>Adaptive daily plans that shrink on difficult days</li>
+        <li><span>02</span>Progress across many life domains, not one streak</li>
+        <li><span>03</span>Recovery and resisted bad habits counted as wins</li>
+      </ul>
+    </aside>
+
+    <div class="form-column">
+      <header class="form-intro">
+        <p class="eyebrow">Orbit community research</p>
+        <h2>Could Orbit help you follow through?</h2>
+        <p>This 4–6 minute survey is about your real experience with routines and self-improvement. Honest doubt is more useful than polite encouragement.</p>
+        <div class="meta-row"><span>4–6 minutes</span><span>No right answers</span><span>Optional early-access list</span></div>
+      </header>
+
+      <form id="interestForm" novalidate>
+        <section class="section">
+          <header class="section-head"><span class="section-number">01</span><div><h3>Your many-sided life</h3><p>First, help us understand the kind of week you’re navigating.</p></div></header>
+          <div class="question" data-blueprint="Which of these describe you right now? | Checkboxes | Required">
+            <div class="question-title"><span>Which of these describe you right now? <b class="required">*</b></span><span class="type-chip">Checkboxes</span></div>
+            <p class="helper">Choose all that apply.</p>
+            <div class="options option-grid">
+              <label class="option checkbox"><input type="checkbox" name="identity" value="Student" required><span class="control"></span>Student</label>
+              <label class="option checkbox"><input type="checkbox" name="identity" value="Creator"><span class="control"></span>Creator / artist / writer</label>
+              <label class="option checkbox"><input type="checkbox" name="identity" value="Entrepreneur"><span class="control"></span>Entrepreneur / freelancer</label>
+              <label class="option checkbox"><input type="checkbox" name="identity" value="Professional"><span class="control"></span>Working professional</label>
+              <label class="option checkbox"><input type="checkbox" name="identity" value="Researcher"><span class="control"></span>Researcher / lifelong learner</label>
+              <label class="option checkbox"><input type="checkbox" name="identity" value="Other"><span class="control"></span>Something else</label>
+            </div>
+          </div>
+          <div class="question" data-blueprint="In a typical week, how many different goals, skills, or responsibilities are you actively trying to maintain? | Multiple choice | Required">
+            <div class="question-title"><span>How many different goals, skills, or responsibilities are you actively maintaining? <b class="required">*</b></span><span class="type-chip">Multiple choice</span></div>
+            <div class="options">
+              <label class="option"><input type="radio" name="load" value="1–2" required><span class="control"></span>1–2: I’m deliberately focused</label>
+              <label class="option"><input type="radio" name="load" value="3–5"><span class="control"></span>3–5: A few important parallel tracks</label>
+              <label class="option"><input type="radio" name="load" value="6–9"><span class="control"></span>6–9: I’m balancing quite a range</label>
+              <label class="option"><input type="radio" name="load" value="10+"><span class="control"></span>10+: My interests and responsibilities multiply quickly</label>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <header class="section-head"><span class="section-number">02</span><div><h3>What happens today</h3><p>Current behavior is more useful than imagined future behavior.</p></div></header>
+          <div class="question" data-blueprint="What do you currently use to plan or track your routines? | Checkboxes | Required">
+            <div class="question-title"><span>What do you currently use to plan or track routines? <b class="required">*</b></span><span class="type-chip">Checkboxes</span></div>
+            <div class="options option-grid">
+              <label class="option checkbox"><input type="checkbox" name="tools" value="Paper" required><span class="control"></span>Paper journal / planner</label>
+              <label class="option checkbox"><input type="checkbox" name="tools" value="Notes"><span class="control"></span>Notes or spreadsheet</label>
+              <label class="option checkbox"><input type="checkbox" name="tools" value="Task app"><span class="control"></span>Task or calendar app</label>
+              <label class="option checkbox"><input type="checkbox" name="tools" value="Habit app"><span class="control"></span>Dedicated habit app</label>
+              <label class="option checkbox"><input type="checkbox" name="tools" value="Memory"><span class="control"></span>Mostly memory / improvisation</label>
+              <label class="option checkbox"><input type="checkbox" name="tools" value="Nothing"><span class="control"></span>Nothing consistently</label>
+            </div>
+          </div>
+          <div class="question" data-blueprint="What usually breaks your routine? | Checkboxes | Required">
+            <div class="question-title"><span>What usually breaks your routine? <b class="required">*</b></span><span class="type-chip">Checkboxes</span></div>
+            <p class="helper">Choose up to three.</p>
+            <div class="options option-grid limited-options" data-limit="3">
+              <label class="option checkbox"><input type="checkbox" name="breakers" value="Too ambitious" required><span class="control"></span>The plan becomes too ambitious</label>
+              <label class="option checkbox"><input type="checkbox" name="breakers" value="Missed day"><span class="control"></span>One missed day becomes a collapse</label>
+              <label class="option checkbox"><input type="checkbox" name="breakers" value="Invisible progress"><span class="control"></span>Progress feels too small to notice</label>
+              <label class="option checkbox"><input type="checkbox" name="breakers" value="Too many interests"><span class="control"></span>Too many competing interests</label>
+              <label class="option checkbox"><input type="checkbox" name="breakers" value="Schedule changes"><span class="control"></span>School/work schedule changes</label>
+              <label class="option checkbox"><input type="checkbox" name="breakers" value="Distraction"><span class="control"></span>Phone, fatigue, or distraction</label>
+            </div>
+            <div class="count-note">0 of 3 selected</div>
+          </div>
+          <div class="question" data-blueprint="Think about the last routine or tracker you stopped using. What made you stop? | Paragraph | Required">
+            <div class="question-title"><label for="lastFailure">Think about the last routine or tracker you stopped using. What made you stop? <b class="required">*</b></label><span class="type-chip">Paragraph</span></div>
+            <textarea id="lastFailure" name="lastFailure" required placeholder="For example: it took too long, felt judgmental, became boring, or did not fit changing days..."></textarea>
+          </div>
+        </section>
+
+        <section class="section">
+          <header class="section-head"><span class="section-number">03</span><div><h3>The Orbit concept</h3><p>Now that we know your current reality, here is the idea.</p></div></header>
+          <article class="concept-card"><span>THE ONE-MINUTE PITCH</span><h4>Orbit is an adaptive growth system for people pursuing more than one kind of life.</h4><p>It turns routines into minimum, standard, and stretch versions; balances progress across domains like learning, health, creativity, money, faith, and relationships; adapts when plans change; and treats recovery from a slip as progress instead of resetting you to zero.</p></article>
+          <div class="question" data-blueprint="Based only on this description, how interested are you in trying Orbit? | Linear scale 1–5 | Required">
+            <div class="question-title"><span>Based only on this description, how interested are you in trying Orbit? <b class="required">*</b></span><span class="type-chip">Linear scale</span></div>
+            <div class="scale">
+              <label class="option"><input type="radio" name="interest" value="1" required><span class="control"></span><span><strong>1</strong><small>Not interested</small></span></label>
+              <label class="option"><input type="radio" name="interest" value="2"><span class="control"></span><span><strong>2</strong><small>Slightly</small></span></label>
+              <label class="option"><input type="radio" name="interest" value="3"><span class="control"></span><span><strong>3</strong><small>Curious</small></span></label>
+              <label class="option"><input type="radio" name="interest" value="4"><span class="control"></span><span><strong>4</strong><small>Interested</small></span></label>
+              <label class="option"><input type="radio" name="interest" value="5"><span class="control"></span><span><strong>5</strong><small>Very interested</small></span></label>
+            </div>
+          </div>
+          <div class="question" data-blueprint="Which parts would be most valuable to you? | Checkboxes | Required">
+            <div class="question-title"><span>Which parts would be most valuable to you? <b class="required">*</b></span><span class="type-chip">Checkboxes</span></div>
+            <p class="helper">Choose up to three.</p>
+            <div class="options limited-options" data-limit="3">
+              <label class="option checkbox"><input type="checkbox" name="features" value="Adaptive plans" required><span class="control"></span>Plans that automatically become smaller on difficult days</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Breadth compass"><span class="control"></span>A breadth compass showing neglected life domains</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Recovery"><span class="control"></span>Recovery tracking that values returning after slips</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Bad habits"><span class="control"></span>Tracking resisted urges and bad habits without shame</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Goals"><span class="control"></span>Connecting tiny daily actions to long-term goals</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Insights"><span class="control"></span>Insights about when and why your routines work</label>
+            </div>
+            <div class="count-note">0 of 3 selected</div>
+          </div>
+          <div class="question" data-blueprint="What would make you hesitant to use Orbit? | Paragraph | Required">
+            <div class="question-title"><label for="concern">What would make you hesitant to use Orbit? <b class="required">*</b></label><span class="type-chip">Paragraph</span></div>
+            <textarea id="concern" name="concern" required placeholder="Privacy, complexity, price, too much tracking, another app to maintain, or something else..."></textarea>
+          </div>
+        </section>
+
+        <section class="section">
+          <header class="section-head"><span class="section-number">04</span><div><h3>Real-world interest</h3><p>This helps separate a nice idea from something people would actually choose.</p></div></header>
+          <div class="question" data-blueprint="If Orbit worked as described, how often would you expect to use it? | Multiple choice | Required">
+            <div class="question-title"><span>If Orbit worked as described, how often would you expect to use it? <b class="required">*</b></span><span class="type-chip">Multiple choice</span></div>
+            <div class="options">
+              <label class="option"><input type="radio" name="frequency" value="Daily" required><span class="control"></span>Daily or almost daily</label>
+              <label class="option"><input type="radio" name="frequency" value="Few times"><span class="control"></span>A few times each week</label>
+              <label class="option"><input type="radio" name="frequency" value="Weekly"><span class="control"></span>Mainly for weekly planning and review</label>
+              <label class="option"><input type="radio" name="frequency" value="Unsure"><span class="control"></span>I’m unsure until I try it</label>
+              <label class="option"><input type="radio" name="frequency" value="Would not use"><span class="control"></span>I probably would not use it</label>
+            </div>
+          </div>
+          <div class="question" data-blueprint="If Orbit consistently helped you follow through, what monthly price would feel reasonable? | Multiple choice | Required">
+            <div class="question-title"><span>If Orbit consistently helped you follow through, what monthly price would feel reasonable? <b class="required">*</b></span><span class="type-chip">Multiple choice</span></div>
+            <p class="helper">This is research, not a payment commitment.</p>
+            <div class="options">
+              <label class="option"><input type="radio" name="price" value="Free" required><span class="control"></span>I would only use a free version</label>
+              <label class="option"><input type="radio" name="price" value="Under 1500"><span class="control"></span>Under ₦1,500 / about $1 monthly</label>
+              <label class="option"><input type="radio" name="price" value="1500–3000"><span class="control"></span>₦1,500–₦3,000 / about $1–$2 monthly</label>
+              <label class="option"><input type="radio" name="price" value="3000–6000"><span class="control"></span>₦3,000–₦6,000 / about $2–$4 monthly</label>
+              <label class="option"><input type="radio" name="price" value="More"><span class="control"></span>More, if the results were genuinely strong</label>
+            </div>
+          </div>
+          <div class="question" data-blueprint="Would you join a small early-access group and give feedback? | Multiple choice | Required">
+            <div class="question-title"><span>Would you join a small early-access group and give feedback? <b class="required">*</b></span><span class="type-chip">Multiple choice</span></div>
+            <div class="options">
+              <label class="option"><input type="radio" name="beta" value="Yes" required><span class="control"></span>Yes, I’d like early access</label>
+              <label class="option"><input type="radio" name="beta" value="Maybe"><span class="control"></span>Maybe — tell me more first</label>
+              <label class="option"><input type="radio" name="beta" value="No"><span class="control"></span>No, not right now</label>
+            </div>
+            <div class="conditional" id="contactFields">
+              <div class="question-title"><label for="contact">Where may we contact you?</label><span class="type-chip">Short answer</span></div>
+              <p class="helper">Email, WhatsApp number, or social handle. Optional and used only for Orbit research.</p>
+              <input class="text-input" id="contact" name="contact" placeholder="you@example.com or @yourhandle" />
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <header class="section-head"><span class="section-number">05</span><div><h3>One last thing</h3><p>Your wording may reveal something our feature list missed.</p></div></header>
+          <div class="question" data-blueprint="If Orbit could solve one problem in your self-improvement life, what should it solve? | Paragraph | Required">
+            <div class="question-title"><label for="oneProblem">If Orbit could solve one problem in your self-improvement life, what should it solve? <b class="required">*</b></label><span class="type-chip">Paragraph</span></div>
+            <textarea id="oneProblem" name="oneProblem" required placeholder="Say it in your own words..."></textarea>
+          </div>
+          <div class="question" data-blueprint="Is there anything else you want us to know? | Paragraph | Optional">
+            <div class="question-title"><label for="anythingElse">Anything else you want us to know?</label><span class="type-chip">Paragraph</span></div>
+            <textarea id="anythingElse" name="anythingElse" placeholder="Ideas, criticism, questions, or a product you think we should study..."></textarea>
+          </div>
+          <div class="privacy"><span>◉</span><div><strong>Privacy note for your real Google Form:</strong> explain who can see responses, how long contact details will be stored, and never add respondents to marketing without explicit permission.</div></div>
+        </section>
+
+        <div class="submit-row"><p>Your answers stay private until you choose to share them.</p><button class="submit-button" type="submit">Submit response <span>→</span></button></div>
+      </form>
+
+      <section class="success" id="successState" aria-live="polite">
+        <div class="success-icon">✓</div><h2>Thank you for helping shape Orbit.</h2>
+        <p>Your honest response helps us understand whether Orbit should exist, who it should serve, and what would make it genuinely useful.</p>
+        <article class="export-card">
+          <div class="export-card-head"><span class="export-icon">⇩</span><div><h3>Keep and share your response</h3><p>Download a readable copy of every answer before sending it to the Orbit team.</p></div></div>
+          <button class="export-button" type="button" id="exportResponse">Download my responses <span>→</span></button>
+        </article>
+        <article class="whatsapp-handoff" id="whatsappHandoff">
+          <div class="whatsapp-kicker"><i></i>File downloaded</div>
+          <h3>Send it to the Orbit team on WhatsApp</h3>
+          <p>Your response remains on your device until you choose to share the downloaded file.</p>
+          <div class="whatsapp-number"><strong id="ownerWhatsappDisplay">WhatsApp number not configured</strong><div class="whatsapp-actions"><button type="button" id="copyWhatsapp">Copy</button><a id="openWhatsapp" href="#" target="_blank" rel="noopener">Open chat</a></div></div>
+          <p class="handoff-note">WhatsApp cannot receive an attachment automatically. In the opened chat, tap the attachment icon and choose the Orbit response file from Downloads.</p>
+        </article>
+        <button type="button" id="editResponse">Edit my response</button>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // Replace this with your full WhatsApp number, including country code and no + or spaces.
+    // Example for Nigeria: "2348012345678"
+    const OWNER_WHATSAPP = "2348085318908";
+    const form = document.querySelector("#interestForm");
+    const progressBar = document.querySelector("#progressBar");
+    const requiredGroups = ["identity", "load", "tools", "breakers", "lastFailure", "interest", "features", "concern", "frequency", "price", "beta", "oneProblem"];
+
+    document.querySelectorAll(".limited-options").forEach(group => {
+      group.addEventListener("change", event => {
+        const limit = Number(group.dataset.limit);
+        const checked = [...group.querySelectorAll("input:checked")];
+        if (checked.length > limit) {
+          event.target.checked = false;
+          showToast(`Choose no more than ${limit}`);
+        }
+        const current = group.querySelectorAll("input:checked").length;
+        const note = group.nextElementSibling;
+        note.textContent = `${current} of ${limit} selected`;
+        note.classList.toggle("warning", current === limit);
+        updateProgress();
+      });
+    });
+
+    form.addEventListener("input", updateProgress);
+    document.querySelectorAll('input[name="beta"]').forEach(input => input.addEventListener("change", () => {
+      document.querySelector("#contactFields").classList.toggle("visible", input.checked && input.value !== "No");
+    }));
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const missing = firstMissingField();
+      if (missing) {
+        missing.scrollIntoView({ behavior: "smooth", block: "center" });
+        missing.focus?.();
+        showToast("Please complete the highlighted required question");
+        missing.closest(".question")?.animate([{ transform: "translateX(-4px)" }, { transform: "translateX(4px)" }, { transform: "none" }], { duration: 220 });
+        return;
+      }
+      form.style.display = "none";
+      document.querySelector("#successState").classList.add("visible");
+      document.querySelector("#successState").scrollIntoView({ behavior: "smooth", block: "center" });
+      progressBar.style.width = "100%";
+    });
+
+    document.querySelector("#editResponse").addEventListener("click", () => {
+      form.style.display = "block";
+      document.querySelector("#successState").classList.remove("visible");
+      form.scrollIntoView({ behavior: "smooth" });
+      updateProgress();
+    });
+
+    document.querySelector("#exportResponse").addEventListener("click", () => {
+      const responseText = buildResponseExport();
+      const blob = new Blob([responseText], { type: "text/plain;charset=utf-8" });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `orbit-interest-response-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+      revealWhatsappHandoff();
+      showToast("Your response file has been downloaded");
+    });
+
+    document.querySelector("#copyWhatsapp").addEventListener("click", async () => {
+      if (!whatsappIsConfigured()) return showToast("Add your WhatsApp number to OWNER_WHATSAPP first");
+      try { await navigator.clipboard.writeText(`+${OWNER_WHATSAPP}`); }
+      catch { fallbackCopy(`+${OWNER_WHATSAPP}`); }
+      showToast("WhatsApp number copied");
+    });
+
+    document.querySelector("#openWhatsapp").addEventListener("click", event => {
+      if (whatsappIsConfigured()) return;
+      event.preventDefault();
+      showToast("Add your WhatsApp number to OWNER_WHATSAPP first");
+    });
+
+    function buildResponseExport() {
+      const lines = [
+        "ORBIT INTEREST SURVEY RESPONSE",
+        `Exported: ${new Date().toLocaleString()}`,
+        "",
+        "This file was created on the respondent's device and was not sent automatically.",
+        ""
+      ];
+      document.querySelectorAll("[data-blueprint]").forEach((question, index) => {
+        const title = question.dataset.blueprint.split(" | ")[0];
+        const fields = [...question.querySelectorAll("input, textarea, select")];
+        const answers = fields
+          .filter(field => (field.type !== "radio" && field.type !== "checkbox") || field.checked)
+          .map(field => field.value.trim())
+          .filter(Boolean);
+        lines.push(`${index + 1}. ${title}`, `   ${answers.length ? answers.join(", ") : "No response"}`, "");
+      });
+      return lines.join("\n");
+    }
+
+    function revealWhatsappHandoff() {
+      const configured = whatsappIsConfigured();
+      document.querySelector("#ownerWhatsappDisplay").textContent = configured ? `+${OWNER_WHATSAPP}` : "Add number in OWNER_WHATSAPP";
+      const message = "Hello, I completed the Orbit interest survey and downloaded my response file. I would like to share it with you.";
+      document.querySelector("#openWhatsapp").href = configured ? `https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(message)}` : "#";
+      document.querySelector("#whatsappHandoff").classList.add("visible");
+      document.querySelector("#whatsappHandoff").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function whatsappIsConfigured() {
+      return /^\d{8,15}$/.test(OWNER_WHATSAPP);
+    }
+
+    function fallbackCopy(value) {
+      const helper = document.createElement("textarea");
+      helper.value = value;
+      document.body.appendChild(helper);
+      helper.select();
+      document.execCommand("copy");
+      helper.remove();
+    }
+
+    function firstMissingField() {
+      for (const name of requiredGroups) {
+        const fields = [...form.elements].filter(field => field.name === name);
+        if (!fields.length) continue;
+        const complete = fields[0].type === "checkbox" || fields[0].type === "radio"
+          ? fields.some(field => field.checked)
+          : fields.some(field => field.value.trim());
+        if (!complete) return fields[0];
+      }
+      return null;
+    }
+
+    function updateProgress() {
+      const completed = requiredGroups.filter(name => {
+        const fields = [...form.elements].filter(field => field.name === name);
+        return fields.some(field => (field.type === "checkbox" || field.type === "radio") ? field.checked : field.value.trim());
+      }).length;
+      progressBar.style.width = `${Math.round((completed / requiredGroups.length) * 100)}%`;
+    }
+
+    function showToast(message) {
+      document.querySelector(".toast")?.remove();
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2800);
+    }
+  </script>
+</body>
+</html>

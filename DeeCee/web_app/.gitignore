@@ -2,6 +2,7 @@
 .env.local
 .env.deployment-notes
 .env.*.local
+.env.example
 node_modules/
 .vercel/
 .next/
