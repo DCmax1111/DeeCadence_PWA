@@ -8,6 +8,7 @@ node_modules/
 .next/
 dist/
 *.pdf
+ledger_v6_dc_editable_logs_v13.html
 INFO.txt
 coverage/
 npm-debug.log*
