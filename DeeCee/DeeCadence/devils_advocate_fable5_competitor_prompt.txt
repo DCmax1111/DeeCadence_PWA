@@ -1,0 +1,313 @@
+FABLE 5 PROMPT: BUILD THE SOLO-LEVELING-PARTNER-READY COMPETITOR TO DEECADENCE
+
+Role:
+You are Fable 5 acting as a world-class product strategist, premium mobile/web UX director, gamification systems designer, brand partnership strategist, and launch engineer. Your job is to design and specify a product that would be more convincing than DeeCadence if the Solo Leveling rights holders were choosing one productivity/wellness partner.
+
+Important legal and brand constraint:
+Do not use official Solo Leveling character names, artwork, logos, music, episode stills, story terms, hunter/dungeon language, or protected lore in the actual product UI unless a licensing agreement exists. The product should feel compatible with a Solo-Leveling-style collaboration because of its rank progression, discipline arc, cinematic system feedback, and transformation psychology, not because it copies protected IP. Build a clean original product that could later receive an official licensed skin.
+
+Context:
+DeeCadence is a free-first focus and attention-recovery app. Its main promise is:
+"One block at a time, visible XP/rank growth, and an automatic minimal schedule."
+
+DeeCadence currently does the following:
+- Lets users start a focus session by choosing a total duration such as 15, 25, 30, 45, 90, or custom minutes.
+- Splits the chosen session into four focus blocks.
+- Shows only the current block countdown so users do not feel intimidated by a long full-session timer.
+- Gives XP after each completed block.
+- Uses ranks and levels as visible proof of discipline.
+- Has a harder XP curve where each level costs more than the previous level.
+- Uses rank tiers: E, D, C, B, A, S, SS, SSS, and L.
+- Treats S-rank as a long-term achievement around Level 100, not something users reach quickly.
+- Has scheduled tasks that can be split into four focus units.
+- When a user starts a scheduled task and completes focus blocks, each completed block advances that task's unit progress.
+- Has an auto-arrange schedule feature that places open tasks into a minimal daily focus order.
+- Has a "system reveal" moment after a completed block, showing XP gained, current level, rank, block number, and task-unit progress.
+- Uses a brand-safe "system" feeling without saying Solo Leveling, Sung Jinwoo, hunter, dungeon, quest, or other protected terms.
+- Positions itself as attention recovery, not pure gaming.
+- Tries to combine the motivation of Forest, the planning utility of Motion/Google Calendar, and the rank-progression feeling of Solo Leveling.
+
+Devil's advocate objective:
+Design the competitor that makes DeeCadence look like the prototype instead of the partner-ready product. The competitor must be so strategically clear, visually memorable, and emotionally persuasive that an IP holder would say:
+"This team understands the transformation fantasy, protects the brand, and can turn focus into a mainstream ritual."
+
+Your output should be a complete product concept, not a vague pitch.
+
+Product name:
+Create an original name. It must not use "Solo", "Leveling", "Hunter", "Dungeon", "Shadow", "Monarch", "Jinwoo", or anything that sounds like official IP. The name should suggest attention, ascent, discipline, cadence, rank, focus, or transformation.
+
+Primary product promise:
+The user is not "playing a game." The user is recovering their attention span through structured focus blocks. Every completed block becomes visible growth. Every task is reducible into focus units. The schedule is minimal, automatic, and calm.
+
+Strategic positioning:
+This competitor must beat DeeCadence on five axes:
+1. Emotional clarity: The product's first screen should instantly communicate "I can become better through small completed blocks."
+2. Partnership readiness: The product must feel like a brand-safe shell that an official anime/IP partner could approve and skin later.
+3. Retention: XP, levels, ranks, streak protection, and task completion should make users come back without becoming noisy or childish.
+4. Utility: The app must actually help people plan their work, not just decorate a timer.
+5. Visual memory: The product must have a signature visual moment users can describe after one use.
+
+Core loop:
+1. User opens the app.
+2. User sees their current rank, level, XP progress, and next focus block.
+3. User sees an automatically arranged minimal schedule.
+4. User starts one focus block attached to a real task.
+5. User completes the block.
+6. The app shows a cinematic, brand-safe system reveal: XP gained, level progress, rank state, and task-unit advancement.
+7. The app asks whether to continue to the next block. It must never auto-start the next block without user consent.
+8. User either continues, rests, or stops with progress saved.
+9. Completed blocks compound into task completion, rank progression, and personal focus history.
+
+Rank and XP system:
+Design a scalable XP formula that does not require manually calculating every level.
+Requirements:
+- Level progression must get harder over time.
+- Early levels should be encouraging.
+- Middle levels should require consistency.
+- S-rank should feel genuinely rare and should not begin before Level 100.
+- Add rank tiers: E, D, C, B, A, S, SS, SSS, L.
+- L-rank should feel legendary and far beyond normal use.
+- Provide a formula for XP required per level.
+- Provide a formula for cumulative XP to reach a level.
+- Provide example thresholds for Levels 5, 25, 45, 70, 100, 150, 200, 290 or so.
+- Explain why the curve is motivating without being manipulative.
+- Avoid casino mechanics, random loot, gambling-style rewards, or exploitative dark patterns.
+
+Suggested rank structure:
+- E-rank: user is starting and learning consistency.
+- D-rank: user can complete short blocks reliably.
+- C-rank: user can protect attention across normal workdays.
+- B-rank: user has repeatable deep-work ability.
+- A-rank: user is highly consistent.
+- S-rank: user has elite attention control and should require approximately Level 100 or more.
+- SS-rank: rare long-term discipline.
+- SSS-rank: exceptional sustained mastery.
+- L-rank: legendary attention span and identity-level transformation.
+
+Task-unit system:
+Do not use quests.
+Instead, scheduled tasks should be decomposed into "focus units."
+Requirements:
+- Every task can be split into 1 to 12 focus units.
+- Default task decomposition should be four units.
+- A focus session has four blocks.
+- Completing one block advances one unit of the linked task.
+- If a task finishes before the session ends, the app should let the user assign the remaining blocks to the next task or continue as free focus.
+- If a user stops after one or two blocks, completed units stay saved.
+- The UI must show task-unit rails clearly and elegantly.
+- The copy must feel mature: "units", "blocks", "progress", "completion", "rank", "cadence", "focus".
+- Do not call them quests, missions, raids, monsters, gates, hunters, or battles.
+
+Scheduling system:
+Build a minimal automatic planner that can compete with DeeCadence's auto-arrange schedule.
+Requirements:
+- User can add loose tasks with title, date, time, estimated duration, priority, and notes.
+- User can press "Auto Arrange" to place tasks into a calm daily order.
+- The auto-arrange logic should prioritize high-priority tasks, preserve existing user-set times when appropriate, and leave breathing room between blocks.
+- The schedule should have day, week, and pending views.
+- Day view should feel familiar like a clean calendar timeline, but not branded as Google-like.
+- Mobile schedule should not feel cramped.
+- Task cards should never let text collide with buttons.
+- Every scheduled task should have a direct "Focus" action.
+- The plan should always answer: "What is my next block?"
+
+Timer behavior:
+Requirements:
+- User chooses total time once.
+- App splits total time into four blocks.
+- Timer shows only the current block countdown.
+- Completed block triggers XP reward reveal.
+- After reward reveal, app moves to rest/recovery.
+- App asks before starting the next block.
+- Fourth block ends smoothly with session summary and no accidental next prompt.
+- User can pause, resume, stop, and save partial progress.
+- Ending during recovery should not count recovery time as focus.
+
+Signature visual experience:
+Create an unforgettable "System Reveal" that is original and brand-safe.
+Requirements:
+- It must appear after every completed block.
+- It should show XP gained, current level, current rank, task-unit progress, and next-level XP remaining.
+- It should feel premium and cinematic, not childish.
+- Use subtle motion: scanline sweep, rank pulse, energy ring, or glyph-free abstract particles.
+- It must respect reduced-motion settings.
+- It must not rely on official anime assets or terminology.
+- It must be understandable without sound.
+- It must be satisfying enough that users want to finish another block.
+
+Visual direction:
+Build a premium "attention system" interface.
+Requirements:
+- Use a dark, atmospheric base with optional light mode that still looks good.
+- Avoid generic purple SaaS dashboards.
+- Avoid cluttered gamified UI.
+- Use deep ink, cool blue, cyan, gold, and restrained violet accents.
+- Use a rank orb or rank console as the signature identity.
+- Use large typography on the main screen.
+- Use layered surfaces, but avoid too many boxes.
+- Major screens should feel composed, not like a grid of unrelated cards.
+- Buttons must have strong affordance and 44px minimum tap targets.
+- Text must wrap safely.
+- Mobile must be designed, not merely compressed.
+- Use motion sparingly and intentionally.
+
+Information architecture:
+Create these primary surfaces:
+1. Today
+   Purpose: Shows next block, current rank, XP, level, and minimal plan.
+   Primary action: Start next block.
+   Secondary action: Auto arrange plan.
+2. Focus
+   Purpose: Run the current focus block and show linked task-unit progress.
+   Primary action: pause/resume or continue.
+   Secondary action: stop and save progress.
+3. Plan
+   Purpose: Add tasks, auto-arrange them, and start focus from a task.
+   Primary action: Auto arrange or start task.
+4. Rank
+   Purpose: Show long-term growth, rank ladder, XP curve, and milestones.
+   Primary action: start next block.
+5. Progress
+   Purpose: Show trends, completion rate, focus history, and consistency.
+6. History
+   Purpose: Review past sessions and export history.
+7. Settings
+   Purpose: Profile, focus defaults, sound/mode, daily goal.
+
+Critical UX details:
+- Do not overwhelm first-time users with the full rank ladder on the first screen.
+- The first screen should focus on current rank, next block, and today's plan.
+- The rank ladder should live on the Rank page.
+- XP must be visible but not the only reason to use the app.
+- The product should reinforce identity: "I am rebuilding attention."
+- Avoid copy that sounds like internal strategy: no "borrowed", "Google-like", "what good apps do well", "based on Forest/Motion", or "Solo Leveling inspired."
+- Avoid fan-service copy.
+- Avoid childish game words.
+- Keep all user-facing language mature, calm, and confident.
+
+Partnership pitch angle:
+The product should be easy to pitch to an IP holder:
+"This is a brand-safe attention training app that translates the emotional arc of progression into daily focus. Users do not fight monsters; they recover attention. They do not copy the story; they experience a personal system of discipline, rank, and transformation. If officially licensed, the app can receive optional visual themes, event campaigns, and approved collectible rank cosmetics without changing the core product."
+
+What would make the rights holder choose this over DeeCadence:
+- Stronger brand-safety: no accidental protected terms.
+- Stronger rank economy: Level 100 S-rank and difficult high tiers.
+- Stronger emotional reveal: reward moment feels premium and memorable.
+- Stronger utility: schedule and task decomposition are real productivity tools.
+- Stronger product clarity: first screen explains the whole loop in 5 seconds.
+- Stronger licensing readiness: app can work unlicensed now and become licensed later.
+- Stronger mobile polish: the app feels native and touch-first.
+
+Pre-mortem:
+Assume this product loses the partnership. Explain the top reasons it failed, then design against them.
+Likely failure reasons:
+1. It feels like an imitation instead of an original system.
+2. The UI feels too much like a generic productivity dashboard.
+3. The rank climb feels fake or too easy.
+4. The timer is not meaningfully different from Pomodoro apps.
+5. The schedule is not useful enough to compete with real planning tools.
+6. The reward reveal feels childish or gimmicky.
+7. Mobile layout feels cramped.
+8. The app uses terms that create legal/IP risk.
+9. There is not enough emotional transformation in the first session.
+10. It asks users to do too much setup before value appears.
+
+Design against those failure reasons:
+- Make the first launch useful in under 30 seconds.
+- Let the user start without creating an account.
+- Provide sample tasks but make them easy to delete.
+- Let auto-arrange produce a clean plan immediately.
+- Give a powerful but tasteful reward reveal after the first block.
+- Make rank progression hard and credible.
+- Make task-unit progress visible in the Focus and Plan screens.
+- Keep every screen focused on the next action.
+
+Implementation expectations:
+Produce a complete app specification and, if generating code, build it as a single-page static web app or modern React app.
+Must include:
+- State model for profile, theme, sessions, schedule tasks, current session, rank/XP, history, and UI state.
+- XP formula functions:
+  - xpNeededForLevel(level)
+  - xpToReachLevel(level)
+  - currentLevel(totalXp)
+  - currentRank(currentLevel)
+  - levelProgress(totalXp)
+  - xpToNextLevel(totalXp)
+- Rank tier configuration with E, D, C, B, A, S, SS, SSS, L.
+- Timer functions:
+  - splitIntoBlocks(totalSeconds)
+  - beginSession(totalMinutes, linkedTaskId)
+  - completeCurrentBlock()
+  - pause/resume
+  - recovery interval
+  - continue to next block
+  - finalize complete/partial session
+- Task functions:
+  - normalizeTask()
+  - autoArrangeSchedule()
+  - startScheduledTask()
+  - advanceLinkedTaskProgress()
+  - renderTaskUnitRail()
+- Reward functions:
+  - detectLevelUp()
+  - detectRankUp()
+  - renderSystemReveal()
+- Tests or test plan for:
+  - uneven block splitting
+  - custom duration validation
+  - reward -> recovery -> next prompt
+  - fourth block session completion
+  - ending during recovery
+  - linked task unit progress
+  - task completion after all units
+  - auto-arrange order
+  - XP curve increases with level
+  - S rank begins at Level 100
+  - SS, SSS, L ranks exist
+
+Accessibility requirements:
+- WCAG 2.1 AA target.
+- Buttons and touch targets at least 44px.
+- Focus states visible.
+- All form fields labeled.
+- Timer has an accessible role/label.
+- Reward reveal uses aria-live politely.
+- Do not spam screen readers every second with timer changes.
+- Reduced motion support.
+- Color contrast must pass for primary text, secondary text, and controls.
+
+Mobile requirements:
+- Bottom navigation with 4 to 5 core destinations.
+- Theme toggle in a predictable top-right or settings location.
+- Menu does not overlap awkwardly.
+- Schedule cards stack cleanly.
+- Task buttons do not squeeze text.
+- Rank ladder can horizontally scroll instead of becoming an unreadable wall.
+- Timer remains visually dominant.
+- Reward reveal fits on a phone without text clipping.
+
+Deliverables:
+1. A concise product name and positioning statement.
+2. The full product loop.
+3. Complete screen-by-screen UX spec.
+4. Complete rank/XP formula and rank thresholds.
+5. Complete task-unit model.
+6. Complete scheduling model.
+7. Premium visual direction.
+8. Copy guidelines.
+9. Accessibility checklist.
+10. Test plan.
+11. If code is requested, generate production-quality code with clean functions, responsive CSS, and no protected IP terminology.
+
+Quality bar:
+This should feel like something that could be placed side-by-side with DeeCadence and win because:
+- It is clearer.
+- It is more emotionally compelling.
+- It is more brand-safe.
+- It is more useful.
+- It has a more memorable reward moment.
+- It treats rank progression as a serious long-term system.
+- It makes attention recovery feel like personal transformation.
+
+Final instruction:
+Do not simply clone DeeCadence. Use the name 'DeeCadence' since whoever wins in the build, takes the name as well. But, beat DeeCadence by understanding the same opportunity more deeply. The winning product is not "anime productivity." The winning product is a disciplined attention-recovery system with a premium progression layer and a minimal automatic planner with Google's sleek schedule look.

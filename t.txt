@@ -1,3 +1,5 @@
+CPE 321           | 23rd June 2026
+
 3.) What is the usage of the different components of the system.
 What is the voltage that goes into the components of the system.
 # PSU (Power Supply Unit), PCB (Printed Circuit Board)

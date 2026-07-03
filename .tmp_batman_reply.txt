@@ -1,28 +1,17 @@
-Batman-Style Playbook (compact)
-- Core rules: lawful, mission-first, non-coercive, protect human dignity.
-- Intelligence: continuous OSINT + vetted human experts; daily risk dashboard (policy, finance, supply chains).
-- Structure: layered vehicles (foundations, LLCs, impact fund) for legal separation and operational flexibility.
-- Teams: small, specialised cells — legal/compliance, ops, impact investing, field ops, comms, cyber security.
-- Funding: seed pilots (profitable, measurable), blended finance to scale, reserve liquidity for shocks.
-- Op-sec: compartmentalise sensitive plans; strict data minimisation; secure comms and identity hygiene.
-- Influence: coalition-building, discreet philanthropy, evidence-backed research, local partners, media literacy.
-- Scale: validate pilots, publish results, hand off to trusted partners for scaling and legitimacy.
-
-Batman-Style 90-Day Operational Plan (starter)
-Week 1–2: Mission & legal scaffolding
-- Finalise mission statement and non-negotiables; create simple governance documents.
-- Incorporate two legal vehicles: one operating LLC and one charitable/trust vehicle for grants.
-
-Week 3–4: Intelligence & team
-- Recruit 3 core advisors: lawyer (compliance), impact operator, operator with field experience.
-- Build an OSINT watchlist and a simple dashboard (policy, supply-chain, competitor moves).
-
-Week 5–8: Pilot selection & setup
-- Choose 1 high-leverage pilot (e.g., modular clean-water system or regenerative microfarm).
-- Run legal/due-diligence, secure permits, sign 1–2 local partner MOUs; budget seed capital.
-
-Week 9–12: Proof, measurement, and safeguards
-- Launch pilot, collect KPIs (impact, unit economics, user consent metrics), publish transparent summary.
-- Harden op-sec, set emergency liquidity, and draft scale funding plan.
-
-Next: I can append a detailed checklist (task owners, budgets, templates: NDA, MOU, KPI sheet). Proceed?
+Facebook:
+- Big Jeff Clothing
+- 
+- Instagram:
+    - zigon store
+    - princesoj_luxury
+    - latonnesignatures_shoes
+    - gqluxurywears_
+    - stride_spot
+    - officiallassb
+    - miskay
+    - ddavidshoes
+    - h.o.d_collections
+    - aadeoclothing
+    - zinkata1
+    - odionworld_luxury
+    - ccluxstore

@@ -8,7 +8,10 @@ node_modules/
 .next/
 dist/
 *.pdf
+statement_review_data.js
 ledger_v6_dc_editable_logs_v13.html
+deecadence_feedback_form_reference.html
+deecadence-response-2026-06-25.txt
 INFO.txt
 coverage/
 npm-debug.log*
