@@ -119,6 +119,9 @@
   var pendingStartTask = null;
   var editingTaskId = null;
   var activeDetailTaskId = null;
+  var tourActive = false;
+  var tourIndex = 0;
+  var tourPreviousView = "today";
   var chosenMinutes = 25;
   var selectedProgressType = "countable";
   var startTaskSource = "schedule";
@@ -126,7 +129,53 @@
   var startModal = document.getElementById("startModal");
   var taskModal = document.getElementById("taskModal");
   var taskDetailModal = document.getElementById("taskDetailModal");
+  var tourOverlay = document.getElementById("tourOverlay");
   var revealOverlay = document.getElementById("revealOverlay");
+
+  var TOUR_STEPS = [
+    {
+      view: "today",
+      target: '[data-tour="today-rank"]',
+      title: "Your recovery level",
+      body: "This is your DeeCadence rank. XP raises your level, but the real goal is showing up consistently."
+    },
+    {
+      view: "today",
+      target: '[data-tour="next-block"]',
+      title: "One block at a time",
+      body: "Today always points you to the next useful block, so you do not have to rebuild your plan every time."
+    },
+    {
+      view: "plan",
+      target: '[data-tour="plan-controls"]',
+      title: "Schedule or task list",
+      body: "Schedule shows your day as time blocks. Tasks gives you the simple list for editing, filtering, and marking work done."
+    },
+    {
+      view: "plan",
+      target: '[data-tour="add-task"]',
+      title: "Add the work once",
+      body: "Add a task with a time, estimate, priority, and description. DeeCadence can arrange it into your day."
+    },
+    {
+      view: "focus",
+      target: '[data-tour="focus-root"]',
+      title: "Focus sessions split into four",
+      body: "Pick a total session length. DeeCadence splits it into four blocks and rewards finished blocks with XP."
+    },
+    {
+      view: "rank",
+      target: '[data-tour="rank-console"]',
+      title: "XP becomes rank",
+      body: "Focus blocks give the strongest XP. Work completed outside the timer can still be marked done, but earns less."
+    },
+    {
+      view: "rank",
+      target: '[data-tour="rank-ladder"]',
+      title: "The climb gets harder",
+      body: "Ranks have higher gates as you climb. The ladder shows what is unlocked by consistent focus over time."
+    }
+  ];
 
   var state = loadState();
 
@@ -166,6 +215,7 @@
       settings: {
         theme: "dark",
         sound: false,
+        tutorialComplete: false,
         reducedMotion: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
       },
       tasks: [
@@ -1318,6 +1368,91 @@
     if (name === "settings") renderSettings();
   }
 
+  function clearTourHighlight() {
+    Array.prototype.forEach.call(document.querySelectorAll(".tour-highlight"), function (element) {
+      element.classList.remove("tour-highlight");
+    });
+  }
+
+  function startTour(force) {
+    if (!force && state.settings.tutorialComplete) return;
+    if (tourActive) return;
+    tourPreviousView = activeView || "today";
+    tourActive = true;
+    tourIndex = 0;
+    renderTourStep();
+  }
+
+  function endTour(completed) {
+    tourActive = false;
+    clearTourHighlight();
+    tourOverlay.classList.remove("open");
+    tourOverlay.setAttribute("aria-hidden", "true");
+    if (completed) {
+      state.settings.tutorialComplete = true;
+      saveState();
+    }
+    if (tourPreviousView && activeView !== tourPreviousView) switchView(tourPreviousView);
+  }
+
+  function renderTourStep() {
+    if (!tourActive) return;
+    var step = TOUR_STEPS[tourIndex];
+    if (!step) {
+      endTour(true);
+      return;
+    }
+    if (activeView !== step.view) switchView(step.view);
+    clearTourHighlight();
+    tourOverlay.classList.add("open");
+    tourOverlay.setAttribute("aria-hidden", "false");
+    document.getElementById("tourCount").textContent = "Step " + (tourIndex + 1) + " of " + TOUR_STEPS.length;
+    document.getElementById("tourTitle").textContent = step.title;
+    document.getElementById("tourBody").textContent = step.body;
+    document.getElementById("tourBackBtn").disabled = tourIndex === 0;
+    document.getElementById("tourNextBtn").textContent = tourIndex === TOUR_STEPS.length - 1 ? "Finish" : "Next";
+    setTimeout(function () {
+      positionTourCard(step);
+    }, 80);
+  }
+
+  function positionTourCard(step) {
+    var target = document.querySelector(step.target);
+    var card = document.getElementById("tourCard");
+    if (!target || !card) return;
+    target.classList.add("tour-highlight");
+    target.scrollIntoView({ behavior: state.settings.reducedMotion ? "auto" : "smooth", block: "center", inline: "center" });
+    setTimeout(function () {
+      var rect = target.getBoundingClientRect();
+      var cardRect = card.getBoundingClientRect();
+      var vw = window.innerWidth || document.documentElement.clientWidth;
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var top = rect.bottom + 18;
+      var left = rect.left;
+      if (top + cardRect.height > vh - 16) top = rect.top - cardRect.height - 18;
+      if (top < 16) top = Math.max(16, vh - cardRect.height - 16);
+      if (left + cardRect.width > vw - 16) left = vw - cardRect.width - 16;
+      if (left < 16) left = 16;
+      card.style.top = Math.round(top) + "px";
+      card.style.left = Math.round(left) + "px";
+    }, state.settings.reducedMotion ? 0 : 220);
+  }
+
+  function nextTourStep() {
+    if (tourIndex >= TOUR_STEPS.length - 1) {
+      endTour(true);
+      return;
+    }
+    tourIndex += 1;
+    renderTourStep();
+  }
+
+  function previousTourStep() {
+    if (tourIndex <= 0) return;
+    tourIndex -= 1;
+    renderTourStep();
+  }
+
   function populateLinkTaskSelect(selectedId) {
     var select = document.getElementById("linkTaskSelect");
     var openTasks = scheduledFocusTasks();
@@ -1587,6 +1722,10 @@
       closeTaskDetail();
       if (taskId) deleteTask(taskId);
     };
+    document.getElementById("tourNextBtn").onclick = nextTourStep;
+    document.getElementById("tourBackBtn").onclick = previousTourStep;
+    document.getElementById("tourSkipBtn").onclick = function () { endTour(true); };
+    document.getElementById("replayTourBtn").onclick = function () { startTour(true); };
     [startModal, taskModal, taskDetailModal].forEach(function (overlay) {
       overlay.addEventListener("click", function (event) {
         if (event.target === overlay) {
@@ -1711,14 +1850,21 @@
     taskTimingState: taskTimingState,
     layoutScheduleBlocks: layoutScheduleBlocks,
     renderNowLine: renderNowLine,
+    startTour: startTour,
+    endTour: endTour,
+    getTourState: function () { return { active: tourActive, index: tourIndex }; },
     getState: function () { return state; }
   };
 
   wireEvents();
   document.addEventListener("visibilitychange", handleVisibilityChange);
   window.addEventListener("storage", handleStorageChange);
+  window.addEventListener("resize", function () {
+    if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]);
+  });
   renderAll();
   switchView("today");
+  setTimeout(function () { startTour(false); }, 450);
   setInterval(function () {
     if (activeView === "today") renderToday();
     if (activeView === "plan" && currentPlanMode === "schedule" && currentPlanTab === "day") renderPlan();

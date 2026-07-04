@@ -49,6 +49,10 @@ function createElement(id = "") {
     focus() {},
     click() {},
     addEventListener() {},
+    scrollIntoView() {},
+    getBoundingClientRect() {
+      return { top: 100, left: 100, right: 300, bottom: 180, width: 200, height: 80 };
+    },
     querySelectorAll() {
       return [];
     },
@@ -116,7 +120,9 @@ function createHarness() {
     document,
     window: {
       matchMedia: () => ({ matches: false }),
-      addEventListener() {}
+      addEventListener() {},
+      innerWidth: 1200,
+      innerHeight: 800
     },
     localStorage: {
       getItem: (key) => store.get(key) || null,
@@ -312,6 +318,24 @@ function testPlanHasScheduleAndTaskModes() {
   assert.match(indexSource, /data-view="settings"/);
 }
 
+function testGuidedTourCanRunAndComplete() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+
+  assert.match(indexSource, /id="tourOverlay"/);
+  assert.match(indexSource, /id="replayTourBtn"/);
+  assert.match(indexSource, /data-tour="today-rank"/);
+  assert.match(styleSource, /\.tour-highlight/);
+
+  debug.startTour(true);
+  assert.equal(debug.getTourState().active, true);
+  assert.equal(debug.getTourState().index, 0);
+
+  debug.endTour(true);
+  assert.equal(debug.getTourState().active, false);
+  assert.equal(state.settings.tutorialComplete, true);
+}
+
 function testTaskModalCanUseDesktopWidth() {
   const taskModal = blockFor("#taskModal .modal");
   const taskForm = blockFor("#taskModal .form-grid");
@@ -409,6 +433,7 @@ testLocalDateFormatterUsesLocalParts();
 testUserFacingHtmlIsAsciiSafe();
 testStartModalHasScheduleAndInputChoices();
 testPlanHasScheduleAndTaskModes();
+testGuidedTourCanRunAndComplete();
 testTaskModalCanUseDesktopWidth();
 testOverlappingScheduleBlocksGetColumns();
 testPastTimedTasksAreFlagged();

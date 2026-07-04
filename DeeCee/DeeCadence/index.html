@@ -47,7 +47,7 @@
         </button>
       </div>
 
-      <div class="card rank-console">
+      <div class="card rank-console" data-tour="today-rank">
         <div class="orb-wrap">
           <div class="orb-glow" id="todayOrbGlow" aria-hidden="true"></div>
           <svg class="orb-energy-ring" viewBox="0 0 100 100" aria-hidden="true">
@@ -67,7 +67,7 @@
         </div>
       </div>
 
-      <div class="card next-block-card">
+      <div class="card next-block-card" data-tour="next-block">
         <div class="next-block-head">
           <div class="eyebrow">Next block</div>
           <button class="btn btn-ghost" id="autoArrangeBtnToday" style="padding:8px 12px; font-size:12.5px; min-height:36px;">Auto-arrange plan</button>
@@ -85,16 +85,16 @@
     <!-- ===== FOCUS ===== -->
     <section class="view" id="view-focus">
       <div class="topbar"><div class="topbar-title">Focus</div></div>
-      <div id="focusRoot"></div>
+      <div id="focusRoot" data-tour="focus-root"></div>
     </section>
 
     <!-- ===== PLAN ===== -->
     <section class="view" id="view-plan">
       <div class="topbar">
         <div class="topbar-title">Plan</div>
-        <button class="btn btn-primary" id="addTaskBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">+ Add task</button>
+        <button class="btn btn-primary" id="addTaskBtn" data-tour="add-task" style="padding:9px 14px; font-size:13px; min-height:38px;">+ Add task</button>
       </div>
-      <div class="plan-controls">
+      <div class="plan-controls" data-tour="plan-controls">
         <div class="seg plan-mode-seg" id="planModeSeg" aria-label="Plan mode">
           <button class="active" data-plan-mode="schedule">Schedule</button>
           <button data-plan-mode="tasks">Tasks</button>
@@ -112,7 +112,7 @@
     <!-- ===== RANK ===== -->
     <section class="view" id="view-rank">
       <div class="topbar"><div class="topbar-title">Rank</div></div>
-      <div class="card rank-console" style="margin-bottom:16px;">
+      <div class="card rank-console" data-tour="rank-console" style="margin-bottom:16px;">
         <div class="orb-wrap">
           <div class="orb-glow" id="rankOrbGlow" aria-hidden="true"></div>
           <svg class="orb-energy-ring" viewBox="0 0 100 100" aria-hidden="true">
@@ -131,7 +131,7 @@
         </div>
       </div>
       <div class="eyebrow" style="margin-bottom:8px;">Rank ladder</div>
-      <div class="rank-ladder" id="rankLadder"></div>
+      <div class="rank-ladder" id="rankLadder" data-tour="rank-ladder"></div>
       <div class="card">
         <div class="eyebrow" style="margin-bottom:8px;">How the climb works</div>
         <p class="curve-note">Every level costs more than the last. Rank gates are based on total XP, while levels continue to climb through the same progression curve, so the two never drift out of sync. The ladder shows each gate in order, and every completed block moves the climb forward without randomness.</p>
@@ -169,6 +169,10 @@
     <section class="view" id="view-settings">
       <div class="topbar"><div class="topbar-title">Settings</div></div>
       <div class="card">
+        <div class="setting-row">
+          <div><div class="setting-label">App tutorial</div><div class="setting-desc">Replay the guided walkthrough for DeeCadence.</div></div>
+          <button class="btn btn-secondary" id="replayTourBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Replay tutorial</button>
+        </div>
         <div class="setting-row">
           <div><div class="setting-label">Theme</div><div class="setting-desc">Dark suits the console. Light stays legible.</div></div>
           <div class="seg">
@@ -358,6 +362,20 @@
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="tour-overlay" id="tourOverlay" aria-hidden="true">
+  <div class="tour-backdrop" aria-hidden="true"></div>
+  <section class="tour-card" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+    <div class="tour-step-count" id="tourCount">Step 1 of 6</div>
+    <h3 id="tourTitle">Welcome to DeeCadence</h3>
+    <p id="tourBody">One block at a time.</p>
+    <div class="tour-actions">
+      <button class="btn btn-ghost" id="tourSkipBtn">Skip</button>
+      <button class="btn btn-secondary" id="tourBackBtn">Back</button>
+      <button class="btn btn-primary" id="tourNextBtn">Next</button>
+    </div>
+  </section>
+</div>
 
 <script src="app.js" defer></script>
 </body>

@@ -1293,6 +1293,106 @@ main {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  pointer-events: none;
+}
+
+.tour-overlay.open {
+  display: block;
+}
+
+.tour-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(93, 246, 211, 0.08), transparent 22rem),
+    rgba(0, 8, 7, 0.68);
+  backdrop-filter: blur(3px);
+  pointer-events: auto;
+}
+
+.tour-card {
+  position: fixed;
+  width: min(360px, calc(100vw - 32px));
+  padding: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--cyan) 8%, transparent), transparent 58%),
+    color-mix(in srgb, var(--bg-elev) 96%, black);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  pointer-events: auto;
+  z-index: 93;
+}
+
+.tour-step-count {
+  color: var(--cyan);
+  font: 800 10px/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.tour-card h3 {
+  margin: 0 0 8px;
+  font-size: 21px;
+  letter-spacing: -0.035em;
+}
+
+.tour-card p {
+  margin: 0;
+  color: var(--text-dim);
+  line-height: 1.55;
+  font-size: 13.5px;
+}
+
+.tour-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tour-actions .btn {
+  min-height: 38px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+}
+
+.tour-actions .btn:disabled {
+  opacity: 0.36;
+}
+
+.tour-highlight {
+  position: relative !important;
+  z-index: 92 !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--cyan) 78%, white),
+    0 0 0 10px rgba(93, 246, 211, 0.12),
+    0 20px 60px rgba(0, 0, 0, 0.28) !important;
+}
+
+[data-theme="light"] .tour-backdrop {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(40, 189, 167, 0.12), transparent 22rem),
+    rgba(24, 34, 28, 0.36);
+}
+
+[data-theme="light"] .tour-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(249, 244, 226, 0.92)),
+    var(--surface);
+  box-shadow: 0 24px 70px rgba(57, 49, 29, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+[data-reduced-motion="true"] .tour-highlight {
+  transition: none !important;
+}
+
 @media (max-width: 640px) {
   main {
     padding-bottom: 132px;
@@ -1341,6 +1441,22 @@ main {
 
   .task-detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tour-card {
+    left: 16px !important;
+    right: 16px;
+    top: auto !important;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    width: auto;
+  }
+
+  .tour-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tour-actions .btn-primary {
+    grid-column: 1 / -1;
   }
 
   .schedule-queue-card {
