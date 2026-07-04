@@ -213,6 +213,27 @@ function testIncompleteSessionCanBeSavedAndContinued() {
   assert.equal(state.session.blockIndex, 1);
 }
 
+function testPartialSavedSessionKeepsRemainingTime() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+
+  debug.beginSession(4, null);
+  state.session.blockRemaining = 41;
+  state.session.blockEndsAt = Date.now() + 41000;
+  debug.finalizeSession(false);
+
+  assert.equal(state.session, null);
+  assert.equal(state.savedSessions.length, 1);
+  assert.equal(state.savedSessions[0].blockIndex, 0);
+  assert.equal(state.savedSessions[0].blockRemaining, 41);
+
+  debug.continueSavedSession(state.savedSessions[0].id);
+
+  assert.ok(state.session);
+  assert.equal(state.session.blockIndex, 0);
+  assert.ok(state.session.blockRemaining <= 41);
+}
+
 function testCsvQuotingKeepsCommas() {
   const { debug } = createHarness();
 
@@ -230,6 +251,7 @@ testDurationClamp();
 testTimestampTimerCompletesElapsedBlock();
 testLinkedTaskDeletionIsBlocked();
 testIncompleteSessionCanBeSavedAndContinued();
+testPartialSavedSessionKeepsRemainingTime();
 testCsvQuotingKeepsCommas();
 testLocalDateFormatterUsesLocalParts();
 

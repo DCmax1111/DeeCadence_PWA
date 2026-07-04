@@ -259,8 +259,13 @@
     normalized.blockEndsAt = null;
     normalized.recoveryEndsAt = null;
     normalized.recoveryRemaining = 0;
-    normalized.blockIndex = Math.max(0, Math.min(normalized.blocks.length - 1, normalized.blocksCompleted));
-    normalized.blockRemaining = normalized.blocks[normalized.blockIndex];
+    var savedIndex = Math.max(normalized.blockIndex, normalized.blocksCompleted);
+    savedIndex = Math.max(0, Math.min(normalized.blocks.length - 1, savedIndex));
+    var canKeepRemaining = savedIndex === normalized.blockIndex && normalized.blockRemaining > 0;
+    normalized.blockIndex = savedIndex;
+    normalized.blockRemaining = canKeepRemaining
+      ? Math.max(1, Math.min(normalized.blocks[savedIndex], normalized.blockRemaining))
+      : normalized.blocks[savedIndex];
     normalized.savedAt = Number.isFinite(Number(session.savedAt)) ? Number(session.savedAt) : Date.now();
     return normalized;
   }
@@ -587,8 +592,8 @@
       id: session.id,
       totalMinutes: session.totalMinutes,
       blocks: session.blocks,
-      blockIndex: session.blocksCompleted,
-      blockRemaining: session.blocks[Math.min(session.blocksCompleted, session.blocks.length - 1)],
+      blockIndex: session.blockIndex,
+      blockRemaining: session.blockRemaining,
       status: "saved",
       linkedTaskId: session.linkedTaskId,
       startedAt: session.startedAt,
@@ -611,12 +616,14 @@
     }
     var saved = state.savedSessions.find(function (item) { return item.id === sessionId; });
     if (!saved) return;
+    var resumeIndex = Math.max(0, Math.min(saved.blocks.length - 1, saved.blockIndex));
+    var resumeRemaining = Math.max(1, Math.min(saved.blocks[resumeIndex], saved.blockRemaining || saved.blocks[resumeIndex]));
     state.savedSessions = state.savedSessions.filter(function (item) { return item.id !== sessionId; });
     state.session = normalizeSession(Object.assign({}, saved, {
       status: "running",
-      blockIndex: saved.blocksCompleted,
-      blockRemaining: saved.blocks[Math.min(saved.blocksCompleted, saved.blocks.length - 1)],
-      blockEndsAt: Date.now() + (saved.blocks[Math.min(saved.blocksCompleted, saved.blocks.length - 1)] * 1000),
+      blockIndex: resumeIndex,
+      blockRemaining: resumeRemaining,
+      blockEndsAt: Date.now() + (resumeRemaining * 1000),
       recoveryEndsAt: null,
       recoveryRemaining: 0
     }));

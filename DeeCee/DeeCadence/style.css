@@ -1,19 +1,19 @@
 @import url("./src/styles/theme.css");
 
 :root {
-  --bg: #071817;
-  --bg-elev: #0d2724;
-  --surface: rgba(12, 43, 39, 0.9);
-  --surface-2: rgba(19, 65, 58, 0.82);
-  --border: rgba(119, 232, 205, 0.14);
-  --border-strong: rgba(119, 232, 205, 0.24);
+  --bg: #061512;
+  --bg-elev: #0a211d;
+  --surface: rgba(13, 49, 42, 0.92);
+  --surface-2: rgba(18, 74, 63, 0.84);
+  --border: rgba(126, 243, 205, 0.17);
+  --border-strong: rgba(126, 243, 205, 0.3);
   --text: #fbfff8;
-  --text-dim: #b9d3c9;
-  --text-faint: #78948b;
-  --cyan: #55efd7;
-  --blue: #4d9cff;
-  --violet: #8f7bff;
-  --gold: #f2c766;
+  --text-dim: #c0ddd0;
+  --text-faint: #82a397;
+  --cyan: #5df6d3;
+  --blue: #4ea7ff;
+  --violet: #806dff;
+  --gold: #ffcf66;
   --success: #7bedb6;
   --radius: 18px;
   --radius-lg: 28px;
@@ -30,32 +30,37 @@
 }
 
 [data-theme="light"] {
-  --bg: #fff3df;
-  --bg-elev: rgba(255, 248, 235, 0.88);
-  --surface: rgba(255, 249, 238, 0.9);
-  --surface-2: rgba(232, 247, 235, 0.92);
-  --border: rgba(46, 112, 92, 0.16);
-  --border-strong: rgba(46, 112, 92, 0.28);
-  --text: #18251f;
-  --text-dim: #5c725f;
-  --text-faint: #879a86;
-  --shadow-card: 0 22px 58px rgba(91, 80, 49, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --bg: #fff4d8;
+  --bg-elev: rgba(255, 246, 222, 0.9);
+  --surface: rgba(255, 250, 235, 0.94);
+  --surface-2: rgba(221, 248, 226, 0.94);
+  --border: rgba(29, 120, 87, 0.2);
+  --border-strong: rgba(29, 120, 87, 0.34);
+  --text: #10261c;
+  --text-dim: #47654f;
+  --text-faint: #78927d;
+  --cyan: #12bfa7;
+  --blue: #347bff;
+  --violet: #6e5bf4;
+  --gold: #d99025;
+  --success: #2eb67d;
+  --shadow-card: 0 26px 64px rgba(92, 77, 35, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 body {
   min-height: 100%;
   background:
-    radial-gradient(circle at 20% -10%, rgba(85, 239, 215, 0.22), transparent 34rem),
-    radial-gradient(circle at 92% 14%, rgba(242, 199, 102, 0.12), transparent 30rem),
-    linear-gradient(135deg, #04100f 0%, var(--bg) 50%, #102017 100%);
+    radial-gradient(circle at 19% -8%, rgba(93, 246, 211, 0.24), transparent 35rem),
+    radial-gradient(circle at 94% 14%, rgba(255, 207, 102, 0.16), transparent 31rem),
+    linear-gradient(135deg, #020c0b 0%, var(--bg) 48%, #142311 100%);
 }
 
 [data-theme="light"] body,
 body[data-theme="light"] {
   background:
-    radial-gradient(circle at 20% -10%, rgba(85, 239, 215, 0.28), transparent 34rem),
-    radial-gradient(circle at 90% 14%, rgba(242, 199, 102, 0.26), transparent 32rem),
-    linear-gradient(135deg, #fffaf0 0%, var(--bg) 54%, #e7f8ee 100%);
+    radial-gradient(circle at 19% -8%, rgba(18, 191, 167, 0.24), transparent 34rem),
+    radial-gradient(circle at 88% 8%, rgba(255, 194, 91, 0.36), transparent 31rem),
+    linear-gradient(135deg, #fff9ec 0%, var(--bg) 52%, #dff7e7 100%);
 }
 
 #app {
@@ -165,44 +170,62 @@ main {
 }
 
 .rank-console::before {
-  content: "";
-  position: absolute;
-  top: 18px;
-  left: 22px;
-  width: 156px;
-  height: 156px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--rank-glow-color) 26%, transparent), transparent 68%);
-  filter: blur(10px);
-  pointer-events: none;
+  display: none;
 }
 
 .orb-wrap {
-  width: 120px;
-  height: 120px;
+  position: relative;
+  width: 136px;
+  height: 136px;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  overflow: visible;
+  flex: 0 0 136px;
+}
+
+.orb-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--rank-glow-color) 22%, transparent), transparent 64%),
+    color-mix(in srgb, var(--surface-2) 52%, transparent);
+  box-shadow: 0 0 34px color-mix(in srgb, var(--rank-glow-color) 26%, transparent);
+  z-index: 1;
 }
 
 .orb-wrap > svg:not(.orb-energy-ring) {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: 14px;
+  width: calc(100% - 28px);
+  height: calc(100% - 28px);
+  z-index: 3;
 }
 
 .orb-glow {
-  inset: -8px;
-  opacity: 0.34;
-  filter: blur(14px);
+  inset: 10px;
+  opacity: 0.26;
+  filter: blur(16px);
+  z-index: 0;
 }
 
 .orb-energy-ring {
-  opacity: 0.34;
+  inset: -8px !important;
+  width: calc(100% + 16px) !important;
+  height: calc(100% + 16px) !important;
+  opacity: 0.42;
+  transform-origin: center;
+  z-index: 2;
 }
 
 .orb-rankletter {
   color: #e8edf8 !important;
-  font-size: 31px;
+  font-size: 34px;
   letter-spacing: -0.03em;
   text-shadow: none;
+  z-index: 4;
 }
 
 [data-theme="light"] .orb-rankletter {
@@ -444,9 +467,10 @@ main {
 }
 
 @media (max-width: 640px) {
-  .rank-console::before {
-    left: 50%;
-    transform: translateX(-50%);
+  .orb-wrap {
+    width: 126px;
+    height: 126px;
+    flex-basis: 126px;
   }
 
   .saved-session-heading,
