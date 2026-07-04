@@ -166,6 +166,7 @@
         normalizeTask({ title: "Draft ceremony program layout", estMinutes: 50, priority: "medium", units: 4 })
       ],
       session: null,
+      savedSessions: [],
       history: [],
       dailyBlockLog: {}
     };
@@ -181,10 +182,18 @@
         profile: Object.assign({}, base.profile, parsed.profile || {}),
         settings: Object.assign({}, base.settings, parsed.settings || {}),
         tasks: Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : base.tasks,
+        savedSessions: Array.isArray(parsed.savedSessions) ? parsed.savedSessions.map(normalizeSavedSession).filter(Boolean).slice(0, 4) : [],
         history: Array.isArray(parsed.history) ? parsed.history : [],
         dailyBlockLog: parsed.dailyBlockLog && typeof parsed.dailyBlockLog === "object" ? parsed.dailyBlockLog : {}
       });
       loaded.session = normalizeSession(parsed.session);
+      var migratedSavedSessions = loaded.history
+        .map(historyEntryToSavedSession)
+        .filter(Boolean)
+        .filter(function (saved) {
+          return !loaded.savedSessions.some(function (existing) { return existing.id === saved.id; });
+        });
+      loaded.savedSessions = loaded.savedSessions.concat(migratedSavedSessions).slice(0, 4);
       return loaded;
     } catch (error) {
       return defaultState();
@@ -241,6 +250,35 @@
       recoveryEndsAt: Number.isFinite(Number(session.recoveryEndsAt)) ? Number(session.recoveryEndsAt) : null,
       lastReveal: session.lastReveal || null
     };
+  }
+
+  function normalizeSavedSession(session) {
+    var normalized = normalizeSession(session);
+    if (!normalized || normalized.blocksCompleted >= normalized.blocks.length) return null;
+    normalized.status = "saved";
+    normalized.blockEndsAt = null;
+    normalized.recoveryEndsAt = null;
+    normalized.recoveryRemaining = 0;
+    normalized.blockIndex = Math.max(0, Math.min(normalized.blocks.length - 1, normalized.blocksCompleted));
+    normalized.blockRemaining = normalized.blocks[normalized.blockIndex];
+    normalized.savedAt = Number.isFinite(Number(session.savedAt)) ? Number(session.savedAt) : Date.now();
+    return normalized;
+  }
+
+  function historyEntryToSavedSession(entry) {
+    if (!entry || entry.completedAll || !entry.blocksCompleted || entry.blocksCompleted >= (entry.blocksPlanned || 4)) return null;
+    var totalMinutes = clampMinutes(entry.totalMinutes, 25);
+    return normalizeSavedSession({
+      id: entry.id || makeId("saved"),
+      totalMinutes: totalMinutes,
+      blocks: splitIntoBlocks(totalMinutes),
+      blockIndex: entry.blocksCompleted,
+      linkedTaskId: entry.linkedTaskId || null,
+      startedAt: entry.completedAt || Date.now(),
+      blocksCompleted: entry.blocksCompleted,
+      xpEarned: entry.xpEarned || 0,
+      savedAt: entry.completedAt || Date.now()
+    });
   }
 
   function getTask(id) {
@@ -503,6 +541,27 @@
     var session = state.session;
     if (!session) return;
     stopTicker();
+    var currentDuration = session.blocks[session.blockIndex] || 0;
+    var hasPartialProgress = session.blockRemaining < currentDuration;
+    if (!completedAll && session.blocksCompleted < session.blocks.length && (session.blocksCompleted > 0 || hasPartialProgress)) {
+      saveIncompleteSession(session);
+      state.session = null;
+      closeReveal();
+      saveState();
+      renderAll();
+      switchView("focus");
+      showToast("Saved. Continue it from Focus.");
+      return;
+    }
+    if (!completedAll && !session.blocksCompleted && !hasPartialProgress) {
+      state.session = null;
+      closeReveal();
+      saveState();
+      renderAll();
+      switchView("focus");
+      showToast("Session cleared.");
+      return;
+    }
     state.history.unshift({
       id: session.id,
       date: todayStr(),
@@ -521,6 +580,62 @@
     renderAll();
     switchView("today");
     showToast(completedAll ? "Session complete. Progress saved." : "Progress saved.");
+  }
+
+  function saveIncompleteSession(session) {
+    var saved = normalizeSavedSession({
+      id: session.id,
+      totalMinutes: session.totalMinutes,
+      blocks: session.blocks,
+      blockIndex: session.blocksCompleted,
+      blockRemaining: session.blocks[Math.min(session.blocksCompleted, session.blocks.length - 1)],
+      status: "saved",
+      linkedTaskId: session.linkedTaskId,
+      startedAt: session.startedAt,
+      blocksCompleted: session.blocksCompleted,
+      xpEarned: session.xpEarned,
+      savedAt: Date.now(),
+      lastReveal: session.lastReveal
+    });
+    if (!saved) return;
+    state.savedSessions = [saved]
+      .concat(state.savedSessions.filter(function (item) { return item.id !== saved.id; }))
+      .slice(0, 4);
+  }
+
+  function continueSavedSession(sessionId) {
+    if (state.session) {
+      switchView("focus");
+      showToast("Finish the current block first.");
+      return;
+    }
+    var saved = state.savedSessions.find(function (item) { return item.id === sessionId; });
+    if (!saved) return;
+    state.savedSessions = state.savedSessions.filter(function (item) { return item.id !== sessionId; });
+    state.session = normalizeSession(Object.assign({}, saved, {
+      status: "running",
+      blockIndex: saved.blocksCompleted,
+      blockRemaining: saved.blocks[Math.min(saved.blocksCompleted, saved.blocks.length - 1)],
+      blockEndsAt: Date.now() + (saved.blocks[Math.min(saved.blocksCompleted, saved.blocks.length - 1)] * 1000),
+      recoveryEndsAt: null,
+      recoveryRemaining: 0
+    }));
+    saveState();
+    startTicker();
+    renderAll();
+    switchView("focus");
+    showToast("Session continued.");
+  }
+
+  function discardSavedSession(sessionId) {
+    var saved = state.savedSessions.find(function (item) { return item.id === sessionId; });
+    if (!saved) return;
+    if (!confirm("Remove this saved focus session?")) return;
+    state.savedSessions = state.savedSessions.filter(function (item) { return item.id !== sessionId; });
+    saveState();
+    renderFocus();
+    renderToday();
+    showToast("Saved session removed.");
   }
 
   function applyDailyStreak() {
@@ -664,7 +779,15 @@
     var task = nextTask();
     var wrap = document.getElementById("todayNextTaskWrap");
     var button = document.getElementById("startNextBlockBtn");
-    if (task) {
+    if (state.savedSessions.length && !state.session) {
+      var saved = state.savedSessions[0];
+      var savedTask = saved.linkedTaskId ? getTask(saved.linkedTaskId) : null;
+      wrap.innerHTML = '<div class="task-line"><div style="flex:1; min-width:0;">' +
+        '<div class="task-title">Continue saved focus</div>' +
+        '<div class="task-meta">' + (savedTask ? escapeHtml(savedTask.title) : "Free focus") + " - Block " + (saved.blocksCompleted + 1) + " of " + saved.blocks.length + " waiting</div>" +
+        renderSessionBlockRail(saved) + "</div></div>";
+      button.textContent = "Continue from Focus";
+    } else if (task) {
       wrap.innerHTML = '<div class="task-line"><div style="flex:1; min-width:0;">' +
         '<div class="task-title">' + escapeHtml(task.title) + "</div>" +
         '<div class="task-meta">' + (task.time || "Unscheduled") + " - " + task.estMinutes + " min - " + task.priority + " priority</div>" +
@@ -690,8 +813,16 @@
     var root = document.getElementById("focusRoot");
     var session = state.session;
     if (!session) {
-      root.innerHTML = '<div class="card empty-focus"><div style="font-size:15px; color:var(--text); font-weight:600; margin-bottom:6px;">No block running</div><div style="margin-bottom:18px;">Start one from Today or Plan.</div><button class="btn btn-primary" id="focusStartFromEmpty">Start a focus block</button></div>';
-      document.getElementById("focusStartFromEmpty").onclick = function () { openStartModal(nextTask()); };
+      var savedHtml = renderSavedSessions();
+      root.innerHTML = savedHtml || '<div class="card empty-focus"><div style="font-size:15px; color:var(--text); font-weight:600; margin-bottom:6px;">No block running</div><div style="margin-bottom:18px;">Start one from Today or Plan.</div><button class="btn btn-primary" id="focusStartFromEmpty">Start a focus block</button></div>';
+      var startEmpty = document.getElementById("focusStartFromEmpty");
+      if (startEmpty) startEmpty.onclick = function () { openStartModal(nextTask()); };
+      Array.prototype.forEach.call(root.querySelectorAll("[data-continue-saved-session]"), function (button) {
+        button.onclick = function () { continueSavedSession(button.getAttribute("data-continue-saved-session")); };
+      });
+      Array.prototype.forEach.call(root.querySelectorAll("[data-discard-saved-session]"), function (button) {
+        button.onclick = function () { discardSavedSession(button.getAttribute("data-discard-saved-session")); };
+      });
       renderSessionIndicators();
       return;
     }
@@ -731,6 +862,36 @@
     if (stop) stop.onclick = function () { finalizeSession(false); };
     if (reopen) reopen.onclick = function () { showSystemReveal(session.lastReveal); };
     renderSessionIndicators();
+  }
+
+  function renderSessionBlockRail(session) {
+    var dots = "";
+    for (var i = 0; i < session.blocks.length; i += 1) {
+      dots += '<span class="unit-dot' + (i < session.blocksCompleted ? " filled" : "") + '"></span>';
+    }
+    return '<div class="unit-rail" aria-label="' + session.blocksCompleted + " of " + session.blocks.length + ' focus blocks complete">' + dots + "</div>";
+  }
+
+  function renderSavedSessions() {
+    if (!state.savedSessions.length) return "";
+    return '<div class="saved-session-stack">' +
+      '<div class="saved-session-heading"><div><span class="eyebrow">Saved focus</span><h3>Continue where you stopped</h3></div><small>Up to 4 incomplete sessions stay here.</small></div>' +
+      state.savedSessions.map(function (saved) {
+        var linkedTask = saved.linkedTaskId ? getTask(saved.linkedTaskId) : null;
+        return '<article class="saved-session-card">' +
+          '<div class="saved-session-main">' +
+            '<strong>' + (linkedTask ? escapeHtml(linkedTask.title) : "Free focus session") + '</strong>' +
+            '<span>Block ' + (saved.blocksCompleted + 1) + " of " + saved.blocks.length + " ready - " + saved.blocksCompleted + " completed - +" + saved.xpEarned + ' XP saved</span>' +
+            renderSessionBlockRail(saved) +
+          '</div>' +
+          '<div class="saved-session-actions">' +
+            '<button class="btn btn-primary" data-continue-saved-session="' + saved.id + '">Continue</button>' +
+            '<button class="btn btn-ghost" data-discard-saved-session="' + saved.id + '">Remove</button>' +
+          '</div>' +
+        '</article>';
+      }).join("") +
+      '<button class="btn btn-secondary btn-block" id="focusStartFromEmpty">Start a new focus block</button>' +
+    '</div>';
   }
 
   function renderPlan() {
@@ -842,7 +1003,7 @@
   }
 
   function renderSessionIndicators() {
-    var active = Boolean(state.session);
+    var active = Boolean(state.session || state.savedSessions.length);
     ["navFocusDot", "bottomNavFocusDot"].forEach(function (id) {
       var dot = document.getElementById(id);
       if (dot) dot.style.display = active ? "inline-block" : "none";
@@ -950,7 +1111,13 @@
   }
 
   function wireEvents() {
-    document.getElementById("startNextBlockBtn").onclick = function () { openStartModal(nextTask()); };
+    document.getElementById("startNextBlockBtn").onclick = function () {
+      if (state.savedSessions.length && !state.session) {
+        switchView("focus");
+        return;
+      }
+      openStartModal(nextTask());
+    };
     document.getElementById("startModalCancel").onclick = function () { startModal.classList.remove("open"); };
     document.getElementById("startModalConfirm").onclick = function () {
       var selectedTaskId = document.getElementById("linkTaskSelect").value;
@@ -1105,6 +1272,8 @@
     clampMinutes: clampMinutes,
     localDateKey: localDateKey,
     beginSession: beginSession,
+    continueSavedSession: continueSavedSession,
+    finalizeSession: finalizeSession,
     tick: tick,
     deleteTask: deleteTask,
     csvCell: csvCell,

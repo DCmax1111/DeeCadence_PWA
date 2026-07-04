@@ -192,6 +192,27 @@ function testLinkedTaskDeletionIsBlocked() {
   assert.equal(state.session.linkedTaskId, taskId);
 }
 
+function testIncompleteSessionCanBeSavedAndContinued() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+
+  debug.beginSession(4, null);
+  state.session.blockEndsAt = Date.now() - 1000;
+  debug.tick();
+  debug.finalizeSession(false);
+
+  assert.equal(state.session, null);
+  assert.equal(state.savedSessions.length, 1);
+  assert.equal(state.savedSessions[0].blocksCompleted, 1);
+
+  debug.continueSavedSession(state.savedSessions[0].id);
+
+  assert.equal(state.savedSessions.length, 0);
+  assert.ok(state.session);
+  assert.equal(state.session.status, "running");
+  assert.equal(state.session.blockIndex, 1);
+}
+
 function testCsvQuotingKeepsCommas() {
   const { debug } = createHarness();
 
@@ -208,6 +229,7 @@ testRankGatesStayExact();
 testDurationClamp();
 testTimestampTimerCompletesElapsedBlock();
 testLinkedTaskDeletionIsBlocked();
+testIncompleteSessionCanBeSavedAndContinued();
 testCsvQuotingKeepsCommas();
 testLocalDateFormatterUsesLocalParts();
 
