@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>DeeCadence — Attention Recovery System</title>
+<title>DeeCadence - Attention Recovery System</title>
 <meta name="description" content="Structured focus blocks, visible rank progression, and a minimal automatic planner.">
 <meta name="theme-color" content="#0A0D14">
 <link rel="manifest" href="manifest.json">
@@ -11,14 +11,14 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="bootLoader">
   <div class="boot-mark" aria-hidden="true"></div>
-  <div class="boot-text">Loading DeeCadence…</div>
+  <div class="boot-text">Loading DeeCadence...</div>
 </div>
 
 <div id="app">
@@ -60,8 +60,8 @@
           <div class="orb-rankletter" id="todayRankLetter" style="color:var(--rank-glow-color); font-size:70px">E</div>
         </div>
         <div class="console-main">
-          <div class="rank-label" id="todayRankLabel">E-Rank · Learning consistency</div>
-          <div class="level-number" id="todayLevel">Level 1</div>
+          <div class="rank-label" id="todayRankLabel">E-Rank - Learning consistency</div>
+          <div class="level-number" id="todayLevel">Level  1</div>
           <div class="xp-bar-track"><div class="xp-bar-fill" id="todayXpFill" style="width:0%"></div></div>
           <div class="xp-caption" id="todayXpCaption">0 / 40 XP to next level</div>
         </div>
@@ -70,7 +70,7 @@
       <div class="card next-block-card">
         <div class="next-block-head">
           <div class="eyebrow">Next block</div>
-          <button class="btn btn-ghost" id="autoArrangeBtnToday" style="padding:8px 12px; font-size:12.5px; min-height:36px;">Auto‑arrange plan</button>
+          <button class="btn btn-ghost" id="autoArrangeBtnToday" style="padding:8px 12px; font-size:12.5px; min-height:36px;">Auto-arrange plan</button>
         </div>
         <div id="todayNextTaskWrap"></div>
         <button class="btn btn-primary btn-block" id="startNextBlockBtn" style="margin-top:14px;">Start next block</button>
@@ -94,13 +94,17 @@
         <div class="topbar-title">Plan</div>
         <button class="btn btn-primary" id="addTaskBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">+ Add task</button>
       </div>
-      <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <div class="tabs" role="tablist">
+      <div class="plan-controls">
+        <div class="seg plan-mode-seg" id="planModeSeg" aria-label="Plan mode">
+          <button class="active" data-plan-mode="schedule">Schedule</button>
+          <button data-plan-mode="tasks">Tasks</button>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Task filter">
           <button class="tab active" data-planview="day">Day</button>
           <button class="tab" data-planview="week">Week</button>
           <button class="tab" data-planview="pending">Pending</button>
         </div>
-        <button class="btn btn-secondary" id="autoArrangeBtnPlan" style="padding:9px 14px; font-size:13px; min-height:38px;">Auto‑arrange</button>
+        <button class="btn btn-secondary" id="autoArrangeBtnPlan" style="padding:9px 14px; font-size:13px; min-height:38px;">Auto-arrange</button>
       </div>
       <div id="planList"></div>
     </section>
@@ -206,6 +210,7 @@
     <button data-view="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Plan</button>
     <button data-view="rank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z"/></svg>Rank</button>
     <button data-view="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>Progress</button>
+    <button data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1z"/></svg>Settings</button>
   </nav>
 
 </div>
@@ -228,8 +233,20 @@
       <input type="number" id="customMinInput" min="4" max="240" value="20">
     </div>
     <div class="field">
-      <label for="linkTaskSelect">Link to a task (optional)</label>
+      <label>Task source</label>
+      <div class="seg" id="startTaskSourceSeg">
+        <button type="button" data-start-source="schedule" class="active">Schedule</button>
+        <button type="button" data-start-source="input">Input</button>
+      </div>
+      <div class="setting-desc" id="startTaskSourceHint" style="margin-top:2px;">Pick a task already on your schedule.</div>
+    </div>
+    <div class="field" id="scheduleTaskField">
+      <label for="linkTaskSelect">Scheduled task</label>
       <select id="linkTaskSelect"></select>
+    </div>
+    <div class="field" id="inputTaskField" style="display:none;">
+      <label for="inputTaskTitle">Task title</label>
+      <input id="inputTaskTitle" type="text" maxlength="90" placeholder="e.g. Review chapter notes">
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="startModalCancel">Cancel</button>
@@ -272,9 +289,9 @@
         <label>Progress style</label>
         <div class="seg" id="progressTypeSeg">
           <button type="button" data-progress-type="countable" class="active">Fixed steps</button>
-          <button type="button" data-progress-type="ongoing">Ongoing — just log time</button>
+          <button type="button" data-progress-type="ongoing">Ongoing - just log time</button>
         </div>
-        <div class="setting-desc" id="progressTypeHint" style="margin-top:2px;">Best for tasks with a known number of pieces — e.g. 4 invitation suites.</div>
+        <div class="setting-desc" id="progressTypeHint" style="margin-top:2px;">Best for tasks with a known number of pieces - e.g. 4 invitation suites.</div>
       </div>
       <div class="field" id="taskUnitsFieldWrap">
         <label for="taskUnitsInput">Focus units</label>
@@ -286,8 +303,8 @@
       <div class="field">
         <label for="taskFlexInput">Timing</label>
         <select id="taskFlexInput">
-          <option value="fixed">Fixed — keep this time</option>
-          <option value="flexible" selected>Flexible — let auto‑arrange place it</option>
+          <option value="fixed">Fixed - keep this time</option>
+          <option value="flexible" selected>Flexible - let auto-arrange place it</option>
         </select>
       </div>
       <div class="field field-span2">
@@ -298,6 +315,20 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" id="taskModalCancel">Cancel</button>
       <button class="btn btn-primary" id="taskModalConfirm">Save task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task detail modal -->
+<div class="modal-overlay" id="taskDetailModal" role="dialog" aria-modal="true" aria-labelledby="taskDetailTitle">
+  <div class="modal task-detail-modal">
+    <div id="taskDetailBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="taskDetailDone">Mark done</button>
+      <button class="btn btn-primary" id="taskDetailFocus">Focus</button>
+      <button class="btn btn-secondary" id="taskDetailEdit">Edit</button>
+      <button class="btn btn-ghost" id="taskDetailClose">Close</button>
+      <button class="btn btn-danger" id="taskDetailDelete">Delete</button>
     </div>
   </div>
 </div>
@@ -315,7 +346,7 @@
       </svg>
       <div class="reveal-orb-center">
         <div class="reveal-level" id="revealLevel">Lv 1</div>
-        <div class="reveal-rankname" id="revealRankName">E‑Rank</div>
+        <div class="reveal-rankname" id="revealRankName">E-Rank</div>
       </div>
     </div>
     <div class="reveal-xp" id="revealXpGained" aria-live="polite">+20 XP</div>

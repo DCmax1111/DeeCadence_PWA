@@ -3,6 +3,7 @@
 
   var STORAGE_KEY = "deecadence_state_v2";
   var XP_PER_BLOCK = 20;
+  var XP_MANUAL_DONE = Math.max(1, Math.round(XP_PER_BLOCK / 4));
   var XP_SESSION_BONUS = 10;
   var RECOVERY_SECONDS = 60;
   var MAX_CUSTOM_MINUTES = 240;
@@ -112,13 +113,19 @@
 
   var idCounter = 1;
   var timerHandle = null;
+  var activeView = "today";
   var currentPlanTab = "day";
+  var currentPlanMode = "schedule";
   var pendingStartTask = null;
+  var editingTaskId = null;
+  var activeDetailTaskId = null;
   var chosenMinutes = 25;
   var selectedProgressType = "countable";
+  var startTaskSource = "schedule";
 
   var startModal = document.getElementById("startModal");
   var taskModal = document.getElementById("taskModal");
+  var taskDetailModal = document.getElementById("taskDetailModal");
   var revealOverlay = document.getElementById("revealOverlay");
 
   var state = loadState();
@@ -223,6 +230,7 @@
       priority: ["high", "medium", "low"].indexOf(source.priority) > -1 ? source.priority : "medium",
       notes: String(source.notes || ""),
       units: { total: total, completed: completed },
+      manualDoneXpAwarded: Boolean(source.manualDoneXpAwarded),
       status: completed >= total ? "completed" : (source.status === "in_progress" ? "in_progress" : "pending")
     };
   }
@@ -478,6 +486,11 @@
     if (!task) return;
     if (state.session && state.session.linkedTaskId === taskId) {
       showToast("This task is attached to the current block.");
+      switchView("focus");
+      return;
+    }
+    if (state.savedSessions.some(function (session) { return session.linkedTaskId === taskId; })) {
+      showToast("Continue or remove the saved focus session first.");
       switchView("focus");
       return;
     }
@@ -808,12 +821,25 @@
     var todays = state.tasks.filter(function (item) { return item.date === todayStr(); }).sort(function (a, b) {
       return (a.time ? timeToMin(a.time) : 9999) - (b.time ? timeToMin(b.time) : 9999);
     });
-    document.getElementById("todayPlanList").innerHTML = todays.length ? todays.map(function (item) {
-      return '<div class="task-line"><div style="flex:1; min-width:0;">' +
-        '<div class="task-title">' + escapeHtml(item.title) + (item.status === "completed" ? " done" : "") + "</div>" +
-        '<div class="task-meta">' + (item.time || "Unscheduled") + " - " + item.estMinutes + " min</div>" +
-        renderTaskUnitRail(item) + "</div></div>";
-    }).join("") : '<div class="empty-state" style="padding:20px 0;">Nothing on the plan yet.</div>';
+    document.getElementById("todayPlanList").innerHTML = renderTodayPlanGroups(todays);
+  }
+
+  function renderTodayPlanGroups(tasks) {
+    if (!tasks.length) return '<div class="empty-state" style="padding:20px 0;">Nothing on the plan yet.</div>';
+    var pending = tasks.filter(function (item) { return item.status !== "completed"; });
+    var done = tasks.filter(function (item) { return item.status === "completed"; });
+    return renderTodayPlanGroup("Ready to focus", pending, true) + renderTodayPlanGroup("Done", done, false);
+  }
+
+  function renderTodayPlanGroup(label, tasks, open) {
+    return '<details class="today-plan-group" ' + (open ? "open" : "") + '><summary><span>' + label + '</span><small>' + tasks.length + '</small></summary><div class="today-plan-items">' + (tasks.length ? tasks.map(renderTodayPlanTask).join("") : '<div class="today-plan-empty">No tasks here.</div>') + '</div></details>';
+  }
+
+  function renderTodayPlanTask(item) {
+    return '<div class="task-line ' + (taskTimingState(item) ? "has-time-alert" : "") + '"><div style="flex:1; min-width:0;">' +
+      '<div class="task-title">' + escapeHtml(item.title) + (item.status === "completed" ? " done" : "") + "</div>" +
+      '<div class="task-meta">' + (item.time || "Unscheduled") + " - " + item.estMinutes + " min " + renderTimingBadge(item) + "</div>" +
+      renderTaskUnitRail(item) + "</div></div>";
   }
 
   function renderFocus() {
@@ -901,29 +927,231 @@
     '</div>';
   }
 
-  function renderPlan() {
-    var root = document.getElementById("planList");
-    var list = state.tasks.filter(function (task) {
+  function planFilteredTasks() {
+    return state.tasks.filter(function (task) {
       if (currentPlanTab === "day") return task.date === todayStr();
       if (currentPlanTab === "pending") return task.status !== "completed";
       var date = new Date(task.date + "T00:00:00");
       var now = startOfDay(new Date());
       return date >= now && date <= new Date(now.getTime() + (7 * 86400000));
-    }).sort(function (a, b) {
-      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
-      return (a.time ? timeToMin(a.time) : 9999) - (b.time ? timeToMin(b.time) : 9999);
-    });
+    }).sort(sortTasksForPlan);
+  }
 
+  function sortTasksForPlan(a, b) {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return (a.time ? timeToMin(a.time) : 9999) - (b.time ? timeToMin(b.time) : 9999);
+  }
+
+  function planPriorityClass(task) {
+    return task.priority === "high" ? "pri-high" : task.priority === "medium" ? "pri-med" : "pri-low";
+  }
+
+  function taskTimingState(task) {
+    if (!task || task.status === "completed" || !task.time) return null;
+    var today = todayStr();
+    if (task.date < today) return { id: "missed", label: "Missed time" };
+    if (task.date > today) return null;
+    var now = new Date();
+    var nowMin = (now.getHours() * 60) + now.getMinutes();
+    var start = timeToMin(task.time);
+    var end = start + task.estMinutes;
+    if (nowMin > end) return { id: "missed", label: "Missed time" };
+    if (nowMin > start) return { id: "time-passed", label: "Time passed" };
+    return null;
+  }
+
+  function renderTimingBadge(task) {
+    var timing = taskTimingState(task);
+    return timing ? '<span class="timing-badge ' + timing.id + '">' + timing.label + '</span>' : "";
+  }
+
+  function renderTaskCard(task) {
+    return '<div class="task-card task-row ' + (taskTimingState(task) ? "has-time-alert" : "") + '">' +
+      '<button class="task-check" data-toggle-task="' + task.id + '" aria-label="' + (task.status === "completed" ? "Mark incomplete" : "Mark complete") + '">' + (task.status === "completed" ? "&#10003;" : "") + '</button>' +
+      '<button class="task-row-main" data-open-task="' + task.id + '">' +
+        '<span class="task-card-title">' + escapeHtml(task.title) + '</span>' +
+        '<span class="task-card-meta">' + (currentPlanTab === "day" ? "" : task.date + " - ") + (task.time || "Unscheduled") + " - " + task.estMinutes + " min" + '</span>' +
+      '</button>' +
+      '<div class="task-card-actions">' +
+        '<span class="priority-pill ' + planPriorityClass(task) + '">' + task.priority + '</span>' +
+        '<button class="btn btn-ghost" data-edit-task="' + task.id + '">Edit</button>' +
+        (task.status !== "completed" ? '<button class="btn btn-primary" data-focus-task="' + task.id + '">Focus</button>' : "") +
+        '<button class="btn btn-ghost" data-delete-task="' + task.id + '">Delete</button>' +
+      '</div></div>';
+  }
+
+  function syncPlanModeButtons() {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-plan-mode]"), function (button) {
+      button.classList.toggle("active", button.getAttribute("data-plan-mode") === currentPlanMode);
+    });
+  }
+
+  function renderPlan() {
+    var root = document.getElementById("planList");
+    var list = planFilteredTasks();
+    syncPlanModeButtons();
+
+    if (currentPlanMode === "schedule") renderScheduleView(root, list);
+    else renderTaskListView(root, list);
+
+    wirePlanTaskActions(root);
+  }
+
+  function renderTaskListView(root, list) {
     if (!list.length) {
       root.innerHTML = '<div class="empty-state"><h3>Nothing here yet</h3><p>Add a task and DeeCadence can place it into your day.</p></div>';
       return;
     }
+    root.innerHTML = '<div class="task-list-stack">' + list.map(renderTaskCard).join("") + "</div>";
+  }
 
-    root.innerHTML = list.map(function (task) {
-      var priClass = task.priority === "high" ? "pri-high" : task.priority === "medium" ? "pri-med" : "pri-low";
-      return '<div class="task-card"><div class="task-card-top"><div class="task-card-title">' + escapeHtml(task.title) + (task.status === "completed" ? " done" : "") + '</div><span class="priority-pill ' + priClass + '">' + task.priority + '</span></div><div class="task-card-meta"><span>' + (currentPlanTab === "day" ? "" : task.date + " - ") + (task.time || "Unscheduled") + "</span><span>" + task.estMinutes + " min</span><span>" + task.units.completed + "/" + task.units.total + " units</span></div>" + renderTaskUnitRail(task) + '<div class="task-card-actions">' + (task.status !== "completed" ? '<button class="btn btn-primary" data-focus-task="' + task.id + '">Focus</button>' : "") + '<button class="btn btn-ghost" data-delete-task="' + task.id + '">Delete</button></div></div>';
+  function renderScheduleView(root, list) {
+    if (currentPlanTab === "week") {
+      renderWeekSchedule(root);
+      return;
+    }
+    if (currentPlanTab === "pending") {
+      renderPendingSchedule(root, list);
+      return;
+    }
+    renderDaySchedule(root, list);
+  }
+
+  function renderDaySchedule(root, list) {
+    var timed = list.filter(function (task) { return task.time; });
+    var unscheduled = list.filter(function (task) { return !task.time && task.status !== "completed"; });
+    var pxPerMinute = 0.82;
+    var timelineHeight = Math.round((DAY_END_MINUTES - DAY_START_MINUTES) * pxPerMinute);
+    var hours = [];
+    for (var min = DAY_START_MINUTES; min <= DAY_END_MINUTES; min += 60) {
+      hours.push('<div class="schedule-hour-row" style="top:' + Math.round((min - DAY_START_MINUTES) * pxPerMinute) + 'px"><span>' + minToTime(min) + '</span></div>');
+    }
+    var layout = layoutScheduleBlocks(timed);
+    var blocks = layout.map(function (item) {
+      var top = Math.max(0, Math.round((item.start - DAY_START_MINUTES) * pxPerMinute));
+      var height = Math.max(40, Math.round((item.end - item.start) * pxPerMinute));
+      var gap = item.columnCount > 1 ? 2 : 0;
+      var width = 100 / item.columnCount;
+      var left = width * item.column;
+      var style = "top:" + top + "px;height:" + height + "px;left:" + left + "%;right:auto;width:calc(" + width + "% - " + gap + "px)";
+      var task = item.task;
+      var timing = taskTimingState(task);
+      return '<article class="schedule-block ' + planPriorityClass(task) + (timing ? " " + timing.id : "") + '" style="' + style + '" data-open-task="' + task.id + '" role="button" tabindex="0" aria-label="Open ' + escapeHtml(task.title) + '"><strong>' + escapeHtml(task.title) + '</strong></article>';
     }).join("");
 
+    root.innerHTML = '<section class="schedule-shell"><div class="schedule-head"><div><div class="eyebrow">Today schedule</div><h3>' + formatReadableDate(todayStr()) + '</h3></div><span>' + timed.length + " timed block" + (timed.length === 1 ? "" : "s") + '</span></div><div class="schedule-timeline" style="min-height:' + timelineHeight + 'px"><div class="schedule-hours">' + hours.join("") + '</div><div class="schedule-block-layer">' + renderNowLine(todayStr(), pxPerMinute) + (blocks || '<div class="schedule-empty-timeline">No scheduled blocks yet. Add a time or use Auto-arrange.</div>') + '</div></div>' + renderScheduleQueue(unscheduled, "Unscheduled today", "Everything for today has a time.") + '</section>';
+  }
+
+  function layoutScheduleBlocks(tasks) {
+    var items = tasks.map(function (task) {
+      var rawStart = timeToMin(task.time);
+      var rawEnd = rawStart + task.estMinutes;
+      return {
+        task: task,
+        rawEnd: rawEnd,
+        start: Math.max(DAY_START_MINUTES, rawStart),
+        end: Math.min(DAY_END_MINUTES, rawEnd),
+        column: 0,
+        columnCount: 1
+      };
+    }).filter(function (item) {
+      return item.end > DAY_START_MINUTES && item.start < DAY_END_MINUTES;
+    }).sort(function (a, b) {
+      if (a.start !== b.start) return a.start - b.start;
+      return a.end - b.end;
+    });
+
+    var groups = [];
+    var group = [];
+    var groupEnd = -1;
+    items.forEach(function (item) {
+      if (!group.length || item.start < groupEnd) {
+        group.push(item);
+        groupEnd = Math.max(groupEnd, item.end);
+      } else {
+        groups.push(group);
+        group = [item];
+        groupEnd = item.end;
+      }
+    });
+    if (group.length) groups.push(group);
+
+    groups.forEach(function (itemsInGroup) {
+      var columnEnds = [];
+      itemsInGroup.forEach(function (item) {
+        var column = columnEnds.findIndex(function (end) { return end <= item.start; });
+        if (column === -1) column = columnEnds.length;
+        item.column = column;
+        columnEnds[column] = item.end;
+      });
+      itemsInGroup.forEach(function (item) {
+        item.columnCount = Math.max(1, columnEnds.length);
+      });
+    });
+
+    return items;
+  }
+
+  function renderNowLine(dateKey, pxPerMinute) {
+    if (dateKey !== todayStr()) return "";
+    var now = new Date();
+    var minutes = (now.getHours() * 60) + now.getMinutes();
+    if (minutes < DAY_START_MINUTES || minutes > DAY_END_MINUTES) return "";
+    var top = Math.round((minutes - DAY_START_MINUTES) * pxPerMinute);
+    return '<div class="schedule-now-line" style="top:' + top + 'px"><span>Now ' + minToTime(minutes) + '</span></div>';
+  }
+
+  function renderPendingSchedule(root, list) {
+    var unscheduled = list.filter(function (task) { return !task.time; });
+    var scheduled = list.filter(function (task) { return task.time; });
+    root.innerHTML = '<section class="schedule-shell"><div class="schedule-head"><div><div class="eyebrow">Pending queue</div><h3>Choose what enters the day</h3></div><span>' + list.length + " open task" + (list.length === 1 ? "" : "s") + '</span></div>' + renderScheduleQueue(unscheduled, "Needs a time", "No unscheduled open tasks.") + renderScheduleQueue(scheduled, "Already placed", "No scheduled open tasks.") + '</section>';
+  }
+
+  function renderWeekSchedule(root) {
+    var start = todayStr();
+    var days = [];
+    for (var i = 0; i < 7; i += 1) days.push(addDaysKey(start, i));
+    root.innerHTML = '<section class="schedule-shell"><div class="schedule-head"><div><div class="eyebrow">Week schedule</div><h3>Next seven days</h3></div><span>Auto-arrange keeps the lane tidy</span></div><div class="schedule-week-grid">' + days.map(function (date) {
+      var dayTasks = state.tasks.filter(function (task) { return task.date === date && task.status !== "completed"; }).sort(sortTasksForPlan);
+      return '<article class="schedule-day-card"><div class="schedule-day-head"><strong>' + shortDayLabel(date) + '</strong><span>' + dayTasks.length + " task" + (dayTasks.length === 1 ? "" : "s") + '</span></div>' + (dayTasks.length ? dayTasks.map(renderMiniScheduleBlock).join("") : '<p>No blocks</p>') + '</article>';
+    }).join("") + '</div></section>';
+  }
+
+  function renderMiniScheduleBlock(task) {
+    var timing = taskTimingState(task);
+    return '<button class="schedule-mini-block ' + planPriorityClass(task) + (timing ? " " + timing.id : "") + '" data-open-task="' + task.id + '"><strong>' + escapeHtml(task.title) + '</strong></button>';
+  }
+
+  function renderScheduleQueue(tasks, label, emptyText) {
+    return '<div class="schedule-queue"><div class="schedule-queue-title">' + label + '</div>' + (tasks.length ? tasks.map(function (task) {
+      return '<article class="schedule-queue-card ' + (taskTimingState(task) ? "has-time-alert" : "") + '"><button class="schedule-queue-main" data-open-task="' + task.id + '"><strong>' + escapeHtml(task.title) + '</strong><span>' + (task.time || "No time set") + " - " + task.estMinutes + " min - " + task.priority + '</span></button><div class="schedule-queue-actions"><button class="btn btn-ghost" data-edit-task="' + task.id + '">Edit</button>' + (task.status !== "completed" ? '<button class="btn btn-primary" data-focus-task="' + task.id + '">Focus</button>' : "") + '<button class="btn btn-ghost" data-delete-task="' + task.id + '">Delete</button></div></article>';
+    }).join("") : '<div class="schedule-empty-queue">' + emptyText + '</div>') + '</div>';
+  }
+
+  function formatReadableDate(dateKey) {
+    return new Date(dateKey + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  }
+
+  function shortDayLabel(dateKey) {
+    return new Date(dateKey + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  function wirePlanTaskActions(root) {
+    Array.prototype.forEach.call(root.querySelectorAll("[data-open-task]"), function (button) {
+      button.onclick = function () { openTaskDetail(button.getAttribute("data-open-task")); };
+      button.onkeydown = function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openTaskDetail(button.getAttribute("data-open-task"));
+        }
+      };
+    });
+    Array.prototype.forEach.call(root.querySelectorAll("[data-edit-task]"), function (button) {
+      button.onclick = function () { openTaskModal(button.getAttribute("data-edit-task")); };
+    });
+    Array.prototype.forEach.call(root.querySelectorAll("[data-toggle-task]"), function (button) {
+      button.onclick = function () { toggleTaskDone(button.getAttribute("data-toggle-task")); };
+    });
     Array.prototype.forEach.call(root.querySelectorAll("[data-focus-task]"), function (button) {
       button.onclick = function () { startScheduledTask(button.getAttribute("data-focus-task")); };
     });
@@ -932,6 +1160,48 @@
         deleteTask(button.getAttribute("data-delete-task"));
       };
     });
+  }
+
+  function toggleTaskDone(taskId) {
+    var task = getTask(taskId);
+    if (!task) return;
+    if (task.status === "completed") {
+      task.units.completed = 0;
+      task.status = "pending";
+      saveState();
+      renderAll();
+      showToast("Task reopened");
+    } else {
+      markTaskDoneOutsideTimer(taskId);
+    }
+  }
+
+  function markTaskDoneOutsideTimer(taskId) {
+    var task = getTask(taskId);
+    if (!task) return;
+    var shouldAward = !task.manualDoneXpAwarded && task.status !== "completed";
+    task.units.completed = task.units.total;
+    task.status = "completed";
+    if (shouldAward) {
+      task.manualDoneXpAwarded = true;
+      state.profile.totalXp += XP_MANUAL_DONE;
+      state.history.unshift({
+        id: makeId("manual"),
+        date: new Date().toISOString(),
+        linkedTaskId: task.id,
+        linkedTaskTitle: task.title,
+        blocksCompleted: 0,
+        blocksPlanned: 0,
+        totalMinutes: task.estMinutes,
+        xpEarned: XP_MANUAL_DONE,
+        completedAll: true,
+        manualDone: true,
+        completionType: "outside_timer"
+      });
+    }
+    saveState();
+    renderAll();
+    showToast(shouldAward ? "Marked done outside timer. +" + XP_MANUAL_DONE + " XP" : "Task completed");
   }
 
   function startOfDay(date) {
@@ -976,7 +1246,7 @@
       return '<div class="bar-col"><div class="bar" style="height:' + height + '%"></div><div class="bar-day">' + label + "</div></div>";
     }).join("");
     var historyXp = state.history.reduce(function (sum, item) { return sum + (item.xpEarned || 0); }, 0);
-    document.getElementById("progressTaskSummary").innerHTML = state.history.length + " sessions logged - " + formatNumber(historyXp) + " XP earned from focus blocks - " + doneTasks + " of " + state.tasks.length + " tasks fully completed.";
+    document.getElementById("progressTaskSummary").innerHTML = state.history.length + " logs saved - " + formatNumber(historyXp) + " XP earned - " + doneTasks + " of " + state.tasks.length + " tasks fully completed.";
   }
 
   function renderHistory() {
@@ -986,8 +1256,10 @@
       return;
     }
     root.innerHTML = state.history.map(function (item) {
-      var date = new Date(item.completedAt || Date.now());
-      return '<div class="history-item"><div class="history-icon">' + item.blocksCompleted + "/" + item.blocksPlanned + '</div><div class="history-main"><div class="history-title">' + (item.linkedTaskTitle ? escapeHtml(item.linkedTaskTitle) : "Free focus") + '</div><div class="history-sub">' + date.toLocaleDateString() + " - " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + item.totalMinutes + ' min planned</div></div><div class="history-xp">+' + item.xpEarned + " XP</div></div>";
+      var date = new Date(item.completedAt || item.date || Date.now());
+      var icon = item.manualDone ? "Done" : item.blocksCompleted + "/" + item.blocksPlanned;
+      var subtitle = item.manualDone ? "Completed outside timer" : item.totalMinutes + " min planned";
+      return '<div class="history-item"><div class="history-icon">' + icon + '</div><div class="history-main"><div class="history-title">' + (item.linkedTaskTitle ? escapeHtml(item.linkedTaskTitle) : "Free focus") + '</div><div class="history-sub">' + date.toLocaleDateString() + " - " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + subtitle + '</div></div><div class="history-xp">+' + item.xpEarned + " XP</div></div>";
     }).join("");
   }
 
@@ -1030,6 +1302,7 @@
   }
 
   function switchView(name) {
+    activeView = name;
     Array.prototype.forEach.call(document.querySelectorAll(".view"), function (view) {
       view.classList.toggle("active", view.id === "view-" + name);
     });
@@ -1047,12 +1320,75 @@
 
   function populateLinkTaskSelect(selectedId) {
     var select = document.getElementById("linkTaskSelect");
-    var openTasks = state.tasks.filter(function (task) { return task.status !== "completed"; });
-    select.innerHTML = '<option value="">No linked task</option>' + openTasks.map(function (task) {
-      return '<option value="' + task.id + '"' + (task.id === selectedId ? " selected" : "") + ">" + escapeHtml(task.title) + "</option>";
-    }).join("");
+    var openTasks = scheduledFocusTasks();
+    select.innerHTML = openTasks.length ? openTasks.map(function (task) {
+      var meta = (task.time || "Unscheduled") + " - " + task.estMinutes + " min";
+      return '<option value="' + task.id + '"' + (task.id === selectedId ? " selected" : "") + ">" + escapeHtml(task.title) + " (" + meta + ")</option>";
+    }).join("") : '<option value="">No scheduled tasks yet</option>';
+    if (selectedId && !getTask(selectedId)) select.value = "";
   }
 
+  function scheduledFocusTasks() {
+    return state.tasks
+      .filter(function (task) { return task.status !== "completed"; })
+      .sort(function (a, b) {
+        var dateCompare = String(a.date || "").localeCompare(String(b.date || ""));
+        if (dateCompare) return dateCompare;
+        return (a.time ? timeToMin(a.time) : 9999) - (b.time ? timeToMin(b.time) : 9999);
+      });
+  }
+
+  function syncStartTaskSource(source) {
+    startTaskSource = source === "input" ? "input" : "schedule";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-start-source]"), function (button) {
+      button.classList.toggle("active", button.getAttribute("data-start-source") === startTaskSource);
+    });
+    document.getElementById("scheduleTaskField").style.display = startTaskSource === "schedule" ? "flex" : "none";
+    document.getElementById("inputTaskField").style.display = startTaskSource === "input" ? "flex" : "none";
+    document.getElementById("startTaskSourceHint").textContent = startTaskSource === "schedule"
+      ? "Pick a task already on your schedule."
+      : "Name the task you want this focus session to move forward.";
+    if (startTaskSource === "input") {
+      document.getElementById("inputTaskTitle").focus();
+    }
+  }
+
+  function createInputFocusTask(title, minutes) {
+    var cleanTitle = String(title || "").trim().replace(/\s+/g, " ");
+    if (!cleanTitle) return null;
+    var task = normalizeTask({
+      title: cleanTitle,
+      date: todayStr(),
+      time: null,
+      flex: "flexible",
+      estMinutes: clampMinutes(minutes, 25),
+      priority: "medium",
+      units: 4,
+      notes: "Created from Focus input"
+    });
+    state.tasks.push(task);
+    return task;
+  }
+
+  function resolveStartTaskId(minutes) {
+    if (startTaskSource === "input") {
+      var input = document.getElementById("inputTaskTitle");
+      var task = createInputFocusTask(input.value, minutes);
+      if (!task) {
+        input.focus();
+        showToast("Type the task title first.");
+        return null;
+      }
+      return task.id;
+    }
+    var selectedTaskId = document.getElementById("linkTaskSelect").value;
+    if (!selectedTaskId || !getTask(selectedTaskId)) {
+      document.getElementById("linkTaskSelect").focus();
+      showToast("Choose a scheduled task, or switch to Input.");
+      return null;
+    }
+    return selectedTaskId;
+  }
   function syncDurationButtons(minutes) {
     var matched = false;
     Array.prototype.forEach.call(document.querySelectorAll(".duration-opt"), function (button) {
@@ -1084,7 +1420,9 @@
     var minutes = task ? task.estMinutes : chosenMinutes;
     syncDurationButtons(minutes);
     populateLinkTaskSelect(task ? task.id : "");
-    document.getElementById("startModalSub").textContent = task ? 'For "' + task.title + '". Choose the full session length.' : "Choose a total length. It will split into four blocks.";
+    document.getElementById("inputTaskTitle").value = "";
+    syncStartTaskSource(task || scheduledFocusTasks().length ? "schedule" : "input");
+    document.getElementById("startModalSub").textContent = task ? 'For "' + task.title + '". Choose the full session length.' : "Choose a total length, then choose from Schedule or type a task title.";
     startModal.classList.add("open");
   }
 
@@ -1093,19 +1431,51 @@
     if (task) openStartModal(task);
   }
 
-  function openTaskModal() {
+  function openTaskModal(taskOrId) {
+    var task = typeof taskOrId === "string" ? getTask(taskOrId) : (taskOrId && taskOrId.id ? taskOrId : null);
+    editingTaskId = task ? task.id : null;
     selectedProgressType = "countable";
-    document.getElementById("taskTitleInput").value = "";
-    document.getElementById("taskDateInput").value = todayStr();
-    document.getElementById("taskTimeInput").value = "";
-    document.getElementById("taskDurationInput").value = "50";
-    document.getElementById("taskPriorityInput").value = "medium";
-    document.getElementById("taskUnitsInput").value = "4";
-    document.getElementById("taskFlexInput").value = "flexible";
-    document.getElementById("taskNotesInput").value = "";
+    document.getElementById("taskModalTitle").textContent = task ? "Edit task" : "Add task";
+    document.getElementById("taskModalConfirm").textContent = task ? "Save changes" : "Save task";
+    document.getElementById("taskTitleInput").value = task ? task.title : "";
+    document.getElementById("taskDateInput").value = task ? task.date : todayStr();
+    document.getElementById("taskTimeInput").value = task && task.time ? task.time : "";
+    document.getElementById("taskDurationInput").value = task ? task.estMinutes : "50";
+    document.getElementById("taskPriorityInput").value = task ? task.priority : "medium";
+    document.getElementById("taskUnitsInput").value = task ? task.units.total : "4";
+    document.getElementById("taskFlexInput").value = task ? task.flex : "flexible";
+    document.getElementById("taskNotesInput").value = task ? task.notes : "";
     syncProgressTypeButtons();
     taskModal.classList.add("open");
     document.getElementById("taskTitleInput").focus();
+  }
+
+  function openTaskDetail(taskId) {
+    var task = getTask(taskId);
+    if (!task) return;
+    activeDetailTaskId = task.id;
+    var timing = taskTimingState(task);
+    document.getElementById("taskDetailBody").innerHTML =
+      '<div class="task-detail-head">' +
+        '<div><div class="eyebrow">Task</div><h3 id="taskDetailTitle">' + escapeHtml(task.title) + '</h3></div>' +
+        (timing ? '<span class="timing-badge ' + timing.id + '">' + timing.label + '</span>' : "") +
+      '</div>' +
+      '<div class="task-detail-grid">' +
+        '<div><span>Date</span><strong>' + formatReadableDate(task.date) + '</strong></div>' +
+        '<div><span>Time</span><strong>' + (task.time || "Unscheduled") + '</strong></div>' +
+        '<div><span>Duration</span><strong>' + task.estMinutes + ' min</strong></div>' +
+        '<div><span>Progress</span><strong>' + task.units.completed + "/" + task.units.total + ' units</strong></div>' +
+      '</div>' +
+      '<div class="task-detail-notes"><span>Description</span><p>' + (task.notes ? escapeHtml(task.notes) : "No description yet.") + '</p></div>' +
+      renderTaskUnitRail(task);
+    document.getElementById("taskDetailDone").style.display = task.status === "completed" ? "none" : "inline-flex";
+    document.getElementById("taskDetailFocus").style.display = task.status === "completed" ? "none" : "inline-flex";
+    taskDetailModal.classList.add("open");
+  }
+
+  function closeTaskDetail() {
+    activeDetailTaskId = null;
+    taskDetailModal.classList.remove("open");
   }
 
   function syncProgressTypeButtons() {
@@ -1127,13 +1497,19 @@
     };
     document.getElementById("startModalCancel").onclick = function () { startModal.classList.remove("open"); };
     document.getElementById("startModalConfirm").onclick = function () {
-      var selectedTaskId = document.getElementById("linkTaskSelect").value;
       var minutes = document.querySelector('.duration-opt[data-min="custom"]').classList.contains("active")
         ? clampMinutes(document.getElementById("customMinInput").value, 20)
         : chosenMinutes;
+      var selectedTaskId = resolveStartTaskId(clampMinutes(minutes, 25));
+      if (!selectedTaskId) return;
       startModal.classList.remove("open");
-      beginSession(clampMinutes(minutes, 25), selectedTaskId || null);
+      beginSession(clampMinutes(minutes, 25), selectedTaskId);
     };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-start-source]"), function (button) {
+      button.onclick = function () {
+        syncStartTaskSource(button.getAttribute("data-start-source"));
+      };
+    });
     Array.prototype.forEach.call(document.querySelectorAll(".duration-opt"), function (button) {
       button.onclick = function () {
         Array.prototype.forEach.call(document.querySelectorAll(".duration-opt"), function (item) { item.classList.remove("active"); });
@@ -1146,15 +1522,20 @@
     document.getElementById("customMinInput").oninput = function () {
       chosenMinutes = clampMinutes(this.value, 20);
     };
-    document.getElementById("addTaskBtn").onclick = openTaskModal;
-    document.getElementById("taskModalCancel").onclick = function () { taskModal.classList.remove("open"); };
+    document.getElementById("addTaskBtn").onclick = function () { openTaskModal(); };
+    document.getElementById("taskModalCancel").onclick = function () {
+      editingTaskId = null;
+      taskModal.classList.remove("open");
+    };
     document.getElementById("taskModalConfirm").onclick = function () {
       var title = document.getElementById("taskTitleInput").value.trim();
       if (!title) {
         document.getElementById("taskTitleInput").focus();
         return;
       }
+      var existingTask = editingTaskId ? getTask(editingTaskId) : null;
       var task = normalizeTask({
+        id: existingTask ? existingTask.id : null,
         title: title,
         date: document.getElementById("taskDateInput").value || todayStr(),
         time: document.getElementById("taskTimeInput").value || null,
@@ -1162,13 +1543,22 @@
         estMinutes: clampMinutes(document.getElementById("taskDurationInput").value, 50),
         priority: document.getElementById("taskPriorityInput").value,
         units: selectedProgressType === "ongoing" ? 4 : document.getElementById("taskUnitsInput").value,
+        completedUnits: existingTask ? existingTask.units.completed : 0,
+        status: existingTask ? existingTask.status : "pending",
+        manualDoneXpAwarded: existingTask ? existingTask.manualDoneXpAwarded : false,
         notes: document.getElementById("taskNotesInput").value
       });
-      state.tasks.push(task);
+      if (existingTask) {
+        var index = state.tasks.findIndex(function (item) { return item.id === existingTask.id; });
+        if (index > -1) state.tasks[index] = task;
+      } else {
+        state.tasks.push(task);
+      }
       saveState();
+      editingTaskId = null;
       taskModal.classList.remove("open");
       renderAll();
-      showToast("Task added");
+      showToast(existingTask ? "Task updated" : "Task added");
     };
     Array.prototype.forEach.call(document.querySelectorAll("[data-progress-type]"), function (button) {
       button.onclick = function () {
@@ -1176,9 +1566,34 @@
         syncProgressTypeButtons();
       };
     });
-    [startModal, taskModal].forEach(function (overlay) {
+    document.getElementById("taskDetailClose").onclick = closeTaskDetail;
+    document.getElementById("taskDetailDone").onclick = function () {
+      var taskId = activeDetailTaskId;
+      closeTaskDetail();
+      if (taskId) markTaskDoneOutsideTimer(taskId);
+    };
+    document.getElementById("taskDetailFocus").onclick = function () {
+      var taskId = activeDetailTaskId;
+      closeTaskDetail();
+      if (taskId) startScheduledTask(taskId);
+    };
+    document.getElementById("taskDetailEdit").onclick = function () {
+      var task = activeDetailTaskId ? getTask(activeDetailTaskId) : null;
+      closeTaskDetail();
+      if (task) openTaskModal(task);
+    };
+    document.getElementById("taskDetailDelete").onclick = function () {
+      var taskId = activeDetailTaskId;
+      closeTaskDetail();
+      if (taskId) deleteTask(taskId);
+    };
+    [startModal, taskModal, taskDetailModal].forEach(function (overlay) {
       overlay.addEventListener("click", function (event) {
-        if (event.target === overlay) overlay.classList.remove("open");
+        if (event.target === overlay) {
+          overlay.classList.remove("open");
+          if (overlay === taskModal) editingTaskId = null;
+          if (overlay === taskDetailModal) activeDetailTaskId = null;
+        }
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll(".navbtn, .bottomnav button"), function (button) {
@@ -1199,6 +1614,12 @@
         Array.prototype.forEach.call(document.querySelectorAll(".tab[data-planview]"), function (item) { item.classList.remove("active"); });
         tab.classList.add("active");
         currentPlanTab = tab.getAttribute("data-planview");
+        renderPlan();
+      };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-plan-mode]"), function (button) {
+      button.onclick = function () {
+        currentPlanMode = button.getAttribute("data-plan-mode");
         renderPlan();
       };
     });
@@ -1281,9 +1702,15 @@
     beginSession: beginSession,
     continueSavedSession: continueSavedSession,
     finalizeSession: finalizeSession,
+    createInputFocusTask: createInputFocusTask,
+    scheduledFocusTasks: scheduledFocusTasks,
     tick: tick,
     deleteTask: deleteTask,
+    markTaskDoneOutsideTimer: markTaskDoneOutsideTimer,
     csvCell: csvCell,
+    taskTimingState: taskTimingState,
+    layoutScheduleBlocks: layoutScheduleBlocks,
+    renderNowLine: renderNowLine,
     getState: function () { return state; }
   };
 
@@ -1292,6 +1719,10 @@
   window.addEventListener("storage", handleStorageChange);
   renderAll();
   switchView("today");
+  setInterval(function () {
+    if (activeView === "today") renderToday();
+    if (activeView === "plan" && currentPlanMode === "schedule" && currentPlanTab === "day") renderPlan();
+  }, 60000);
   if (state.session && state.session.status === "running") startTicker();
   document.body.classList.add("booted");
 })();

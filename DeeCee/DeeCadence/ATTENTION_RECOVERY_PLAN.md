@@ -79,3 +79,8 @@ Measure:
 - A 2024 online attention training study found that a four-session program improved attention and reduced boredom experiences among healthy adults.
 - A 2025 break-technique study found no overall productivity difference between self-regulated, Pomodoro, and Flowtime breaks, and observed faster fatigue increase under Pomodoro in that sample. DeeCadence should therefore personalize breaks instead of assuming one timer style fits everyone.
 - A 2024 systematic review of digital habit formation found common useful techniques such as self-monitoring, goal setting, prompts/cues, and positive reinforcement. DeeCadence already has the right ingredients through XP, scheduling, progress, and saved-session recovery, but they need to be measured and tuned.
+
+Sources:
+- Online attention training study: https://link.springer.com/article/10.1007/s11031-024-10081-2
+- Break technique study: https://www.mdpi.com/2076-328X/15/7/861
+- Digital habit formation review: https://pmc.ncbi.nlm.nih.gov/articles/PMC11161714/

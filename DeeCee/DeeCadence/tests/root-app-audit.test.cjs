@@ -5,6 +5,8 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const appSource = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const styleSource = fs.readFileSync(path.join(root, "style.css"), "utf8");
 
 function style() {
   return {
@@ -79,6 +81,8 @@ function createHarness() {
   });
   const themeButtons = ["dark", "light"].map((value) => buttonWith("data-theme-choice", value));
   const progressButtons = ["countable", "ongoing"].map((value) => buttonWith("data-progress-type", value));
+  const startSourceButtons = ["schedule", "input"].map((value) => buttonWith("data-start-source", value));
+  const planModeButtons = ["schedule", "tasks"].map((value) => buttonWith("data-plan-mode", value));
   const tabs = ["day", "week", "pending"].map((value) => buttonWith("data-planview", value));
   const nav = ["today", "focus", "plan", "rank", "progress", "history", "settings"].map((value) => buttonWith("data-view", value));
 
@@ -98,6 +102,8 @@ function createHarness() {
       if (selector === ".duration-opt") return durationButtons;
       if (selector === "[data-theme-choice]") return themeButtons;
       if (selector === "[data-progress-type]") return progressButtons;
+      if (selector === "[data-start-source]") return startSourceButtons;
+      if (selector === "[data-plan-mode]") return planModeButtons;
       if (selector === ".tab[data-planview]") return tabs;
       if (selector === ".navbtn, .bottomnav button") return nav;
       if (selector === ".view") return nav.map((button) => byId(`view-${button.getAttribute("data-view")}`));
@@ -234,6 +240,39 @@ function testPartialSavedSessionKeepsRemainingTime() {
   assert.ok(state.session.blockRemaining <= 41);
 }
 
+function testInputTaskSessionUpdatesHistoryWithTitle() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+
+  const task = debug.createInputFocusTask("  Draft   launch notes  ", 25);
+  debug.beginSession(4, task.id);
+  state.session.blockEndsAt = Date.now() - 1000;
+  debug.tick();
+  debug.finalizeSession(true);
+
+  assert.equal(task.title, "Draft launch notes");
+  assert.equal(state.history.length, 1);
+  assert.equal(state.history[0].linkedTaskId, task.id);
+  assert.equal(state.history[0].linkedTaskTitle, "Draft launch notes");
+}
+
+function testSavedLinkedTaskDeletionIsBlocked() {
+  const { context, debug } = createHarness();
+  const state = debug.getState();
+  context.confirm = () => true;
+
+  const task = debug.createInputFocusTask("Read design notes", 25);
+  debug.beginSession(4, task.id);
+  state.session.blockEndsAt = Date.now() - 1000;
+  debug.tick();
+  debug.finalizeSession(false);
+  debug.deleteTask(task.id);
+
+  assert.ok(state.tasks.some((item) => item.id === task.id));
+  assert.equal(state.savedSessions.length, 1);
+  assert.equal(state.savedSessions[0].linkedTaskId, task.id);
+}
+
 function testCsvQuotingKeepsCommas() {
   const { debug } = createHarness();
 
@@ -246,13 +285,135 @@ function testLocalDateFormatterUsesLocalParts() {
   assert.equal(debug.localDateKey(new Date(2026, 6, 3, 23, 30)), "2026-07-03");
 }
 
+function blockFor(selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = styleSource.match(new RegExp(`${escaped}\\s*\\{([\\s\\S]*?)\\n\\}`));
+  assert.ok(match, `${selector} block should exist`);
+  return match[1];
+}
+
+function testUserFacingHtmlIsAsciiSafe() {
+  assert.equal(/[^\x00-\x7F]/.test(indexSource), false);
+}
+
+function testStartModalHasScheduleAndInputChoices() {
+  assert.match(indexSource, /data-start-source="schedule"/);
+  assert.match(indexSource, /data-start-source="input"/);
+  assert.match(indexSource, /id="inputTaskTitle"/);
+  assert.match(indexSource, /id="scheduleTaskField"/);
+}
+
+function testPlanHasScheduleAndTaskModes() {
+  assert.match(indexSource, /data-plan-mode="schedule"/);
+  assert.match(indexSource, /data-plan-mode="tasks"/);
+  assert.match(appSource, /function layoutScheduleBlocks/);
+  assert.match(styleSource, /\.schedule-now-line/);
+  assert.doesNotMatch(styleSource, /\.schedule-now-line::before/);
+  assert.match(indexSource, /data-view="settings"/);
+}
+
+function testTaskModalCanUseDesktopWidth() {
+  const taskModal = blockFor("#taskModal .modal");
+  const taskForm = blockFor("#taskModal .form-grid");
+
+  assert.match(taskModal, /760px/);
+  assert.match(taskModal, /overflow-x:\s*hidden/);
+  assert.match(taskForm, /minmax\(0, 1fr\) minmax\(0, 1fr\)/);
+}
+
+function testOverlappingScheduleBlocksGetColumns() {
+  const { debug } = createHarness();
+  const layout = debug.layoutScheduleBlocks([
+    { id: "a", title: "A", time: "14:30", estMinutes: 50, priority: "medium", status: "pending", units: { completed: 0, total: 1 } },
+    { id: "b", title: "B", time: "14:40", estMinutes: 50, priority: "medium", status: "pending", units: { completed: 0, total: 1 } },
+    { id: "c", title: "C", time: "16:00", estMinutes: 30, priority: "low", status: "pending", units: { completed: 0, total: 1 } }
+  ]);
+
+  assert.equal(layout[0].columnCount, 2);
+  assert.equal(layout[1].columnCount, 2);
+  assert.notEqual(layout[0].column, layout[1].column);
+  assert.equal(layout[2].columnCount, 1);
+
+  const oneMinuteOverlap = debug.layoutScheduleBlocks([
+    { id: "x", title: "X", time: "14:30", estMinutes: 20, priority: "medium", status: "pending", units: { completed: 0, total: 1 } },
+    { id: "y", title: "Y", time: "14:49", estMinutes: 20, priority: "medium", status: "pending", units: { completed: 0, total: 1 } }
+  ]);
+  assert.equal(oneMinuteOverlap[0].columnCount, 2);
+  assert.equal(oneMinuteOverlap[1].columnCount, 2);
+}
+
+function testPastTimedTasksAreFlagged() {
+  const { debug } = createHarness();
+  const missed = debug.taskTimingState({ date: "2000-01-01", time: "09:00", estMinutes: 30, status: "pending" });
+  const done = debug.taskTimingState({ date: "2000-01-01", time: "09:00", estMinutes: 30, status: "completed" });
+
+  assert.equal(missed.id, "missed");
+  assert.equal(done, null);
+}
+
+function testManualDoneGivesSmallXpWithoutBlockCredit() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+  const task = debug.createInputFocusTask("Already completed errand", 25);
+  const beforeXp = state.profile.totalXp;
+  const today = debug.localDateKey(new Date());
+
+  debug.markTaskDoneOutsideTimer(task.id);
+
+  assert.equal(task.status, "completed");
+  assert.equal(task.units.completed, task.units.total);
+  assert.equal(task.manualDoneXpAwarded, true);
+  assert.equal(state.profile.totalXp - beforeXp, 5);
+  assert.equal(state.dailyBlockLog[today] || 0, 0);
+  assert.equal(state.history[0].manualDone, true);
+  assert.equal(state.history[0].blocksCompleted, 0);
+  assert.equal(state.history[0].blocksPlanned, 0);
+
+  debug.markTaskDoneOutsideTimer(task.id);
+  assert.equal(state.profile.totalXp - beforeXp, 5);
+}
+
+function testRankOrbGeometryKeepsRingsCentered() {
+  const orbWrap = blockFor(".orb-wrap");
+  const progressRing = blockFor(".orb-wrap > svg:not(.orb-energy-ring)");
+  const energyRing = blockFor(".orb-energy-ring");
+
+  assert.match(orbWrap, /position:\s*relative/);
+  assert.match(progressRing, /position:\s*absolute/);
+  assert.match(progressRing, /inset:\s*14px/);
+  assert.match(progressRing, /width:\s*calc\(100% - 28px\)/);
+  assert.match(energyRing, /position:\s*absolute !important/);
+  assert.match(energyRing, /inset:\s*-14px !important/);
+  assert.match(energyRing, /width:\s*calc\(100% \+ 28px\) !important/);
+  assert.match(energyRing, /transform:\s*none !important/);
+  assert.match(energyRing, /animation:\s*none !important/);
+  assert.match(styleSource, /\.orb-energy-ring circle\s*\{[\s\S]*animation:\s*orbDashOrbit 9s linear infinite/);
+}
+
+function testThemeAndMotionContractsStayWired() {
+  assert.match(styleSource, /\[data-theme="light"\]/);
+  assert.match(styleSource, /\[data-reduced-motion="true"\] \*/);
+  assert.match(appSource, /data-reduced-motion/);
+}
+
 testRankGatesStayExact();
 testDurationClamp();
 testTimestampTimerCompletesElapsedBlock();
 testLinkedTaskDeletionIsBlocked();
 testIncompleteSessionCanBeSavedAndContinued();
 testPartialSavedSessionKeepsRemainingTime();
+testInputTaskSessionUpdatesHistoryWithTitle();
+testSavedLinkedTaskDeletionIsBlocked();
 testCsvQuotingKeepsCommas();
 testLocalDateFormatterUsesLocalParts();
+testUserFacingHtmlIsAsciiSafe();
+testStartModalHasScheduleAndInputChoices();
+testPlanHasScheduleAndTaskModes();
+testTaskModalCanUseDesktopWidth();
+testOverlappingScheduleBlocksGetColumns();
+testPastTimedTasksAreFlagged();
+testManualDoneGivesSmallXpWithoutBlockCredit();
+testRankOrbGeometryKeepsRingsCentered();
+testThemeAndMotionContractsStayWired();
 
 console.log("Root app audit tests passed");
