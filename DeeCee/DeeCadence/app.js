@@ -10,6 +10,10 @@
   var MIN_CUSTOM_MINUTES = 4;
   var DAY_START_MINUTES = 8 * 60;
   var DAY_END_MINUTES = 20 * 60;
+  var SOUND_FILES = {
+    blockComplete: "assets/sounds/block-complete.wav",
+    sessionComplete: "assets/sounds/session-complete.wav"
+  };
 
   var LEVEL_ANCHORS = [
     { level: 1, xp: 0, curve: 1.28 },
@@ -125,6 +129,7 @@
   var chosenMinutes = 25;
   var selectedProgressType = "countable";
   var startTaskSource = "schedule";
+  var audioCache = {};
 
   var startModal = document.getElementById("startModal");
   var taskModal = document.getElementById("taskModal");
@@ -178,6 +183,37 @@
   ];
 
   var state = loadState();
+
+  function getSound(name) {
+    if (!SOUND_FILES[name] || typeof Audio === "undefined") return null;
+    if (!audioCache[name]) {
+      audioCache[name] = new Audio(SOUND_FILES[name]);
+      audioCache[name].preload = "auto";
+      audioCache[name].volume = name === "sessionComplete" ? 0.56 : 0.42;
+    }
+    return audioCache[name];
+  }
+
+  function primeSounds() {
+    Object.keys(SOUND_FILES).forEach(function (name) {
+      getSound(name);
+    });
+  }
+
+  function playSound(name) {
+    if (!state.settings.sound) return;
+    var sound = getSound(name);
+    if (!sound) return;
+    try {
+      sound.currentTime = 0;
+      var attempt = sound.play();
+      if (attempt && typeof attempt.catch === "function") {
+        attempt.catch(function () {});
+      }
+    } catch (error) {
+      // Browser autoplay rules can still block audio after long idle periods.
+    }
+  }
 
   function clampMinutes(value, fallback) {
     var parsed = parseInt(value, 10);
@@ -580,6 +616,7 @@
       isFinalBlock: isFinalBlock
     };
 
+    playSound(isFinalBlock ? "sessionComplete" : "blockComplete");
     saveState();
     renderAll();
     showSystemReveal(session.lastReveal);
@@ -1778,6 +1815,13 @@
     };
     document.getElementById("soundSwitch").onclick = function () {
       state.settings.sound = !state.settings.sound;
+      if (state.settings.sound) {
+        primeSounds();
+        playSound("blockComplete");
+        showToast("Sound on");
+      } else {
+        showToast("Sound off");
+      }
       saveState();
       renderSettings();
     };
@@ -1864,6 +1908,7 @@
   });
   renderAll();
   switchView("today");
+  if (state.settings.sound) primeSounds();
   setTimeout(function () { startTour(false); }, 450);
   setInterval(function () {
     if (activeView === "today") renderToday();

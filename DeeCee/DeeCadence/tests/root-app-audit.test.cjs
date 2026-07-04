@@ -143,6 +143,13 @@ function createHarness() {
       revokeObjectURL() {}
     },
     Blob: function Blob() {},
+    Audio: function Audio(src) {
+      this.src = src;
+      this.preload = "";
+      this.volume = 1;
+      this.currentTime = 0;
+      this.play = () => Promise.resolve();
+    },
     Date,
     Math,
     Number,
@@ -420,6 +427,23 @@ function testThemeAndMotionContractsStayWired() {
   assert.match(appSource, /data-reduced-motion/);
 }
 
+function testSoundAssetsAreWired() {
+  const soundDir = path.join(root, "assets", "sounds");
+  const blockSound = path.join(soundDir, "block-complete.wav");
+  const sessionSound = path.join(soundDir, "session-complete.wav");
+  const sources = path.join(soundDir, "SOURCES.md");
+
+  assert.match(appSource, /assets\/sounds\/block-complete\.wav/);
+  assert.match(appSource, /assets\/sounds\/session-complete\.wav/);
+  assert.match(appSource, /function playSound/);
+  assert.match(appSource, /playSound\(isFinalBlock \? "sessionComplete" : "blockComplete"\)/);
+  assert.ok(fs.existsSync(blockSound), "block completion sound should exist");
+  assert.ok(fs.existsSync(sessionSound), "session completion sound should exist");
+  assert.ok(fs.statSync(blockSound).size > 1000, "block sound should not be empty");
+  assert.ok(fs.statSync(sessionSound).size > 1000, "session sound should not be empty");
+  assert.ok(fs.existsSync(sources), "sound source note should exist");
+}
+
 testRankGatesStayExact();
 testDurationClamp();
 testTimestampTimerCompletesElapsedBlock();
@@ -440,5 +464,6 @@ testPastTimedTasksAreFlagged();
 testManualDoneGivesSmallXpWithoutBlockCredit();
 testRankOrbGeometryKeepsRingsCentered();
 testThemeAndMotionContractsStayWired();
+testSoundAssetsAreWired();
 
 console.log("Root app audit tests passed");
