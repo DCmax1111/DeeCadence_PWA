@@ -88,6 +88,10 @@ body[data-theme="light"] {
   height: 100vh;
 }
 
+.sidenav .navbtn[data-view="settings"] {
+  margin-top: 4px;
+}
+
 [data-theme="light"] .sidenav {
   background: rgba(247, 242, 226, 0.88);
   border-right-color: rgba(42, 91, 72, 0.13);
@@ -153,6 +157,14 @@ main {
   padding-top: 42px;
 }
 
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
 .topbar {
   margin-bottom: 30px;
 }
@@ -182,6 +194,36 @@ main {
   border-color: var(--border);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(18px);
+}
+
+.attention-brief {
+  margin-bottom: 16px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 4% 18%, color-mix(in srgb, var(--cyan) 18%, transparent), transparent 18rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--bg-elev) 88%, transparent));
+}
+
+.attention-kicker {
+  color: var(--cyan);
+  font: 800 11px/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.attention-brief h1 {
+  margin: 9px 0 8px;
+  max-width: 780px;
+  font-size: clamp(28px, 4.5vw, 52px);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+}
+
+.attention-brief p {
+  margin: 0;
+  max-width: 640px;
+  color: var(--text-dim);
+  line-height: 1.55;
 }
 
 [data-theme="light"] .card {
@@ -461,6 +503,147 @@ main {
   flex: 1 1 180px;
 }
 
+.block-count-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.block-count-grid button {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--surface-2) 66%, transparent);
+  font-weight: 800;
+}
+
+.block-count-grid button.active {
+  color: #071411;
+  border-color: color-mix(in srgb, var(--cyan) 60%, white);
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--cyan) 16%, transparent);
+}
+
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 96;
+  display: none;
+  place-items: center;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--cyan) 18%, transparent), transparent 28rem),
+    rgba(0, 8, 7, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.welcome-overlay.open {
+  display: grid;
+}
+
+.welcome-card {
+  width: min(860px, 100%);
+  max-height: min(90vh, 760px);
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 30px;
+  padding: clamp(22px, 4vw, 34px);
+  color: var(--text);
+  background:
+    radial-gradient(circle at 8% 4%, color-mix(in srgb, var(--cyan) 14%, transparent), transparent 18rem),
+    linear-gradient(145deg, color-mix(in srgb, var(--bg-elev) 96%, black), color-mix(in srgb, var(--surface) 82%, black));
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .welcome-card {
+  background:
+    radial-gradient(circle at 8% 4%, rgba(45, 189, 167, 0.15), transparent 18rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(249, 244, 226, 0.94));
+  box-shadow: 0 34px 90px rgba(64, 55, 31, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.welcome-orb {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  color: #071411;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.8), transparent 35%),
+    linear-gradient(135deg, var(--cyan), var(--gold));
+  box-shadow: 0 18px 38px color-mix(in srgb, var(--cyan) 24%, transparent);
+}
+
+.welcome-orb span {
+  font: 900 30px/1 "Sora", sans-serif;
+  letter-spacing: -0.08em;
+}
+
+.welcome-card h2 {
+  margin: 10px 0 10px;
+  max-width: 720px;
+  font-size: clamp(30px, 5vw, 58px);
+  line-height: 0.98;
+  letter-spacing: -0.07em;
+}
+
+.welcome-card > p {
+  margin: 0;
+  max-width: 720px;
+  color: var(--text-dim);
+  line-height: 1.58;
+}
+
+.welcome-task-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 22px 0 14px;
+}
+
+.welcome-task-grid > div {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--surface-2) 54%, transparent);
+}
+
+.welcome-task-grid h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.welcome-task-grid p,
+.welcome-note {
+  margin: 0 0 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.welcome-task-grid input {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg-elev) 76%, transparent);
+}
+
+.welcome-note {
+  margin: 2px 0 18px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
+  border-radius: 14px;
+  color: color-mix(in srgb, var(--cyan) 72%, var(--text));
+  background: color-mix(in srgb, var(--cyan) 8%, transparent);
+}
+
 .plan-controls {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
@@ -685,8 +868,8 @@ main {
   border: 1px solid var(--border);
   border-radius: 22px;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--cyan) 7%, transparent), transparent 34%),
-    color-mix(in srgb, var(--surface-2) 58%, transparent);
+    linear-gradient(90deg, color-mix(in srgb, var(--cyan) 9%, transparent), transparent 34%),
+    color-mix(in srgb, var(--surface-2) 68%, transparent);
   overflow: hidden;
 }
 
@@ -715,8 +898,8 @@ main {
 }
 
 .schedule-block-layer {
-  left: 78px;
-  right: 10px;
+  left: 76px;
+  right: 8px;
 }
 
 .schedule-block {
@@ -724,14 +907,15 @@ main {
   display: grid;
   align-items: center;
   min-width: 0;
-  padding: 6px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 11px;
+  padding: 2px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
   color: #071411;
   background: #65dcca;
-  box-shadow: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 4px 12px rgba(0, 0, 0, 0.12);
   z-index: 4;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .schedule-block > div {
@@ -742,9 +926,14 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: "Sora", sans-serif;
-  font-size: 13px;
-  letter-spacing: -0.02em;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11.5px;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.schedule-block.compact strong {
+  font-size: 10px;
 }
 
 .schedule-block.pri-high {
@@ -1317,7 +1506,7 @@ main {
 
 .tour-card {
   position: fixed;
-  width: min(360px, calc(100vw - 32px));
+  width: min(390px, calc(100vw - 32px));
   padding: 18px;
   border: 1px solid var(--border-strong);
   border-radius: 22px;
@@ -1327,6 +1516,54 @@ main {
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   pointer-events: auto;
   z-index: 93;
+}
+
+.tour-coach {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.coach-orb {
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  color: #071411;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.72), transparent 35%),
+    linear-gradient(135deg, var(--cyan), var(--gold));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--cyan) 24%, transparent);
+  animation: coachFloat 2.8s ease-in-out infinite;
+}
+
+.coach-orb span {
+  font-family: "Sora", sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: -0.08em;
+}
+
+.coach-status {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 9%, transparent);
+  font: 800 10px/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@keyframes coachFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(2deg);
+  }
 }
 
 .tour-step-count {
@@ -1393,6 +1630,10 @@ main {
   transition: none !important;
 }
 
+[data-reduced-motion="true"] .coach-orb {
+  animation: none;
+}
+
 @media (max-width: 640px) {
   main {
     padding-bottom: 132px;
@@ -1409,6 +1650,28 @@ main {
 
   #taskModal .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .attention-brief {
+    padding: 18px;
+  }
+
+  .welcome-overlay {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .welcome-card {
+    max-height: 88vh;
+    border-radius: 24px;
+  }
+
+  .welcome-task-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .block-count-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .plan-mode-seg,
@@ -1447,16 +1710,23 @@ main {
     left: 16px !important;
     right: 16px;
     top: auto !important;
-    bottom: calc(92px + env(safe-area-inset-bottom));
+    bottom: calc(86px + env(safe-area-inset-bottom));
     width: auto;
+    max-height: min(54vh, 430px);
+    overflow: auto;
+    padding: 16px;
   }
 
   .tour-actions {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
+    position: sticky;
+    bottom: -16px;
+    padding-top: 10px;
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--bg-elev) 96%, black) 18%);
   }
 
   .tour-actions .btn-primary {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
 
   .schedule-queue-card {
@@ -1469,7 +1739,7 @@ main {
   }
 
   .schedule-timeline {
-    min-height: 620px !important;
+    min-height: 780px !important;
   }
 
   .schedule-block-layer {
@@ -1486,7 +1756,7 @@ main {
     align-items: stretch;
     flex-direction: column;
     justify-content: center;
-    padding: 10px;
+    padding: 2px 6px;
   }
 
   .orb-wrap {
@@ -1511,4 +1781,748 @@ main {
   .saved-session-actions .btn {
     flex: 1;
   }
+}
+
+/* ---------- L99 cohesion pass ---------- */
+:root {
+  --bg: #020605;
+  --bg-elev: #06100e;
+  --surface: rgba(7, 28, 24, 0.94);
+  --surface-2: rgba(10, 54, 45, 0.86);
+  --border: rgba(100, 255, 218, 0.16);
+  --border-strong: rgba(100, 255, 218, 0.42);
+  --text: #f4fff9;
+  --text-dim: #b6d8cd;
+  --text-faint: #6e9288;
+  --cyan: #64ffda;
+  --blue: #6db6ff;
+  --violet: #7f73ff;
+  --gold: #ffd166;
+  --success: #80f2bd;
+  --shadow-card: 0 26px 90px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+main {
+  width: 100%;
+  max-width: min(1180px, calc(100vw - 32px));
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% -6%, rgba(100, 255, 218, 0.2), transparent 31rem),
+    radial-gradient(circle at 88% 2%, rgba(128, 242, 189, 0.1), transparent 28rem),
+    linear-gradient(135deg, #000 0%, #020605 46%, #07130f 100%);
+}
+
+#app {
+  background:
+    linear-gradient(90deg, rgba(100, 255, 218, 0.03), transparent 36%),
+    radial-gradient(circle at 52% 14%, rgba(100, 255, 218, 0.055), transparent 28rem);
+}
+
+.card,
+.task-card,
+.schedule-shell,
+.modal,
+.welcome-card,
+.tour-card {
+  border-color: var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  margin: -18px -6px 22px;
+  padding: 16px 6px 12px;
+  background:
+    linear-gradient(180deg, rgba(2, 6, 5, 0.96), rgba(2, 6, 5, 0.82) 72%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.topbar-title {
+  color: var(--cyan);
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 800;
+}
+
+.icon-btn,
+.btn,
+.seg button,
+.tab,
+.block-count-grid button {
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.icon-btn {
+  border-radius: 14px;
+  border: 1px solid rgba(100, 255, 218, 0.2);
+  background: linear-gradient(145deg, rgba(100, 255, 218, 0.09), rgba(255, 255, 255, 0.025));
+  color: var(--cyan);
+}
+
+.btn {
+  border: 1px solid rgba(100, 255, 218, 0.18);
+  border-radius: 15px;
+  letter-spacing: -0.01em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.btn:hover,
+.icon-btn:hover,
+.tab:hover,
+.seg button:hover,
+.block-count-grid button:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  color: #00110d;
+  background: linear-gradient(135deg, #64ffda 0%, #7beeb6 52%, #6db6ff 100%);
+  box-shadow: 0 18px 38px rgba(100, 255, 218, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
+.btn-secondary,
+.btn-ghost {
+  color: var(--text);
+  background: linear-gradient(145deg, rgba(100, 255, 218, 0.08), rgba(255, 255, 255, 0.025));
+}
+
+.btn-danger {
+  background: rgba(232, 111, 111, 0.08);
+}
+
+.next-block-card .btn-primary,
+.saved-session-stack > .btn-secondary {
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(100, 255, 218, 0.96), rgba(109, 182, 255, 0.92)),
+    #64ffda;
+}
+
+.attention-brief {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(22px, 4vw, 34px);
+  overflow: hidden;
+  border: 1px solid rgba(100, 255, 218, 0.22);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(100, 255, 218, 0.18), transparent 16rem),
+    linear-gradient(135deg, rgba(6, 36, 30, 0.98), rgba(2, 12, 10, 0.96));
+}
+
+.attention-brief::after {
+  content: "";
+  position: absolute;
+  right: -72px;
+  top: -92px;
+  width: 220px;
+  height: 220px;
+  border: 1px solid rgba(100, 255, 218, 0.2);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(100, 255, 218, 0.11), transparent 66%);
+  z-index: -1;
+}
+
+.attention-brief h1 {
+  max-width: 650px;
+  font-size: clamp(25px, 4vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.attention-brief p {
+  font-size: clamp(14px, 1.7vw, 17px);
+}
+
+.rank-console {
+  border: 1px solid rgba(100, 255, 218, 0.3);
+  background:
+    radial-gradient(circle at 14% 50%, rgba(100, 255, 218, 0.15), transparent 16rem),
+    linear-gradient(135deg, rgba(12, 58, 49, 0.9), rgba(4, 21, 18, 0.96));
+}
+
+.rank-console::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(100, 255, 218, 0.12), inset 0 -24px 70px rgba(100, 255, 218, 0.055);
+}
+
+.plan-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.plan-controls .btn {
+  margin-left: auto;
+}
+
+.plan-mode-seg,
+.tabs {
+  min-height: 48px;
+  align-items: center;
+}
+
+.schedule-scroll {
+  height: clamp(480px, calc(100vh - 230px), 760px);
+  min-height: 420px;
+  overflow: auto;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: rgba(3, 18, 15, 0.52);
+  scrollbar-color: rgba(100, 255, 218, 0.45) rgba(255, 255, 255, 0.04);
+}
+
+.schedule-timeline {
+  margin-top: 0;
+  border: 0;
+  border-radius: 0;
+  min-height: unset !important;
+}
+
+.schedule-block {
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.schedule-queue-card {
+  border-radius: 16px;
+}
+
+.bar-chart {
+  display: block;
+  height: auto;
+  padding-top: 0;
+}
+
+.tour-overlay {
+  z-index: 120;
+}
+
+.tour-card {
+  z-index: 240 !important;
+  width: min(360px, calc(100vw - 28px));
+  padding: clamp(14px, 1.8vw, 18px);
+}
+
+.tour-card h3 {
+  font-size: clamp(18px, 2.4vw, 21px);
+  line-height: 1.12;
+}
+
+.tour-card p {
+  font-size: clamp(12px, 1.5vw, 13.5px);
+  line-height: 1.48;
+}
+
+.tour-highlight {
+  z-index: 130 !important;
+  outline: 2px solid color-mix(in srgb, var(--cyan) 82%, white);
+  outline-offset: 6px;
+  box-shadow: 0 0 0 10px rgba(100, 255, 218, 0.08) !important;
+}
+
+.xp-float {
+  position: fixed;
+  left: 50%;
+  bottom: 112px;
+  z-index: 300;
+  transform: translateX(-50%) translateY(16px) scale(0.98);
+  opacity: 0;
+  padding: 9px 16px;
+  border: 1px solid rgba(100, 255, 218, 0.5);
+  border-radius: 999px;
+  color: #00110d;
+  background: linear-gradient(135deg, var(--cyan), var(--success));
+  box-shadow: 0 18px 44px rgba(100, 255, 218, 0.22);
+  font: 900 14px/1 "IBM Plex Mono", monospace;
+  pointer-events: none;
+  transition: transform 1.25s ease, opacity 1.25s ease;
+}
+
+.xp-float.rise {
+  transform: translateX(-50%) translateY(-58px) scale(1);
+  opacity: 1;
+}
+
+[data-theme="light"] .topbar {
+  background:
+    linear-gradient(180deg, rgba(246, 243, 234, 0.96), rgba(246, 243, 234, 0.8) 72%, transparent);
+}
+
+@media (max-width: 860px) {
+  main {
+    max-width: 100%;
+  }
+
+  .topbar {
+    margin: -10px -2px 18px;
+    padding: 12px 2px 10px;
+  }
+
+  .rank-console {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .rank-console .console-main {
+    flex-basis: 100%;
+  }
+
+  .rank-console .xp-bar-track {
+    max-width: 260px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .tour-card {
+    z-index: 240 !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    max-height: min(42vh, 330px);
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .tour-coach {
+    margin-bottom: 8px;
+  }
+
+  .coach-orb {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+  }
+
+  .coach-orb span {
+    font-size: 18px;
+  }
+
+  .tour-step-count,
+  .coach-status {
+    font-size: 8.5px;
+  }
+
+  .tour-actions {
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .tour-actions .btn {
+    min-height: 34px;
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  .tour-highlight {
+    z-index: 126 !important;
+    outline-offset: 3px;
+  }
+
+  .plan-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-scroll {
+    height: clamp(430px, calc(100vh - 210px), 680px);
+  }
+
+}
+
+/* ---------- Black-mode calibration ---------- */
+[data-theme="dark"] {
+  --bg: #000;
+  --bg-elev: #020403;
+  --surface: rgba(2, 12, 10, 0.96);
+  --surface-2: rgba(5, 28, 23, 0.88);
+  --border: color-mix(in srgb, var(--rank-glow-color, #64ffda) 22%, transparent);
+  --border-strong: color-mix(in srgb, var(--rank-glow-color, #64ffda) 58%, transparent);
+  --shadow-card: 0 28px 80px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+[data-theme="dark"] body,
+body[data-theme="dark"] {
+  background: #000;
+}
+
+[data-theme="dark"] #app {
+  background:
+    radial-gradient(circle at 18% 14%, color-mix(in srgb, var(--rank-glow-color, #64ffda) 10%, transparent), transparent 34rem),
+    #000;
+}
+
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .mobile-nav {
+  background: #010403;
+  border-color: color-mix(in srgb, var(--rank-glow-color, #64ffda) 18%, transparent);
+}
+
+[data-theme="dark"] .topbar {
+  background: #000;
+  border-bottom: 1px solid color-mix(in srgb, var(--rank-glow-color, #64ffda) 12%, transparent);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .task-card,
+[data-theme="dark"] .schedule-shell,
+[data-theme="dark"] .modal,
+[data-theme="dark"] .welcome-card,
+[data-theme="dark"] .tour-card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--rank-glow-color, #64ffda) 5%, transparent), transparent 42%),
+    var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .attention-brief,
+[data-theme="dark"] .rank-console {
+  border-color: color-mix(in srgb, var(--rank-glow-color, #64ffda) 42%, transparent);
+  background:
+    radial-gradient(circle at 14% 52%, color-mix(in srgb, var(--rank-glow-color, #64ffda) 16%, transparent), transparent 15rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--rank-glow-color, #64ffda) 12%, #020403), #000);
+}
+
+[data-theme="dark"] .icon-btn,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn-ghost {
+  background: #030806;
+  border-color: color-mix(in srgb, var(--rank-glow-color, #64ffda) 26%, transparent);
+}
+
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .next-block-card .btn-primary,
+[data-theme="dark"] .saved-session-stack > .btn-secondary {
+  color: #00100d;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--rank-glow-color, #64ffda) 92%, white), #72d7ff);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--rank-glow-color, #64ffda) 18%, transparent);
+}
+
+[data-theme="dark"] .plan-controls {
+  display: grid;
+  grid-template-columns: auto auto minmax(120px, 1fr);
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 10px;
+}
+
+[data-theme="dark"] .plan-controls .btn {
+  justify-self: end;
+  margin-left: 0;
+}
+
+[data-theme="dark"] .plan-mode-seg,
+[data-theme="dark"] .tabs {
+  height: 50px;
+  min-height: 50px;
+}
+
+[data-theme="dark"] .schedule-shell {
+  padding-top: clamp(20px, 2.6vw, 28px);
+}
+
+[data-theme="dark"] .schedule-scroll {
+  height: clamp(560px, calc(100vh - 190px), 820px);
+  min-height: 500px;
+  padding-top: 22px;
+  margin-top: 16px;
+  border-color: color-mix(in srgb, var(--rank-glow-color, #64ffda) 28%, transparent);
+  background: #020705;
+}
+
+[data-theme="dark"] .schedule-timeline {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--rank-glow-color, #64ffda) 7%, transparent), transparent),
+    #061d17;
+}
+
+[data-theme="dark"] .schedule-hour-row:first-child span {
+  top: 2px;
+}
+
+[data-theme="dark"] .schedule-block {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.block-feedback {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  margin: 12px 0 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--rank-glow-color, #64ffda) 24%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--rank-glow-color, #64ffda) 7%, rgba(0, 0, 0, 0.72));
+  text-align: left;
+}
+
+.block-feedback-label {
+  color: var(--text-dim);
+  font: 800 10px/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.block-feedback-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.block-feedback-options button {
+  border: 1px solid color-mix(in srgb, var(--rank-glow-color, #64ffda) 20%, transparent);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.035);
+  font: 800 11px/1 "Manrope", sans-serif;
+  cursor: pointer;
+}
+
+.block-feedback-options button.active {
+  color: #00100d;
+  border-color: transparent;
+  background: color-mix(in srgb, var(--rank-glow-color, #64ffda) 88%, white);
+}
+
+.block-feedback input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid color-mix(in srgb, var(--rank-glow-color, #64ffda) 18%, transparent);
+  border-radius: 13px;
+  padding: 9px 11px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.history-feedback {
+  margin-top: 7px;
+  color: color-mix(in srgb, var(--rank-glow-color, #64ffda) 70%, var(--text-dim));
+  font: 700 11px/1.45 "IBM Plex Mono", monospace;
+  letter-spacing: 0.01em;
+}
+
+.rank-ladder {
+  margin-bottom: 22px;
+}
+
+.rank-ladder + .card {
+  margin-top: 26px;
+}
+
+.plan-controls {
+  display: grid;
+  grid-template-columns: auto auto minmax(120px, 1fr);
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 10px;
+}
+
+.plan-controls .btn {
+  justify-self: end;
+  margin-left: 0;
+}
+
+.plan-mode-seg,
+.tabs {
+  height: 50px;
+  min-height: 50px;
+  align-items: center;
+}
+
+.schedule-scroll {
+  padding-top: 22px;
+  box-sizing: border-box;
+}
+
+.schedule-hour-row:first-child span {
+  top: 2px;
+}
+
+@media (max-width: 860px) {
+  .plan-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-controls .btn {
+    justify-self: stretch;
+  }
+
+  [data-theme="dark"] .plan-controls {
+    grid-template-columns: 1fr;
+  }
+
+  [data-theme="dark"] .plan-controls .btn {
+    justify-self: stretch;
+  }
+
+  [data-theme="dark"] .schedule-scroll {
+    height: clamp(500px, calc(100vh - 190px), 720px);
+    min-height: 460px;
+  }
+}
+
+/* ---------- Workspace surfaces ---------- */
+#view-plan {
+  min-height: calc(100vh - 44px);
+}
+
+#view-plan #planList {
+  min-height: calc(100vh - 190px);
+}
+
+#view-plan[data-plan-mode-current="schedule"] [data-planview="pending"] {
+  display: none;
+}
+
+#view-plan .schedule-main {
+  min-height: calc(100vh - 204px);
+  padding: clamp(18px, 2vw, 24px);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#view-plan .schedule-main .schedule-scroll {
+  height: calc(100vh - 318px);
+  min-height: 560px;
+  max-height: none;
+  padding-top: 0;
+  margin-top: 18px;
+  border-radius: 18px;
+  background: #020705;
+}
+
+#view-plan .schedule-main .schedule-timeline {
+  background:
+    linear-gradient(90deg, rgba(100, 255, 218, 0.07), transparent 32%),
+    #061b16;
+}
+
+#view-plan .schedule-main .schedule-hour-row:first-child span {
+  top: 3px;
+}
+
+#view-plan .schedule-main .schedule-empty-timeline {
+  top: 52px;
+}
+
+#view-progress .progress-attention-chart {
+  width: 100%;
+  min-height: 220px;
+  border: 1px solid rgba(100, 255, 218, 0.14);
+  border-radius: 20px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(100, 255, 218, 0.07), transparent),
+    rgba(2, 12, 10, 0.48);
+}
+
+#view-progress .progress-graph-stage {
+  position: relative;
+  min-height: 220px;
+}
+
+#view-progress .progress-graph-stage svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#view-progress .progress-line-area {
+  fill: rgba(100, 255, 218, 0.11);
+}
+
+#view-progress .progress-line-stroke {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 10px rgba(100, 255, 218, 0.45));
+}
+
+#view-progress .progress-line-dots circle {
+  fill: #000;
+  stroke: var(--cyan);
+  stroke-width: 3;
+  transition: r 160ms ease, fill 160ms ease;
+}
+
+#view-progress .progress-line-dots circle.selected {
+  fill: color-mix(in srgb, var(--rank-glow-color, #64ffda) 84%, white);
+}
+
+#view-progress .progress-line-labels text {
+  fill: var(--text-faint);
+  font: 800 11px/1 "IBM Plex Mono", monospace;
+  text-anchor: middle;
+}
+
+#view-progress .progress-chart-point {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  z-index: 4;
+}
+
+#view-progress .progress-chart-point span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  white-space: nowrap;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--rank-glow-color, #64ffda) 36%, transparent);
+  border-radius: 999px;
+  color: var(--text);
+  background: #020605;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+  font: 800 11px/1 "IBM Plex Mono", monospace;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+#view-progress .progress-chart-point:hover span,
+#view-progress .progress-chart-point:focus-visible span,
+#view-progress .progress-chart-point.active span {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 860px) {
+  #view-plan #planList,
+  #view-plan .schedule-main {
+    min-height: calc(100vh - 230px);
+  }
+
+  #view-plan .schedule-main .schedule-scroll {
+    height: calc(100vh - 330px);
+    min-height: 520px;
+  }
+
 }

@@ -2,12 +2,16 @@
   "use strict";
 
   var STORAGE_KEY = "deecadence_state_v2";
-  var XP_PER_BLOCK = 20;
-  var XP_MANUAL_DONE = Math.max(1, Math.round(XP_PER_BLOCK / 4));
-  var XP_SESSION_BONUS = 10;
+  var XP_PER_FOCUS_MINUTE = 1;
+  var XP_MANUAL_DONE_RATE = 0.25;
+  var XP_SESSION_BONUS_RATE = 0.1;
+  var XP_PAUSE_FREE_LIMIT = 5;
+  var XP_PAUSE_PENALTY = 1;
   var RECOVERY_SECONDS = 60;
   var MAX_CUSTOM_MINUTES = 240;
   var MIN_CUSTOM_MINUTES = 4;
+  var SCHEDULE_START_MINUTES = 0;
+  var SCHEDULE_END_MINUTES = 24 * 60;
   var DAY_START_MINUTES = 8 * 60;
   var DAY_END_MINUTES = 20 * 60;
   var SOUND_FILES = {
@@ -127,13 +131,16 @@
   var tourIndex = 0;
   var tourPreviousView = "today";
   var chosenMinutes = 25;
+  var chosenBlockCount = 4;
   var selectedProgressType = "countable";
+  var selectedProgressDate = "";
   var startTaskSource = "schedule";
   var audioCache = {};
 
   var startModal = document.getElementById("startModal");
   var taskModal = document.getElementById("taskModal");
   var taskDetailModal = document.getElementById("taskDetailModal");
+  var welcomeOverlay = document.getElementById("welcomeOverlay");
   var tourOverlay = document.getElementById("tourOverlay");
   var revealOverlay = document.getElementById("revealOverlay");
 
@@ -141,44 +148,68 @@
     {
       view: "today",
       target: '[data-tour="today-rank"]',
-      title: "Your recovery level",
-      body: "This is your DeeCadence rank. XP raises your level, but the real goal is showing up consistently."
-    },
-    {
-      view: "today",
-      target: '[data-tour="next-block"]',
-      title: "One block at a time",
-      body: "Today always points you to the next useful block, so you do not have to rebuild your plan every time."
-    },
-    {
-      view: "plan",
-      target: '[data-tour="plan-controls"]',
-      title: "Schedule or task list",
-      body: "Schedule shows your day as time blocks. Tasks gives you the simple list for editing, filtering, and marking work done."
-    },
-    {
-      view: "plan",
-      target: '[data-tour="add-task"]',
-      title: "Add the work once",
-      body: "Add a task with a time, estimate, priority, and description. DeeCadence can arrange it into your day."
-    },
-    {
-      view: "focus",
-      target: '[data-tour="focus-root"]',
-      title: "Focus sessions split into four",
-      body: "Pick a total session length. DeeCadence splits it into four blocks and rewards finished blocks with XP."
-    },
-    {
-      view: "rank",
-      target: '[data-tour="rank-console"]',
-      title: "XP becomes rank",
-      body: "Focus blocks give the strongest XP. Work completed outside the timer can still be marked done, but earns less."
+      coach: "Start here",
+      title: "DeeCadence rebuilds attention",
+      body: "You plan one task, focus on one block, earn XP from the minutes you actually protect, then continue from where you stopped."
     },
     {
       view: "rank",
       target: '[data-tour="rank-ladder"]',
+      coach: "Ranks",
+      title: "What the letters mean",
+      body: "E, D, C, B, A, S, SS, SSS, and L are attention ranks. E is the starting point. Higher letters need much more total XP, so long focus time matters."
+    },
+    {
+      view: "plan",
+      target: '[data-tour="plan-controls"]',
+      coach: "Practice 1",
+      title: "Pick Schedule or Tasks",
+      body: "Schedule shows your day by time. Tasks shows the same work as a checklist so you can edit, mark done, or start focus quickly."
+    },
+    {
+      view: "plan",
+      target: '[data-tour="add-task"]',
+      coach: "Practice 2",
+      title: "Add one task",
+      body: "Give the task a title, date, optional time, and estimate. If the time is flexible, Auto-arrange can place it neatly."
+    },
+    {
+      view: "plan",
+      target: "#progressTypeSeg",
+      setup: "taskModal",
+      coach: "Task setup",
+      title: "Count pieces or track time",
+      body: "Count pieces is for work with clear parts, like 4 pages. Track time only is for ongoing work where finishing minutes matters more than ticking pieces."
+    },
+    {
+      view: "plan",
+      target: "#taskFlexInput",
+      setup: "taskModal",
+      coach: "Timing",
+      title: "Fixed or flexible time",
+      body: "Fixed means keep this exact time. Flexible means DeeCadence can move it when Auto-arrange builds a clean schedule."
+    },
+    {
+      view: "focus",
+      target: '[data-tour="focus-root"]',
+      setup: "closeModals",
+      coach: "Practice 3",
+      title: "Start one block at a time",
+      body: "Choose a session length and 1 to 4 blocks based on your plan. The timer only shows the current block so it feels manageable."
+    },
+    {
+      view: "progress",
+      target: "#progressChart",
+      coach: "Scoring",
+      title: "XP follows focused time",
+      body: "A finished block earns about 1 XP per focused minute. Completing every selected block adds a small bonus. Marking work done outside the timer earns much less."
+    },
+    {
+      view: "rank",
+      target: '[data-tour="rank-console"]',
+      coach: "Discipline",
       title: "The climb gets harder",
-      body: "Ranks have higher gates as you climb. The ladder shows what is unlocked by consistent focus over time."
+      body: "Pausing is allowed, but after 5 pauses in one session, DeeCadence starts subtracting small XP. The goal is gentle pressure, not punishment."
     }
   ];
 
@@ -230,6 +261,27 @@
     return localDateKey(new Date());
   }
 
+  function focusXpForSeconds(seconds) {
+    return Math.max(1, Math.round((Math.max(1, Number(seconds) || 1) / 60) * XP_PER_FOCUS_MINUTE));
+  }
+
+  function sessionCompletionBonus(totalMinutes) {
+    return Math.max(1, Math.round(clampMinutes(totalMinutes, 25) * XP_SESSION_BONUS_RATE));
+  }
+
+  function manualDoneXp(task) {
+    var minutes = task && task.estMinutes ? task.estMinutes : 20;
+    return Math.max(1, Math.round(focusXpForSeconds(minutes * 60) * XP_MANUAL_DONE_RATE));
+  }
+
+  function applyXpPenalty(amount) {
+    var penalty = Math.max(0, Math.round(Number(amount) || 0));
+    if (!penalty) return 0;
+    var applied = Math.min(state.profile.totalXp, penalty);
+    state.profile.totalXp -= applied;
+    return applied;
+  }
+
   function addDaysKey(dateKey, delta) {
     var base = parseDateKey(dateKey);
     base.setDate(base.getDate() + delta);
@@ -247,10 +299,12 @@
 
   function defaultState() {
     return {
-      profile: { totalXp: 0, streak: 0, lastActiveDate: null, dailyGoalBlocks: 4 },
+      profile: { totalXp: 0, streak: 0, lastActiveDate: null, dailyGoalBlocks: 4, dailyGoalMinutes: 60 },
       settings: {
         theme: "dark",
-        sound: false,
+        sound: true,
+        soundPreferenceTouched: false,
+        welcomeComplete: false,
         tutorialComplete: false,
         reducedMotion: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
       },
@@ -261,7 +315,8 @@
       session: null,
       savedSessions: [],
       history: [],
-      dailyBlockLog: {}
+      dailyBlockLog: {},
+      dailyFocusMinutes: {}
     };
   }
 
@@ -277,8 +332,11 @@
         tasks: Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : base.tasks,
         savedSessions: Array.isArray(parsed.savedSessions) ? parsed.savedSessions.map(normalizeSavedSession).filter(Boolean).slice(0, 4) : [],
         history: Array.isArray(parsed.history) ? parsed.history : [],
-        dailyBlockLog: parsed.dailyBlockLog && typeof parsed.dailyBlockLog === "object" ? parsed.dailyBlockLog : {}
+        dailyBlockLog: parsed.dailyBlockLog && typeof parsed.dailyBlockLog === "object" ? parsed.dailyBlockLog : {},
+        dailyFocusMinutes: parsed.dailyFocusMinutes && typeof parsed.dailyFocusMinutes === "object" ? parsed.dailyFocusMinutes : {}
       });
+      if (!loaded.profile.dailyGoalMinutes) loaded.profile.dailyGoalMinutes = loaded.profile.dailyGoalBlocks ? loaded.profile.dailyGoalBlocks * 15 : 60;
+      if (!Object.prototype.hasOwnProperty.call(parsed.settings || {}, "soundPreferenceTouched")) loaded.settings.sound = true;
       loaded.session = normalizeSession(parsed.session);
       var migratedSavedSessions = loaded.history
         .map(historyEntryToSavedSession)
@@ -323,11 +381,10 @@
 
   function normalizeSession(session) {
     if (!session || !Array.isArray(session.blocks) || !session.blocks.length) return null;
-    var index = Math.max(0, Math.min(3, parseInt(session.blockIndex, 10) || 0));
     var blocks = session.blocks.slice(0, 4).map(function (value) {
       return Math.max(1, parseInt(value, 10) || 1);
     });
-    while (blocks.length < 4) blocks.push(blocks[blocks.length - 1] || 1);
+    var index = Math.max(0, Math.min(blocks.length - 1, parseInt(session.blockIndex, 10) || 0));
     return {
       id: session.id || makeId("sess"),
       totalMinutes: clampMinutes(session.totalMinutes, 25),
@@ -338,11 +395,14 @@
       status: ["running", "paused", "recovery"].indexOf(session.status) > -1 ? session.status : "paused",
       linkedTaskId: session.linkedTaskId || null,
       startedAt: session.startedAt || Date.now(),
-      blocksCompleted: Math.max(0, Math.min(4, parseInt(session.blocksCompleted, 10) || 0)),
+      blocksCompleted: Math.max(0, Math.min(blocks.length, parseInt(session.blocksCompleted, 10) || 0)),
       xpEarned: Math.max(0, parseInt(session.xpEarned, 10) || 0),
+      pauseCount: Math.max(0, parseInt(session.pauseCount, 10) || 0),
+      penaltyXp: Math.max(0, parseInt(session.penaltyXp, 10) || 0),
       recoveryRemaining: Math.max(0, parseInt(session.recoveryRemaining, 10) || 0),
       recoveryEndsAt: Number.isFinite(Number(session.recoveryEndsAt)) ? Number(session.recoveryEndsAt) : null,
-      lastReveal: session.lastReveal || null
+      lastReveal: session.lastReveal || null,
+      blockFeedback: Array.isArray(session.blockFeedback) ? session.blockFeedback.slice(0, 4) : []
     };
   }
 
@@ -370,7 +430,7 @@
     return normalizeSavedSession({
       id: entry.id || makeId("saved"),
       totalMinutes: totalMinutes,
-      blocks: splitIntoBlocks(totalMinutes),
+      blocks: splitIntoBlocks(totalMinutes, entry.blocksPlanned || 4),
       blockIndex: entry.blocksCompleted,
       linkedTaskId: entry.linkedTaskId || null,
       startedAt: entry.completedAt || Date.now(),
@@ -457,22 +517,29 @@
     return placed.sort(function (a, b) { return a.start - b.start; }).map(function (item) { return item.task; });
   }
 
-  function splitIntoBlocks(totalMinutes) {
+  function clampBlockCount(value, fallback) {
+    var parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed)) parsed = fallback || 4;
+    return Math.max(1, Math.min(4, parsed));
+  }
+
+  function splitIntoBlocks(totalMinutes, blockCount) {
     var totalSeconds = Math.max(1, Math.round(clampMinutes(totalMinutes, 25) * 60));
-    var base = Math.floor(totalSeconds / 4);
-    var remainder = totalSeconds - (base * 4);
-    return [0, 1, 2, 3].map(function (index) {
+    var count = clampBlockCount(blockCount, 4);
+    var base = Math.floor(totalSeconds / count);
+    var remainder = totalSeconds - (base * count);
+    return Array.from({ length: count }).map(function (_, index) {
       return base + (index < remainder ? 1 : 0);
     });
   }
 
-  function beginSession(totalMinutes, linkedTaskId) {
+  function beginSession(totalMinutes, linkedTaskId, blockCount) {
     if (state.session) {
       openStartModal(getTask(linkedTaskId));
       return;
     }
     var minutes = clampMinutes(totalMinutes, 25);
-    var blocks = splitIntoBlocks(minutes);
+    var blocks = splitIntoBlocks(minutes, blockCount);
     state.session = {
       id: makeId("sess"),
       totalMinutes: minutes,
@@ -485,9 +552,12 @@
       startedAt: Date.now(),
       blocksCompleted: 0,
       xpEarned: 0,
+      pauseCount: 0,
+      penaltyXp: 0,
       recoveryRemaining: 0,
       recoveryEndsAt: null,
-      lastReveal: null
+      lastReveal: null,
+      blockFeedback: []
     };
     if (linkedTaskId && getTask(linkedTaskId)) getTask(linkedTaskId).status = "in_progress";
     saveState();
@@ -544,6 +614,12 @@
     state.session.blockRemaining = state.session.blockEndsAt ? secondsUntil(state.session.blockEndsAt) : state.session.blockRemaining;
     state.session.blockEndsAt = null;
     state.session.status = "paused";
+    state.session.pauseCount = (state.session.pauseCount || 0) + 1;
+    if (state.session.pauseCount > XP_PAUSE_FREE_LIMIT) {
+      var penalty = applyXpPenalty(XP_PAUSE_PENALTY);
+      state.session.penaltyXp = (state.session.penaltyXp || 0) + penalty;
+      showToast(penalty ? "Pause limit passed. -" + penalty + " XP" : "Pause limit passed.");
+    }
     stopTicker();
     saveState();
     renderFocus();
@@ -593,11 +669,12 @@
     if (!session) return;
     var prevXp = state.profile.totalXp;
     var isFinalBlock = session.blockIndex >= session.blocks.length - 1;
-    var xpGained = XP_PER_BLOCK + (isFinalBlock ? XP_SESSION_BONUS : 0);
+    var blockSeconds = session.blocks[session.blockIndex] || 60;
+    var xpGained = focusXpForSeconds(blockSeconds) + (isFinalBlock ? sessionCompletionBonus(session.totalMinutes) : 0);
     var linkedTask = session.linkedTaskId ? advanceLinkedTaskProgress(session.linkedTaskId) : null;
 
     applyDailyStreak();
-    logDailyBlock();
+    logDailyFocus(blockSeconds);
     state.profile.totalXp += xpGained;
     session.blocksCompleted += 1;
     session.xpEarned += xpGained;
@@ -613,10 +690,13 @@
       leveledUp: detectLevelUp(prevXp, state.profile.totalXp),
       rankedUpId: (detectRankUp(prevXp, state.profile.totalXp) || {}).id || "",
       linkedTaskId: linkedTask ? linkedTask.id : "",
-      isFinalBlock: isFinalBlock
+      isFinalBlock: isFinalBlock,
+      focusedMinutes: Math.round(blockSeconds / 60),
+      penaltyXp: session.penaltyXp || 0
     };
 
     playSound(isFinalBlock ? "sessionComplete" : "blockComplete");
+    showXpFloat(xpGained);
     saveState();
     renderAll();
     showSystemReveal(session.lastReveal);
@@ -675,9 +755,12 @@
       blocksCompleted: session.blocksCompleted,
       blocksPlanned: session.blocks.length,
       xpEarned: session.xpEarned,
+      penaltyXp: session.penaltyXp || 0,
+      pauseCount: session.pauseCount || 0,
       linkedTaskId: session.linkedTaskId,
       linkedTaskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : null,
-      completedAll: Boolean(completedAll)
+      completedAll: Boolean(completedAll),
+      blockFeedback: session.blockFeedback || []
     });
     state.session = null;
     closeReveal();
@@ -699,8 +782,11 @@
       startedAt: session.startedAt,
       blocksCompleted: session.blocksCompleted,
       xpEarned: session.xpEarned,
+      pauseCount: session.pauseCount || 0,
+      penaltyXp: session.penaltyXp || 0,
       savedAt: Date.now(),
-      lastReveal: session.lastReveal
+      lastReveal: session.lastReveal,
+      blockFeedback: session.blockFeedback || []
     });
     if (!saved) return;
     state.savedSessions = [saved]
@@ -738,11 +824,12 @@
     var saved = state.savedSessions.find(function (item) { return item.id === sessionId; });
     if (!saved) return;
     if (!confirm("Remove this saved focus session?")) return;
+    var penalty = saved.blocksCompleted < saved.blocks.length ? applyXpPenalty(Math.min(10, Math.max(1, Math.round(saved.totalMinutes * 0.02)))) : 0;
     state.savedSessions = state.savedSessions.filter(function (item) { return item.id !== sessionId; });
     saveState();
     renderFocus();
     renderToday();
-    showToast("Saved session removed.");
+    showToast(penalty ? "Saved session removed. -" + penalty + " XP" : "Saved session removed.");
   }
 
   function applyDailyStreak() {
@@ -753,9 +840,10 @@
     state.profile.lastActiveDate = today;
   }
 
-  function logDailyBlock() {
+  function logDailyFocus(blockSeconds) {
     var today = todayStr();
     state.dailyBlockLog[today] = (state.dailyBlockLog[today] || 0) + 1;
+    state.dailyFocusMinutes[today] = (state.dailyFocusMinutes[today] || 0) + Math.max(1, Math.round((Number(blockSeconds) || 0) / 60));
   }
 
   function showSystemReveal(data) {
@@ -791,6 +879,8 @@
       ? "<b>" + escapeHtml(linkedTask.title) + "</b> - " + linkedTask.units.completed + " of " + linkedTask.units.total + " units complete"
       : "Free focus block logged";
 
+    resetBlockFeedbackControls(data);
+
     actions.innerHTML = data.isFinalBlock
       ? '<button class="btn btn-primary btn-block" id="revealFinishBtn">Finish session</button>'
       : '<button class="btn btn-primary btn-block" id="revealContinueBtn">Continue to next block</button><button class="btn btn-ghost btn-block" id="revealStopBtn">Stop and save progress</button>';
@@ -799,10 +889,65 @@
     var finish = document.getElementById("revealFinishBtn");
     var cont = document.getElementById("revealContinueBtn");
     var stop = document.getElementById("revealStopBtn");
-    if (finish) finish.onclick = function () { finalizeSession(true); };
-    if (cont) cont.onclick = continueSession;
-    if (stop) stop.onclick = function () { finalizeSession(false); };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-block-feeling]"), function (button) {
+      button.onclick = function () {
+        Array.prototype.forEach.call(document.querySelectorAll("[data-block-feeling]"), function (item) { item.classList.remove("active"); });
+        button.classList.add("active");
+      };
+    });
+    if (finish) finish.onclick = function () {
+      captureBlockFeedback();
+      finalizeSession(true);
+    };
+    if (cont) cont.onclick = function () {
+      captureBlockFeedback();
+      continueSession();
+    };
+    if (stop) stop.onclick = function () {
+      captureBlockFeedback();
+      finalizeSession(false);
+    };
     (finish || cont || stop || revealOverlay).focus();
+  }
+
+  function resetBlockFeedbackControls(data) {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-block-feeling]"), function (button) {
+      button.classList.remove("active");
+    });
+    var note = document.getElementById("blockFeedbackNote");
+    if (note) note.value = "";
+    if (!state.session || !Array.isArray(state.session.blockFeedback)) return;
+    var existing = state.session.blockFeedback.find(function (entry) {
+      return entry && entry.blockIndex === state.session.blockIndex;
+    });
+    if (!existing) return;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-block-feeling]"), function (button) {
+      button.classList.toggle("active", button.getAttribute("data-block-feeling") === existing.feeling);
+    });
+    if (note) note.value = existing.note || "";
+  }
+
+  function captureBlockFeedback() {
+    var session = state.session;
+    if (!session || session.status !== "recovery") return;
+    var activeFeeling = document.querySelector("[data-block-feeling].active");
+    var noteInput = document.getElementById("blockFeedbackNote");
+    var feeling = activeFeeling ? activeFeeling.getAttribute("data-block-feeling") : "";
+    var note = String((noteInput || {}).value || "").trim().replace(/\s+/g, " ");
+    if (!feeling && !note) return;
+    var entry = {
+      blockIndex: session.blockIndex,
+      blockNumber: session.blockIndex + 1,
+      feeling: feeling,
+      note: note,
+      createdAt: Date.now()
+    };
+    session.blockFeedback = (session.blockFeedback || []).filter(function (item) {
+      return item && item.blockIndex !== session.blockIndex;
+    });
+    session.blockFeedback.push(entry);
+    if (session.lastReveal) session.lastReveal.feedback = entry;
+    saveState();
   }
 
   function closeReveal() {
@@ -820,6 +965,14 @@
     return Number(value || 0).toLocaleString();
   }
 
+  function formatMinutesCompact(minutes) {
+    var safe = Math.max(0, Math.round(Number(minutes) || 0));
+    if (safe < 60) return safe + "m";
+    var hours = Math.floor(safe / 60);
+    var remainder = safe % 60;
+    return hours + "h" + (remainder ? " " + remainder + "m" : "");
+  }
+
   function escapeHtml(value) {
     var div = document.createElement("div");
     div.textContent = String(value == null ? "" : value);
@@ -833,6 +986,21 @@
     toast.classList.add("show");
     clearTimeout(showToast.timer);
     showToast.timer = setTimeout(function () { toast.classList.remove("show"); }, 2600);
+  }
+
+  function showXpFloat(amount) {
+    var xp = Math.round(Number(amount) || 0);
+    if (!xp || !document.body || typeof document.body.appendChild !== "function") return;
+    var bubble = document.createElement("div");
+    bubble.className = "xp-float";
+    bubble.textContent = (xp > 0 ? "+" : "") + xp + " XP";
+    document.body.appendChild(bubble);
+    setTimeout(function () {
+      bubble.classList.add("rise");
+    }, 20);
+    setTimeout(function () {
+      if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+    }, 1800);
   }
 
   function csvCell(value) {
@@ -1073,10 +1241,20 @@
     });
   }
 
+  function syncPlanTabButtons() {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-planview]"), function (button) {
+      button.classList.toggle("active", button.getAttribute("data-planview") === currentPlanTab);
+    });
+  }
+
   function renderPlan() {
     var root = document.getElementById("planList");
+    var planView = document.getElementById("view-plan");
+    if (currentPlanMode === "schedule" && currentPlanTab === "pending") currentPlanTab = "day";
+    if (planView) planView.setAttribute("data-plan-mode-current", currentPlanMode);
     var list = planFilteredTasks();
     syncPlanModeButtons();
+    syncPlanTabButtons();
 
     if (currentPlanMode === "schedule") renderScheduleView(root, list);
     else renderTaskListView(root, list);
@@ -1105,44 +1283,45 @@
   }
 
   function renderDaySchedule(root, list) {
-    var timed = list.filter(function (task) { return task.time; });
-    var unscheduled = list.filter(function (task) { return !task.time && task.status !== "completed"; });
-    var pxPerMinute = 0.82;
-    var timelineHeight = Math.round((DAY_END_MINUTES - DAY_START_MINUTES) * pxPerMinute);
+    var timed = list.filter(function (task) { return task.time && task.status !== "completed"; });
+    var pxPerMinute = 1.25;
+    var timelineHeight = Math.round((SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES) * pxPerMinute);
     var hours = [];
-    for (var min = DAY_START_MINUTES; min <= DAY_END_MINUTES; min += 60) {
-      hours.push('<div class="schedule-hour-row" style="top:' + Math.round((min - DAY_START_MINUTES) * pxPerMinute) + 'px"><span>' + minToTime(min) + '</span></div>');
+    for (var min = SCHEDULE_START_MINUTES; min < SCHEDULE_END_MINUTES; min += 60) {
+      hours.push('<div class="schedule-hour-row" style="top:' + Math.round((min - SCHEDULE_START_MINUTES) * pxPerMinute) + 'px"><span>' + minToTime(min) + '</span></div>');
     }
-    var layout = layoutScheduleBlocks(timed);
+    var layout = layoutScheduleBlocks(timed, SCHEDULE_START_MINUTES, SCHEDULE_END_MINUTES);
     var blocks = layout.map(function (item) {
-      var top = Math.max(0, Math.round((item.start - DAY_START_MINUTES) * pxPerMinute));
-      var height = Math.max(40, Math.round((item.end - item.start) * pxPerMinute));
+      var top = Math.max(0, Math.round((item.start - SCHEDULE_START_MINUTES) * pxPerMinute));
+      var height = Math.max(14, Math.round((item.end - item.start) * pxPerMinute));
       var gap = item.columnCount > 1 ? 2 : 0;
       var width = 100 / item.columnCount;
       var left = width * item.column;
       var style = "top:" + top + "px;height:" + height + "px;left:" + left + "%;right:auto;width:calc(" + width + "% - " + gap + "px)";
       var task = item.task;
       var timing = taskTimingState(task);
-      return '<article class="schedule-block ' + planPriorityClass(task) + (timing ? " " + timing.id : "") + '" style="' + style + '" data-open-task="' + task.id + '" role="button" tabindex="0" aria-label="Open ' + escapeHtml(task.title) + '"><strong>' + escapeHtml(task.title) + '</strong></article>';
+      return '<article class="schedule-block ' + planPriorityClass(task) + (timing ? " " + timing.id : "") + (height < 24 ? " compact" : "") + '" style="' + style + '" data-open-task="' + task.id + '" role="button" tabindex="0" aria-label="Open ' + escapeHtml(task.title) + '"><strong>' + escapeHtml(task.title) + '</strong></article>';
     }).join("");
 
-    root.innerHTML = '<section class="schedule-shell"><div class="schedule-head"><div><div class="eyebrow">Today schedule</div><h3>' + formatReadableDate(todayStr()) + '</h3></div><span>' + timed.length + " timed block" + (timed.length === 1 ? "" : "s") + '</span></div><div class="schedule-timeline" style="min-height:' + timelineHeight + 'px"><div class="schedule-hours">' + hours.join("") + '</div><div class="schedule-block-layer">' + renderNowLine(todayStr(), pxPerMinute) + (blocks || '<div class="schedule-empty-timeline">No scheduled blocks yet. Add a time or use Auto-arrange.</div>') + '</div></div>' + renderScheduleQueue(unscheduled, "Unscheduled today", "Everything for today has a time.") + '</section>';
+    root.innerHTML = '<section class="schedule-shell schedule-main"><div class="schedule-head"><div><div class="eyebrow">Today schedule</div><h3>' + formatReadableDate(todayStr()) + '</h3></div><span>00:00 - 23:59 - ' + timed.length + " timed block" + (timed.length === 1 ? "" : "s") + '</span></div><div class="schedule-scroll"><div class="schedule-timeline" style="height:' + timelineHeight + 'px"><div class="schedule-hours">' + hours.join("") + '</div><div class="schedule-block-layer">' + renderNowLine(todayStr(), pxPerMinute, SCHEDULE_START_MINUTES, SCHEDULE_END_MINUTES) + (blocks || '<div class="schedule-empty-timeline">No scheduled blocks yet. Add a time or use Auto-arrange.</div>') + '</div></div></div></section>';
   }
 
-  function layoutScheduleBlocks(tasks) {
+  function layoutScheduleBlocks(tasks, startBound, endBound) {
+    var startLimit = Number.isFinite(Number(startBound)) ? Number(startBound) : DAY_START_MINUTES;
+    var endLimit = Number.isFinite(Number(endBound)) ? Number(endBound) : DAY_END_MINUTES;
     var items = tasks.map(function (task) {
       var rawStart = timeToMin(task.time);
       var rawEnd = rawStart + task.estMinutes;
       return {
         task: task,
         rawEnd: rawEnd,
-        start: Math.max(DAY_START_MINUTES, rawStart),
-        end: Math.min(DAY_END_MINUTES, rawEnd),
+        start: Math.max(startLimit, rawStart),
+        end: Math.min(endLimit, rawEnd),
         column: 0,
         columnCount: 1
       };
     }).filter(function (item) {
-      return item.end > DAY_START_MINUTES && item.start < DAY_END_MINUTES;
+      return item.end > startLimit && item.start < endLimit;
     }).sort(function (a, b) {
       if (a.start !== b.start) return a.start - b.start;
       return a.end - b.end;
@@ -1179,12 +1358,14 @@
     return items;
   }
 
-  function renderNowLine(dateKey, pxPerMinute) {
+  function renderNowLine(dateKey, pxPerMinute, startBound, endBound) {
     if (dateKey !== todayStr()) return "";
+    var startLimit = Number.isFinite(Number(startBound)) ? Number(startBound) : DAY_START_MINUTES;
+    var endLimit = Number.isFinite(Number(endBound)) ? Number(endBound) : DAY_END_MINUTES;
     var now = new Date();
     var minutes = (now.getHours() * 60) + now.getMinutes();
-    if (minutes < DAY_START_MINUTES || minutes > DAY_END_MINUTES) return "";
-    var top = Math.round((minutes - DAY_START_MINUTES) * pxPerMinute);
+    if (minutes < startLimit || minutes > endLimit) return "";
+    var top = Math.round((minutes - startLimit) * pxPerMinute);
     return '<div class="schedule-now-line" style="top:' + top + 'px"><span>Now ' + minToTime(minutes) + '</span></div>';
   }
 
@@ -1267,28 +1448,31 @@
     var task = getTask(taskId);
     if (!task) return;
     var shouldAward = !task.manualDoneXpAwarded && task.status !== "completed";
+    var xpAward = manualDoneXp(task);
     task.units.completed = task.units.total;
     task.status = "completed";
     if (shouldAward) {
       task.manualDoneXpAwarded = true;
-      state.profile.totalXp += XP_MANUAL_DONE;
+      state.profile.totalXp += xpAward;
       state.history.unshift({
         id: makeId("manual"),
-        date: new Date().toISOString(),
+        date: todayStr(),
+        completedAt: Date.now(),
         linkedTaskId: task.id,
         linkedTaskTitle: task.title,
         blocksCompleted: 0,
         blocksPlanned: 0,
         totalMinutes: task.estMinutes,
-        xpEarned: XP_MANUAL_DONE,
+        xpEarned: xpAward,
         completedAll: true,
         manualDone: true,
         completionType: "outside_timer"
       });
+      showXpFloat(xpAward);
     }
     saveState();
     renderAll();
-    showToast(shouldAward ? "Marked done outside timer. +" + XP_MANUAL_DONE + " XP" : "Task completed");
+    showToast(shouldAward ? "Marked done outside timer. +" + xpAward + " XP" : "Task completed");
   }
 
   function startOfDay(date) {
@@ -1313,27 +1497,102 @@
     }).join("");
   }
 
+  function focusMinutesByDate() {
+    var byDate = Object.assign({}, state.dailyFocusMinutes || {});
+    state.history.forEach(function (item) {
+      if (!item || item.manualDone) return;
+      var key = item.date && /^\d{4}-\d{2}-\d{2}$/.test(String(item.date))
+        ? item.date
+        : localDateKey(new Date(item.completedAt || item.date || Date.now()));
+      if (byDate[key]) return;
+      var plannedBlocks = Math.max(1, Number(item.blocksPlanned) || 1);
+      var completedBlocks = Math.max(0, Number(item.blocksCompleted) || 0);
+      byDate[key] = (byDate[key] || 0) + Math.round((Number(item.totalMinutes) || 0) * Math.min(1, completedBlocks / plannedBlocks));
+    });
+    return byDate;
+  }
+
+  function renderAttentionLineChart(days, maxMinutes) {
+    var width = 640;
+    var height = 210;
+    var paddingX = 34;
+    var paddingTop = 20;
+    var paddingBottom = 36;
+    var innerW = width - (paddingX * 2);
+    var innerH = height - paddingTop - paddingBottom;
+    var selectedDate = selectedProgressDate || (days[days.length - 1] || {}).date;
+    var points = days.map(function (day, index) {
+      var x = paddingX + (days.length === 1 ? 0 : (innerW * index / (days.length - 1)));
+      var y = paddingTop + innerH - ((day.minutes / Math.max(1, maxMinutes)) * innerH);
+      return { x: x, y: y, day: day };
+    });
+    var path = points.map(function (point, index) {
+      return (index ? "L" : "M") + point.x.toFixed(1) + " " + point.y.toFixed(1);
+    }).join(" ");
+    var area = path + " L " + points[points.length - 1].x.toFixed(1) + " " + (height - paddingBottom) + " L " + points[0].x.toFixed(1) + " " + (height - paddingBottom) + " Z";
+    var labels = points.map(function (point) {
+      var label = new Date(point.day.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
+      return '<text x="' + point.x.toFixed(1) + '" y="' + (height - 12) + '">' + label + '</text>';
+    }).join("");
+    var dots = points.map(function (point) {
+      return '<circle cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="' + (point.day.date === selectedDate ? "7" : "5") + '" class="' + (point.day.date === selectedDate ? "selected" : "") + '"></circle>';
+    }).join("");
+    var hitTargets = points.map(function (point) {
+      var left = (point.x / width) * 100;
+      var top = (point.y / height) * 100;
+      var fullDate = new Date(point.day.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+      return '<button class="progress-chart-point ' + (point.day.date === selectedDate ? "active" : "") + '" style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%" data-progress-day="' + point.day.date + '" aria-label="' + fullDate + ": " + formatMinutesCompact(point.day.minutes) + ' focused"><span>' + formatMinutesCompact(point.day.minutes) + '</span></button>';
+    }).join("");
+    return '<div class="progress-attention-chart" aria-label="Seven day attention span trend"><div class="progress-graph-stage"><svg viewBox="0 0 ' + width + " " + height + '" preserveAspectRatio="none"><path class="progress-line-area" d="' + area + '"></path><path class="progress-line-stroke" d="' + path + '"></path><g class="progress-line-dots">' + dots + '</g><g class="progress-line-labels">' + labels + '</g></svg>' + hitTargets + '</div></div>';
+  }
+
+  function wireProgressChart(days) {
+    var selected = days.find(function (day) { return day.date === selectedProgressDate; }) || days[days.length - 1];
+    if (!selected) return;
+    selectedProgressDate = selected.date;
+    var progressRoot = document.getElementById("view-progress");
+    if (!progressRoot) return;
+    Array.prototype.forEach.call(progressRoot.querySelectorAll("[data-progress-day]"), function (button) {
+      button.onclick = function () {
+        selectedProgressDate = button.getAttribute("data-progress-day");
+        renderProgress();
+      };
+    });
+  }
+
   function renderProgress() {
     var days = [];
-    var blocks7 = 0;
+    var focusMinutes7 = 0;
+    var minutesByDate = focusMinutesByDate();
     for (var i = 6; i >= 0; i -= 1) {
       var date = addDaysKey(todayStr(), -i);
-      var count = state.dailyBlockLog[date] || 0;
-      blocks7 += count;
-      days.push({ date: date, count: count });
+      var minutes = minutesByDate[date] || 0;
+      focusMinutes7 += minutes;
+      days.push({ date: date, minutes: minutes });
+    }
+    if (!selectedProgressDate || !days.some(function (day) { return day.date === selectedProgressDate; })) {
+      selectedProgressDate = (days[days.length - 1] || {}).date || "";
     }
     document.getElementById("statStreak").textContent = state.profile.streak;
-    document.getElementById("statBlocks7").textContent = blocks7;
+    document.getElementById("statFocus7").textContent = formatMinutesCompact(focusMinutes7);
     var doneTasks = state.tasks.filter(function (task) { return task.status === "completed"; }).length;
     document.getElementById("statCompletion").textContent = state.tasks.length ? Math.round((doneTasks / state.tasks.length) * 100) + "%" : "0%";
-    var max = Math.max(state.profile.dailyGoalBlocks, Math.max.apply(null, days.map(function (day) { return day.count; })), 1);
-    document.getElementById("progressChart").innerHTML = days.map(function (day) {
-      var height = Math.max(3, Math.round((day.count / max) * 100));
-      var label = new Date(day.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
-      return '<div class="bar-col"><div class="bar" style="height:' + height + '%"></div><div class="bar-day">' + label + "</div></div>";
-    }).join("");
+    var max = Math.max(state.profile.dailyGoalMinutes || 60, Math.max.apply(null, days.map(function (day) { return day.minutes; })), 1);
+    document.getElementById("progressChart").innerHTML = renderAttentionLineChart(days, max);
     var historyXp = state.history.reduce(function (sum, item) { return sum + (item.xpEarned || 0); }, 0);
-    document.getElementById("progressTaskSummary").innerHTML = state.history.length + " logs saved - " + formatNumber(historyXp) + " XP earned - " + doneTasks + " of " + state.tasks.length + " tasks fully completed.";
+    document.getElementById("progressTaskSummary").innerHTML = state.history.length + " logs saved - " + formatMinutesCompact(focusMinutes7) + " focused this week - " + formatNumber(historyXp) + " XP earned - " + doneTasks + " of " + state.tasks.length + " tasks fully completed.";
+    wireProgressChart(days);
+  }
+
+  function renderFeedbackSummary(item) {
+    var feedback = Array.isArray(item.blockFeedback) ? item.blockFeedback.filter(Boolean) : [];
+    if (!feedback.length) return "";
+    var summary = feedback.map(function (entry) {
+      var label = entry.feeling || entry.note || "Noted";
+      var note = entry.note && entry.note !== entry.feeling ? " - " + entry.note : "";
+      return "B" + (entry.blockNumber || (entry.blockIndex + 1)) + ": " + label + note;
+    }).join(" | ");
+    return '<div class="history-feedback">' + escapeHtml(summary) + "</div>";
   }
 
   function renderHistory() {
@@ -1346,7 +1605,7 @@
       var date = new Date(item.completedAt || item.date || Date.now());
       var icon = item.manualDone ? "Done" : item.blocksCompleted + "/" + item.blocksPlanned;
       var subtitle = item.manualDone ? "Completed outside timer" : item.totalMinutes + " min planned";
-      return '<div class="history-item"><div class="history-icon">' + icon + '</div><div class="history-main"><div class="history-title">' + (item.linkedTaskTitle ? escapeHtml(item.linkedTaskTitle) : "Free focus") + '</div><div class="history-sub">' + date.toLocaleDateString() + " - " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + subtitle + '</div></div><div class="history-xp">+' + item.xpEarned + " XP</div></div>";
+      return '<div class="history-item"><div class="history-icon">' + icon + '</div><div class="history-main"><div class="history-title">' + (item.linkedTaskTitle ? escapeHtml(item.linkedTaskTitle) : "Free focus") + '</div><div class="history-sub">' + date.toLocaleDateString() + " - " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + subtitle + '</div>' + renderFeedbackSummary(item) + '</div><div class="history-xp">+' + item.xpEarned + " XP</div></div>";
     }).join("");
   }
 
@@ -1358,7 +1617,7 @@
     document.getElementById("soundSwitch").setAttribute("aria-pressed", String(state.settings.sound));
     document.getElementById("motionSwitch").classList.toggle("on", state.settings.reducedMotion);
     document.getElementById("motionSwitch").setAttribute("aria-pressed", String(state.settings.reducedMotion));
-    document.getElementById("dailyGoalSelect").value = String(state.profile.dailyGoalBlocks);
+    document.getElementById("dailyGoalSelect").value = String(state.profile.dailyGoalMinutes || 60);
   }
 
   function applyTheme() {
@@ -1405,6 +1664,64 @@
     if (name === "settings") renderSettings();
   }
 
+  function openWelcome(force) {
+    if (!welcomeOverlay || (!force && state.settings.welcomeComplete)) return false;
+    welcomeOverlay.classList.add("open");
+    welcomeOverlay.setAttribute("aria-hidden", "false");
+    var first = document.getElementById("welcomeCritical1");
+    if (first) first.focus();
+    return true;
+  }
+
+  function closeWelcome(markComplete) {
+    if (!welcomeOverlay) return;
+    welcomeOverlay.classList.remove("open");
+    welcomeOverlay.setAttribute("aria-hidden", "true");
+    if (markComplete) {
+      state.settings.welcomeComplete = true;
+      saveState();
+    }
+  }
+
+  function welcomeInputValue(id) {
+    return String((document.getElementById(id) || {}).value || "").trim().replace(/\s+/g, " ");
+  }
+
+  function saveWelcomeSetup() {
+    var created = [];
+    [
+      { id: "welcomeCritical1", priority: "high" },
+      { id: "welcomeCritical2", priority: "high" },
+      { id: "welcomeCritical3", priority: "high" },
+      { id: "welcomeNormal1", priority: "medium" },
+      { id: "welcomeNormal2", priority: "medium" },
+      { id: "welcomeNormal3", priority: "medium" }
+    ].forEach(function (slot) {
+      var title = welcomeInputValue(slot.id);
+      if (!title) return;
+      created.push(normalizeTask({
+        title: title,
+        date: todayStr(),
+        priority: slot.priority,
+        estMinutes: slot.priority === "high" ? 45 : 25,
+        units: slot.priority === "high" ? 3 : 1,
+        flex: "flexible",
+        notes: slot.priority === "high" ? "Non-negotiable attention task" : "Normal task from welcome setup"
+      }));
+    });
+    if (!created.length) {
+      showToast("Add at least one task, or set up later.");
+      return;
+    }
+    state.tasks = created.concat(state.tasks);
+    closeWelcome(true);
+    saveState();
+    renderAll();
+    switchView("plan");
+    showToast(created.length + " task" + (created.length === 1 ? "" : "s") + " added. Start with one block.");
+    startTour(false);
+  }
+
   function clearTourHighlight() {
     Array.prototype.forEach.call(document.querySelectorAll(".tour-highlight"), function (element) {
       element.classList.remove("tour-highlight");
@@ -1425,6 +1742,9 @@
     clearTourHighlight();
     tourOverlay.classList.remove("open");
     tourOverlay.setAttribute("aria-hidden", "true");
+    if (taskModal.classList.contains("open")) closeTaskModal();
+    if (startModal.classList.contains("open")) startModal.classList.remove("open");
+    if (taskDetailModal.classList.contains("open")) closeTaskDetail();
     if (completed) {
       state.settings.tutorialComplete = true;
       saveState();
@@ -1440,10 +1760,12 @@
       return;
     }
     if (activeView !== step.view) switchView(step.view);
+    prepareTourStep(step);
     clearTourHighlight();
     tourOverlay.classList.add("open");
     tourOverlay.setAttribute("aria-hidden", "false");
     document.getElementById("tourCount").textContent = "Step " + (tourIndex + 1) + " of " + TOUR_STEPS.length;
+    document.getElementById("tourCoachStatus").textContent = step.coach || "Practice run";
     document.getElementById("tourTitle").textContent = step.title;
     document.getElementById("tourBody").textContent = step.body;
     document.getElementById("tourBackBtn").disabled = tourIndex === 0;
@@ -1451,6 +1773,16 @@
     setTimeout(function () {
       positionTourCard(step);
     }, 80);
+  }
+
+  function prepareTourStep(step) {
+    if (step.setup === "taskModal") {
+      if (!taskModal.classList.contains("open")) openTaskModal();
+      return;
+    }
+    if (step.setup === "closeModals" || taskModal.classList.contains("open")) closeTaskModal();
+    if (startModal.classList.contains("open")) startModal.classList.remove("open");
+    if (taskDetailModal.classList.contains("open")) closeTaskDetail();
   }
 
   function positionTourCard(step) {
@@ -1464,11 +1796,23 @@
       var cardRect = card.getBoundingClientRect();
       var vw = window.innerWidth || document.documentElement.clientWidth;
       var vh = window.innerHeight || document.documentElement.clientHeight;
-      var top = rect.bottom + 18;
-      var left = rect.left;
-      if (top + cardRect.height > vh - 16) top = rect.top - cardRect.height - 18;
+      if (vw <= 640) {
+        card.style.top = "";
+        card.style.left = "";
+        return;
+      }
+      var sideGap = 18;
+      var top = Math.max(16, Math.min(rect.top, vh - cardRect.height - 16));
+      var left = rect.right + sideGap;
+      if (left + cardRect.width > vw - 16 && rect.left - cardRect.width - sideGap > 16) {
+        left = rect.left - cardRect.width - sideGap;
+      }
+      if (left + cardRect.width > vw - 16) {
+        left = Math.min(Math.max(16, rect.left), vw - cardRect.width - 16);
+        top = rect.bottom + sideGap;
+        if (top + cardRect.height > vh - 16) top = rect.top - cardRect.height - sideGap;
+      }
       if (top < 16) top = Math.max(16, vh - cardRect.height - 16);
-      if (left + cardRect.width > vw - 16) left = vw - cardRect.width - 16;
       if (left < 16) left = 16;
       card.style.top = Math.round(top) + "px";
       card.style.left = Math.round(left) + "px";
@@ -1521,6 +1865,7 @@
       ? "Pick a task already on your schedule."
       : "Name the task you want this focus session to move forward.";
     if (startTaskSource === "input") {
+      syncBlockCountButtons(4, "Input sessions can use any block count. Four gives the full focus rhythm.");
       document.getElementById("inputTaskTitle").focus();
     }
   }
@@ -1561,6 +1906,28 @@
     }
     return selectedTaskId;
   }
+
+  function suggestedBlockCount(task) {
+    if (task && task.units) {
+      return clampBlockCount(Math.max(1, task.units.total - task.units.completed), 4);
+    }
+    var todaysOpen = state.tasks.filter(function (item) {
+      return item.date === todayStr() && item.status !== "completed";
+    }).length;
+    return clampBlockCount(todaysOpen || 4, 4);
+  }
+
+  function syncBlockCountButtons(count, reason) {
+    chosenBlockCount = clampBlockCount(count, 4);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-block-count]"), function (button) {
+      button.classList.toggle("active", parseInt(button.getAttribute("data-block-count"), 10) === chosenBlockCount);
+    });
+    var hint = document.getElementById("blockCountHint");
+    if (hint) {
+      hint.textContent = reason || "Pick based on how much of your plan this session should move.";
+    }
+  }
+
   function syncDurationButtons(minutes) {
     var matched = false;
     Array.prototype.forEach.call(document.querySelectorAll(".duration-opt"), function (button) {
@@ -1591,10 +1958,11 @@
     pendingStartTask = task || null;
     var minutes = task ? task.estMinutes : chosenMinutes;
     syncDurationButtons(minutes);
+    syncBlockCountButtons(suggestedBlockCount(task), task ? "Suggested from this task's remaining pieces. You can change it." : "Suggested from today's open plan. You can change it.");
     populateLinkTaskSelect(task ? task.id : "");
     document.getElementById("inputTaskTitle").value = "";
     syncStartTaskSource(task || scheduledFocusTasks().length ? "schedule" : "input");
-    document.getElementById("startModalSub").textContent = task ? 'For "' + task.title + '". Choose the full session length.' : "Choose a total length, then choose from Schedule or type a task title.";
+    document.getElementById("startModalSub").textContent = task ? 'For "' + task.title + '". Choose length and blocks.' : "Choose length, blocks, then choose from Schedule or type a task title.";
     startModal.classList.add("open");
   }
 
@@ -1620,6 +1988,11 @@
     syncProgressTypeButtons();
     taskModal.classList.add("open");
     document.getElementById("taskTitleInput").focus();
+  }
+
+  function closeTaskModal() {
+    editingTaskId = null;
+    taskModal.classList.remove("open");
   }
 
   function openTaskDetail(taskId) {
@@ -1656,10 +2029,17 @@
     });
     var isOngoing = selectedProgressType === "ongoing";
     document.getElementById("taskUnitsFieldWrap").style.display = isOngoing ? "none" : "flex";
-    document.getElementById("progressTypeHint").textContent = isOngoing ? "Best when you only need to record focused time." : "Best when a task can be reduced into smaller focus units.";
+    document.getElementById("progressTypeHint").textContent = isOngoing
+      ? "Use this when the goal is simply to spend focused time on the task."
+      : "Use this when the task has clear pieces, like 4 pages or 3 messages.";
   }
 
   function wireEvents() {
+    document.getElementById("welcomeSaveBtn").onclick = saveWelcomeSetup;
+    document.getElementById("welcomeSkipBtn").onclick = function () {
+      closeWelcome(true);
+      startTour(false);
+    };
     document.getElementById("startNextBlockBtn").onclick = function () {
       if (state.savedSessions.length && !state.session) {
         switchView("focus");
@@ -1675,7 +2055,7 @@
       var selectedTaskId = resolveStartTaskId(clampMinutes(minutes, 25));
       if (!selectedTaskId) return;
       startModal.classList.remove("open");
-      beginSession(clampMinutes(minutes, 25), selectedTaskId);
+      beginSession(clampMinutes(minutes, 25), selectedTaskId, chosenBlockCount);
     };
     Array.prototype.forEach.call(document.querySelectorAll("[data-start-source]"), function (button) {
       button.onclick = function () {
@@ -1694,10 +2074,18 @@
     document.getElementById("customMinInput").oninput = function () {
       chosenMinutes = clampMinutes(this.value, 20);
     };
+    document.getElementById("linkTaskSelect").onchange = function () {
+      var task = getTask(this.value);
+      syncBlockCountButtons(suggestedBlockCount(task), task ? "Suggested from this task's remaining pieces. You can change it." : "Pick based on how much of your plan this session should move.");
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-block-count]"), function (button) {
+      button.onclick = function () {
+        syncBlockCountButtons(button.getAttribute("data-block-count"));
+      };
+    });
     document.getElementById("addTaskBtn").onclick = function () { openTaskModal(); };
     document.getElementById("taskModalCancel").onclick = function () {
-      editingTaskId = null;
-      taskModal.classList.remove("open");
+      closeTaskModal();
     };
     document.getElementById("taskModalConfirm").onclick = function () {
       var title = document.getElementById("taskTitleInput").value.trim();
@@ -1727,8 +2115,7 @@
         state.tasks.push(task);
       }
       saveState();
-      editingTaskId = null;
-      taskModal.classList.remove("open");
+      closeTaskModal();
       renderAll();
       showToast(existingTask ? "Task updated" : "Task added");
     };
@@ -1763,11 +2150,16 @@
     document.getElementById("tourBackBtn").onclick = previousTourStep;
     document.getElementById("tourSkipBtn").onclick = function () { endTour(true); };
     document.getElementById("replayTourBtn").onclick = function () { startTour(true); };
-    [startModal, taskModal, taskDetailModal].forEach(function (overlay) {
+    [welcomeOverlay, startModal, taskModal, taskDetailModal].forEach(function (overlay) {
       overlay.addEventListener("click", function (event) {
         if (event.target === overlay) {
+          if (overlay === welcomeOverlay) {
+            closeWelcome(true);
+            startTour(false);
+            return;
+          }
           overlay.classList.remove("open");
-          if (overlay === taskModal) editingTaskId = null;
+          if (overlay === taskModal) closeTaskModal();
           if (overlay === taskDetailModal) activeDetailTaskId = null;
         }
       });
@@ -1807,14 +2199,17 @@
         applyTheme();
       };
     });
-    document.getElementById("themeToggleTop").onclick = function () {
-      state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
-      saveState();
-      renderSettings();
-      applyTheme();
-    };
+    Array.prototype.forEach.call(document.querySelectorAll(".theme-toggle"), function (button) {
+      button.onclick = function () {
+        state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
+        saveState();
+        renderSettings();
+        applyTheme();
+      };
+    });
     document.getElementById("soundSwitch").onclick = function () {
       state.settings.sound = !state.settings.sound;
+      state.settings.soundPreferenceTouched = true;
       if (state.settings.sound) {
         primeSounds();
         playSound("blockComplete");
@@ -1832,7 +2227,7 @@
       applyTheme();
     };
     document.getElementById("dailyGoalSelect").onchange = function () {
-      state.profile.dailyGoalBlocks = parseInt(this.value, 10);
+      state.profile.dailyGoalMinutes = Math.max(15, parseInt(this.value, 10) || 60);
       saveState();
       renderProgress();
     };
@@ -1876,13 +2271,19 @@
   window.__DEECADENCE_DEBUG__ = {
     cumulativeXpForLevel: cumulativeXpForLevel,
     xpNeededForLevel: xpNeededForLevel,
+    focusXpForSeconds: focusXpForSeconds,
+    manualDoneXp: manualDoneXp,
+    focusMinutesByDate: focusMinutesByDate,
     currentLevel: currentLevel,
     currentRank: currentRank,
     ranks: RANKS,
     splitIntoBlocks: splitIntoBlocks,
     clampMinutes: clampMinutes,
+    clampBlockCount: clampBlockCount,
     localDateKey: localDateKey,
     beginSession: beginSession,
+    pauseSession: pauseSession,
+    resumeSession: resumeSession,
     continueSavedSession: continueSavedSession,
     finalizeSession: finalizeSession,
     createInputFocusTask: createInputFocusTask,
@@ -1894,6 +2295,9 @@
     taskTimingState: taskTimingState,
     layoutScheduleBlocks: layoutScheduleBlocks,
     renderNowLine: renderNowLine,
+    openWelcome: openWelcome,
+    closeWelcome: closeWelcome,
+    saveWelcomeSetup: saveWelcomeSetup,
     startTour: startTour,
     endTour: endTour,
     getTourState: function () { return { active: tourActive, index: tourIndex }; },
@@ -1909,7 +2313,9 @@
   renderAll();
   switchView("today");
   if (state.settings.sound) primeSounds();
-  setTimeout(function () { startTour(false); }, 450);
+  setTimeout(function () {
+    if (!openWelcome(false)) startTour(false);
+  }, 450);
   setInterval(function () {
     if (activeView === "today") renderToday();
     if (activeView === "plan" && currentPlanMode === "schedule" && currentPlanTab === "day") renderPlan();

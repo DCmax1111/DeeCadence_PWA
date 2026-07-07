@@ -32,8 +32,10 @@ function classList() {
 }
 
 function createElement(id = "") {
-  return {
+  const element = {
     id,
+    parentNode: null,
+    children: [],
     value: "",
     textContent: "",
     innerHTML: "",
@@ -49,6 +51,16 @@ function createElement(id = "") {
     focus() {},
     click() {},
     addEventListener() {},
+    appendChild(child) {
+      child.parentNode = this;
+      this.children.push(child);
+      return child;
+    },
+    removeChild(child) {
+      this.children = this.children.filter((item) => item !== child);
+      child.parentNode = null;
+      return child;
+    },
     scrollIntoView() {},
     getBoundingClientRect() {
       return { top: 100, left: 100, right: 300, bottom: 180, width: 200, height: 80 };
@@ -60,6 +72,7 @@ function createElement(id = "") {
       return createElement("nested");
     }
   };
+  return element;
 }
 
 function createHarness() {
@@ -81,6 +94,11 @@ function createHarness() {
   const durationButtons = ["15", "25", "30", "45", "90", "custom"].map((value) => {
     const button = buttonWith("data-min", value);
     if (value === "25") button.classList.add("active");
+    return button;
+  });
+  const blockCountButtons = ["1", "2", "3", "4"].map((value) => {
+    const button = buttonWith("data-block-count", value);
+    if (value === "4") button.classList.add("active");
     return button;
   });
   const themeButtons = ["dark", "light"].map((value) => buttonWith("data-theme-choice", value));
@@ -107,6 +125,7 @@ function createHarness() {
       if (selector === "[data-theme-choice]") return themeButtons;
       if (selector === "[data-progress-type]") return progressButtons;
       if (selector === "[data-start-source]") return startSourceButtons;
+      if (selector === "[data-block-count]") return blockCountButtons;
       if (selector === "[data-plan-mode]") return planModeButtons;
       if (selector === ".tab[data-planview]") return tabs;
       if (selector === ".navbtn, .bottomnav button") return nav;
@@ -183,6 +202,14 @@ function testDurationClamp() {
   assert.equal(debug.clampMinutes(-20, 25), 4);
   assert.equal(debug.clampMinutes(999, 25), 240);
   assert.deepEqual(Array.from(debug.splitIntoBlocks(-20)), [60, 60, 60, 60]);
+  assert.deepEqual(Array.from(debug.splitIntoBlocks(30, 3)), [600, 600, 600]);
+  assert.equal(debug.clampBlockCount(99, 4), 4);
+}
+
+function testSoundDefaultsOnForNewUsers() {
+  const { debug } = createHarness();
+  assert.equal(debug.getState().settings.sound, true);
+  assert.equal(debug.getState().settings.soundPreferenceTouched, false);
 }
 
 function testTimestampTimerCompletesElapsedBlock() {
@@ -197,6 +224,33 @@ function testTimestampTimerCompletesElapsedBlock() {
   assert.equal(state.session.blocksCompleted, 1);
   assert.equal(state.session.blockRemaining, 0);
   assert.ok(state.profile.totalXp > 0);
+}
+
+function testSessionCanUseChosenBlockCount() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+
+  debug.beginSession(30, null, 2);
+
+  assert.equal(state.session.blocks.length, 2);
+  assert.deepEqual(state.session.blocks, [900, 900]);
+}
+
+function testWelcomeSetupCreatesPriorityTasks() {
+  const { context, debug } = createHarness();
+  const before = debug.getState().tasks.length;
+
+  context.document.getElementById("welcomeCritical1").value = "Deep study";
+  context.document.getElementById("welcomeNormal1").value = "Reply emails";
+  debug.saveWelcomeSetup();
+
+  const state = debug.getState();
+  assert.equal(state.settings.welcomeComplete, true);
+  assert.equal(state.tasks.length, before + 2);
+  assert.equal(state.tasks[0].title, "Deep study");
+  assert.equal(state.tasks[0].priority, "high");
+  assert.equal(state.tasks[0].units.total, 3);
+  assert.equal(state.tasks[1].priority, "medium");
 }
 
 function testLinkedTaskDeletionIsBlocked() {
@@ -394,14 +448,82 @@ function testManualDoneGivesSmallXpWithoutBlockCredit() {
   assert.equal(task.status, "completed");
   assert.equal(task.units.completed, task.units.total);
   assert.equal(task.manualDoneXpAwarded, true);
-  assert.equal(state.profile.totalXp - beforeXp, 5);
+  assert.equal(state.profile.totalXp - beforeXp, 6);
   assert.equal(state.dailyBlockLog[today] || 0, 0);
+  assert.equal(state.dailyFocusMinutes[today] || 0, 0);
   assert.equal(state.history[0].manualDone, true);
   assert.equal(state.history[0].blocksCompleted, 0);
   assert.equal(state.history[0].blocksPlanned, 0);
 
   debug.markTaskDoneOutsideTimer(task.id);
-  assert.equal(state.profile.totalXp - beforeXp, 5);
+  assert.equal(state.profile.totalXp - beforeXp, 6);
+}
+
+function testFocusXpRewardsTimeNotBlockCount() {
+  const { debug } = createHarness();
+
+  assert.equal(debug.focusXpForSeconds(15 * 60), 15);
+  assert.equal(debug.focusXpForSeconds(11 * 60 * 60), 660);
+  assert.ok(debug.focusXpForSeconds(90 * 60) > debug.focusXpForSeconds(15 * 60));
+  assert.match(appSource, /dailyFocusMinutes/);
+  assert.match(indexSource, /Focus time \/ 7d/);
+}
+
+function testProgressGraphBackfillsFromHistory() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+  const today = debug.localDateKey(new Date());
+
+  state.dailyFocusMinutes = {};
+  state.history.unshift({
+    id: "old-session",
+    date: today,
+    completedAt: Date.now(),
+    totalMinutes: 40,
+    blocksCompleted: 2,
+    blocksPlanned: 4,
+    xpEarned: 20,
+    completedAll: false
+  });
+
+  assert.equal(debug.focusMinutesByDate()[today], 20);
+  assert.match(appSource, /renderAttentionLineChart/);
+  assert.match(appSource, /data-progress-day/);
+  assert.match(appSource, /function wireProgressChart/);
+  assert.match(indexSource, /id="progressTaskSummary"/);
+  assert.doesNotMatch(indexSource, /id="progressHistoryPreview"/);
+  assert.match(appSource, /progress-attention-chart/);
+  assert.match(appSource, /progressRoot\.querySelectorAll\("\[data-progress-day\]"\)/);
+  assert.match(styleSource, /#view-progress \.progress-attention-chart/);
+  assert.match(styleSource, /#view-progress \.progress-chart-point/);
+}
+
+function testScheduleModeIsFullDayOnly() {
+  assert.match(appSource, /SCHEDULE_START_MINUTES = 0/);
+  assert.match(appSource, /SCHEDULE_END_MINUTES = 24 \* 60/);
+  assert.match(appSource, /00:00 - 23:59/);
+  assert.match(appSource, /renderNowLine\(todayStr\(\), pxPerMinute, SCHEDULE_START_MINUTES, SCHEDULE_END_MINUTES\)/);
+  assert.match(appSource, /var timed = list\.filter\(function \(task\) \{ return task\.time && task\.status !== "completed"; \}\)/);
+  assert.doesNotMatch(appSource, /renderScheduleQueue\(done, "Done today"/);
+  assert.match(styleSource, /data-plan-mode-current="schedule"/);
+}
+
+function testPausePenaltyStartsAfterFivePauses() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+  state.profile.totalXp = 20;
+
+  debug.beginSession(25, null);
+  for (let i = 0; i < 5; i += 1) {
+    debug.pauseSession();
+    debug.resumeSession();
+  }
+  assert.equal(state.profile.totalXp, 20);
+
+  debug.pauseSession();
+  assert.equal(state.session.pauseCount, 6);
+  assert.equal(state.session.penaltyXp, 1);
+  assert.equal(state.profile.totalXp, 19);
 }
 
 function testRankOrbGeometryKeepsRingsCentered() {
@@ -444,9 +566,48 @@ function testSoundAssetsAreWired() {
   assert.ok(fs.existsSync(sources), "sound source note should exist");
 }
 
+function testCoachTutorialExplainsCoreConcepts() {
+  assert.match(indexSource, /class="tour-coach"/);
+  assert.match(appSource, /DeeCadence rebuilds attention/);
+  assert.match(appSource, /What the letters mean/);
+  assert.match(appSource, /Count pieces or track time/);
+  assert.match(appSource, /setup: "taskModal"/);
+  assert.match(styleSource, /\.coach-orb/);
+}
+
+function testWelcomeSetupExplainsAttentionTraining() {
+  assert.match(indexSource, /Attention span recovery system/);
+  assert.match(indexSource, /3 non-negotiables/);
+  assert.match(indexSource, /3 normal tasks/);
+  assert.match(indexSource, /id="welcomeOverlay"/);
+  assert.match(indexSource, /data-block-count="1"/);
+  assert.match(indexSource, /data-block-count="4"/);
+  assert.match(appSource, /function saveWelcomeSetup/);
+  assert.match(styleSource, /\.welcome-card/);
+}
+
+function testEndBlockFeedbackIsWired() {
+  assert.match(indexSource, /id="blockFeedbackPanel"/);
+  assert.match(indexSource, /data-block-feeling="Tired"/);
+  assert.match(indexSource, /id="blockFeedbackNote"/);
+  assert.match(appSource, /function captureBlockFeedback/);
+  assert.match(appSource, /blockFeedback: session\.blockFeedback \|\| \[\]/);
+  assert.match(appSource, /renderFeedbackSummary/);
+  assert.match(styleSource, /\.block-feedback/);
+}
+
+function testInactiveViewsAreHidden() {
+  assert.match(styleSource, /\.view\s*\{\s*display:\s*none;/);
+  assert.match(styleSource, /\.view\.active\s*\{\s*display:\s*block;/);
+  assert.match(appSource, /view\.classList\.toggle\("active", view\.id === "view-" \+ name\)/);
+}
+
 testRankGatesStayExact();
 testDurationClamp();
+testSoundDefaultsOnForNewUsers();
 testTimestampTimerCompletesElapsedBlock();
+testSessionCanUseChosenBlockCount();
+testWelcomeSetupCreatesPriorityTasks();
 testLinkedTaskDeletionIsBlocked();
 testIncompleteSessionCanBeSavedAndContinued();
 testPartialSavedSessionKeepsRemainingTime();
@@ -462,8 +623,16 @@ testTaskModalCanUseDesktopWidth();
 testOverlappingScheduleBlocksGetColumns();
 testPastTimedTasksAreFlagged();
 testManualDoneGivesSmallXpWithoutBlockCredit();
+testFocusXpRewardsTimeNotBlockCount();
+testProgressGraphBackfillsFromHistory();
+testScheduleModeIsFullDayOnly();
+testPausePenaltyStartsAfterFivePauses();
 testRankOrbGeometryKeepsRingsCentered();
 testThemeAndMotionContractsStayWired();
 testSoundAssetsAreWired();
+testCoachTutorialExplainsCoreConcepts();
+testWelcomeSetupExplainsAttentionTraining();
+testEndBlockFeedbackIsWired();
+testInactiveViewsAreHidden();
 
 console.log("Root app audit tests passed");
