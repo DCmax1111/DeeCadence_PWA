@@ -186,14 +186,29 @@ function testRankGatesStayExact() {
   const { debug } = createHarness();
   const rank = (code) => debug.ranks.find((item) => item.id === code);
 
+  assert.equal(rank("D").minXp, 1736);
+  assert.equal(rank("C").minXp, 14380);
+  assert.equal(rank("B").minXp, 29403);
   assert.equal(rank("A").minXp, 49999);
   assert.equal(rank("S").minXp, 109109);
+  assert.equal(rank("SS").minXp, 237678);
+  assert.equal(rank("SSS").minXp, 460371);
   assert.equal(rank("L").minXp, 999999);
+  assert.equal(rank("SS").minLevel, 200);
+  assert.equal(rank("SSS").minLevel, 300);
+  assert.equal(rank("L").minLevel, 500);
+  assert.equal(debug.currentRank(1736).id, "D");
+  assert.equal(debug.currentRank(14380).id, "C");
+  assert.equal(debug.currentRank(29403).id, "B");
   assert.equal(debug.currentRank(49999).id, "A");
   assert.equal(debug.currentRank(109109).id, "S");
+  assert.equal(debug.currentRank(237678).id, "SS");
+  assert.equal(debug.currentRank(460371).id, "SSS");
   assert.equal(debug.currentRank(999999).id, "L");
   assert.equal(debug.currentLevel(109109), 100);
-  assert.equal(debug.currentLevel(999999), 290);
+  assert.equal(debug.currentLevel(237678), 200);
+  assert.equal(debug.currentLevel(460371), 300);
+  assert.equal(debug.currentLevel(999999), 500);
 }
 
 function testDurationClamp() {
@@ -602,6 +617,38 @@ function testInactiveViewsAreHidden() {
   assert.match(appSource, /view\.classList\.toggle\("active", view\.id === "view-" \+ name\)/);
 }
 
+function testFeedbackBaselineAndBackupSystemsAreWired() {
+  assert.match(indexSource, /meta name="deecadence-feedback-endpoint"/);
+  assert.match(indexSource, /meta name="deecadence-supabase-url"/);
+  assert.match(indexSource, /meta name="deecadence-supabase-anon-key"/);
+  assert.match(indexSource, /dominiquecreations24@gmail.com/);
+  assert.match(indexSource, /id="feedbackFab"/);
+  assert.match(indexSource, /id="feedbackModal"/);
+  assert.match(indexSource, /data-feedback-type="Confusing"/);
+  assert.match(indexSource, /id="attentionTestModal"/);
+  assert.match(indexSource, /id="exportBackupBtn"/);
+  assert.match(indexSource, /id="importBackupInput"/);
+  assert.match(appSource, /function submitFeedback/);
+  assert.match(appSource, /function sendFeedbackToSupabase/);
+  assert.match(appSource, /SUPABASE_ANON_KEY/);
+  assert.match(appSource, /recipient_email/);
+  assert.match(appSource, /feedbackOutbox/);
+  assert.match(appSource, /function openAttentionTest/);
+  assert.match(appSource, /REFERENCE_BENCHMARK/);
+  assert.match(appSource, /function exportBackup/);
+  assert.match(appSource, /function importBackup/);
+  assert.match(styleSource, /\.feedback-fab/);
+  assert.match(styleSource, /\.baseline-card/);
+  assert.match(styleSource, /\.test-signal/);
+}
+
+function testContextTipsAreWired() {
+  assert.match(appSource, /CONTEXT_TIPS/);
+  assert.match(appSource, /function renderContextTip/);
+  assert.match(appSource, /renderContextTip\(name\)/);
+  assert.match(styleSource, /\.context-tip/);
+}
+
 testRankGatesStayExact();
 testDurationClamp();
 testSoundDefaultsOnForNewUsers();
@@ -634,5 +681,7 @@ testCoachTutorialExplainsCoreConcepts();
 testWelcomeSetupExplainsAttentionTraining();
 testEndBlockFeedbackIsWired();
 testInactiveViewsAreHidden();
+testFeedbackBaselineAndBackupSystemsAreWired();
+testContextTipsAreWired();
 
 console.log("Root app audit tests passed");

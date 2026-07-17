@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#fbf7ed" />
+  <title>Nigeria Vehicle Ownership Cost Calculator</title>
+  <link rel="stylesheet" href="vehicle-cost-calculator.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero-panel" aria-labelledby="pageTitle">
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <div>
+          <strong>RoadCost NG</strong>
+          <small>Buyer estimate ledger</small>
+        </div>
+      </div>
+
+      <div class="hero-copy">
+        <p class="eyebrow">Nigeria vehicle total-cost prototype</p>
+        <h1 id="pageTitle">Know the landed cost before the price looks cheap.</h1>
+        <p>
+          Compare engine size, purchase price, estimated import charges, monthly fuel use,
+          and first-year ownership cost with every assumption labelled.
+        </p>
+      </div>
+
+      <div class="trust-strip" id="trustStrip" role="status" aria-live="polite">
+        <span class="trust-light" aria-hidden="true"></span>
+        <div>
+          <strong id="trustStatus">Checking rule freshness</strong>
+          <small id="trustMeta">Tax assumptions must be reconfirmed every 48 hours.</small>
+        </div>
+      </div>
+
+      <div class="source-ledger" aria-label="Rule source ledger">
+        <div>
+          <span>Snapshot verified</span>
+          <strong id="verifiedAt">--</strong>
+        </div>
+        <div>
+          <span>Next required check</span>
+          <strong id="nextCheck">--</strong>
+        </div>
+        <div>
+          <span>Calculation policy</span>
+          <strong id="calcPolicy">Blocked if stale</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="calculator" aria-label="Vehicle cost calculator">
+      <form id="calculatorForm" novalidate>
+        <div class="form-grid">
+          <label>
+            <span>Vehicle label</span>
+            <input id="vehicleName" type="text" value="Toyota Camry 2018" autocomplete="off" />
+          </label>
+
+          <label>
+            <span>Purchase price</span>
+            <input id="purchasePrice" type="number" min="0" step="10000" value="18000000" />
+            <small>Estimated vehicle price before import charges.</small>
+          </label>
+
+          <label>
+            <span>Currency</span>
+            <select id="priceCurrency">
+              <option value="NGN">NGN</option>
+              <option value="USD">USD</option>
+            </select>
+          </label>
+
+          <label>
+            <span>USD to NGN rate</span>
+            <input id="fxRate" type="number" min="1" step="1" value="1500" />
+            <small>Editable estimate. Connect to an FX feed in production.</small>
+          </label>
+
+          <label>
+            <span>Engine size</span>
+            <input id="engineSize" type="number" min="0" step="100" value="2500" />
+            <small>CC. Example: 2500 for a 2.5L engine.</small>
+          </label>
+
+          <label>
+            <span>Vehicle condition</span>
+            <select id="vehicleCondition">
+              <option value="used">Used import</option>
+              <option value="new">New import</option>
+              <option value="local">Locally bought / already cleared</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Estimated freight + insurance</span>
+            <input id="freightInsurance" type="number" min="0" step="10000" value="1800000" />
+            <small>Used to estimate CIF value for duty calculations.</small>
+          </label>
+
+          <label>
+            <span>Monthly fuel consumption</span>
+            <input id="monthlyFuelLitres" type="number" min="0" step="5" value="220" />
+            <small>Litres per month.</small>
+          </label>
+
+          <label>
+            <span>Fuel price per litre</span>
+            <input id="fuelPrice" type="number" min="0" step="1" value="900" />
+            <small>Editable local pump-price estimate.</small>
+          </label>
+
+          <label>
+            <span>Insurance per year</span>
+            <input id="insuranceAnnual" type="number" min="0" step="10000" value="450000" />
+          </label>
+
+          <label>
+            <span>Maintenance per year</span>
+            <input id="maintenanceAnnual" type="number" min="0" step="10000" value="650000" />
+          </label>
+
+          <label>
+            <span>Registration / papers</span>
+            <input id="registrationAnnual" type="number" min="0" step="10000" value="250000" />
+          </label>
+        </div>
+
+        <div class="assumption-panel">
+          <div>
+            <p class="eyebrow">Rule assumptions</p>
+            <h2>Rates stay visible and editable.</h2>
+          </div>
+          <button class="ghost-button" id="confirmRulesButton" type="button">Mark checked after source review</button>
+        </div>
+
+        <div class="rate-grid" aria-label="Editable charge assumptions">
+          <label>
+            <span>Import duty</span>
+            <input id="importDutyRate" type="number" min="0" max="100" step="0.1" value="20" />
+            <small>% of estimated CIF.</small>
+          </label>
+          <label>
+            <span>NAC levy</span>
+            <input id="nacLevyRate" type="number" min="0" max="100" step="0.1" value="5" />
+            <small>% of estimated CIF. New imports may differ.</small>
+          </label>
+          <label>
+            <span>VAT</span>
+            <input id="vatRate" type="number" min="0" max="100" step="0.1" value="7.5" />
+            <small>% applied to value plus import charges in this prototype.</small>
+          </label>
+          <label>
+            <span>Admin / terminal buffer</span>
+            <input id="adminBuffer" type="number" min="0" step="10000" value="350000" />
+            <small>Estimated fees outside statutory tax lines.</small>
+          </label>
+        </div>
+      </form>
+
+      <aside class="result-panel" aria-label="Estimated result">
+        <div class="result-head">
+          <div>
+            <p class="eyebrow">Estimate result</p>
+            <h2 id="resultTitle">Toyota Camry 2018</h2>
+          </div>
+          <span class="estimate-badge" id="estimateBadge">Estimate</span>
+        </div>
+
+        <div class="blocked-message" id="blockedMessage" hidden>
+          <strong>Calculation blocked.</strong>
+          <span>Tax and duty assumptions are older than 48 hours. Confirm the snapshot before showing buyer-facing totals.</span>
+        </div>
+
+        <div class="summary-grid" id="summaryGrid">
+          <div>
+            <span>Estimated landed cost</span>
+            <strong id="landedCost">--</strong>
+          </div>
+          <div>
+            <span>Monthly fuel estimate</span>
+            <strong id="monthlyFuelCost">--</strong>
+          </div>
+          <div>
+            <span>First-year ownership cost</span>
+            <strong id="annualCost">--</strong>
+          </div>
+        </div>
+
+        <div class="breakdown" id="breakdown"></div>
+
+        <div class="warning-box">
+          <strong>Trust rule</strong>
+          <span>Do not treat this as a customs quote. The app should update or reconfirm rule data every 24-48 hours and show source timestamps with every estimate.</span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="method-panel" aria-label="Method and sources">
+      <div>
+        <p class="eyebrow">Calculation method</p>
+        <h2>What the prototype prevents</h2>
+        <p>
+          The calculator separates statutory charge assumptions from owner-entered cost assumptions.
+          If policy data is stale, it hides totals instead of letting an old rate look official.
+        </p>
+      </div>
+      <div class="method-list">
+        <article>
+          <span>01</span>
+          <strong>Estimate, not quote</strong>
+          <p>Every result line says whether it is statutory, editable, fuel-based, or a buffer.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <strong>48-hour expiry</strong>
+          <p>Rule timestamps expire automatically. Production should refresh from verified official/admin sources.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <strong>Input guardrails</strong>
+          <p>Negative numbers, missing prices, and stale tax assumptions are prevented before totals are displayed.</p>
+        </article>
+      </div>
+      <div class="source-note">
+        <strong>Verification queue:</strong>
+        confirm current rules from official customs, FIRS, finance ministry, or gazetted circulars before refreshing the snapshot.
+        The default green-surcharge bands mirror public tax-summary guidance, but the app treats them as expiring assumptions.
+      </div>
+    </section>
+  </main>
+
+  <script src="vehicle-cost-calculator.js"></script>
+</body>
+</html>

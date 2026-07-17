@@ -94,12 +94,16 @@ function importedReviewNote(tx){if(tx.category==="Savings")return"Statement impo
 function seedImportedTransactionsForReview(){const privateRows=globalThis.FINMAX_PRIVATE_REVIEW_DATA?.rows;if(Array.isArray(privateRows)&&privateRows.length){seed.reviewQueue=privateRows;seed.transactions=[];normalizeState(seed);return}const imported=(seed.transactions||[]).map(tx=>({id:`import_${tx.id}`,date:tx.date,name:tx.name,suggestedCategory:importedReviewCategory(tx),suggestedType:importedReviewType(tx),accountId:tx.accountId,amount:tx.amount,note:importedReviewNote(tx),source:"seeded-statement-review",sourceTransactionId:tx.id}));seed.reviewQueue=[...imported,...(seed.reviewQueue||[])];seed.transactions=[];normalizeState(seed)}
 
 let state=normalizeState(load());let db=loadUserDb();let view="dashboard";let modal=null;let search="";let tutorialStep=0;let editingPathId=null;let editingGoalId=null;let editingSubscriptionId=null;let reviewingId=null;let authMode=localStorage.getItem("finmax_auth_mode")||(db.users.length?"login":"signup");let authenticated=Boolean(sessionStorage.getItem("finmax_session")==="yes"&&db.users.some(x=>x.id===sessionStorage.getItem("finmax_user_id")));
+const finmaxPreviousVisitAt=state.profile.lastVisitAt||"";
+state.profile.lastVisitAt=new Date().toISOString();
 const app=document.querySelector("#app");const importFile=document.querySelector("#importFile");
 const executiveNav=[
   ["dashboard","⌂","Dashboard"],["review","✓","Review"],["accounts","▤","Accounts"],["transactions","↔","Transactions"],["wealth","◇","Net Worth"],["loans","▣","Loans"],["subscriptions","◫","Subscriptions"],["analytics","▥","Analytics"],["settings","⚙","Customize"]
 ];
 const everydayNav=[["dashboard","⌂","Today"],["review","✓","Review"],["transactions","↔","Activity"],["goals","◎","Goals"],["advisor","✦","Advisor"],["settings","⚙","More"]];
 const rankNav=[["dashboard","⌂","Rank"],["review","✓","Review"],["goals","◎","Goals"],["transactions","↔","Logs"],["accounts","▤","Vaults"],["analytics","▥","Stats"],["settings","⚙","More"]];
+
+const everydayNavSimple=[["dashboard","\u2302","Today"],["money","\u2195","Money"],["goals","\u25CE","Goals"],["advisor","\u2726","Maxwell"],["settings","\u2022\u2022\u2022","More"]];
 
 function loadUserDb(){try{const parsed=JSON.parse(localStorage.getItem(USER_DB_KEY)||'{"users":[]}');return{users:Array.isArray(parsed.users)?parsed.users:[]}}catch{return{users:[]}}}
 function saveUserDb(){localStorage.setItem(USER_DB_KEY,JSON.stringify(db))}
@@ -124,7 +128,7 @@ function movementTotals(){const income=sum(state.transactions.filter(x=>x.type==
 function totals(){const m=movementTotals(),assets=sum(state.assets)+sum(state.accounts,"balance"),liabilities=sum(state.liabilities);return{income:m.income,expense:m.spending,grossOutflow:m.grossOutflow,protectedSavings:m.protectedSavings,cashflow:m.netOperating,assets,liabilities,netWorth:assets-liabilities}}
 function route(next){view=next;modal=null;render();scrollTo({top:0,behavior:"smooth"})}
 
-function render(){document.body.dataset.theme=theme();document.body.dataset.accent=state.profile.accent;document.documentElement.style.setProperty("--density",state.profile.density);app.innerHTML=!state.profile.onboarded?onboarding():!authenticated?authScreen():shell();}
+function render(){document.body.dataset.theme=theme();document.body.dataset.accent=state.profile.accent;document.body.dataset.mode=state.profile.mode||"everyday";document.documentElement.style.setProperty("--density",state.profile.density);app.innerHTML=!state.profile.onboarded?onboarding():!authenticated?authScreen():shell();}
 function shell(){return `<div class="app">${sidebar()}<main class="main">${topbar()}<section class="content">${page()}</section>${mobileNav()}</main>${modal?modalView():""}${!state.profile.tutorialDone?tutorial():""}</div>`}
 function sidebar(){return `<aside class="sidebar"><div class="brand"><span class="brand-mark">F</span><div>FinMax <small>Private Finance OS</small></div></div><nav class="nav">${currentNav().map(n=>navButton(...n)).join("")}</nav><div class="sidebar-foot"><button class="btn privacy-toggle" data-action="privacy">${state.profile.privacy?"Show values":"Hide values"}</button><div class="profile-mini"><span class="avatar" aria-hidden="true">$</span><div><strong>${esc(state.profile.name)}</strong><small>${modeLabel()}</small></div></div></div></aside>`}
 function navButton(id,icon,label){return `<button class="nav-btn ${view===id?"active":""}" data-view="${id}"><span class="nav-icon">${icon}</span>${label}</button>`}
@@ -398,7 +402,7 @@ const builtInReviewRules=[
   {label:"Income signal",type:"income",category:"Income",keywords:["cashback","interest","reward","commission received","payment received","income"],note:"Likely income, refund, interest, or reward. Confirm before approving."}
 ];
 function reviewText(item){return `${item.name||""} ${statementRawDescription(item)} ${item.note||""} ${item.suggestedCategory||""} ${item.source||""} ${statementSourceFile(item)}`.toLowerCase()}
-function builtInGuess(item){const text=reviewText(item);return builtInReviewRules.find(rule=>rule.keywords.some(keyword=>text.includes(keyword)))}
+function builtInGuess(item){const text=`${item?.name||""} ${statementRawDescription(item)} ${item?.note||""}`.toLowerCase(),ordered=[...builtInReviewRules.slice(1),builtInReviewRules[0]];return ordered.find(rule=>rule.keywords.some(keyword=>text.includes(keyword)))}
 function applyGuessToItem(item,guess,reason){if(!item||!guess)return false;const before=`${item.suggestedType}|${item.suggestedCategory}|${item.accountId||""}|${item.note||""}`;item.suggestedType=guess.type;item.suggestedCategory=guess.category;if(guess.accountId)item.accountId=guess.accountId;const prefix=`${reason}: ${guess.label}.`;item.note=String(item.note||"").includes(prefix)?item.note:`${prefix} ${guess.note} ${item.note||""}`.trim();return before!==`${item.suggestedType}|${item.suggestedCategory}|${item.accountId||""}|${item.note||""}`}
 function applyReviewRules(){let count=0;(state.reviewQueue||[]).forEach(item=>{const learned=state.rules.find(rule=>rulePattern(item.name).includes(rule.pattern)||String(item.name||"").toLowerCase().includes(rule.pattern));if(learned&&applyGuessToItem(item,{label:`Remembered rule "${learned.pattern}"`,type:learned.type,category:learned.category,accountId:learned.accountId,note:"This came from a previous update you made."},"Learned rule"))count++;const guess=builtInGuess(item);if(guess&&applyGuessToItem(item,guess,"Suggested"))count++});save();render();toast(count?`${count} review rows auto-sorted for your approval`:"No matching review rules yet")}
 function runTransferMatching(){const matches=transferMatches(60),ids=new Set(matches.flat().map(item=>item.id));let count=0;(state.reviewQueue||[]).forEach(item=>{if(ids.has(item.id)&&applyGuessToItem(item,{label:"Likely internal transfer pair",type:"transfer",category:"Transfer Review",note:"Same amount appears close together in another account. Confirm before approving."},"Transfer match"))count++});save();render();toast(count?`${count} possible cross-account transfer rows marked`:"No likely transfer pairs found")}
@@ -821,12 +825,14 @@ function advisor(){
 function currentNav(){
   const mode=normalizeExperienceMode();
   if(isBusinessProfile())return [["dashboard","&#8962;","Overview"],["business","&#9638;","Business"],["review","&#10003;","Review"],["accounts","&#9636;","Accounts"],["transactions","&#8596;","Activity"],["goals","&#9678;","Goals"],["advisor","&#10022;","Maxwell AI"],["analytics","&#9637;","Analytics"],["settings","&#9881;","Customize"]];
-  return mode==="executive"?executiveNav:mode==="rank"?rankNav:everydayNav;
+  return mode==="executive"?executiveNav:mode==="rank"?rankNav:everydayNavSimple;
 }
-function page(){return({dashboard,business,review,accounts,transactions,goals,advisor,wealth,loans,subscriptions,analytics,settings}[view]||dashboard)()}
+function page(){return({dashboard,money:moneyPage,business,review,accounts,transactions,goals,advisor,wealth,loans,subscriptions,analytics,settings:settingsV2}[view]||dashboard)()}
 function topbar(){
-  const mode=normalizeExperienceMode(),names={dashboard:mode==="everyday"?"Today":mode==="rank"?"Rank Command":isBusinessProfile()?"Overview":"Overview",business:"Business Command",review:"Transaction Review",accounts:"Accounts",transactions:"Transactions",goals:"Goals",advisor:"Maxwell AI",wealth:"Net Worth",loans:"Loans",subscriptions:"Subscriptions",analytics:"Analytics",settings:"Customize"};
-  return `<header class="topbar"><h1>${names[view]||"FinMax"}</h1><div class="top-actions">${modeSwitcher()}<button class="btn privacy-top" data-action="privacy" title="${state.profile.privacy?"Show balances":"Hide balances"}">${state.profile.privacy?"Show":"Hide"}</button><button class="btn primary" data-open="transaction">+ Add</button></div></header>`;
+  const mode=normalizeExperienceMode(),names={dashboard:mode==="everyday"?"Today":mode==="rank"?"Rank Command":isBusinessProfile()?"Overview":"Overview",money:"Money",business:"Business Command",review:"Transaction Review",accounts:"Accounts",transactions:"Transactions",goals:"Goals",advisor:"Maxwell AI",wealth:"Net Worth",loans:"Loans",subscriptions:"Subscriptions",analytics:"Analytics",settings:"More"};
+  const everydayActions=`<button class="btn privacy-top" data-action="privacy" title="${state.profile.privacy?"Show balances":"Hide balances"}">${state.profile.privacy?"Show values":"Hide values"}</button><button class="btn primary everyday-add" data-open="transaction">+ Add money</button>`;
+  const advancedActions=`${modeSwitcher()}<button class="btn privacy-top" data-action="privacy" title="${state.profile.privacy?"Show balances":"Hide balances"}">${state.profile.privacy?"Show":"Hide"}</button><button class="btn primary" data-open="transaction">+ Add</button>`;
+  return `<header class="topbar"><div class="topbar-title"><span class="topbar-product">FinMax</span><h1>${names[view]||"FinMax"}</h1></div><div class="top-actions">${mode==="everyday"?everydayActions:advancedActions}</div></header>`;
 }
 document.addEventListener("click",e=>{
   const prompt=e.target.closest("[data-maxwell-prompt]");
@@ -1051,6 +1057,195 @@ function tutorial(){
   const s=steps[tutorialStep],isFirst=tutorialStep===0,isLast=tutorialStep===steps.length-1;
   return `<div class="tutorial-backdrop"><section class="tutorial-card" role="dialog" aria-modal="true" aria-label="FinMax tutorial"><div class="tutorial-progress">${steps.map((_,i)=>`<i class="${i<=tutorialStep?"active":""}"></i>`).join("")}</div><div class="tutorial-icon">${s.icon}</div><span class="eyebrow">FinMax tutorial - ${tutorialStep+1} of ${steps.length}</span><h2>${s.title}</h2><p>${s.text}</p><div class="tutorial-actions ${isLast?"final":""}"><button class="btn tutorial-arrow" data-tutorial="back" ${isFirst?"disabled":""} aria-label="Previous tutorial step">&larr;</button>${isLast?`<button class="btn primary tutorial-start" data-tutorial="finish">Start FinMax</button>`:`<button class="btn tutorial-skip" data-tutorial="skip">Skip</button><button class="btn primary tutorial-arrow" data-tutorial="next" aria-label="Next tutorial step">&rarr;</button>`}</div></section></div>`;
 }
+
+// Everyday UX: fast capture first, reminders second, deeper tools on demand.
+let finmaxQuickTransactionType="";
+function visitContext(){
+  if(!finmaxPreviousVisitAt)return"Everything important is collected here.";
+  const days=Math.floor((Date.now()-Date.parse(finmaxPreviousVisitAt))/86400000);
+  if(days>=2)return`Welcome back. It has been ${days} days, so FinMax kept the unfinished work waiting for you.`;
+  return"Your latest balances, reminders, and next action are ready.";
+}
+function monthApprovedRows(){const key=new Date().toISOString().slice(0,7);return(state.transactions||[]).filter(tx=>String(tx.date||"").startsWith(key))}
+function monthSnapshot(){const rows=monthApprovedRows(),income=sum(rows.filter(x=>x.type==="income"),"amount"),spending=sum(rows.filter(x=>x.type==="expense"&&!isProtectedMovement(x)),"amount"),saved=sum(rows.filter(isProtectedMovement),"amount");return{income,spending,saved,count:rows.length}}
+function quickMoneyActions(){return `<div class="quick-money-actions" aria-label="Quick money actions"><button class="quick-money-action expense" type="button" data-quick-transaction="expense" data-open="transaction"><span aria-hidden="true">-</span><strong>Expense</strong><small>Money you spent</small></button><button class="quick-money-action income" type="button" data-quick-transaction="income" data-open="transaction"><span aria-hidden="true">+</span><strong>Income</strong><small>Money received</small></button><button class="quick-money-action" type="button" data-open="importWizard"><span aria-hidden="true">⇩</span><strong>Import</strong><small>Statement or file</small></button><button class="quick-money-action" type="button" data-view="review"><span aria-hidden="true">✓</span><strong>Review</strong><small>${state.reviewQueue.length} waiting</small></button></div>`}
+function compactTopAccounts(){const accounts=topUsedAccounts();return `<div class="everyday-account-list">${accounts.map(account=>`<button type="button" data-open-account-tx="${account.id}"><span class="account-dot" style="--account-color:${account.color}"></span><span><strong>${esc(accountShortName(account))}</strong><small>${esc(account.type)}</small></span><b class="privacy-amount" data-hidden="${state.profile.privacy}">${money(account.balance)}</b></button>`).join("")}<button class="account-list-more" type="button" data-view="accounts"><span class="account-dot more">+</span><span><strong>All accounts</strong><small>View and organise</small></span><b>Open</b></button></div>`}
+function nextEverydayReminder(){
+  const pending=state.reviewQueue.length,goal=activeGoal(),cp=goal?checkpointFocus(goal):null,subs=state.subscriptions.filter(x=>x.active).length;
+  if(pending)return{label:"Statement reminder",title:`${pending} imported lines are waiting`,text:"FinMax has kept them out of your reports. Review a small batch whenever you have a few minutes.",action:"Review 10",view:"review"};
+  if(cp&&cp.gap>0)return{label:"Goal reminder",title:`${moneyIn(cp.gap,goalCurrency(goal),true)} to the next checkpoint`,text:`The checkpoint is due ${cp.deadline}. Add only money that has actually arrived.`,action:"Open goal",view:"goals"};
+  if(subs)return{label:"Upcoming money",title:`${subs} active recurring payments`,text:"Add exact renewal dates to make reminders useful before charges happen.",action:"Check bills",view:"subscriptions"};
+  return{label:"You are caught up",title:"Nothing urgent is waiting",text:"Log the next transaction when it happens. FinMax will keep the trail ready.",action:"Add money",modal:"transaction"};
+}
+function reminderCard(){const item=nextEverydayReminder();return `<article class="everyday-reminder"><span class="eyebrow">${esc(item.label)}</span><h2>${esc(item.title)}</h2><p>${esc(item.text)}</p>${item.view?`<button class="btn primary" data-view="${item.view}">${esc(item.action)}</button>`:`<button class="btn primary" data-open="${item.modal}">${esc(item.action)}</button>`}</article>`}
+function everydayDashboard(){
+  const snap=monthSnapshot(),goal=activeGoal();
+  return `<section class="everyday-home"><div class="everyday-welcome"><div><span class="today-date">${new Intl.DateTimeFormat(undefined,{weekday:"long",day:"numeric",month:"long"}).format(new Date())}</span><h2>Good ${greeting()}, ${esc(state.profile.name||"there")}</h2><p>${esc(visitContext())}</p></div><button class="btn primary welcome-add" data-open="transaction">+ Log transaction</button></div><section class="quick-capture"><div class="section-intro"><span class="eyebrow">Quick capture</span><h3>What do you want to record?</h3></div>${quickMoneyActions()}</section><div class="everyday-priority-grid"><section class="card everyday-glance"><div class="card-head"><div><span class="eyebrow">This month</span><h3>Money at a glance</h3></div><button class="btn small" data-view="transactions">History</button></div><div class="glance-numbers"><span><small>Received</small><strong class="positive privacy-amount" data-hidden="${state.profile.privacy}">${money(snap.income,true)}</strong></span><span><small>Spent</small><strong class="privacy-amount" data-hidden="${state.profile.privacy}">${money(snap.spending,true)}</strong></span><span><small>Protected</small><strong class="privacy-amount" data-hidden="${state.profile.privacy}">${money(snap.saved,true)}</strong></span></div>${compactTopAccounts()}</section>${reminderCard()}</div><div class="everyday-lower-grid"><article class="card compact-history"><div class="card-head"><div><span class="eyebrow">Recently approved</span><h3>Your latest activity</h3></div><button class="btn small" data-view="transactions">See all</button></div><div>${state.transactions.slice(0,4).map(txRow).join("")||`<div class="gentle-empty"><strong>No approved activity yet</strong><span>Log something now, or review an imported statement when you are ready.</span></div>`}</div></article><article class="card compact-goal"><div class="card-head"><div><span class="eyebrow">Current checkpoint</span><h3>${esc(goal?.name||"No goal yet")}</h3></div><button class="btn small" data-view="goals">Open</button></div>${goal?dashboardGoalCheckpoint(goal):`<div class="gentle-empty"><strong>Choose something worth building toward</strong><span>FinMax will break it into smaller checkpoints.</span></div>`}</article></div></section>`;
+}
+function moneyReviewPreview(){return(state.reviewQueue||[]).slice(0,3).map(item=>{const account=state.accounts.find(a=>a.id===item.accountId);return `<button type="button" class="money-preview-row" data-edit-review="${item.id}"><span><strong>${esc(reviewDisplayTitle(item))}</strong><small>${esc(accountShortName(account))} · ${esc(item.date)}</small></span><b>${money(item.amount)}</b></button>`}).join("")}
+function moneyPage(){
+  const snap=monthSnapshot(),pending=state.reviewQueue.length;
+  return `${pageHead("Money","Log something quickly, find an old movement, or continue an unfinished review.",`<button class="btn primary" data-open="transaction">+ Log transaction</button>`)}<section class="money-hub"><article class="card money-command"><div><span class="eyebrow">Fast actions</span><h2>Money, without the maze.</h2><p>Capture first. FinMax keeps the deeper accounting out of the way until you ask for it.</p></div>${quickMoneyActions()}</article><div class="money-hub-grid"><section class="card card-pad"><div class="card-head"><div><span class="eyebrow">Accounts</span><h3>Where your money is</h3></div><button class="btn small" data-view="accounts">Manage</button></div>${compactTopAccounts()}</section><section class="card card-pad"><div class="card-head"><div><span class="eyebrow">Review later</span><h3>${pending?`${pending} lines waiting`:"Nothing waiting"}</h3></div>${pending?`<button class="btn small primary" data-view="review">Continue</button>`:""}</div><div class="money-preview-list">${moneyReviewPreview()||`<div class="gentle-empty"><strong>Your review queue is clear</strong><span>New imports will wait here before they affect reports.</span></div>`}</div></section></div><nav class="money-tool-list" aria-label="Money tools"><button data-view="transactions"><span>Transaction history</span><small>Search approved money movements</small><b>›</b></button><button data-open="importWizard"><span>Import a statement</span><small>PDF, CSV, JSON, or text; processed on this device</small><b>›</b></button><button data-view="subscriptions"><span>Bills and subscriptions</span><small>Remember recurring charges</small><b>›</b></button><button data-view="loans"><span>Loans and money owed</span><small>Track what you borrowed or lent</small><b>›</b></button><button data-view="wealth"><span>Savings and investments</span><small>See protected money separately</small><b>›</b></button></nav><article class="money-month-line"><span>This month</span><b class="positive privacy-amount" data-hidden="${state.profile.privacy}">+${money(snap.income,true)}</b><small>received</small><b class="privacy-amount" data-hidden="${state.profile.privacy}">-${money(snap.spending,true)}</b><small>spent</small></article></section>`;
+}
+
+function transactionForm(){
+  const selected=finmaxQuickTransactionType||"expense",title=selected==="income"?"Add income":"Add transaction",copy=selected==="income"?"Record money you received. You can add more detail later.":"Record the amount first; category and account keep it useful later.";
+  return `${modalHeader(title,copy)}<form data-form="transaction"><div class="form-grid"><div class="field"><label>Amount</label><input name="amount" type="number" inputmode="decimal" min="0.01" step="0.01" required autofocus placeholder="0.00"></div><div class="field"><label>Type</label><select name="type"><option value="expense" ${selected==="expense"?"selected":""}>Expense</option><option value="income" ${selected==="income"?"selected":""}>Income</option></select></div><div class="field full"><label>Short note <span class="muted">(optional)</span></label><input name="name" placeholder="What was it for?"></div><div class="field"><label>Account</label><select name="accountId" required>${state.accounts.map(x=>`<option value="${x.id}" ${state.pendingAccount===x.id?"selected":""}>${esc(accountShortName(x))} · ${money(x.balance)}</option>`).join("")}</select></div><div class="field"><label>Category</label><select name="category">${["Food","Housing","Utilities","Transport","Health","Data/Airtime","Savings","Investment","Loan","Loan Repayment","Subscription","Fees","Income","Other"].map(x=>`<option ${selected==="income"&&x==="Income"?"selected":""}>${x}</option>`).join("")}</select></div><div class="field full"><label>Date</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}"></div></div>${modalActions()}</form>`;
+}
+
+function decodePdfLiteral(value){return String(value||"").replace(/\\([0-7]{1,3})/g,(_,oct)=>String.fromCharCode(parseInt(oct,8))).replace(/\\n/g,"\n").replace(/\\r/g,"\n").replace(/\\t/g,"\t").replace(/\\([()\\])/g,"$1")}
+function decodePdfHex(value){const clean=String(value||"").replace(/\s+/g,"");if(!clean)return"";const bytes=[];for(let i=0;i<clean.length;i+=2)bytes.push(parseInt(clean.slice(i,i+2).padEnd(2,"0"),16));if(bytes[0]===254&&bytes[1]===255){let out="";for(let i=2;i<bytes.length;i+=2)out+=String.fromCharCode((bytes[i]<<8)|(bytes[i+1]||0));return out}return new TextDecoder("latin1").decode(new Uint8Array(bytes))}
+function pdfOperatorsToText(source){const blocks=String(source||"").match(/BT[\s\S]*?ET/g)||[];const lines=[];blocks.forEach(block=>{let line="";const tokens=block.match(/\((?:\\.|[^\\)])*\)|<[0-9A-Fa-f\s]+>/g)||[];tokens.forEach(token=>{const text=token[0]==="("?decodePdfLiteral(token.slice(1,-1)):decodePdfHex(token.slice(1,-1));if(text.trim())line+=`${text} `});if(line.trim())lines.push(line.replace(/\s+/g," ").trim())});return lines.join("\n")}
+async function inflatePdfStream(bytes,format){const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));return new Uint8Array(await new Response(stream).arrayBuffer())}
+async function extractPdfText(file){const buffer=await file.arrayBuffer(),bytes=new Uint8Array(buffer),raw=new TextDecoder("latin1").decode(bytes),sources=[raw];if(globalThis.DecompressionStream){const marker=/stream\r?\n/g;let match,count=0;while((match=marker.exec(raw))&&count<300){const start=match.index+match[0].length,end=raw.indexOf("endstream",start),header=raw.slice(Math.max(0,match.index-260),match.index);if(end<0)break;if(/FlateDecode/.test(header)){const chunk=bytes.slice(start,end);for(const format of ["deflate","deflate-raw"]){try{sources.push(new TextDecoder("latin1").decode(await inflatePdfStream(chunk,format)));break}catch{}}count++}marker.lastIndex=end+9}}const text=sources.map(pdfOperatorsToText).filter(Boolean).join("\n");return text||raw.match(/[\x20-\x7E]{8,}/g)?.join("\n")||""}
+function normalizeStatementDate(value){const raw=String(value||"").trim(),iso=raw.match(/\b(20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2})\b/);if(iso)return`${iso[1]}-${iso[2].padStart(2,"0")}-${iso[3].padStart(2,"0")}`;const local=raw.match(/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](20\d{2})\b/);if(local)return`${local[3]}-${local[2].padStart(2,"0")}-${local[1].padStart(2,"0")}`;return new Date().toISOString().slice(0,10)}
+function statementRowsFromText(text,accountId,source){const lines=String(text||"").split(/\r?\n/).map(x=>x.replace(/\s+/g," ").trim()).filter(x=>x.length>2),dateRe=/\b(?:20\d{2}[-\/.]\d{1,2}[-\/.]\d{1,2}|\d{1,2}[-\/.]\d{1,2}[-\/.]20\d{2})\b/,blocks=[];let current="";lines.forEach(line=>{if(dateRe.test(line)){if(current)blocks.push(current);current=line}else if(current)current+=` ${line}`});if(current)blocks.push(current);return blocks.slice(0,10000).map((block,index)=>{const dateMatch=block.match(dateRe),withoutDate=block.replace(dateRe," "),amountMatches=[...withoutDate.matchAll(/(?:NGN|N|\u20A6|USD|\$)?\s*-?\d[\d,]*(?:\.\d{1,2})?/gi)].map(m=>({raw:m[0],value:Number(m[0].replace(/[^\d.-]/g,""))})).filter(x=>Number.isFinite(x.value)&&Math.abs(x.value)>0);if(!amountMatches.length)return null;const amount=Math.abs(amountMatches[amountMatches.length-1].value),description=withoutDate.replace(/(?:NGN|N|\u20A6|USD|\$)?\s*-?\d[\d,]*(?:\.\d{1,2})?/gi," ").replace(/\s+/g," ").trim().slice(0,220)||`Statement transaction ${index+1}`,lower=description.toLowerCase();let type=/credit|received|interest|cashback|reward|deposit/.test(lower)?"income":/debit|purchase|payment|paid|charge|withdrawal|sent/.test(lower)?"expense":"transfer";const draft={name:description,rawDescription:block,suggestedCategory:type==="income"?"Income":"Transfer Review",suggestedType:type,accountId,amount,date:normalizeStatementDate(dateMatch?.[0]),source,sourceFile:source,note:"Imported from a PDF on this device. Confirm the original narration before approval."},guess=builtInGuess(draft);if(guess){draft.suggestedCategory=guess.category;draft.suggestedType=guess.type}draft.category=draft.suggestedCategory;draft.type=draft.suggestedType;return normalizeImportRow(draft,accountId,source,index)}).filter(Boolean)}
+async function readStatementFile(file,accountId){const source=file.name||"Imported statement";if(/\.pdf$/i.test(source)){const text=await extractPdfText(file),rows=statementRowsFromText(text,accountId,source);return{rows,text,source,warning:rows.length?"PDF text was read locally. Check the preview before importing.":"No transaction table was found. This may be a scanned PDF; use CSV or paste text instead."}}const text=await file.text();return{rows:parseImportRows(text,accountId,source),text,source,warning:"File read locally. Check the preview before importing."}}
+function importRowsAsCsv(rows){return ["date,name,amount,type,category,note",...rows.map(row=>[row.date,row.name,row.amount,row.suggestedType,row.suggestedCategory,row.note].map(value=>`"${String(value||"").replace(/"/g,'""')}"`).join(","))].join("\n")}
+function importWizardForm(){return `${modalHeader("Import a statement","Choose a local PDF, CSV, JSON, or text file. Nothing leaves this device.")}<form data-form="import-wizard"><div class="import-drop"><label for="statement-import-file"><strong>Choose statement file</strong><span>PDF, CSV, JSON, or TXT · processed offline</span></label><input id="statement-import-file" type="file" accept=".pdf,.csv,.json,.txt,application/pdf,text/csv,application/json,text/plain" data-statement-file></div><div class="form-grid"><div class="field"><label>Statement name</label><input name="source" value="Manual import" data-import-source></div><div class="field"><label>Account</label><select name="accountId" data-import-account>${state.accounts.map(x=>`<option value="${x.id}">${esc(accountShortName(x))}</option>`).join("")}</select></div><div class="field full"><label>Preview rows</label><textarea name="rows" rows="9" placeholder="Choose a file, or paste CSV/JSON rows here" data-import-rows></textarea></div></div><p class="import-status muted" data-import-status>Every imported line goes to Review first. Scanned image-only PDFs may need a CSV export.</p>${modalActions()}</form>`}
+
+function maxwellTaskBar(){return `<div class="maxwell-task-bar"><button type="button" data-maxwell-task="sort"><span>Sort review guesses</span><small>Apply local rules; approve nothing</small></button><button type="button" data-maxwell-task="transfers"><span>Find transfers</span><small>Match nearby equal amounts</small></button><button type="button" data-maxwell-task="import"><span>Import statement</span><small>Read a file on this device</small></button><button type="button" data-maxwell-task="add"><span>Log transaction</span><small>Open quick capture</small></button></div>`}
+function advisor(){
+  const actions=advisorData(),messages=state.maxwellMessages.length?state.maxwellMessages:[{role:"maxwell",text:`I can answer questions from your approved local records and prepare safe review actions. I never approve imported money without you. ${maxwellBrief()}`,at:new Date().toISOString()}];
+  return `${pageHead("Maxwell AI","Ask a question or give Maxwell a safe housekeeping task.")}<section class="maxwell-hero card"><div><span class="eyebrow">Private, on-device guidance</span><h2>Ask, sort, or find what needs attention.</h2><p>Maxwell can explain your records, suggest categories, find likely transfers, and open the right tool. Final financial approval stays with you.</p></div><div class="maxwell-orb"><strong>M</strong><span>local</span></div></section>${maxwellTaskBar()}<div class="grid maxwell-grid"><section class="card card-pad maxwell-chat"><div class="maxwell-feed">${messages.map(maxwellMessageBubble).join("")}</div><div class="maxwell-prompts">${maxwellQuickPrompts().map(prompt=>`<button class="btn small" type="button" data-maxwell-prompt="${esc(prompt)}">${esc(prompt)}</button>`).join("")}</div><form class="maxwell-form" data-form="maxwell"><input name="question" autocomplete="off" placeholder="Ask about spending, accounts, goals, or reviews"><button class="btn primary">Ask</button></form></section><aside class="grid"><article class="card card-pad"><div class="card-head"><div><span class="eyebrow">Reminders</span><h3>What Maxwell is watching</h3></div><span class="badge active">Local</span></div><div class="grid">${actions.slice(0,4).map((a,i)=>`<article class="advice-card ${a.level}"><span class="advice-number">${i+1}</span><div><h3>${esc(a.title)}</h3><p>${esc(a.text)}</p><strong>${esc(a.impact)}</strong></div></article>`).join("")}</div></article></aside></div><p class="advisor-note">Maxwell uses explainable local rules in this offline build. It does not send your statements to an external model.</p>`;
+}
+
+document.addEventListener("click",e=>{
+  const quick=e.target.closest("[data-quick-transaction]");if(quick){finmaxQuickTransactionType=quick.dataset.quickTransaction||"expense";return}
+  if(e.target.closest('[data-open="transaction"]'))finmaxQuickTransactionType="";
+  const task=e.target.closest("[data-maxwell-task]");if(!task)return;e.preventDefault();e.stopImmediatePropagation();
+  if(task.dataset.maxwellTask==="sort")return applyReviewRules();
+  if(task.dataset.maxwellTask==="transfers")return runTransferMatching();
+  if(task.dataset.maxwellTask==="import"){modal="importWizard";render();return}
+  if(task.dataset.maxwellTask==="add"){finmaxQuickTransactionType="expense";modal="transaction";render()}
+},{capture:true});
+document.addEventListener("change",async e=>{
+  const input=e.target.closest("[data-statement-file]");if(!input?.files?.[0])return;
+  const form=input.closest("form"),status=form.querySelector("[data-import-status]"),rowsBox=form.querySelector("[data-import-rows]"),sourceBox=form.querySelector("[data-import-source]"),accountId=form.querySelector("[data-import-account]")?.value;
+  status.textContent="Reading the statement on this device...";
+  try{const parsed=await readStatementFile(input.files[0],accountId);sourceBox.value=parsed.source;rowsBox.value=importRowsAsCsv(parsed.rows);status.textContent=`${parsed.rows.length} possible transaction rows found. ${parsed.warning}`;if(!parsed.rows.length)rowsBox.value=parsed.text.slice(0,30000)}catch(err){status.textContent=`This file could not be read: ${err.message||"unknown format"}`}
+},{capture:true});
+document.addEventListener("submit",e=>{if(e.target.dataset.form!=="transaction")return;const name=e.target.elements.name,type=e.target.elements.type;if(name&&!name.value.trim())name.value=type?.value==="income"?"Income received":"Expense";finmaxQuickTransactionType=""},{capture:true});
+
+// Reliable reset, versioned exports, narration-safe imports, and amount/date transfer matching.
+function settingsV2(){
+  return settings()
+    .replace('<button class="btn primary" data-action="export">Export encrypted-ready JSON</button>','<button class="btn" data-action="export-simple">Simple ledger export</button><button class="btn primary" data-action="export-full">Full workspace backup</button>')
+    .replace('<button class="btn danger" data-action="reset">Reset imported data</button>','<button class="btn danger" data-action="reset">Reset financial values</button>');
+}
+function downloadJsonFile(payload,name){const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),a=document.createElement("a"),url=URL.createObjectURL(blob);a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),0)}
+function simpleExportPayload(){const m=movementTotals();return{kind:"finmax-simple-ledger",schemaVersion:2,exportedAt:new Date().toISOString(),currency:state.profile.currency,summary:{approvedTransactions:state.transactions.length,pendingReview:state.reviewQueue.length,income:m.income,spending:m.spending,protectedSavings:m.protectedSavings},accounts:structuredClone(state.accounts),transactions:structuredClone(state.transactions),reviewQueue:structuredClone(state.reviewQueue)}}
+function fullExportPayload(){return{kind:"finmax-full-backup",schemaVersion:2,exportedAt:new Date().toISOString(),app:"FinMax",state:structuredClone(state),manifest:{accounts:state.accounts.length,transactions:state.transactions.length,reviewRows:state.reviewQueue.length,goals:state.goals.length,incomePaths:state.incomePaths.length,assets:state.assets.length,liabilities:state.liabilities.length,loans:state.loans.length,loansGiven:state.loansGiven.length,subscriptions:state.subscriptions.length,clients:(state.clients||[]).length,invoices:(state.businessInvoices||[]).length}}}
+function exportData(kind="simple"){const full=kind==="full",payload=full?fullExportPayload():simpleExportPayload(),date=new Date().toISOString().slice(0,10);downloadJsonFile(payload,`finmax-${full?"full-backup":"simple-ledger"}-${date}.json`);toast(full?"Full workspace backup exported":"Simple ledger exported")}
+function resetFinancialWorkspace(){
+  state.accounts=(state.accounts||[]).map(account=>({...account,balance:0}));
+  state.transactions=[];state.reviewQueue=[];
+  state.assets=(state.assets||[]).map(item=>({...item,value:0}));
+  state.liabilities=(state.liabilities||[]).map(item=>({...item,value:0}));
+  state.loans=(state.loans||[]).map(item=>({...item,balance:0,original:0,payment:0}));
+  state.loansGiven=(state.loansGiven||[]).map(item=>({...item,balance:0,original:0,payment:0}));
+  state.goals=(state.goals||[]).map(goal=>({...goal,saved:0,updatedAt:new Date().toISOString()}));
+  state.incomePaths=(state.incomePaths||[]).map(path=>({...path,sold:0,salesLog:[]}));
+  state.monthly=(state.monthly||[]).map(row=>({...row,income:0,expense:0}));
+  state.businessInvoices=[];state.monthlyCloses=[];state.importBatches=[];state.auditTrail=[];state.maxwellMessages=[];
+  delete state.pendingAccount;
+  save();view="dashboard";modal=null;render();toast("Financial values reset to zero");
+}
+function normalizeImportRow(row,accountId,source,index=0){
+  const debit=Number(String(row.debit||row.withdrawal||"").replace(/[^\d.-]/g,""))||0,credit=Number(String(row.credit||row.deposit||"").replace(/[^\d.-]/g,""))||0,rawAmount=row.amount||row.value||row.total||debit||credit,amount=Number(String(rawAmount||"").replace(/[^\d.-]/g,""));if(!amount)return null;
+  const raw=row.rawDescription||row.rawdescription||row.narration||row.description||row.memo||row.details||row.remark||row.name||"",name=row.name||row.description||row.narration||row.memo||row.details||row.remark||raw||`Imported row ${index+1}`,type=row.type||(credit>0?"income":debit>0?"expense":"transfer"),category=row.category||(type==="income"?"Income":"Transfer Review"),sourceFile=row.sourceFile||row.sourcefile||source||row.source||"Manual import";
+  return{id:row.id||uid("import"),date:normalizeStatementDate(row.date||row.transactiondate||row.valuedate||new Date().toISOString().slice(0,10)),name:String(name).trim(),rawDescription:String(raw).trim(),suggestedCategory:category,suggestedType:type,accountId:row.accountId||row.accountid||accountId,amount:Math.abs(amount),balanceAfter:Number(String(row.balance||row.runningbalance||"").replace(/[^\d.-]/g,""))||undefined,note:row.note||`Imported through the offline wizard. Original detail: ${raw||"not provided"}`,source:source||row.source||"Manual import",sourceFile,fingerprint:row.fingerprint||""};
+}
+function importRowsAsCsv(rows){return["date,name,rawDescription,amount,type,category,note,sourceFile",...rows.map(row=>[row.date,row.name,row.rawDescription,row.amount,row.suggestedType,row.suggestedCategory,row.note,row.sourceFile].map(value=>`"${String(value||"").replace(/"/g,'""')}"`).join(","))].join("\n")}
+function transferMatchMetrics(a,b,maxDays=3){if(!a||!b||a.id===b.id||a.accountId===b.accountId)return null;const amountA=Math.abs(Number(a.amount)||0),amountB=Math.abs(Number(b.amount)||0),amountDiff=Math.abs(amountA-amountB),dateDiff=Math.abs(startOfLocalDay(a.date)-startOfLocalDay(b.date))/86400000;if(!amountA||amountDiff>.01||dateDiff>maxDays)return null;return{amountDiff,dateDiff,score:dateDiff*1000+amountDiff}}
+function transferPairFor(item){return(state.reviewQueue||[]).filter(other=>transferMatchMetrics(item,other)).map(other=>({other,metrics:transferMatchMetrics(item,other)})).sort((a,b)=>a.metrics.score-b.metrics.score)[0]?.other}
+function transferMatches(limit=8){const rows=state.reviewQueue||[],candidates=[];for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){const metrics=transferMatchMetrics(rows[i],rows[j]);if(metrics)candidates.push({pair:[rows[i],rows[j]],metrics})}candidates.sort((a,b)=>a.metrics.score-b.metrics.score);const used=new Set(),matches=[];for(const candidate of candidates){const[a,b]=candidate.pair;if(used.has(a.id)||used.has(b.id))continue;used.add(a.id);used.add(b.id);matches.push(candidate.pair);if(matches.length>=limit)break}return matches}
+function restoreExportPayload(payload){
+  if(payload?.kind==="finmax-full-backup"&&payload.state){state=normalizeState(merge(structuredClone(seed),payload.state))}
+  else if(payload?.kind==="finmax-simple-ledger"){state.accounts=Array.isArray(payload.accounts)?payload.accounts:state.accounts;state.transactions=Array.isArray(payload.transactions)?payload.transactions:[];state.reviewQueue=Array.isArray(payload.reviewQueue)?payload.reviewQueue:[];if(payload.currency)state.profile.currency=payload.currency}
+  else state=normalizeState(merge(structuredClone(seed),payload));
+  ensureUpgradeState();ensureFinMaxWorkspaceState();save();view="dashboard";modal=null;render();
+}
+document.addEventListener("click",e=>{
+  const action=e.target.closest("[data-action]")?.dataset.action;
+  if(action==="export-simple"||action==="export-full"){e.preventDefault();e.stopImmediatePropagation();exportData(action==="export-full"?"full":"simple");return}
+  if(action==="reset"){e.preventDefault();e.stopImmediatePropagation();if(confirm("Reset every account balance, goal contribution, sale count, asset value, loan balance, transaction, and review row to zero? Account names, goals, income paths, subscriptions, and your login will remain."))resetFinancialWorkspace();return}
+  const approve=e.target.closest("[data-approve-review]");if(!approve)return;e.preventDefault();e.stopImmediatePropagation();const item=state.reviewQueue.find(x=>x.id===approve.dataset.approveReview);if(!item)return;const account=state.accounts.find(x=>x.id===item.accountId),type=reviewTypeToLedger(item.suggestedType);state.transactions.unshift({id:uid("tx"),date:item.date,name:item.name||statementRawDescription(item)||"Imported transaction",rawDescription:statementRawDescription(item),category:item.suggestedCategory,account:account?.name||"Imported",accountId:item.accountId,type,amount:item.amount,note:item.note,source:item.source,sourceFile:statementSourceFile(item),fingerprint:item.fingerprint,reviewed:true});state.reviewQueue=state.reviewQueue.filter(x=>x.id!==item.id);save();render();toast(type==="transfer"?"Neutral transfer confirmed":"Transaction confirmed with its narration");
+},{capture:true});
+importFile.addEventListener("change",async e=>{e.stopImmediatePropagation();const file=importFile.files[0];if(!file)return;try{const payload=JSON.parse(await file.text());restoreExportPayload(payload);toast(payload.kind==="finmax-full-backup"?"Full workspace restored":payload.kind==="finmax-simple-ledger"?"Simple ledger restored":"Legacy backup restored")}catch(err){toast(`Backup could not be restored: ${err.message||"invalid file"}`)}finally{importFile.value=""}},{capture:true});
 ensureFinMaxWorkspaceState();
 save();
 render();
+
+// PDF.js is bundled locally so statement extraction also works from file:// URLs.
+async function extractPdfLayout(file){
+  if(!globalThis.pdfjsLib?.getDocument)throw new Error("The offline PDF reader did not load");
+  const data=new Uint8Array(await file.arrayBuffer());
+  const document=await globalThis.pdfjsLib.getDocument({data,isEvalSupported:false,useWorkerFetch:false}).promise;
+  const pages=[];
+  for(let pageNumber=1;pageNumber<=document.numPages;pageNumber++){
+    const page=await document.getPage(pageNumber),viewport=page.getViewport({scale:1}),content=await page.getTextContent();
+    const items=content.items.filter(item=>item.str?.trim()).map(item=>({text:item.str.replace(/\s+/g," ").trim(),x:Number(item.transform?.[4]||0),y:Number(item.transform?.[5]||0)}));
+    pages.push({number:pageNumber,width:viewport.width,height:viewport.height,items});
+  }
+  return pages;
+}
+function pdfLayoutToText(pages){
+  const output=[];
+  pages.forEach(page=>{
+    const lines=[];
+    page.items.forEach(item=>{let line=lines.find(candidate=>Math.abs(candidate.y-item.y)<2);if(!line){line={y:item.y,items:[]};lines.push(line)}line.items.push(item)});
+    lines.sort((a,b)=>b.y-a.y).forEach(line=>{line.items.sort((a,b)=>a.x-b.x);output.push(line.items.map(item=>item.text).join(" "))});
+  });
+  return output.join("\n");
+}
+function pdfNumber(value){const parsed=Number(String(value||"").replace(/[^\d.-]/g,""));return Number.isFinite(parsed)?Math.abs(parsed):0}
+function pdfRecordText(items){return items.slice().sort((a,b)=>Math.abs(a.y-b.y)<2?a.x-b.x:b.y-a.y).map(item=>item.text).join(" ").replace(/\s+/g," ").trim()}
+function statementRowsFromPdfLayout(pages,accountId,source){
+  const rows=[];
+  pages.forEach(page=>{
+    const references=page.items.filter(item=>/_(?:CBA_)?(?:CREDIT|DEBIT)_\d+\b/i.test(item.text)).sort((a,b)=>b.y-a.y);
+    references.forEach((reference,index)=>{
+      const upper=index===0?page.height:(references[index-1].y+reference.y)/2,lower=index===references.length-1?0:(reference.y+references[index+1].y)/2;
+      const record=page.items.filter(item=>item.y<upper&&item.y>=lower),onAmountLine=record.filter(item=>Math.abs(item.y-reference.y)<4&&pdfNumber(item.text)>=0),debitX=page.items.find(item=>/^Debit$/i.test(item.text))?.x||page.width*.528,creditX=page.items.find(item=>/^Credit$/i.test(item.text))?.x||page.width*.566,settlementX=page.items.find(item=>/^Amount$/i.test(item.text))?.x||page.width*.488,nearestAmount=x=>onAmountLine.map(item=>({item,distance:Math.abs(item.x-x)})).filter(candidate=>candidate.distance<34).sort((a,b)=>a.distance-b.distance)[0]?.item,debit=nearestAmount(debitX),credit=nearestAmount(creditX),settlement=nearestAmount(settlementX),isCredit=/_CREDIT_\d+\b/i.test(reference.text),amount=pdfNumber(isCredit?credit?.text:debit?.text)||pdfNumber(settlement?.text);
+      if(!amount)return;
+      const narrationX=page.items.find(item=>/^Narration$/i.test(item.text))?.x||page.width*.856,dateRaw=record.filter(item=>item.x<page.width*.045).sort((a,b)=>b.y-a.y).map(item=>item.text).join("").replace(/\s+/g,""),date=normalizeStatementDate(dateRaw),narrationItems=record.filter(item=>item.x>=narrationX-8),rawDescription=pdfRecordText(record),narration=pdfRecordText(narrationItems).replace(/^(?:N\/A\s*)+/i,"").trim(),fallbackDescription=isCredit?"Incoming transfer":"Outgoing transaction",name=(narration||fallbackDescription).slice(0,240);
+      let type=isCredit?"income":"expense",category=isCredit?"Income":"Other";
+      const draft={name,rawDescription,suggestedCategory:category,suggestedType:type,accountId,amount,date,source,sourceFile:source,note:`Original statement narration: ${name}`},guess=builtInGuess(draft);
+      if(guess){draft.suggestedCategory=guess.category;draft.suggestedType=guess.type}
+      draft.category=draft.suggestedCategory;draft.type=draft.suggestedType;
+      const normalized=normalizeImportRow(draft,accountId,source,rows.length);if(normalized)rows.push(normalized);
+    });
+  });
+  return rows;
+}
+async function extractPdfText(file){return pdfLayoutToText(await extractPdfLayout(file))}
+async function readStatementFile(file,accountId){
+  const source=file.name||"Imported statement";
+  if(/\.pdf$/i.test(source)){
+    const pages=await extractPdfLayout(file),text=pdfLayoutToText(pages),layoutRows=statementRowsFromPdfLayout(pages,accountId,source),rows=layoutRows.length?layoutRows:statementRowsFromText(text,accountId,source);
+    return{rows,text,source,warning:rows.length?`${rows.length} statement rows were read locally with their original narrations. Confirm the preview before importing.`:"No readable transaction table was found. This may be an image-only scan; export CSV or use OCR first."};
+  }
+  const text=await file.text();return{rows:parseImportRows(text,accountId,source),text,source,warning:"File read locally. Check the preview before importing."};
+}
+
+function paintMaxwellMessage(id){
+  const message=state.maxwellMessages.find(item=>item.id===id),bubble=document.querySelector(`[data-maxwell-message="${id}"]`);if(!message||!bubble)return;
+  const paragraph=bubble.querySelector("p");if(paragraph){paragraph.className="maxwell-typed-text";paragraph.textContent=message.text;paragraph.scrollIntoView({block:"nearest"})}
+}
+function typeMaxwellResponse(id,answer,index=0){
+  const message=state.maxwellMessages.find(item=>item.id===id);if(!message)return;
+  if(index>=answer.length){message.text=answer;message.typing=false;save();const bubble=document.querySelector(`[data-maxwell-message="${id}"]`);if(bubble){bubble.classList.remove("typing");paintMaxwellMessage(id)}return}
+  const character=answer[index],step=/[.!?]/.test(character)?1:Math.min(3,answer.length-index);message.text=answer.slice(0,index+step);paintMaxwellMessage(id);
+  maxwellTypingTimer=setTimeout(()=>typeMaxwellResponse(id,answer,index+step),/[.!?]/.test(character)?115:24);
+}
+function askMaxwell(question){
+  const prompt=String(question||"").trim();if(!prompt)return toast("Type a question for Maxwell AI");
+  const previous=state.maxwellMessages?.find(message=>message.typing);if(previous){previous.typing=false;previous.text=previous.text||"Response paused. Ask again when you are ready."}
+  state.maxwellMessages=Array.isArray(state.maxwellMessages)?state.maxwellMessages:[];const id=uid("mx");
+  state.maxwellMessages.push({role:"user",text:prompt,at:new Date().toISOString()});state.maxwellMessages.push({id,role:"maxwell",text:"",typing:true,at:new Date().toISOString()});state.maxwellMessages=state.maxwellMessages.slice(-16);save();render();
+  clearTimeout(maxwellTypingTimer);const answer=maxwellAnswer(prompt);maxwellTypingTimer=setTimeout(()=>typeMaxwellResponse(id,answer),500);
+}
+function maxwellMessageBubble(message){
+  const id=message.id||"";return `<article class="maxwell-message ${message.role==="user"?"user":""} ${message.typing?"typing":""}" ${id?`data-maxwell-message="${esc(id)}"`:""}><span>${message.role==="user"?"You":"Maxwell AI"}</span>${message.typing&&!message.text?`<p class="typing-dots"><i></i><i></i><i></i></p>`:`<p class="${message.typing?"maxwell-typed-text":""}">${esc(message.text)}</p>`}</article>`;
+}

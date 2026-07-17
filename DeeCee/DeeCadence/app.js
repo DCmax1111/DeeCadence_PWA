@@ -1,7 +1,14 @@
 (function () {
   "use strict";
 
+  var APP_VERSION = "3.2.current";
   var STORAGE_KEY = "deecadence_state_v2";
+  var FEEDBACK_ENDPOINT = (document.querySelector('meta[name="deecadence-feedback-endpoint"]') || {}).content || "";
+  var FEEDBACK_EMAIL = (document.querySelector('meta[name="deecadence-feedback-email"]') || {}).content || "";
+  var SUPABASE_URL = (document.querySelector('meta[name="deecadence-supabase-url"]') || {}).content || "";
+  var SUPABASE_ANON_KEY = (document.querySelector('meta[name="deecadence-supabase-anon-key"]') || {}).content || "";
+  var FEEDBACK_TABLE = (document.querySelector('meta[name="deecadence-feedback-table"]') || {}).content || "feedbacks";
+  var REFERENCE_BENCHMARK = { score: 70, label: "Provisional reference average", version: "launch-2026" };
   var XP_PER_FOCUS_MINUTE = 1;
   var XP_MANUAL_DONE_RATE = 0.25;
   var XP_SESSION_BONUS_RATE = 0.1;
@@ -19,34 +26,43 @@
     sessionComplete: "assets/sounds/session-complete.wav"
   };
 
-  var LEVEL_ANCHORS = [
-    { level: 1, xp: 0, curve: 1.28 },
-    { level: 70, xp: 49999, curve: 1.18 },
-    { level: 100, xp: 109109, curve: 1.34 },
-    { level: 290, xp: 999999, curve: 1.45 }
+  var RANKS = [
+    { id: "E", name: "E-Rank", minLevel: 1, minXp: 0, desc: "Learning consistency", color: "var(--rank-E)" },
+    { id: "D", name: "D-Rank", minLevel: 5, minXp: 1736, desc: "Control is forming", color: "var(--rank-D)" },
+    { id: "C", name: "C-Rank", minLevel: 25, minXp: 14380, desc: "Reliable under pressure", color: "var(--rank-C)" },
+    { id: "B", name: "B-Rank", minLevel: 45, minXp: 29403, desc: "Deep work is repeatable", color: "var(--rank-B)" },
+    { id: "A", name: "A-Rank", minLevel: 70, minXp: 49999, desc: "High consistency", color: "var(--rank-A)" },
+    { id: "S", name: "S-Rank", minLevel: 100, minXp: 109109, desc: "Elite attention control", color: "var(--rank-S)" },
+    { id: "SS", name: "SS-Rank", minLevel: 200, minXp: 237678, desc: "Rare long-term discipline", color: "var(--rank-SS)" },
+    { id: "SSS", name: "SSS-Rank", minLevel: 300, minXp: 460371, desc: "Exceptional cadence", color: "var(--rank-SSS)" },
+    { id: "L", name: "L-Rank", minLevel: 500, minXp: 999999, desc: "Legendary attention span", color: "var(--rank-L)" }
   ];
+  var L_LEVEL_BASE_XP = 5000;
+  var L_LEVEL_GROWTH_XP = 50;
   var xpLevelCache = Object.create(null);
 
   function cumulativeXpForLevel(level) {
     var target = Math.max(1, Math.floor(Number(level) || 1));
     if (xpLevelCache[target] != null) return xpLevelCache[target];
-    if (target <= LEVEL_ANCHORS[0].level) return 0;
+    var last = RANKS[RANKS.length - 1];
+    if (target >= last.minLevel) {
+      var extra = target - last.minLevel;
+      xpLevelCache[target] = last.minXp + Math.round((extra * L_LEVEL_BASE_XP) + (extra * (extra - 1) * L_LEVEL_GROWTH_XP / 2));
+      return xpLevelCache[target];
+    }
 
-    for (var i = 1; i < LEVEL_ANCHORS.length; i += 1) {
-      var start = LEVEL_ANCHORS[i - 1];
-      var end = LEVEL_ANCHORS[i];
-      if (target <= end.level) {
-        var span = end.level - start.level;
-        var ratio = (target - start.level) / span;
-        var eased = Math.pow(ratio, end.curve);
-        xpLevelCache[target] = Math.round(start.xp + ((end.xp - start.xp) * eased));
+    for (var i = 0; i < RANKS.length - 1; i += 1) {
+      var start = RANKS[i];
+      var end = RANKS[i + 1];
+      if (target < end.minLevel) {
+        var xpSpan = end.minXp - start.minXp;
+        var levelSpan = end.minLevel - start.minLevel;
+        xpLevelCache[target] = start.minXp + Math.ceil((target - start.minLevel) * xpSpan / levelSpan);
         return xpLevelCache[target];
       }
     }
 
-    var postLevels = target - 290;
-    xpLevelCache[target] = 999999 + Math.round((9000 * postLevels) + (65 * Math.pow(postLevels, 2)));
-    return xpLevelCache[target];
+    return last.minXp;
   }
 
   function xpNeededForLevel(level) {
@@ -66,18 +82,6 @@
     }
     return low;
   }
-
-  var RANKS = [
-    { id: "E", name: "E-Rank", minLevel: 1, minXp: 0, desc: "Learning consistency", color: "var(--rank-E)" },
-    { id: "D", name: "D-Rank", minLevel: 5, minXp: cumulativeXpForLevel(5), desc: "Completing blocks reliably", color: "var(--rank-D)" },
-    { id: "C", name: "C-Rank", minLevel: 25, minXp: cumulativeXpForLevel(25), desc: "Protecting attention daily", color: "var(--rank-C)" },
-    { id: "B", name: "B-Rank", minLevel: 45, minXp: cumulativeXpForLevel(45), desc: "Repeatable deep work", color: "var(--rank-B)" },
-    { id: "A", name: "A-Rank", minLevel: 70, minXp: 49999, desc: "Highly consistent", color: "var(--rank-A)" },
-    { id: "S", name: "S-Rank", minLevel: 100, minXp: 109109, desc: "Elite attention control", color: "var(--rank-S)" },
-    { id: "SS", name: "SS-Rank", minLevel: 150, minXp: cumulativeXpForLevel(150), desc: "Rare, long-term discipline", color: "var(--rank-SS)" },
-    { id: "SSS", name: "SSS-Rank", minLevel: 200, minXp: cumulativeXpForLevel(200), desc: "Exceptional sustained mastery", color: "var(--rank-SSS)" },
-    { id: "L", name: "L-Rank", minLevel: 290, minXp: 999999, desc: "Legendary transformation", color: "var(--rank-L)" }
-  ];
 
   function currentRank(totalXp) {
     var xp = Math.max(0, Math.floor(Number(totalXp) || 0));
@@ -135,11 +139,16 @@
   var selectedProgressType = "countable";
   var selectedProgressDate = "";
   var startTaskSource = "schedule";
+  var feedbackType = "Idea";
+  var attentionRuntime = null;
+  var attentionTimer = null;
   var audioCache = {};
 
   var startModal = document.getElementById("startModal");
   var taskModal = document.getElementById("taskModal");
   var taskDetailModal = document.getElementById("taskDetailModal");
+  var feedbackModal = document.getElementById("feedbackModal");
+  var attentionTestModal = document.getElementById("attentionTestModal");
   var welcomeOverlay = document.getElementById("welcomeOverlay");
   var tourOverlay = document.getElementById("tourOverlay");
   var revealOverlay = document.getElementById("revealOverlay");
@@ -299,6 +308,7 @@
 
   function defaultState() {
     return {
+      appVersion: APP_VERSION,
       profile: { totalXp: 0, streak: 0, lastActiveDate: null, dailyGoalBlocks: 4, dailyGoalMinutes: 60 },
       settings: {
         theme: "dark",
@@ -316,7 +326,13 @@
       savedSessions: [],
       history: [],
       dailyBlockLog: {},
-      dailyFocusMinutes: {}
+      dailyFocusMinutes: {},
+      attentionTests: [],
+      baselineScore: null,
+      baselineTestId: "",
+      baselineCompletedAt: "",
+      feedbackOutbox: [],
+      dismissedContextTips: {}
     };
   }
 
@@ -327,14 +343,26 @@
       var parsed = JSON.parse(raw);
       var base = defaultState();
       var loaded = Object.assign({}, base, parsed, {
+        appVersion: APP_VERSION,
         profile: Object.assign({}, base.profile, parsed.profile || {}),
         settings: Object.assign({}, base.settings, parsed.settings || {}),
         tasks: Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : base.tasks,
         savedSessions: Array.isArray(parsed.savedSessions) ? parsed.savedSessions.map(normalizeSavedSession).filter(Boolean).slice(0, 4) : [],
         history: Array.isArray(parsed.history) ? parsed.history : [],
         dailyBlockLog: parsed.dailyBlockLog && typeof parsed.dailyBlockLog === "object" ? parsed.dailyBlockLog : {},
-        dailyFocusMinutes: parsed.dailyFocusMinutes && typeof parsed.dailyFocusMinutes === "object" ? parsed.dailyFocusMinutes : {}
+        dailyFocusMinutes: parsed.dailyFocusMinutes && typeof parsed.dailyFocusMinutes === "object" ? parsed.dailyFocusMinutes : {},
+        attentionTests: Array.isArray(parsed.attentionTests) ? parsed.attentionTests.map(normalizeAttentionTest).filter(Boolean).slice(-60) : [],
+        baselineScore: Number.isFinite(Number(parsed.baselineScore)) ? Math.max(0, Math.min(100, Math.round(Number(parsed.baselineScore)))) : null,
+        baselineTestId: String(parsed.baselineTestId || ""),
+        baselineCompletedAt: String(parsed.baselineCompletedAt || ""),
+        feedbackOutbox: Array.isArray(parsed.feedbackOutbox) ? parsed.feedbackOutbox.slice(-50) : [],
+        dismissedContextTips: parsed.dismissedContextTips && typeof parsed.dismissedContextTips === "object" ? parsed.dismissedContextTips : {}
       });
+      if (loaded.baselineScore === null && loaded.attentionTests.length) {
+        loaded.baselineScore = loaded.attentionTests[0].score;
+        loaded.baselineTestId = loaded.attentionTests[0].id;
+        loaded.baselineCompletedAt = loaded.attentionTests[0].takenAt;
+      }
       if (!loaded.profile.dailyGoalMinutes) loaded.profile.dailyGoalMinutes = loaded.profile.dailyGoalBlocks ? loaded.profile.dailyGoalBlocks * 15 : 60;
       if (!Object.prototype.hasOwnProperty.call(parsed.settings || {}, "soundPreferenceTouched")) loaded.settings.sound = true;
       loaded.session = normalizeSession(parsed.session);
@@ -422,6 +450,21 @@
       : normalized.blocks[savedIndex];
     normalized.savedAt = Number.isFinite(Number(session.savedAt)) ? Number(session.savedAt) : Date.now();
     return normalized;
+  }
+
+  function normalizeAttentionTest(test) {
+    if (!test || !Number.isFinite(Number(test.score))) return null;
+    return {
+      id: test.id || makeId("test"),
+      takenAt: test.takenAt || new Date().toISOString(),
+      score: Math.max(0, Math.min(100, Math.round(Number(test.score)))),
+      accuracy: Math.max(0, Math.min(100, Math.round(Number(test.accuracy) || 0))),
+      averageReaction: test.averageReaction == null ? null : Math.max(0, Math.round(Number(test.averageReaction) || 0)),
+      misses: Math.max(0, Math.round(Number(test.misses) || 0)),
+      falseTaps: Math.max(0, Math.round(Number(test.falseTaps) || 0)),
+      benchmarkScore: Math.max(0, Math.min(100, Math.round(Number(test.benchmarkScore) || REFERENCE_BENCHMARK.score))),
+      benchmarkVersion: String(test.benchmarkVersion || REFERENCE_BENCHMARK.version)
+    };
   }
 
   function historyEntryToSavedSession(entry) {
@@ -879,16 +922,21 @@
       ? "<b>" + escapeHtml(linkedTask.title) + "</b> - " + linkedTask.units.completed + " of " + linkedTask.units.total + " units complete"
       : "Free focus block logged";
 
+    var feedbackPanel = document.getElementById("blockFeedbackPanel");
+    if (feedbackPanel) feedbackPanel.style.display = data.isManualDone ? "none" : "";
     resetBlockFeedbackControls(data);
 
-    actions.innerHTML = data.isFinalBlock
-      ? '<button class="btn btn-primary btn-block" id="revealFinishBtn">Finish session</button>'
-      : '<button class="btn btn-primary btn-block" id="revealContinueBtn">Continue to next block</button><button class="btn btn-ghost btn-block" id="revealStopBtn">Stop and save progress</button>';
+    actions.innerHTML = data.isManualDone
+      ? '<button class="btn btn-primary btn-block" id="revealCloseBtn">Close</button>'
+      : data.isFinalBlock
+        ? '<button class="btn btn-primary btn-block" id="revealFinishBtn">Finish session</button>'
+        : '<button class="btn btn-primary btn-block" id="revealContinueBtn">Continue to next block</button><button class="btn btn-ghost btn-block" id="revealStopBtn">Stop and save progress</button>';
 
     revealOverlay.classList.add("open");
     var finish = document.getElementById("revealFinishBtn");
     var cont = document.getElementById("revealContinueBtn");
     var stop = document.getElementById("revealStopBtn");
+    var close = document.getElementById("revealCloseBtn");
     Array.prototype.forEach.call(document.querySelectorAll("[data-block-feeling]"), function (button) {
       button.onclick = function () {
         Array.prototype.forEach.call(document.querySelectorAll("[data-block-feeling]"), function (item) { item.classList.remove("active"); });
@@ -907,7 +955,10 @@
       captureBlockFeedback();
       finalizeSession(false);
     };
-    (finish || cont || stop || revealOverlay).focus();
+    if (close) close.onclick = function () {
+      revealOverlay.classList.remove("open");
+    };
+    (finish || cont || stop || close || revealOverlay).focus();
   }
 
   function resetBlockFeedbackControls(data) {
@@ -1006,6 +1057,420 @@
   function csvCell(value) {
     var text = String(value == null ? "" : value);
     return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  function downloadJson(filename, data) {
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var anchor = document.createElement("a");
+    anchor.href = URL.createObjectURL(blob);
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(anchor.href);
+  }
+
+  function exportBackup() {
+    downloadJson("deecadence-backup-" + todayStr() + ".json", {
+      product: "DeeCadence",
+      appVersion: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      state: state
+    });
+    showToast("Backup exported");
+  }
+
+  function importBackup(event) {
+    var file = event && event.target && event.target.files ? event.target.files[0] : null;
+    if (!file || typeof FileReader === "undefined") return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var parsed = JSON.parse(String(reader.result || "{}"));
+        var incoming = parsed.state || parsed;
+        if (!incoming || !Array.isArray(incoming.tasks) || !incoming.profile) throw new Error("Invalid backup");
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(incoming));
+        state = loadState();
+        saveState();
+        renderAll();
+        switchView("today");
+        showToast("Backup imported");
+      } catch (error) {
+        showToast("That backup file could not be read");
+      } finally {
+        if (event && event.target) event.target.value = "";
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function feedbackDeliveryMode() {
+    if (FEEDBACK_ENDPOINT.trim()) return "endpoint";
+    if (SUPABASE_URL.trim() && SUPABASE_ANON_KEY.trim()) return "supabase";
+    if (FEEDBACK_EMAIL.trim()) return "email";
+    return "outbox";
+  }
+
+  function updateFeedbackDeliveryCopy() {
+    var mode = feedbackDeliveryMode();
+    var pending = state.feedbackOutbox.length;
+    var status = document.getElementById("feedbackDeliveryStatus");
+    var note = document.getElementById("feedbackDeliveryNote");
+    if (status) {
+      status.textContent = mode === "endpoint"
+        ? "Connected to the developer receiver" + (pending ? " - " + pending + " queued" : "") + "."
+        : mode === "supabase"
+          ? "Connected to Supabase feedback table" + (pending ? " - " + pending + " queued" : "") + "."
+        : mode === "email"
+          ? "Uses your email app to address the developer."
+          : "Receiver not configured yet" + (pending ? " - " + pending + " saved locally" : "") + ".";
+    }
+    if (note) {
+      note.textContent = mode === "endpoint"
+        ? "This report will be sent to the configured DeeCadence developer receiver."
+        : mode === "supabase"
+          ? "This report will be saved to the configured Supabase table. Email delivery should be handled by an Edge Function or database trigger."
+        : mode === "email"
+          ? "Submitting opens a pre-addressed email draft. You remain in control of sending it."
+          : "No receiver is configured yet. Submitting safely stores this report on this device.";
+    }
+  }
+
+  function updateFeedbackBadge() {
+    var badge = document.getElementById("feedbackQueueBadge");
+    if (!badge) return;
+    var count = state.feedbackOutbox.length;
+    badge.hidden = count === 0;
+    badge.textContent = String(Math.min(99, count));
+  }
+
+  function openFeedback() {
+    feedbackType = "Idea";
+    var message = document.getElementById("feedbackMessageInput");
+    var email = document.getElementById("feedbackEmailInput");
+    if (message) message.value = "";
+    if (email) email.value = "";
+    var count = document.getElementById("feedbackCharCount");
+    if (count) count.textContent = "0";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-type]"), function (button) {
+      button.classList.toggle("active", button.getAttribute("data-feedback-type") === feedbackType);
+    });
+    updateFeedbackDeliveryCopy();
+    feedbackModal.classList.add("open");
+    setTimeout(function () { if (message) message.focus(); }, 80);
+  }
+
+  function closeFeedback() {
+    if (feedbackModal) feedbackModal.classList.remove("open");
+  }
+
+  function anonymousFeedbackContext() {
+    var minutesByDate = focusMinutesByDate();
+    var focus7 = 0;
+    for (var i = 0; i < 7; i += 1) focus7 += minutesByDate[addDaysKey(todayStr(), -i)] || 0;
+    return {
+      appVersion: APP_VERSION,
+      view: activeView,
+      viewport: window.innerWidth + "x" + window.innerHeight,
+      platform: navigator.platform || "unknown",
+      online: navigator.onLine,
+      theme: state.settings.theme,
+      reducedMotion: state.settings.reducedMotion,
+      sessionCount: state.history.length,
+      taskCount: state.tasks.length,
+      totalXp: state.profile.totalXp,
+      focusMinutes7: focus7,
+      attentionTests: state.attentionTests.length
+    };
+  }
+
+  function submitFeedback() {
+    var message = document.getElementById("feedbackMessageInput").value.trim();
+    if (message.length < 8) {
+      showToast("Add a little more detail");
+      return;
+    }
+    var payload = {
+      id: makeId("feedback"),
+      type: feedbackType,
+      message: message,
+      replyEmail: document.getElementById("feedbackEmailInput").value.trim().slice(0, 120),
+      sentAt: new Date().toISOString(),
+      appVersion: APP_VERSION,
+      context: document.getElementById("feedbackContextInput").checked ? anonymousFeedbackContext() : null
+    };
+    var button = document.getElementById("feedbackSubmitBtn");
+    var mode = feedbackDeliveryMode();
+    button.disabled = true;
+    button.textContent = "Sending...";
+    if (mode === "email") {
+      var subject = encodeURIComponent("[DeeCadence " + feedbackType + "] Product feedback");
+      var body = encodeURIComponent(message + "\n\nReply email: " + (payload.replyEmail || "Not provided") + "\n\nContext:\n" + JSON.stringify(payload.context, null, 2));
+      window.location.href = "mailto:" + FEEDBACK_EMAIL + "?subject=" + subject + "&body=" + body;
+      closeFeedback();
+      showToast("Email draft opened");
+      button.disabled = false;
+      button.textContent = "Send feedback";
+      return;
+    }
+    if (mode === "endpoint" && typeof fetch === "function") {
+      fetch(FEEDBACK_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+        .then(function (response) {
+          if (!response.ok) throw new Error("Receiver failed");
+          closeFeedback();
+          showToast("Feedback delivered");
+        })
+        .catch(function () {
+          state.feedbackOutbox.push(payload);
+          state.feedbackOutbox = state.feedbackOutbox.slice(-50);
+          saveState();
+          closeFeedback();
+          showToast("Receiver unavailable. Feedback queued.");
+        })
+        .finally(function () {
+          button.disabled = false;
+          button.textContent = "Send feedback";
+          updateFeedbackBadge();
+          updateFeedbackDeliveryCopy();
+        });
+      return;
+    }
+    if (mode === "supabase" && typeof fetch === "function") {
+      sendFeedbackToSupabase(payload)
+        .then(function () {
+          closeFeedback();
+          showToast("Feedback saved to Supabase");
+        })
+        .catch(function () {
+          state.feedbackOutbox.push(payload);
+          state.feedbackOutbox = state.feedbackOutbox.slice(-50);
+          saveState();
+          closeFeedback();
+          showToast("Supabase unavailable. Feedback queued.");
+        })
+        .finally(function () {
+          button.disabled = false;
+          button.textContent = "Send feedback";
+          updateFeedbackBadge();
+          updateFeedbackDeliveryCopy();
+        });
+      return;
+    }
+    state.feedbackOutbox.push(payload);
+    state.feedbackOutbox = state.feedbackOutbox.slice(-50);
+    saveState();
+    closeFeedback();
+    showToast("Feedback saved locally");
+    button.disabled = false;
+    button.textContent = "Send feedback";
+    updateFeedbackBadge();
+    updateFeedbackDeliveryCopy();
+  }
+
+  function retryFeedbackOutbox() {
+    if (!navigator.onLine || !state.feedbackOutbox.length || typeof fetch !== "function") return;
+    var mode = feedbackDeliveryMode();
+    if (mode !== "endpoint" && mode !== "supabase") return;
+    var remaining = [];
+    Promise.all(state.feedbackOutbox.map(function (payload) {
+      var request = mode === "supabase"
+        ? sendFeedbackToSupabase(payload)
+        : fetch(FEEDBACK_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).then(function (response) {
+          if (!response.ok) throw new Error("Receiver failed");
+        });
+      return request
+        .catch(function () { remaining.push(payload); });
+    })).then(function () {
+      if (remaining.length !== state.feedbackOutbox.length) {
+        state.feedbackOutbox = remaining;
+        saveState();
+        updateFeedbackBadge();
+        updateFeedbackDeliveryCopy();
+      }
+    });
+  }
+
+  function sendFeedbackToSupabase(payload) {
+    var base = SUPABASE_URL.trim().replace(/\/+$/, "");
+    var table = encodeURIComponent(FEEDBACK_TABLE.trim() || "feedbacks");
+    var row = {
+      id: payload.id,
+      feedback_type: payload.type,
+      message: payload.message,
+      reply_email: payload.replyEmail || null,
+      app_version: payload.appVersion,
+      context: payload.context || null,
+      recipient_email: FEEDBACK_EMAIL || "dominiquecreations24@gmail.com",
+      created_at: payload.sentAt
+    };
+    return fetch(base + "/rest/v1/" + table, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY.trim(),
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY.trim(),
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(row)
+    }).then(function (response) {
+      if (!response.ok) throw new Error("Supabase insert failed");
+    });
+  }
+
+  function openAttentionTest() {
+    clearTimeout(attentionTimer);
+    attentionRuntime = null;
+    var body = document.getElementById("attentionTestBody");
+    body.innerHTML =
+      '<section class="test-guide">' +
+        '<div class="attention-kicker">14-second attention baseline</div>' +
+        '<h3 id="attentionTestTitle">One rule: respond only to FOCUS.</h3>' +
+        '<p>This checks selective attention: noticing one target while ignoring nearby noise. Sit normally, silence notifications, and use this same device for fairer future comparisons.</p>' +
+        '<div class="test-rules">' +
+          '<div class="test-rule"><b>1</b><div><strong>Keep your eyes on the center.</strong><span>A new word appears about every 0.8 seconds.</span></div></div>' +
+          '<div class="test-rule"><b>2</b><div><strong>Tap or press Space only for FOCUS.</strong><span>Ignore SCROLL, REPLY, NEW, WATCH, and every other word.</span></div></div>' +
+          '<div class="test-rule"><b>3</b><div><strong>Respond once, then wait.</strong><span>Missed targets and wrong taps reduce the score.</span></div></div>' +
+        '</div>' +
+        '<div class="test-rule-note">This is a product benchmark, not a diagnosis.</div>' +
+        '<div class="modal-actions"><button class="btn btn-ghost" type="button" id="attentionCloseBtn">Not now</button><button class="btn btn-primary" type="button" id="attentionStartBtn">Start after countdown</button></div>' +
+      '</section>';
+    document.getElementById("attentionCloseBtn").onclick = closeAttentionTest;
+    document.getElementById("attentionStartBtn").onclick = beginAttentionTest;
+    attentionTestModal.classList.add("open");
+  }
+
+  function beginAttentionTest() {
+    var sequences = [
+      ["SCROLL", "FOCUS", "REPLY", "CHECK", "FOCUS", "SKIP", "NEW", "FOCUS", "WATCH", "REFRESH", "FOCUS", "LIKE", "PAUSE", "FOCUS", "SWITCH", "NEXT", "FOCUS", "DONE"],
+      ["WATCH", "NEXT", "FOCUS", "NEW", "REPLY", "FOCUS", "SCROLL", "LIKE", "FOCUS", "CHECK", "SKIP", "PAUSE", "FOCUS", "REFRESH", "FOCUS", "SWITCH", "DONE", "FOCUS"]
+    ];
+    attentionRuntime = {
+      sequence: sequences[state.attentionTests.length % sequences.length],
+      index: -1,
+      hits: 0,
+      misses: 0,
+      falseTaps: 0,
+      reactions: [],
+      shownAt: 0,
+      hitCurrent: false,
+      running: true
+    };
+    document.getElementById("attentionTestBody").innerHTML =
+      '<section class="test-live">' +
+        '<div class="test-live-head"><span>Selective attention</span><span data-test-count>Preparing...</span></div>' +
+        '<div class="test-live-progress"><i data-test-progress></i></div>' +
+        '<button class="test-signal" type="button" id="attentionSignalBtn" aria-label="Tap only when the word Focus appears">3</button>' +
+        '<p class="test-live-note">Press Space or tap the word only when it says FOCUS.</p>' +
+      '</section>';
+    document.getElementById("attentionSignalBtn").onclick = registerAttentionTap;
+    var countdown = 3;
+    var runCountdown = function () {
+      if (!attentionRuntime || !attentionRuntime.running) return;
+      var signal = document.getElementById("attentionSignalBtn");
+      signal.textContent = String(countdown);
+      countdown -= 1;
+      if (countdown < 0) showNextAttentionSignal();
+      else attentionTimer = setTimeout(runCountdown, 500);
+    };
+    runCountdown();
+  }
+
+  function showNextAttentionSignal() {
+    var runtime = attentionRuntime;
+    if (!runtime || !runtime.running) return;
+    if (runtime.index >= 0 && runtime.sequence[runtime.index] === "FOCUS" && !runtime.hitCurrent) runtime.misses += 1;
+    runtime.index += 1;
+    if (runtime.index >= runtime.sequence.length) {
+      finishAttentionTest();
+      return;
+    }
+    var word = runtime.sequence[runtime.index];
+    runtime.hitCurrent = false;
+    runtime.shownAt = performance.now();
+    var signal = document.getElementById("attentionSignalBtn");
+    signal.textContent = word;
+    signal.classList.toggle("is-target", word === "FOCUS");
+    var count = document.querySelector("[data-test-count]");
+    var progress = document.querySelector("[data-test-progress]");
+    if (count) count.textContent = (runtime.index + 1) + " / " + runtime.sequence.length;
+    if (progress) progress.style.width = ((runtime.index + 1) / runtime.sequence.length * 100) + "%";
+    attentionTimer = setTimeout(showNextAttentionSignal, 780);
+  }
+
+  function registerAttentionTap() {
+    var runtime = attentionRuntime;
+    if (!runtime || !runtime.running || runtime.index < 0) return;
+    var word = runtime.sequence[runtime.index];
+    var signal = document.getElementById("attentionSignalBtn");
+    if (word === "FOCUS" && !runtime.hitCurrent) {
+      runtime.hitCurrent = true;
+      runtime.hits += 1;
+      runtime.reactions.push(Math.round(performance.now() - runtime.shownAt));
+      signal.textContent = "CAUGHT";
+      signal.classList.remove("is-target");
+    } else if (word !== "FOCUS") {
+      runtime.falseTaps += 1;
+      signal.textContent = "WAIT";
+    }
+  }
+
+  function finishAttentionTest() {
+    var runtime = attentionRuntime;
+    if (!runtime) return;
+    runtime.running = false;
+    var targets = runtime.sequence.filter(function (word) { return word === "FOCUS"; }).length;
+    var accuracy = Math.max(0, Math.round(runtime.hits / targets * 100 - runtime.falseTaps * 8));
+    var averageReaction = runtime.reactions.length ? Math.round(runtime.reactions.reduce(function (sum, value) { return sum + value; }, 0) / runtime.reactions.length) : null;
+    var reactionScore = averageReaction ? Math.max(0, Math.min(100, Math.round(120 - averageReaction / 8))) : 0;
+    var score = Math.max(0, Math.min(100, Math.round(accuracy * 0.78 + reactionScore * 0.22)));
+    var result = normalizeAttentionTest({
+      id: makeId("test"),
+      takenAt: new Date().toISOString(),
+      score: score,
+      accuracy: accuracy,
+      averageReaction: averageReaction,
+      misses: runtime.misses,
+      falseTaps: runtime.falseTaps,
+      benchmarkScore: REFERENCE_BENCHMARK.score,
+      benchmarkVersion: REFERENCE_BENCHMARK.version
+    });
+    state.attentionTests.push(result);
+    state.attentionTests = state.attentionTests.slice(-60);
+    if (state.baselineScore === null || !state.baselineTestId) {
+      state.baselineScore = result.score;
+      state.baselineTestId = result.id;
+      state.baselineCompletedAt = result.takenAt;
+    }
+    saveState();
+    var previous = state.attentionTests[state.attentionTests.length - 2] || null;
+    var change = previous ? result.score - previous.score : null;
+    var referenceDelta = result.score - REFERENCE_BENCHMARK.score;
+    var referenceCopy = Math.abs(referenceDelta) <= 5 ? "within the reference band" : referenceDelta > 0 ? referenceDelta + " points above the reference" : Math.abs(referenceDelta) + " points below the reference";
+    document.getElementById("attentionTestBody").innerHTML =
+      '<section class="test-result">' +
+        '<div class="attention-kicker">' + (previous ? "New check saved" : "Starting baseline saved") + '</div>' +
+        '<h3 id="attentionTestTitle">' + result.score + '<span class="score-denominator">/100</span></h3>' +
+        '<p>' + (previous ? "That is " + (change >= 0 ? "+" : "") + change + " compared with your previous check." : "This is your personal starting point. You landed " + referenceCopy + ".") + ' Treat the pattern across several checks as useful, not one isolated score.</p>' +
+        '<div class="benchmark-comparison">' +
+          '<div class="benchmark-comparison-head"><span>Your score <strong>' + result.score + '</strong></span><span>' + REFERENCE_BENCHMARK.label + ' <strong>' + REFERENCE_BENCHMARK.score + '</strong></span></div>' +
+          '<div class="benchmark-track"><i></i><b style="left:' + REFERENCE_BENCHMARK.score + '%"></b><em style="left:' + result.score + '%"></em></div>' +
+        '</div>' +
+        '<div class="test-result-grid">' +
+          '<div><span>Accuracy</span><strong>' + accuracy + '%</strong></div>' +
+          '<div><span>Reaction</span><strong>' + (averageReaction ? averageReaction + "ms" : "-") + '</strong></div>' +
+          '<div><span>Misses</span><strong>' + runtime.misses + '</strong></div>' +
+          '<div><span>Early taps</span><strong>' + runtime.falseTaps + '</strong></div>' +
+        '</div>' +
+        '<div class="modal-actions"><button class="btn btn-ghost" type="button" id="attentionAgainBtn">Try again</button><button class="btn btn-primary" type="button" id="attentionDoneBtn">Return to progress</button></div>' +
+      '</section>';
+    document.getElementById("attentionAgainBtn").onclick = openAttentionTest;
+    document.getElementById("attentionDoneBtn").onclick = closeAttentionTest;
+    renderProgress();
+  }
+
+  function closeAttentionTest() {
+    if (attentionRuntime && attentionRuntime.running && !confirm("Stop this attention check? The unfinished result will not be saved.")) return;
+    clearTimeout(attentionTimer);
+    attentionRuntime = null;
+    if (attentionTestModal) attentionTestModal.classList.remove("open");
   }
 
   function renderTaskUnitRail(task) {
@@ -1449,6 +1914,7 @@
     if (!task) return;
     var shouldAward = !task.manualDoneXpAwarded && task.status !== "completed";
     var xpAward = manualDoneXp(task);
+    var prevXp = state.profile.totalXp;
     task.units.completed = task.units.total;
     task.status = "completed";
     if (shouldAward) {
@@ -1472,6 +1938,20 @@
     }
     saveState();
     renderAll();
+    if (shouldAward && (detectLevelUp(prevXp, state.profile.totalXp) || detectRankUp(prevXp, state.profile.totalXp))) {
+      showSystemReveal({
+        xpGained: xpAward,
+        prevXp: prevXp,
+        newXp: state.profile.totalXp,
+        leveledUp: detectLevelUp(prevXp, state.profile.totalXp),
+        rankedUpId: (detectRankUp(prevXp, state.profile.totalXp) || {}).id || "",
+        linkedTaskId: task.id,
+        isFinalBlock: true,
+        isManualDone: true,
+        focusedMinutes: 0,
+        penaltyXp: 0
+      });
+    }
     showToast(shouldAward ? "Marked done outside timer. +" + xpAward + " XP" : "Task completed");
   }
 
@@ -1513,14 +1993,17 @@
   }
 
   function renderAttentionLineChart(days, maxMinutes) {
-    var width = 640;
-    var height = 210;
-    var paddingX = 34;
-    var paddingTop = 20;
-    var paddingBottom = 36;
+    if (!days.length) return "";
+    var width = 720;
+    var height = 260;
+    var paddingX = 42;
+    var paddingTop = 28;
+    var paddingBottom = 46;
     var innerW = width - (paddingX * 2);
     var innerH = height - paddingTop - paddingBottom;
     var selectedDate = selectedProgressDate || (days[days.length - 1] || {}).date;
+    var selected = days.find(function (day) { return day.date === selectedDate; }) || days[days.length - 1];
+    var selectedFullDate = new Date(selected.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
     var points = days.map(function (day, index) {
       var x = paddingX + (days.length === 1 ? 0 : (innerW * index / (days.length - 1)));
       var y = paddingTop + innerH - ((day.minutes / Math.max(1, maxMinutes)) * innerH);
@@ -1530,6 +2013,10 @@
       return (index ? "L" : "M") + point.x.toFixed(1) + " " + point.y.toFixed(1);
     }).join(" ");
     var area = path + " L " + points[points.length - 1].x.toFixed(1) + " " + (height - paddingBottom) + " L " + points[0].x.toFixed(1) + " " + (height - paddingBottom) + " Z";
+    var grid = [0, 0.25, 0.5, 0.75, 1].map(function (ratio) {
+      var y = paddingTop + innerH - (innerH * ratio);
+      return '<line x1="' + paddingX + '" x2="' + (width - paddingX) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"></line>';
+    }).join("");
     var labels = points.map(function (point) {
       var label = new Date(point.day.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
       return '<text x="' + point.x.toFixed(1) + '" y="' + (height - 12) + '">' + label + '</text>';
@@ -1541,9 +2028,18 @@
       var left = (point.x / width) * 100;
       var top = (point.y / height) * 100;
       var fullDate = new Date(point.day.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-      return '<button class="progress-chart-point ' + (point.day.date === selectedDate ? "active" : "") + '" style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%" data-progress-day="' + point.day.date + '" aria-label="' + fullDate + ": " + formatMinutesCompact(point.day.minutes) + ' focused"><span>' + formatMinutesCompact(point.day.minutes) + '</span></button>';
+      return '<button class="progress-chart-point ' + (point.day.date === selectedDate ? "active" : "") + '" style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%" data-progress-day="' + point.day.date + '" aria-pressed="' + (point.day.date === selectedDate ? "true" : "false") + '" aria-label="' + fullDate + ": " + formatMinutesCompact(point.day.minutes) + ' focused"><span>' + formatMinutesCompact(point.day.minutes) + '</span></button>';
     }).join("");
-    return '<div class="progress-attention-chart" aria-label="Seven day attention span trend"><div class="progress-graph-stage"><svg viewBox="0 0 ' + width + " " + height + '" preserveAspectRatio="none"><path class="progress-line-area" d="' + area + '"></path><path class="progress-line-stroke" d="' + path + '"></path><g class="progress-line-dots">' + dots + '</g><g class="progress-line-labels">' + labels + '</g></svg>' + hitTargets + '</div></div>';
+    return '<div class="progress-attention-chart" aria-label="Seven day attention span trend">' +
+      '<div class="progress-chart-head"><div><span>Selected day</span><strong>' + escapeHtml(selectedFullDate) + '</strong></div><b>' + formatMinutesCompact(selected.minutes) + ' focused</b></div>' +
+      '<div class="progress-graph-stage"><svg viewBox="0 0 ' + width + " " + height + '" preserveAspectRatio="none">' +
+        '<g class="progress-line-grid">' + grid + '</g>' +
+        '<path class="progress-line-area" d="' + area + '"></path>' +
+        '<path class="progress-line-stroke" d="' + path + '"></path>' +
+        '<g class="progress-line-dots">' + dots + '</g>' +
+        '<g class="progress-line-labels">' + labels + '</g>' +
+      '</svg>' + hitTargets + '</div>' +
+    '</div>';
   }
 
   function wireProgressChart(days) {
@@ -1580,8 +2076,29 @@
     var max = Math.max(state.profile.dailyGoalMinutes || 60, Math.max.apply(null, days.map(function (day) { return day.minutes; })), 1);
     document.getElementById("progressChart").innerHTML = renderAttentionLineChart(days, max);
     var historyXp = state.history.reduce(function (sum, item) { return sum + (item.xpEarned || 0); }, 0);
-    document.getElementById("progressTaskSummary").innerHTML = state.history.length + " logs saved - " + formatMinutesCompact(focusMinutes7) + " focused this week - " + formatNumber(historyXp) + " XP earned - " + doneTasks + " of " + state.tasks.length + " tasks fully completed.";
+    var latest = state.attentionTests[state.attentionTests.length - 1] || null;
+    var baselineDelta = latest && state.baselineScore !== null ? latest.score - state.baselineScore : null;
+    var best = state.attentionTests.length ? Math.max.apply(null, state.attentionTests.map(function (test) { return test.score; })) : null;
+    document.getElementById("progressTaskSummary").innerHTML =
+      '<div class="progress-summary-line">' + state.history.length + " logs saved - " + formatMinutesCompact(focusMinutes7) + " focused this week - " + formatNumber(historyXp) + " XP earned - " + doneTasks + " of " + state.tasks.length + " tasks fully completed.</div>" +
+      '<section class="baseline-card">' +
+        '<div class="baseline-card-head">' +
+          '<div><div class="attention-kicker">Attention baseline</div><h3>' + (latest ? latest.score + '/100 latest score' : 'Measure your starting point') + '</h3>' +
+          '<p>A short selective-attention check gives DeeCadence another signal besides XP: whether your focus control is improving over time.</p></div>' +
+          '<button class="btn btn-primary" type="button" id="runAttentionTestBtn">' + (latest ? "Run again" : "Start baseline") + '</button>' +
+        '</div>' +
+        '<div class="baseline-metrics">' +
+          '<div><span>Starting score</span><strong>' + (state.baselineScore == null ? "-" : state.baselineScore) + '</strong></div>' +
+          '<div><span>Latest score</span><strong>' + (latest ? latest.score : "-") + '</strong></div>' +
+          '<div><span>From baseline</span><strong>' + (baselineDelta == null ? "-" : (baselineDelta >= 0 ? "+" : "") + baselineDelta) + '</strong></div>' +
+          '<div><span>Reference</span><strong>' + REFERENCE_BENCHMARK.score + '</strong></div>' +
+          '<div><span>Personal best</span><strong>' + (best == null ? "-" : best) + '</strong></div>' +
+        '</div>' +
+        '<p class="benchmark-disclaimer">This is a product benchmark, not a diagnosis. Repeat it under similar conditions to make the trend useful.</p>' +
+      '</section>';
     wireProgressChart(days);
+    var runBaseline = document.getElementById("runAttentionTestBtn");
+    if (runBaseline) runBaseline.onclick = openAttentionTest;
   }
 
   function renderFeedbackSummary(item) {
@@ -1618,6 +2135,65 @@
     document.getElementById("motionSwitch").classList.toggle("on", state.settings.reducedMotion);
     document.getElementById("motionSwitch").setAttribute("aria-pressed", String(state.settings.reducedMotion));
     document.getElementById("dailyGoalSelect").value = String(state.profile.dailyGoalMinutes || 60);
+    updateFeedbackDeliveryCopy();
+    updateFeedbackBadge();
+  }
+
+  var CONTEXT_TIPS = {
+    today: {
+      eyebrow: "First encounter",
+      title: "Today is your command center.",
+      body: "Pick the next protected block, see your current rank, and keep the day simple."
+    },
+    focus: {
+      eyebrow: "Block logic",
+      title: "One block can be paused without losing progress.",
+      body: "Continue saved sessions from here. XP is based on protected minutes, not just opening the timer."
+    },
+    plan: {
+      eyebrow: "Schedule vs tasks",
+      title: "Schedule is time. Tasks is control.",
+      body: "Use Schedule to see the day. Use Tasks to edit, mark done, or start a focus session quickly."
+    },
+    rank: {
+      eyebrow: "Rank meaning",
+      title: "Ranks are long-term attention gates.",
+      body: "E starts the climb. A, S, SS, SSS, and L require much larger XP totals, so short scattered focus cannot fake mastery."
+    },
+    progress: {
+      eyebrow: "Attention evidence",
+      title: "Progress combines minutes and attention checks.",
+      body: "The graph shows protected time. The baseline check gives a second signal: selective attention control."
+    },
+    settings: {
+      eyebrow: "Data safety",
+      title: "Export before testing heavily.",
+      body: "Backups preserve tasks, history, XP, settings, attention checks, and feedback queue on this device."
+    }
+  };
+
+  function renderContextTip(viewName) {
+    var view = document.getElementById("view-" + viewName);
+    var tip = CONTEXT_TIPS[viewName];
+    if (!view || !tip) return;
+    var existing = view.querySelector(".context-tip");
+    if (state.dismissedContextTips && state.dismissedContextTips[viewName]) {
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      return;
+    }
+    if (!existing) {
+      existing = document.createElement("div");
+      existing.className = "context-tip";
+      var topbar = view.querySelector(".topbar");
+      if (topbar && topbar.parentNode) topbar.parentNode.insertBefore(existing, topbar.nextSibling);
+    }
+    existing.innerHTML = '<div><div class="attention-kicker">' + escapeHtml(tip.eyebrow) + '</div><strong>' + escapeHtml(tip.title) + '</strong><p>' + escapeHtml(tip.body) + '</p></div><button type="button" class="icon-btn" data-dismiss-context="' + viewName + '" aria-label="Dismiss tip">x</button>';
+    var dismiss = existing.querySelector("[data-dismiss-context]");
+    if (dismiss) dismiss.onclick = function () {
+      state.dismissedContextTips[viewName] = true;
+      saveState();
+      renderContextTip(viewName);
+    };
   }
 
   function applyTheme() {
@@ -1645,6 +2221,7 @@
     renderSettings();
     applyTheme();
     renderSessionIndicators();
+    renderContextTip(activeView);
   }
 
   function switchView(name) {
@@ -1662,6 +2239,7 @@
     if (name === "progress") renderProgress();
     if (name === "history") renderHistory();
     if (name === "settings") renderSettings();
+    renderContextTip(name);
   }
 
   function openWelcome(force) {
@@ -2150,12 +2728,21 @@
     document.getElementById("tourBackBtn").onclick = previousTourStep;
     document.getElementById("tourSkipBtn").onclick = function () { endTour(true); };
     document.getElementById("replayTourBtn").onclick = function () { startTour(true); };
-    [welcomeOverlay, startModal, taskModal, taskDetailModal].forEach(function (overlay) {
+    [welcomeOverlay, startModal, taskModal, taskDetailModal, feedbackModal, attentionTestModal].forEach(function (overlay) {
+      if (!overlay) return;
       overlay.addEventListener("click", function (event) {
         if (event.target === overlay) {
           if (overlay === welcomeOverlay) {
             closeWelcome(true);
             startTour(false);
+            return;
+          }
+          if (overlay === feedbackModal) {
+            closeFeedback();
+            return;
+          }
+          if (overlay === attentionTestModal) {
+            closeAttentionTest();
             return;
           }
           overlay.classList.remove("open");
@@ -2231,6 +2818,25 @@
       saveState();
       renderProgress();
     };
+    document.getElementById("exportBackupBtn").onclick = exportBackup;
+    document.getElementById("importBackupBtn").onclick = function () { document.getElementById("importBackupInput").click(); };
+    document.getElementById("importBackupInput").onchange = importBackup;
+    document.getElementById("feedbackFab").onclick = openFeedback;
+    document.getElementById("openFeedbackSettingsBtn").onclick = openFeedback;
+    document.getElementById("feedbackCloseBtn").onclick = closeFeedback;
+    document.getElementById("feedbackCancelBtn").onclick = closeFeedback;
+    document.getElementById("feedbackSubmitBtn").onclick = submitFeedback;
+    document.getElementById("feedbackMessageInput").oninput = function () {
+      document.getElementById("feedbackCharCount").textContent = String(this.value.length);
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-type]"), function (button) {
+      button.onclick = function () {
+        feedbackType = button.getAttribute("data-feedback-type") || "Other";
+        Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-type]"), function (item) {
+          item.classList.toggle("active", item === button);
+        });
+      };
+    });
     document.getElementById("resetDataBtn").onclick = function () {
       if (confirm("This clears all rank progress, tasks, and history on this device. Continue?")) {
         localStorage.removeItem(STORAGE_KEY);
@@ -2266,6 +2872,17 @@
     if (event.key !== STORAGE_KEY || state.session) return;
     state = loadState();
     renderAll();
+  }
+
+  function handleKeydown(event) {
+    if (event.key === "Escape") {
+      if (feedbackModal && feedbackModal.classList.contains("open")) closeFeedback();
+      if (attentionTestModal && attentionTestModal.classList.contains("open")) closeAttentionTest();
+    }
+    if (event.code === "Space" && attentionRuntime && attentionRuntime.running && !["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes((document.activeElement || {}).tagName)) {
+      event.preventDefault();
+      registerAttentionTap();
+    }
   }
 
   window.__DEECADENCE_DEBUG__ = {
@@ -2306,7 +2923,9 @@
 
   wireEvents();
   document.addEventListener("visibilitychange", handleVisibilityChange);
+  document.addEventListener("keydown", handleKeydown);
   window.addEventListener("storage", handleStorageChange);
+  window.addEventListener("online", retryFeedbackOutbox);
   window.addEventListener("resize", function () {
     if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]);
   });

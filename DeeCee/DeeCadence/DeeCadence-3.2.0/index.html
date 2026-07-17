@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DeeCadence - Attention Recovery System</title>
+<meta name="description" content="Structured focus blocks, visible rank progression, and a minimal automatic planner.">
+<meta name="theme-color" content="#0A0D14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="deecadence-feedback-endpoint" content="">
+<meta name="deecadence-feedback-email" content="">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<a class="skip-link" href="#view-today">Skip to app content</a>
+
+<div id="bootLoader">
+  <div class="boot-mark" aria-hidden="true"></div>
+  <div class="boot-text">Loading DeeCadence...</div>
+</div>
+
+<div id="app">
+
+  <nav class="sidenav" aria-label="Desktop navigation">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"></div><div class="brand-name">DeeCadence</div></div>
+    <button type="button" class="navbtn" data-view="today"><span class="dot"></span>Today</button>
+    <button type="button" class="navbtn" data-view="focus" id="navFocusBtn"><span class="dot"></span>Focus<span class="session-dot" id="navFocusDot" style="display:none;" aria-hidden="true"></span></button>
+    <button type="button" class="navbtn" data-view="plan"><span class="dot"></span>Plan</button>
+    <button type="button" class="navbtn" data-view="rank"><span class="dot"></span>Rank</button>
+    <button type="button" class="navbtn" data-view="progress"><span class="dot"></span>Progress</button>
+    <button type="button" class="navbtn" data-view="history"><span class="dot"></span>History</button>
+    <button type="button" class="navbtn" data-view="settings"><span class="dot"></span>Settings</button>
+  </nav>
+
+  <main>
+
+    <!-- ===== TODAY ===== -->
+    <section class="view" id="view-today">
+      <div class="topbar">
+        <div class="topbar-title">Attention training</div>
+        <button type="button" class="icon-btn theme-toggle" id="themeToggleTop" aria-label="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+      </div>
+
+      <div class="attention-brief card">
+        <div class="attention-kicker">Attention span recovery system</div>
+        <h1>Train your focus one protected block at a time.</h1>
+        <p>Pick the work that matters, protect the minutes, and let XP show your attention span getting stronger over time.</p>
+      </div>
+
+      <div class="card rank-console" data-tour="today-rank">
+        <div class="orb-wrap">
+          <div class="orb-glow" id="todayOrbGlow" aria-hidden="true"></div>
+          <svg class="orb-energy-ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="46" fill="none" stroke="var(--rank-glow-color)" stroke-width="1.5" stroke-dasharray="2 8" opacity="0.7"/>
+          </svg>
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--surface-2)" stroke-width="8"/>
+            <circle id="todayOrbFill" cx="50" cy="50" r="42" fill="none" stroke="var(--cyan)" stroke-width="8" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          </svg>
+          <div class="orb-rankletter" id="todayRankLetter" style="color:var(--rank-glow-color); font-size:70px">E</div>
+        </div>
+        <div class="console-main">
+          <div class="rank-label" id="todayRankLabel">E-Rank - Learning consistency</div>
+          <div class="level-number" id="todayLevel">Level  1</div>
+          <div class="xp-bar-track"><div class="xp-bar-fill" id="todayXpFill" style="width:0%"></div></div>
+          <div class="xp-caption" id="todayXpCaption">0 / 40 XP to next level</div>
+        </div>
+      </div>
+
+      <div class="card next-block-card" data-tour="next-block">
+        <div class="next-block-head">
+          <div class="eyebrow">Next block</div>
+          <button type="button" class="btn btn-ghost" id="autoArrangeBtnToday" style="padding:8px 12px; font-size:12.5px; min-height:36px;">Auto-arrange plan</button>
+        </div>
+        <div id="todayNextTaskWrap"></div>
+        <button type="button" class="btn btn-primary btn-block" id="startNextBlockBtn" style="margin-top:14px;">Start next block</button>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="eyebrow" style="margin-bottom:10px;">Today's plan</div>
+        <div id="todayPlanList"></div>
+      </div>
+    </section>
+
+    <!-- ===== FOCUS ===== -->
+    <section class="view" id="view-focus">
+      <div class="topbar"><div class="topbar-title">Focus</div><button type="button" class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
+      <div id="focusRoot" data-tour="focus-root"></div>
+    </section>
+
+    <!-- ===== PLAN ===== -->
+    <section class="view" id="view-plan">
+      <div class="topbar">
+        <div class="topbar-title">Plan</div>
+        <button type="button" class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+        <button type="button" class="btn btn-primary" id="addTaskBtn" data-tour="add-task" style="padding:9px 14px; font-size:13px; min-height:38px;">+ Add task</button>
+      </div>
+      <div class="plan-controls" data-tour="plan-controls">
+        <div class="seg plan-mode-seg" id="planModeSeg" role="group" aria-label="Plan mode">
+          <button type="button" class="active" data-plan-mode="schedule">Schedule</button>
+          <button type="button" data-plan-mode="tasks">Tasks</button>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Task filter">
+          <button type="button" class="tab active" data-planview="day">Day</button>
+          <button type="button" class="tab" data-planview="week">Week</button>
+          <button type="button" class="tab" data-planview="pending">Pending</button>
+        </div>
+        <button type="button" class="btn btn-secondary" id="autoArrangeBtnPlan" style="padding:9px 14px; font-size:13px; min-height:38px;">Auto-arrange</button>
+      </div>
+      <div id="planList"></div>
+    </section>
+
+    <!-- ===== RANK ===== -->
+    <section class="view" id="view-rank">
+      <div class="topbar"><div class="topbar-title">Rank</div><button type="button" class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
+      <div class="card rank-console" data-tour="rank-console" style="margin-bottom:16px;">
+        <div class="orb-wrap">
+          <div class="orb-glow" id="rankOrbGlow" aria-hidden="true"></div>
+          <svg class="orb-energy-ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="46" fill="none" stroke="var(--rank-glow-color)" stroke-width="1.5" stroke-dasharray="2 8" opacity="0.7"/>
+          </svg>
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--surface-2)" stroke-width="8"/>
+            <circle id="rankOrbFill" cx="50" cy="50" r="42" fill="none" stroke="var(--cyan)" stroke-width="8" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          </svg>
+          <div class="orb-rankletter" id="rankPageLetter" style="color:var(--rank-glow-color); font-size:70px">E</div>
+        </div>
+        <div class="console-main">
+          <div class="rank-label" id="rankPageLabel">E-Rank</div>
+          <div class="level-number" id="rankPageLevel">Level 1</div>
+          <div class="xp-caption" id="rankPageTotalXp">0 total XP</div>
+        </div>
+      </div>
+      <div class="eyebrow" style="margin-bottom:8px;">Rank ladder</div>
+      <div class="rank-ladder" id="rankLadder" data-tour="rank-ladder"></div>
+      <div class="card rank-gate-card">
+        <div class="eyebrow" id="rankGateEyebrow" style="margin-bottom:8px;">Next promotion</div>
+        <h3 id="rankGateTitle">D-Rank must be earned four ways.</h3>
+        <p class="curve-note" id="rankGateBody">XP proves volume. Active days prove return. Completed blocks prove closure. Recent consistency proves the pattern still exists.</p>
+        <div class="rank-gate-grid" id="rankGateGrid"></div>
+        <p class="rank-gate-rule">Promotion is permanent once every requirement is met. Levels may rise before the next rank, but XP alone cannot award the badge.</p>
+      </div>
+    </section>
+
+    <!-- ===== PROGRESS ===== -->
+    <section class="view" id="view-progress">
+      <div class="topbar"><div class="topbar-title">Progress</div><button type="button" class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="stat-num" id="statStreak">0</div><div class="stat-label">Day streak</div></div>
+        <div class="stat-tile"><div class="stat-num" id="statFocus7">0m</div><div class="stat-label">Focus time / 7d</div></div>
+        <div class="stat-tile"><div class="stat-num" id="statCompletion">0%</div><div class="stat-label">Completion</div></div>
+        <div class="stat-tile"><div class="stat-num" id="statConsistency">0</div><div class="stat-label">Consistency</div></div>
+        <div class="stat-tile"><div class="stat-num" id="statBlocks">0</div><div class="stat-label">Blocks finished</div></div>
+      </div>
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:4px;">Last 7 days</div>
+        <div class="bar-chart" id="progressChart"></div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="eyebrow" style="margin-bottom:8px;">Progress intelligence</div>
+        <div id="progressTaskSummary" style="font-size:13.5px; color:var(--text-dim); line-height:1.7;"></div>
+      </div>
+    </section>
+
+    <!-- ===== HISTORY ===== -->
+    <section class="view" id="view-history">
+      <div class="topbar">
+        <div class="topbar-title">History</div>
+        <button type="button" class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+        <button type="button" class="btn btn-ghost" id="exportHistoryBtn" style="padding:8px 12px; font-size:12.5px; min-height:36px;">Export</button>
+      </div>
+      <div class="card" style="padding:6px 16px;" id="historyList"></div>
+    </section>
+
+    <!-- ===== SETTINGS ===== -->
+    <section class="view" id="view-settings">
+      <div class="topbar"><div class="topbar-title">Settings</div><button type="button" class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
+      <div class="card">
+        <div class="setting-row">
+          <div><div class="setting-label">First recovery mission</div><div class="setting-desc">Learn DeeCadence by completing one real protected block.</div></div>
+          <button type="button" class="btn btn-secondary" id="openMissionBtn">Open mission</button>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Contextual guidance</div><div class="setting-desc">Show the short explanations again when you next encounter each section.</div></div>
+          <button type="button" class="btn btn-secondary" id="resetTipsBtn">Reset tips</button>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Theme</div><div class="setting-desc">Dark suits the console. Light stays legible.</div></div>
+          <div class="seg">
+            <button type="button" data-theme-choice="dark" class="active">Dark</button>
+            <button type="button" data-theme-choice="light">Light</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Sound</div><div class="setting-desc">Soft chime on block completion.</div></div>
+          <button type="button" class="switch" id="soundSwitch" aria-pressed="false" role="switch" aria-label="Toggle sound"></button>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Reduce motion</div><div class="setting-desc">Turns off the pulsing glow, shimmer, and scanline effects.</div></div>
+          <button type="button" class="switch" id="motionSwitch" aria-pressed="false" role="switch" aria-label="Toggle reduced motion"></button>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Daily goal</div><div class="setting-desc">Focused minutes per day to hold your streak.</div></div>
+          <select id="dailyGoalSelect" style="background:var(--surface-2); border:1px solid var(--border-strong); border-radius:10px; padding:9px 10px; color:var(--text); min-height:40px;">
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">60 minutes</option>
+            <option value="120">120 minutes</option>
+          </select>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="setting-row">
+          <div><div class="setting-label">Data backup</div><div class="setting-desc">Export everything or restore a DeeCadence backup on this device.</div></div>
+          <div class="row settings-data-actions">
+            <button type="button" class="btn btn-secondary" id="exportBackupBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Export</button>
+            <button type="button" class="btn btn-secondary" id="importBackupBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Import</button>
+            <input class="sr-only" id="importBackupInput" type="file" accept="application/json,.json">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Feedback delivery</div><div class="setting-desc" id="feedbackDeliveryStatus">Checking receiver configuration…</div></div>
+          <button type="button" class="btn btn-secondary" id="openFeedbackSettingsBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Send feedback</button>
+        </div>
+        <div class="setting-row" style="border:none; padding-top:2px;">
+          <div><div class="setting-label">Reset all data</div><div class="setting-desc">Clears rank, tasks, and history on this device.</div></div>
+          <button type="button" class="btn btn-danger" id="resetDataBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Reset</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottomnav" aria-label="Mobile navigation">
+    <button type="button" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M8 16h5"/></svg>Today</button>
+    <button type="button" data-view="focus" id="bottomNavFocusBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Focus<span class="session-dot" id="bottomNavFocusDot" style="display:none;" aria-hidden="true"></span></button>
+    <button type="button" data-view="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Plan</button>
+    <button type="button" data-view="rank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z"/></svg>Rank</button>
+    <button type="button" data-view="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>Progress</button>
+    <button type="button" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1z"/></svg>Settings</button>
+  </nav>
+
+</div>
+
+<!-- First-run attention baseline -->
+<div class="welcome-overlay" id="welcomeOverlay" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+  <section class="welcome-card">
+    <div class="onboarding-head">
+      <div class="welcome-orb" aria-hidden="true"><span>D</span></div>
+      <div class="onboarding-step-label">Set your starting point · about 30 seconds</div>
+    </div>
+    <div class="attention-kicker">Welcome to DeeCadence</div>
+    <h2 id="welcomeTitle">Recover your attention with a starting point you can beat.</h2>
+    <p>Before the dashboard, complete one short selective-attention check. DeeCadence will save the result as your personal baseline, compare it with a provisional reference average, then teach the system through one real protected block.</p>
+
+    <div class="onboarding-flow" aria-label="Onboarding steps">
+      <article class="active"><b>1</b><div><strong>Baseline</strong><span>Follow one clear signal rule.</span></div></article>
+      <article><b>2</b><div><strong>Compare</strong><span>Save your score and reference.</span></div></article>
+      <article><b>3</b><div><strong>Practice</strong><span>Complete one protected block.</span></div></article>
+    </div>
+
+    <div class="onboarding-readiness">
+      <div><span>✓</span><p><strong>Use this device normally.</strong> Keep it in the same position you would use for future checks.</p></div>
+      <div><span>✓</span><p><strong>Give it your full attention.</strong> The live check lasts roughly 14 seconds after the countdown.</p></div>
+      <div><span>✓</span><p><strong>No diagnosis is being made.</strong> This is a DeeCadence product benchmark for tracking your own trend.</p></div>
+    </div>
+
+    <div class="welcome-note"><strong>Your first score stays on this device.</strong> It remains visible in Progress even after later tests, so improvement is measured against where you actually started.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="welcomeSkipBtn">Explore without a baseline</button>
+      <button type="button" class="btn btn-primary" id="welcomeStartBtn">Read the rules</button>
+    </div>
+  </section>
+</div>
+
+<!-- First Recovery Mission -->
+<div class="mission-overlay" id="missionOverlay" role="dialog" aria-modal="true" aria-labelledby="missionTitle" aria-hidden="true">
+  <section class="mission-card">
+    <div class="mission-mark" aria-hidden="true"><span>D</span></div>
+    <div class="attention-kicker">First recovery mission</div>
+    <h2 id="missionTitle">Learn DeeCadence by doing the work.</h2>
+    <p>Choose one real task. DeeCadence will protect a short block, bank the minutes you complete, and show how that work becomes XP and progress.</p>
+
+    <div class="mission-steps" aria-label="Mission steps">
+      <article><b>1</b><div><strong>Name the work</strong><span>One clear finish line.</span></div></article>
+      <article><b>2</b><div><strong>Protect the block</strong><span>Stay with it until the timer ends.</span></div></article>
+      <article><b>3</b><div><strong>See the evidence</strong><span>Minutes, XP and progress are saved.</span></div></article>
+    </div>
+
+    <div class="mission-form">
+      <div class="field">
+        <label for="missionTaskInput">What will you work on?</label>
+        <input id="missionTaskInput" type="text" maxlength="90" autocomplete="off" placeholder="e.g. Review one lecture topic">
+      </div>
+      <div class="field">
+        <label>Choose the first block</label>
+        <div class="mission-duration-grid" id="missionDurationGrid" role="group" aria-label="Mission duration">
+          <button type="button" class="active" data-mission-minutes="2"><strong>2 min</strong><span>Practice</span></button>
+          <button type="button" data-mission-minutes="5"><strong>5 min</strong><span>Quick start</span></button>
+          <button type="button" data-mission-minutes="15"><strong>15 min</strong><span>Real block</span></button>
+          <button type="button" data-mission-minutes="25"><strong>25 min</strong><span>Deep start</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mission-note">This is a real session. Completing it creates your first work record; leaving early saves only the work actually completed.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="missionSkipBtn">Explore first</button>
+      <button type="button" class="btn btn-primary" id="missionStartBtn">Start recovery mission</button>
+    </div>
+  </section>
+</div>
+
+<!-- Start session modal -->
+<div class="modal-overlay" id="startModal" role="dialog" aria-modal="true" aria-labelledby="startModalTitle">
+  <div class="modal">
+    <h3 id="startModalTitle">Start a focus session</h3>
+    <div class="modal-sub" id="startModalSub">Choose a total length and how many blocks this task needs.</div>
+    <div class="duration-grid" id="durationGrid">
+      <button type="button" class="duration-opt" data-min="15">15m</button>
+      <button type="button" class="duration-opt active" data-min="25">25m</button>
+      <button type="button" class="duration-opt" data-min="30">30m</button>
+      <button type="button" class="duration-opt" data-min="45">45m</button>
+      <button type="button" class="duration-opt" data-min="90">90m</button>
+      <button type="button" class="duration-opt" data-min="custom">Custom</button>
+    </div>
+    <div class="field" id="customMinWrap" style="display:none; margin-bottom:14px;">
+      <label for="customMinInput">Custom minutes</label>
+      <input type="number" id="customMinInput" min="4" max="240" value="20">
+    </div>
+    <div class="field">
+      <label>Blocks for this session</label>
+      <div class="block-count-grid" id="blockCountGrid">
+        <button type="button" data-block-count="1">1 block</button>
+        <button type="button" data-block-count="2">2 blocks</button>
+        <button type="button" data-block-count="3">3 blocks</button>
+        <button type="button" data-block-count="4" class="active">4 blocks</button>
+      </div>
+      <div class="setting-desc" id="blockCountHint" style="margin-top:2px;">Pick based on how much of your plan this session should move.</div>
+    </div>
+    <div class="field">
+      <label>Task source</label>
+      <div class="seg" id="startTaskSourceSeg">
+        <button type="button" data-start-source="schedule" class="active">Schedule</button>
+        <button type="button" data-start-source="input">Input</button>
+      </div>
+      <div class="setting-desc" id="startTaskSourceHint" style="margin-top:2px;">Pick a task already on your schedule.</div>
+    </div>
+    <div class="field" id="scheduleTaskField">
+      <label for="linkTaskSelect">Scheduled task</label>
+      <select id="linkTaskSelect"></select>
+    </div>
+    <div class="field" id="inputTaskField" style="display:none;">
+      <label for="inputTaskTitle">Task title</label>
+      <input id="inputTaskTitle" type="text" maxlength="90" placeholder="e.g. Review chapter notes">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="startModalCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="startModalConfirm">Begin session</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit task modal -->
+<div class="modal-overlay" id="taskModal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+  <div class="modal">
+    <h3 id="taskModalTitle">Add task</h3>
+    <div class="modal-sub">Add the work once. DeeCadence can split it into smaller focus pieces.</div>
+    <div class="form-grid">
+      <div class="field field-span2">
+        <label for="taskTitleInput">Title</label>
+        <input id="taskTitleInput" type="text" placeholder="e.g. Draft client proposal">
+      </div>
+      <div class="field">
+        <label for="taskDateInput">Date</label>
+        <input id="taskDateInput" type="date">
+      </div>
+      <div class="field">
+        <label for="taskTimeInput">Time (optional)</label>
+        <input id="taskTimeInput" type="time">
+      </div>
+      <div class="field">
+        <label for="taskDurationInput">Est. minutes</label>
+        <input id="taskDurationInput" type="number" min="10" max="480" value="50">
+      </div>
+      <div class="field">
+        <label for="taskPriorityInput">Priority</label>
+        <select id="taskPriorityInput">
+          <option value="high">High</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="field field-span2">
+        <label>How should progress be counted?</label>
+        <div class="seg" id="progressTypeSeg">
+          <button type="button" data-progress-type="countable" class="active">Count pieces</button>
+          <button type="button" data-progress-type="ongoing">Track time only</button>
+        </div>
+        <div class="setting-desc" id="progressTypeHint" style="margin-top:2px;">Use this when the task has clear pieces, like 4 pages or 3 messages.</div>
+      </div>
+      <div class="field" id="taskUnitsFieldWrap">
+        <label for="taskUnitsInput">Pieces to finish</label>
+        <select id="taskUnitsInput">
+          <option>1</option><option>2</option><option>3</option><option selected>4</option>
+          <option>5</option><option>6</option><option>8</option><option>10</option><option>12</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="taskFlexInput">Schedule behavior</label>
+        <select id="taskFlexInput">
+          <option value="fixed">Fixed - keep this time</option>
+          <option value="flexible" selected>Flexible - let auto-arrange place it</option>
+        </select>
+      </div>
+      <div class="field field-span2">
+        <label for="taskNotesInput">Notes (optional)</label>
+        <textarea id="taskNotesInput" placeholder="Anything worth remembering"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="taskModalCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="taskModalConfirm">Save task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task detail modal -->
+<div class="modal-overlay" id="taskDetailModal" role="dialog" aria-modal="true" aria-labelledby="taskDetailTitle">
+  <div class="modal task-detail-modal">
+    <div id="taskDetailBody"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="taskDetailDone">Mark done</button>
+      <button type="button" class="btn btn-primary" id="taskDetailFocus">Focus</button>
+      <button type="button" class="btn btn-secondary" id="taskDetailEdit">Edit</button>
+      <button type="button" class="btn btn-ghost" id="taskDetailClose">Close</button>
+      <button type="button" class="btn btn-danger" id="taskDetailDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- System Reveal -->
+<div class="reveal-overlay" id="revealOverlay" role="dialog" aria-modal="true" aria-label="Block complete">
+  <div class="reveal-scanline" aria-hidden="true"></div>
+  <div class="reveal-card">
+    <div class="reveal-eyebrow">Block complete</div>
+    <div class="reveal-orb">
+      <div class="orb-glow" id="revealOrbGlow" aria-hidden="true"></div>
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface-2)" stroke-width="7"/>
+        <circle id="revealRingFill" class="reveal-ring-fill" cx="60" cy="60" r="52" fill="none" stroke="var(--cyan)" stroke-width="7" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+      </svg>
+      <div class="reveal-orb-center">
+        <div class="reveal-level" id="revealLevel">Lv 1</div>
+        <div class="reveal-rankname" id="revealRankName">E-Rank</div>
+      </div>
+    </div>
+    <div class="reveal-xp" id="revealXpGained" aria-live="polite">+20 XP</div>
+    <div class="reveal-remaining" id="revealRemaining">36 XP to next level</div>
+    <div id="revealFlags"></div>
+    <div class="reveal-task" id="revealTaskLine"></div>
+    <div class="block-feedback" id="blockFeedbackPanel">
+      <div class="block-feedback-label">How did this block feel?</div>
+      <div class="block-feedback-options" role="group" aria-label="Block feeling">
+        <button type="button" data-block-feeling="Locked in">Locked in</button>
+        <button type="button" data-block-feeling="Okay">Okay</button>
+        <button type="button" data-block-feeling="Tired">Tired</button>
+        <button type="button" data-block-feeling="Sleepy">Sleepy</button>
+        <button type="button" data-block-feeling="Distracted">Distracted</button>
+      </div>
+      <input id="blockFeedbackNote" type="text" maxlength="120" placeholder='Optional note, e.g. "Tired", "Sleepy", "Flow was strong"'>
+    </div>
+    <div class="reveal-actions" id="revealActions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Guided attention baseline -->
+<div class="modal-overlay attention-test-overlay" id="attentionTestModal" role="dialog" aria-modal="true" aria-labelledby="attentionTestTitle">
+  <div class="modal attention-test-modal">
+    <div id="attentionTestBody"></div>
+  </div>
+</div>
+
+<!-- Developer feedback -->
+<button class="feedback-fab" id="feedbackFab" type="button" aria-label="Send feedback to the DeeCadence developer" title="Send feedback">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M8 9h8M8 13h5"/></svg>
+  <span>Feedback</span>
+  <i id="feedbackQueueBadge" hidden>0</i>
+</button>
+
+<div class="modal-overlay" id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
+  <div class="modal feedback-modal">
+    <div class="feedback-head">
+      <div>
+        <div class="attention-kicker">Direct product feedback</div>
+        <h3 id="feedbackTitle">Tell the developer what happened.</h3>
+      </div>
+      <button class="icon-btn" id="feedbackCloseBtn" type="button" aria-label="Close feedback">×</button>
+    </div>
+    <p class="modal-sub">Specific reports improve DeeCadence faster. Your focus history stays private unless you include the optional summary.</p>
+    <div class="feedback-type-grid" id="feedbackTypeGrid" role="group" aria-label="Feedback type">
+      <button type="button" data-feedback-type="Bug">Bug</button>
+      <button type="button" data-feedback-type="Confusing">Confusing</button>
+      <button type="button" data-feedback-type="Idea" class="active">Idea</button>
+      <button type="button" data-feedback-type="Other">Other</button>
+    </div>
+    <div class="field">
+      <label for="feedbackMessageInput">Message</label>
+      <textarea id="feedbackMessageInput" maxlength="1200" placeholder="What did you expect, and what happened instead?"></textarea>
+      <div class="field-counter"><span id="feedbackCharCount">0</span>/1200</div>
+    </div>
+    <div class="field">
+      <label for="feedbackEmailInput">Reply email <span>(optional)</span></label>
+      <input id="feedbackEmailInput" type="email" maxlength="120" autocomplete="email" placeholder="you@example.com">
+    </div>
+    <label class="consent-row">
+      <input id="feedbackContextInput" type="checkbox" checked>
+      <span>Include app version, device size, current screen, and anonymous progress totals. No task names or notes.</span>
+    </label>
+    <div class="feedback-delivery-note" id="feedbackDeliveryNote"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="feedbackCancelBtn" type="button">Cancel</button>
+      <button class="btn btn-primary" id="feedbackSubmitBtn" type="button">Send feedback</button>
+    </div>
+  </div>
+</div>
+
+<div class="tour-overlay" id="tourOverlay">
+  <div class="tour-backdrop" aria-hidden="true"></div>
+  <div class="tour-spotlight" id="tourSpotlight" aria-hidden="true"></div>
+  <section class="tour-card" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+    <div class="tour-coach" aria-hidden="true">
+      <div class="coach-orb"><span>D</span></div>
+      <div class="coach-status" id="tourCoachStatus">Practice run</div>
+    </div>
+    <div class="tour-step-count" id="tourCount">Step 1 of 6</div>
+    <div class="tour-progress" id="tourProgress" aria-hidden="true"></div>
+    <h3 id="tourTitle">Welcome to DeeCadence</h3>
+    <p id="tourBody">One block at a time.</p>
+    <div class="tour-actions">
+      <button type="button" class="btn btn-ghost" id="tourSkipBtn">Skip</button>
+      <button type="button" class="btn btn-secondary" id="tourBackBtn">Back</button>
+      <button type="button" class="btn btn-primary" id="tourNextBtn">Next</button>
+    </div>
+  </section>
+</div>
+
+<script src="app.js" defer></script>
+</body>
+</html>
