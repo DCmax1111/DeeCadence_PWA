@@ -1249,3 +1249,160 @@ function askMaxwell(question){
 function maxwellMessageBubble(message){
   const id=message.id||"";return `<article class="maxwell-message ${message.role==="user"?"user":""} ${message.typing?"typing":""}" ${id?`data-maxwell-message="${esc(id)}"`:""}><span>${message.role==="user"?"You":"Maxwell AI"}</span>${message.typing&&!message.text?`<p class="typing-dots"><i></i><i></i><i></i></p>`:`<p class="${message.typing?"maxwell-typed-text":""}">${esc(message.text)}</p>`}</article>`;
 }
+
+// Maxwell command layer: explain first, propose exact changes, then require confirmation.
+let maxwellTypingFrame=null;
+function maxwellSpeed(){return state.profile.maxwellSpeed==="fast"?"fast":"standard"}
+function maxwellTypingRate(answer){
+  let rate=maxwellSpeed()==="fast"?76:38;
+  if(answer.length>260)rate*=1.3;
+  if(answer.length>520)rate*=1.35;
+  return rate;
+}
+function maxwellSpeedControl(){return `<div class="maxwell-speed" role="group" aria-label="Maxwell response speed"><span>Typing</span><button type="button" class="${maxwellSpeed()==="standard"?"active":""}" data-maxwell-speed="standard">Standard</button><button type="button" class="${maxwellSpeed()==="fast"?"active":""}" data-maxwell-speed="fast">Fast</button></div>`}
+function normalizedReviewText(item){return `${item.name||""} ${statementRawDescription(item)} ${item.note||""}`.toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
+function learnedRuleFor(item){const text=normalizedReviewText(item);return (state.rules||[]).find(rule=>text.includes(String(rule.pattern||"").toLowerCase()))}
+function reviewConfidence(item){
+  if(learnedRuleFor(item))return{level:"certain",label:"Learned",score:96};
+  if(transferPairFor(item))return{level:"certain",label:"Paired transfer",score:94};
+  const guess=builtInGuess(item),raw=statementRawDescription(item);
+  if(guess&&raw)return{level:"likely",label:"Strong match",score:82};
+  if(guess)return{level:"likely",label:"Pattern match",score:72};
+  return{level:"unsure",label:"Needs context",score:35};
+}
+function classifyReviewLocally(){
+  let changed=0;
+  (state.reviewQueue||[]).forEach(item=>{
+    const learned=learnedRuleFor(item),guess=learned?{label:`Learned ${learned.pattern}`,type:learned.type,category:learned.category,accountId:learned.accountId,note:"Based on a correction you previously confirmed."}:builtInGuess(item);
+    if(guess&&applyGuessToItem(item,guess,learned?"Learned":"Suggested"))changed++;
+  });
+  const pairs=transferMatches(3);
+  pairs.flat().forEach(item=>{if(applyGuessToItem(item,{label:"Paired internal transfer",type:"transfer",category:"Transfer Review",note:"Equal amount, nearby date, and a different account. Both sides should remain neutral."},"Transfer match"))changed++});
+  return changed;
+}
+function maxwellCategoryFromPrompt(q){
+  const aliases=[
+    ["Transfer Review",/cross[- ]?account|internal transfer|transfers?/],
+    ["Savings",/savings?|cashbox|reserve/],
+    ["Loan",/loans?|repayment|borrow/],
+    ["Data\/Airtime",/data|airtime|phone|internet/],
+    ["Subscription",/subscriptions?|recurring/],
+    ["Fees",/fees?|charges?|levy|commission/],
+    ["Income",/income|credits?|money received/]
+  ];
+  return aliases.find(([,pattern])=>pattern.test(q))?.[0]||"";
+}
+function reviewItemsForApproval(prompt){
+  classifyReviewLocally();
+  const q=String(prompt||"").toLowerCase(),category=maxwellCategoryFromPrompt(q);
+  let rows=(state.reviewQueue||[]).filter(item=>category?item.suggestedCategory===category:reviewConfidence(item).score>=80);
+  if(/certain|confident|safe/.test(q))rows=rows.filter(item=>reviewConfidence(item).score>=90);
+  return{category:category||"high-confidence",rows};
+}
+function maxwellPlan(prompt){
+  const q=String(prompt||"").toLowerCase();
+  if(/(?:confirm|approve|move)\s+(?:all|every)|confirm all transactions/.test(q)){
+    const result=reviewItemsForApproval(q),count=result.rows.length;
+    return count?{text:`I found ${count} ${result.category} review item${count===1?"":"s"}. I have not changed the ledger yet. Confirm the exact batch below, or open Review to inspect it first.`,action:{type:"approve-review",ids:result.rows.map(x=>x.id),category:result.category,label:`Confirm ${count} ${result.category}`}}:{text:`I could not find any ${result.category} rows that are safe to propose. Try “sort my review transactions” first, or open Review and correct one example so I can learn the pattern.`};
+  }
+  if(/sort|classif|categor|organise|organize/.test(q)&&/review|transaction|statement|import/.test(q)){
+    const changed=classifyReviewLocally();save();
+    return{text:`I sorted the review queue using your remembered corrections, statement narration, merchant patterns, and matched transfers. ${changed} label${changed===1?" was":"s were"} updated; nothing was approved.`,action:{type:"open-review",label:"Review the sorted queue"}};
+  }
+  if(/find|match|detect/.test(q)&&/transfer|cross[- ]?account/.test(q)){
+    const pairs=transferMatches(3),ids=[...new Set(pairs.flat().map(x=>x.id))];
+    pairs.flat().forEach(item=>applyGuessToItem(item,{label:"Paired internal transfer",type:"transfer",category:"Transfer Review",note:"Equal amount, nearby date, and different accounts."},"Transfer match"));save();
+    return ids.length?{text:`I matched ${pairs.length} likely cross-account pair${pairs.length===1?"":"s"} by amount, date, and different accounts. Names were not required. Review both sides before confirming them as neutral transfers.`,action:{type:"approve-review",ids,category:"paired transfers",label:`Confirm ${ids.length} transfer sides`}}:{text:"I found no reliable cross-account pairs. I only match equal amounts in different accounts within three days, and I leave uncertain rows alone."};
+  }
+  return null;
+}
+function maxwellFallback(){return `I cannot verify that from the records stored on this device. I can reliably help with accounts, balances, spending, goals, imports, review categories, transfers, subscriptions, loans, invoices, clients, and net worth. Try asking “What should I review first?” or “Sort my review transactions.”`}
+function maxwellAnswer(question){
+  const plan=maxwellPlan(question);if(plan)return plan;
+  const q=String(question||"").toLowerCase(),m=movementTotals(),goal=activeGoal(),cp=goal?checkpointFocus(goal):null,top=topUsedAccounts(),stats=businessInvoiceStats();
+  if(/invoice|receivable|client|customer|collect/.test(q))return{text:`Receivables are ${money(stats.receivable,true)} across ${stats.open} open invoice${stats.open===1?"":"s"}. ${stats.overdue?`${stats.overdue} are overdue, so collection comes before new spending.`:"Add due dates so collections remain visible."}`};
+  if(/goal|checkpoint|target/.test(q)&&goal&&cp)return{text:`Your active checkpoint is ${moneyIn(cp.saved,goalCurrency(goal),true)} of ${moneyIn(cp.next,goalCurrency(goal),true)}. The remaining gap is ${moneyIn(cp.gap,goalCurrency(goal),true)} by ${cp.deadline}. Only confirmed money should reduce it.`};
+  if(/account|balance|investment|piggy/.test(q))return{text:`Your most-used accounts are ${top.map(account=>`${accountShortName(account)} at ${money(account.balance,true)}`).join(" and ")||"not available yet"}. Investment accounts remain separate from spendable cash.`};
+  if(/spend|budget|cashflow|guardrail/.test(q))return{text:`Approved spending is ${money(m.spending,true)} against your ${money(state.profile.monthlyBudget,true)} guardrail. Protected savings of ${money(m.protectedSavings,true)} are excluded from ordinary spending pressure.`};
+  if(/review|queue|import|statement|pdf/.test(q))return{text:`${state.reviewQueue.length} imported lines are waiting. I can sort them without approving anything, find paired transfers, or prepare a category-specific approval batch for you to confirm.`};
+  if(/net worth|wealth|asset|liabilit/.test(q))return{text:`Your tracked net worth is ${money(sum(state.accounts,"balance")+sum(state.assets)-sum(state.liabilities),true)} from the balances, assets, and liabilities saved here. It is only as current as your latest import and corrections.`};
+  return{text:maxwellFallback(),fallback:true};
+}
+function paintMaxwellMessage(id){
+  const message=state.maxwellMessages.find(item=>item.id===id),bubble=document.querySelector(`[data-maxwell-message="${id}"]`);if(!message||!bubble)return;
+  const paragraph=bubble.querySelector("p");if(paragraph){paragraph.className="maxwell-typed-text";paragraph.textContent=message.text}
+  const feed=bubble.closest(".maxwell-feed");if(feed)feed.scrollTop=feed.scrollHeight;
+}
+function typeMaxwellResponse(id,answer,startedAt=performance.now()){
+  const message=state.maxwellMessages.find(item=>item.id===id);if(!message)return;
+  const tick=now=>{
+    const count=Math.min(answer.length,Math.floor(((now-startedAt)/1000)*maxwellTypingRate(answer)));
+    message.text=answer.slice(0,count);paintMaxwellMessage(id);
+    if(count<answer.length){maxwellTypingFrame=requestAnimationFrame(tick);return}
+    message.text=answer;message.typing=false;save();render();
+  };
+  maxwellTypingFrame=requestAnimationFrame(tick);
+}
+function askMaxwell(question){
+  const prompt=String(question||"").trim();if(!prompt)return toast("Type a question for Maxwell AI");
+  if(maxwellTypingFrame)cancelAnimationFrame(maxwellTypingFrame);clearTimeout(maxwellTypingTimer);
+  const previous=state.maxwellMessages?.find(message=>message.typing);if(previous){previous.typing=false;previous.text=previous.text||"Response paused."}
+  const response=maxwellAnswer(prompt),id=uid("mx");state.maxwellMessages=Array.isArray(state.maxwellMessages)?state.maxwellMessages:[];
+  state.maxwellMessages.push({role:"user",text:prompt,at:new Date().toISOString()});state.maxwellMessages.push({id,role:"maxwell",text:"",typing:true,action:response.action||null,fallback:Boolean(response.fallback),at:new Date().toISOString()});state.maxwellMessages=state.maxwellMessages.slice(-16);save();render();
+  maxwellTypingTimer=setTimeout(()=>typeMaxwellResponse(id,response.text),500);
+}
+function maxwellActionMarkup(message){if(!message.action||message.typing)return"";return `<div class="maxwell-action"><button class="btn small primary" type="button" data-maxwell-confirm="${esc(message.id)}">${esc(message.action.label||"Continue")}</button>${message.action.type==="approve-review"?`<button class="btn small" type="button" data-maxwell-open-review>Review first</button>`:""}</div>`}
+function maxwellMessageBubble(message){
+  const id=message.id||"";return `<article class="maxwell-message ${message.role==="user"?"user":""} ${message.typing?"typing":""} ${message.fallback?"fallback":""}" ${id?`data-maxwell-message="${esc(id)}"`:""}><span>${message.role==="user"?"You":"Maxwell AI"}</span>${message.typing&&!message.text?`<p class="typing-dots"><i></i><i></i><i></i></p>`:`<p class="${message.typing?"maxwell-typed-text":""}">${esc(message.text)}</p>`}${maxwellActionMarkup(message)}</article>`;
+}
+function approveReviewItem(item){
+  if(!item)return false;const account=state.accounts.find(x=>x.id===item.accountId),type=reviewTypeToLedger(item.suggestedType);
+  state.transactions.unshift({id:uid("tx"),reviewSourceId:item.id,date:item.date,name:item.name||statementRawDescription(item)||"Imported transaction",rawDescription:statementRawDescription(item),category:item.suggestedCategory,account:account?.name||"Imported",accountId:item.accountId,type,amount:Number(item.amount)||0,note:item.note,source:item.source,sourceFile:statementSourceFile(item),fingerprint:item.fingerprint,reviewed:true});
+  state.reviewQueue=state.reviewQueue.filter(x=>x.id!==item.id);return true;
+}
+function confirmMaxwellAction(message){
+  const action=message?.action;if(!action)return;
+  if(action.type==="open-review"){view="review";render();return}
+  if(action.type!=="approve-review")return;
+  const ids=new Set(action.ids||[]),rows=state.reviewQueue.filter(item=>ids.has(item.id));if(!rows.length)return toast("Those rows were already handled or are no longer available");
+  addAudit({kind:"review-batch",label:`Maxwell batch: ${action.category}`,items:structuredClone(rows)});rows.forEach(approveReviewItem);message.action=null;message.text+=` Confirmed ${rows.length} item${rows.length===1?"":"s"}; the approved ledger and dashboards are now updated.`;save();render();toast(`${rows.length} transactions confirmed`);
+}
+function advisor(){
+  const actions=advisorData(),messages=state.maxwellMessages.length?state.maxwellMessages:[{role:"maxwell",text:`I can explain your local records, sort review guesses, match transfers, and prepare exact approval batches. Nothing enters the ledger until you confirm it. ${maxwellBrief()}`,at:new Date().toISOString()}];
+  return `${pageHead("Maxwell AI","Ask about your money or give Maxwell a review task.",maxwellSpeedControl())}<section class="maxwell-hero card"><div><span class="eyebrow">Private, on-device guidance</span><h2>Ask, sort, confirm.</h2><p>Maxwell uses statement narrations, dates, amounts, accounts, and your past corrections. Every batch action remains visible and reversible.</p></div><div class="maxwell-orb"><strong>M</strong><span>local</span></div></section>${maxwellTaskBar()}<div class="grid maxwell-grid"><section class="card card-pad maxwell-chat"><div class="maxwell-feed" aria-live="polite">${messages.map(maxwellMessageBubble).join("")}</div><div class="maxwell-prompts">${["Sort my review transactions","Find cross-account transfers","Confirm all confident transactions","What should I do next?"].map(prompt=>`<button class="btn small" type="button" data-maxwell-prompt="${esc(prompt)}">${esc(prompt)}</button>`).join("")}</div><form class="maxwell-form" data-form="maxwell"><input name="question" autocomplete="off" placeholder="Try: Confirm all transactions in Savings"><button class="btn primary">Ask</button></form></section><aside class="grid maxwell-side"><article class="card card-pad"><div class="card-head"><div><span class="eyebrow">Reminders</span><h3>What needs attention</h3></div><span class="badge active">Local</span></div><div class="grid">${actions.slice(0,3).map((a,i)=>`<article class="advice-card ${a.level}"><span class="advice-number">${i+1}</span><div><h3>${esc(a.title)}</h3><p>${esc(a.text)}</p><strong>${esc(a.impact)}</strong></div></article>`).join("")}</div></article></aside></div><p class="advisor-note">Maxwell uses explainable offline rules. It never sends statements away or silently approves uncertain money.</p>`;
+}
+document.addEventListener("click",event=>{
+  const speed=event.target.closest("[data-maxwell-speed]");if(speed){event.preventDefault();event.stopImmediatePropagation();state.profile.maxwellSpeed=speed.dataset.maxwellSpeed;save();render();toast(`Maxwell typing set to ${speed.dataset.maxwellSpeed}`);return}
+  const confirmButton=event.target.closest("[data-maxwell-confirm]");if(confirmButton){event.preventDefault();event.stopImmediatePropagation();confirmMaxwellAction(state.maxwellMessages.find(message=>message.id===confirmButton.dataset.maxwellConfirm));return}
+  const reviewButton=event.target.closest("[data-maxwell-open-review]");if(reviewButton){event.preventDefault();event.stopImmediatePropagation();view="review";render()}
+},{capture:true});
+
+function reviewRow(item){
+  const account=state.accounts.find(a=>a.id===item.accountId),bucket=reviewSmartBucket(item),pdf=reviewPdfLabel(item),confidence=reviewConfidence(item);
+  const raw=statementRawDescription(item),title=reviewDisplayTitle(item),subtitle=reviewSubtitle(item);
+  return `<details class="smart-review-item"><summary><div class="review-main"><span class="eyebrow">${esc(item.date)} - ${esc(accountShortName(account))}</span><h3 title="${esc(title)}">${esc(title)}</h3><small>${esc(smartBucketLabel(bucket))} - ${esc(smartSourceName(pdf))} - <span class="review-confidence ${confidence.level}">${esc(confidence.label)}</span></small></div><strong class="review-amount">${money(item.amount)}</strong><span class="review-open">Open</span></summary><div class="review-detail">${transferPairMarkup(item)}<div class="detail-grid"><span><b>Original narration</b><small>${esc(raw||item.name)}</small></span><span><b>FinMax suggestion</b><small>${esc(item.suggestedType)} / ${esc(item.suggestedCategory)} - ${confidence.score}% confidence</small></span><span><b>Account</b><small>${esc(account?.name||"Unassigned")}</small></span><span><b>Source</b><small>${esc(smartSourceName(pdf))}</small></span></div>${item.note?`<p>${esc(item.note)}</p>`:""}<div class="review-actions"><button class="btn small" data-edit-review="${item.id}">Correct</button><button class="btn small primary" data-approve-review="${item.id}">Confirm</button></div></div></details>`;
+}
+
+function narrationRulePattern(item){
+  const stop=new Set(["transfer","transaction","payment","successful","reference","credit","debit","from","into","sent","received","bank","account","wallet","amount","ngn"]);
+  return String(statementRawDescription(item)||"").toLowerCase().replace(/20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}/g," ").replace(/\b\d{4,}\b/g," ").replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(word=>word.length>2&&!stop.has(word)&&!/^\d+$/.test(word)).slice(0,4).join(" ");
+}
+function learnRuleFromReview(item,data){
+  const patterns=[rulePattern(data.name||item?.name),narrationRulePattern(item)].filter(Boolean).filter((value,index,list)=>list.indexOf(value)===index);
+  patterns.forEach(pattern=>{const rule={id:uid("rule"),pattern,type:data.type,category:data.category,accountId:data.accountId,createdAt:new Date().toISOString(),uses:0};state.rules=state.rules.filter(existing=>existing.pattern!==pattern);state.rules.unshift(rule)});
+  state.rules=state.rules.slice(0,80);
+}
+function undoLastAction(){
+  ensureUpgradeState();const entry=state.auditTrail.shift();if(!entry)return toast("Nothing to undo yet");
+  if(entry.kind==="review-batch"){
+    const ids=new Set((entry.items||[]).map(item=>item.id));state.transactions=state.transactions.filter(tx=>!ids.has(tx.reviewSourceId));(entry.items||[]).forEach(item=>{if(!state.reviewQueue.some(row=>row.id===item.id))state.reviewQueue.unshift(item)});
+  }else if(entry.kind==="review-approve"){
+    state.transactions=state.transactions.filter(tx=>!(tx.reviewed&&tx.date===entry.item.date&&Number(tx.amount)===Number(entry.item.amount)&&tx.name===entry.item.name));if(!state.reviewQueue.some(x=>x.id===entry.item.id))state.reviewQueue.unshift(entry.item);
+  }else if(entry.kind==="delete-tx"){
+    state.transactions.unshift(entry.tx);const index=state.accounts.findIndex(x=>x.id===entry.account?.id);if(index>=0)state.accounts[index]=entry.account;
+  }else if(entry.kind==="goal-saved"){state.goals=entry.goals;state.accounts=entry.accounts}
+  else if(entry.kind==="path"){const index=state.incomePaths.findIndex(x=>x.id===entry.path.id);if(index>=0)state.incomePaths[index]=entry.path}
+  else if(entry.kind==="sub"){const index=state.subscriptions.findIndex(x=>x.id===entry.sub.id);if(index>=0)state.subscriptions[index]=entry.sub}
+  else if(entry.kind==="collections"){state.goals=entry.goals;state.incomePaths=entry.paths;state.accounts=entry.accounts}
+  save();render();toast(`Undone: ${entry.label}`);
+}

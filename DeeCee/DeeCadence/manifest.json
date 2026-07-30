@@ -1,0 +1,19 @@
+{
+  "name": "DeeCadence - Attention Training",
+  "short_name": "DeeCadence",
+  "description": "Plan meaningful work, protect one focus block at a time, and build sustainable attention.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/icons/deecadence.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

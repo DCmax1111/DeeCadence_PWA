@@ -14,6 +14,7 @@
 <meta name="deecadence-supabase-anon-key" content="">
 <meta name="deecadence-feedback-table" content="feedbacks">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icons/deecadence.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,10 +55,22 @@
         </button>
       </div>
 
-      <div class="attention-brief card">
-        <div class="attention-kicker">Attention span recovery system</div>
-        <h1>Train your focus one protected block at a time.</h1>
-        <p>Pick the work that matters, protect the minutes, and let XP show your attention span getting stronger over time.</p>
+      <div class="attention-brief capacity-hero card">
+        <div class="capacity-copy">
+          <div class="attention-kicker">Attention span training</div>
+          <h1 id="todayHeroTitle">Build focus you can actually sustain.</h1>
+          <p id="todayHeroCopy">DeeCadence learns from the blocks you finish, then helps you stretch your focus gradually instead of forcing a fixed timer.</p>
+        </div>
+        <div class="capacity-reading" aria-live="polite">
+          <span>Current sustainable focus range</span>
+          <strong id="sustainableFocusRange">Not measured yet</strong>
+          <p id="sustainableFocusEvidence">Complete three focus blocks to establish your starting range.</p>
+          <div class="capacity-evidence" aria-hidden="true"><i id="capacityEvidenceFill"></i></div>
+          <div class="capacity-reading-footer">
+            <small id="capacityConfidence">Building evidence</small>
+            <button class="btn btn-primary" id="startSuggestedFocusBtn" type="button">Start with 10 min</button>
+          </div>
+        </div>
       </div>
 
       <div class="card rank-console" data-tour="today-rank">
@@ -145,7 +158,15 @@
         </div>
       </div>
       <div class="eyebrow" style="margin-bottom:8px;">Rank ladder</div>
-      <div class="rank-ladder" id="rankLadder" data-tour="rank-ladder"></div>
+      <div class="rank-ladder-shell" data-tour="rank-ladder">
+        <button class="rank-ladder-arrow previous" id="rankLadderPrev" type="button" aria-label="View previous ranks">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+        <div class="rank-ladder" id="rankLadder"></div>
+        <button class="rank-ladder-arrow next" id="rankLadderNext" type="button" aria-label="View next ranks">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+        </button>
+      </div>
       <div class="card">
         <div class="eyebrow" style="margin-bottom:8px;">How the climb works</div>
         <p class="curve-note">Every level costs more than the last. Rank gates are based on total XP, while levels continue to climb through the same progression curve, so the two never drift out of sync. The ladder shows each gate in order, and every completed block moves the climb forward without randomness.</p>
@@ -157,14 +178,29 @@
       <div class="topbar"><div class="topbar-title">Progress</div><button class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
       <div class="stat-grid">
         <div class="stat-tile"><div class="stat-num" id="statStreak">0</div><div class="stat-label">Day streak</div></div>
-        <div class="stat-tile"><div class="stat-num" id="statFocus7">0m</div><div class="stat-label">Focus time / 7d</div></div>
+        <div class="stat-tile"><div class="stat-num" id="statFocus7">0m</div><div class="stat-label" id="statFocusRangeLabel">Focus time / 7d</div></div>
         <div class="stat-tile"><div class="stat-num" id="statCompletion">0%</div><div class="stat-label">Completion</div></div>
       </div>
-      <div class="card">
-        <div class="eyebrow" style="margin-bottom:4px;">Last 7 days</div>
+      <div class="progress-chart-section">
+        <div class="progress-section-head">
+          <div>
+            <div class="eyebrow">Attention trend</div>
+            <h2 id="progressRangeTitle">Last 7 days</h2>
+          </div>
+          <label class="progress-range-picker" for="progressRangeSelect">
+            <span>Timeline</span>
+            <select id="progressRangeSelect">
+              <option value="3">3 days</option>
+              <option value="7" selected>7 days</option>
+              <option value="14">14 days</option>
+              <option value="30">30 days</option>
+            </select>
+          </label>
+        </div>
         <div class="bar-chart" id="progressChart"></div>
+        <div class="progress-insights" id="progressInsights" aria-live="polite"></div>
       </div>
-      <div class="card" style="margin-top:14px;">
+      <div class="card progress-history-card">
         <div class="eyebrow" style="margin-bottom:8px;">Focus history</div>
         <div id="progressTaskSummary" style="font-size:13.5px; color:var(--text-dim); line-height:1.7;"></div>
       </div>
@@ -177,6 +213,11 @@
         <button class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
         <button class="btn btn-ghost" id="exportHistoryBtn" style="padding:8px 12px; font-size:12.5px; min-height:36px;">Export</button>
       </div>
+      <div class="history-controls" role="group" aria-label="History filter">
+        <button class="active" type="button" data-history-filter="all">All activity</button>
+        <button type="button" data-history-filter="completed">Fully completed</button>
+        <button type="button" data-history-filter="partial">Partial</button>
+      </div>
       <div class="card" style="padding:6px 16px;" id="historyList"></div>
     </section>
 
@@ -185,8 +226,8 @@
       <div class="topbar"><div class="topbar-title">Settings</div><button class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
       <div class="card">
         <div class="setting-row">
-          <div><div class="setting-label">App tutorial</div><div class="setting-desc">Replay the guided walkthrough for DeeCadence.</div></div>
-          <button class="btn btn-secondary" id="replayTourBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Replay tutorial</button>
+          <div><div class="setting-label">Onboarding</div><div class="setting-desc">Replay the short first-run introduction.</div></div>
+          <button class="btn btn-secondary" id="replayTourBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Replay onboarding</button>
         </div>
         <div class="setting-row">
           <div><div class="setting-label">Theme</div><div class="setting-desc">Dark suits the console. Light stays legible.</div></div>
@@ -215,7 +256,7 @@
       </div>
       <div class="card" style="margin-top:14px;">
         <div class="setting-row">
-          <div><div class="setting-label">Data backup</div><div class="setting-desc">Export a full backup before switching browsers or devices.</div></div>
+          <div><div class="setting-label">Data backup</div><div class="setting-desc">Your work saves locally as you go and again when this tab closes. Export before switching browsers or devices.</div></div>
           <div class="settings-data-actions">
             <button class="btn btn-secondary" id="exportBackupBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Export</button>
             <button class="btn btn-secondary" id="importBackupBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Import</button>
@@ -246,33 +287,143 @@
 
 </div>
 
-<!-- First-run setup -->
+<!-- First-run onboarding -->
 <div class="welcome-overlay" id="welcomeOverlay" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-hidden="true">
-  <section class="welcome-card">
-    <div class="welcome-orb" aria-hidden="true"><span>D</span></div>
-    <div class="attention-kicker">Welcome to DeeCadence</div>
-    <h2 id="welcomeTitle">Build your attention span around today's real work.</h2>
-    <p>DeeCadence is a complete focus system: plan the important tasks, choose how many blocks they need, then earn XP from the minutes you actually protect.</p>
-    <div class="welcome-task-grid">
+  <section class="welcome-card onboarding-card">
+    <div class="onboarding-topline">
+      <div class="welcome-orb" aria-hidden="true"><span>D</span></div>
       <div>
-        <h3>3 non-negotiables</h3>
-        <p>High-priority tasks DeeCadence should keep near the top.</p>
-        <input id="welcomeCritical1" type="text" maxlength="90" placeholder="Non-negotiable 1">
-        <input id="welcomeCritical2" type="text" maxlength="90" placeholder="Non-negotiable 2">
-        <input id="welcomeCritical3" type="text" maxlength="90" placeholder="Non-negotiable 3">
-      </div>
-      <div>
-        <h3>3 normal tasks</h3>
-        <p>Useful work that can fit around the main tasks.</p>
-        <input id="welcomeNormal1" type="text" maxlength="90" placeholder="Normal task 1">
-        <input id="welcomeNormal2" type="text" maxlength="90" placeholder="Normal task 2">
-        <input id="welcomeNormal3" type="text" maxlength="90" placeholder="Normal task 3">
+        <div class="attention-kicker">Welcome to DeeCadence</div>
+        <div class="onboarding-step-label" id="welcomeStepLabel">Step 1 of 4</div>
       </div>
     </div>
-    <div class="welcome-note">Tip: XP is based on focused minutes. Longer protected focus moves your rank faster than short scattered sessions.</div>
-    <div class="modal-actions">
+    <div class="onboarding-progress" aria-hidden="true">
+      <span class="active"></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <div class="onboarding-slides">
+      <article class="onboarding-slide active" data-onboarding-panel="0">
+        <div class="onboarding-mini-console" aria-hidden="true">
+          <span class="mini-pulse"></span>
+          <strong>Attention training</strong>
+        </div>
+        <h2 id="welcomeTitle">What are you protecting attention for?</h2>
+        <p>Choose the closest fit. DeeCadence will shape the first task and schedule around it.</p>
+        <div class="setup-option-grid" role="radiogroup" aria-label="What are you using DeeCadence for?">
+          <button class="setup-option" type="button" data-welcome-purpose="studying" aria-pressed="false">
+            <strong>Studying</strong>
+            <span>Subjects, courses, exams, revision blocks.</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-purpose="work" aria-pressed="false">
+            <strong>Work</strong>
+            <span>Daily tasks, deep work, admin, meetings.</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-purpose="business" aria-pressed="false">
+            <strong>Business</strong>
+            <span>Sales, delivery, operations, follow-ups.</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-purpose="coding" aria-pressed="false">
+            <strong>Coding</strong>
+            <span>Build sessions, debugging, technical practice.</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-purpose="skill" aria-pressed="false">
+            <strong>Learning a skill</strong>
+            <span>Practice, drills, lessons, creative reps.</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-purpose="discipline" aria-pressed="false">
+            <strong>Personal discipline</strong>
+            <span>Habits, routines, chores, life admin.</span>
+          </button>
+        </div>
+      </article>
+
+      <article class="onboarding-slide" data-onboarding-panel="1">
+        <h2>What should stay consistent?</h2>
+        <p id="welcomeConsistencyHint">Name the thing you want to keep showing up for. Keep it simple.</p>
+        <div class="onboarding-form-grid">
+          <div class="field">
+            <label for="welcomeTargetInput" id="welcomeTargetLabel">Main area</label>
+            <input id="welcomeTargetInput" type="text" maxlength="80" autocomplete="off" placeholder="e.g. Physics, client work, JavaScript">
+          </div>
+          <div class="field">
+            <label for="welcomeChallengeInput" id="welcomeChallengeLabel">Hardest part</label>
+            <input id="welcomeChallengeInput" type="text" maxlength="80" autocomplete="off" placeholder="e.g. Past questions, outreach, algorithms">
+          </div>
+          <div class="field field-span2">
+            <label for="welcomeGoalInput" id="welcomeGoalLabel">Near goal</label>
+            <input id="welcomeGoalInput" type="text" maxlength="120" autocomplete="off" placeholder="e.g. Prepare for Friday test">
+          </div>
+        </div>
+      </article>
+
+      <article class="onboarding-slide" data-onboarding-panel="2">
+        <div class="onboarding-block-demo" aria-hidden="true">
+          <span class="done"></span>
+          <span class="active"></span>
+          <span></span>
+          <span></span>
+        </div>
+        <h2>When do you focus best?</h2>
+        <p>This helps DeeCadence suggest a realistic first block. You can change your schedule anytime.</p>
+        <div class="setup-option-grid compact" role="radiogroup" aria-label="Best focus time">
+          <button class="setup-option" type="button" data-welcome-focus-window="morning" aria-pressed="false">
+            <strong>Morning</strong>
+            <span>6 AM to 11 AM</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-focus-window="afternoon" aria-pressed="false">
+            <strong>Afternoon</strong>
+            <span>12 PM to 4 PM</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-focus-window="evening" aria-pressed="false">
+            <strong>Evening</strong>
+            <span>5 PM to 9 PM</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-focus-window="late-night" aria-pressed="false">
+            <strong>Late night</strong>
+            <span>After 9 PM</span>
+          </button>
+          <button class="setup-option" type="button" data-welcome-focus-window="not-sure" aria-pressed="false">
+            <strong>Not sure yet</strong>
+            <span>Start small and learn from data.</span>
+          </button>
+        </div>
+      </article>
+
+      <article class="onboarding-slide" data-onboarding-panel="3">
+        <div class="onboarding-rank-demo setup-rank-card" aria-hidden="true">
+          <div class="rank-orbit">E</div>
+          <div>
+            <strong>Level 1</strong>
+            <span>E-Rank starting point</span>
+          </div>
+        </div>
+        <h2>Your path starts here.</h2>
+        <p>XP comes mostly from protected focus minutes. Ranks get harder as your attention span grows.</p>
+        <div class="onboarding-choice-stack">
+          <button class="onboarding-choice primary-choice" type="button" id="welcomeAddTaskBtn">
+            <strong>Add my first task</strong>
+            <span>Save one thing you want to stay consistent with.</span>
+          </button>
+          <button class="onboarding-choice" type="button" id="welcomeScheduleBtn">
+            <strong>Schedule first block</strong>
+            <span>Put your first protected block on today's plan.</span>
+          </button>
+          <button class="onboarding-choice" type="button" id="welcomeStartFocusBtn">
+            <strong>Start a focus block</strong>
+            <span>Try the timer immediately with a short session.</span>
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <div class="welcome-note" id="welcomeNote" aria-live="polite">Choose your lane first. DeeCadence adapts after that.</div>
+    <div class="modal-actions onboarding-actions">
       <button class="btn btn-ghost" id="welcomeSkipBtn">Set up later</button>
-      <button class="btn btn-primary" id="welcomeSaveBtn">Build my first day</button>
+      <button class="btn btn-secondary" id="welcomeBackBtn" disabled>Back</button>
+      <button class="btn btn-primary" id="welcomeSaveBtn">Next</button>
     </div>
   </section>
 </div>
@@ -318,7 +469,9 @@
     </div>
     <div class="field" id="inputTaskField" style="display:none;">
       <label for="inputTaskTitle">Task title</label>
-      <input id="inputTaskTitle" type="text" maxlength="90" placeholder="e.g. Review chapter notes">
+      <input id="inputTaskTitle" type="text" maxlength="90" list="focusTaskTitleSuggestions" autocomplete="off" placeholder="e.g. Review chapter notes">
+      <datalist id="focusTaskTitleSuggestions"></datalist>
+      <div class="smart-task-suggestions" id="startTaskSuggestions" aria-label="Suggested task titles"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="startModalCancel">Cancel</button>
@@ -331,11 +484,13 @@
 <div class="modal-overlay" id="taskModal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
   <div class="modal">
     <h3 id="taskModalTitle">Add task</h3>
-    <div class="modal-sub">Add the work once. DeeCadence can split it into smaller focus pieces.</div>
+    <div class="modal-sub" id="taskModalSub">Add the work once. DeeCadence can split it into smaller focus pieces.</div>
     <div class="form-grid">
       <div class="field field-span2">
         <label for="taskTitleInput">Title</label>
-        <input id="taskTitleInput" type="text" placeholder="e.g. Draft client proposal">
+        <input id="taskTitleInput" type="text" list="taskTitleSuggestions" autocomplete="off" placeholder="e.g. Draft client proposal">
+        <datalist id="taskTitleSuggestions"></datalist>
+        <div class="smart-task-suggestions" id="taskSmartSuggestions" aria-label="Suggested task titles"></div>
       </div>
       <div class="field">
         <label for="taskDateInput">Date</label>
@@ -343,7 +498,13 @@
       </div>
       <div class="field">
         <label for="taskTimeInput">Time (optional)</label>
-        <input id="taskTimeInput" type="time">
+        <div class="time-picker-field">
+          <input id="taskTimeInput" type="time" aria-describedby="taskTimeHelp">
+          <button class="icon-btn time-picker-button" id="taskTimePickerBtn" type="button" aria-label="Open time picker">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 7v5l3 2"></path></svg>
+          </button>
+        </div>
+        <div class="setting-desc" id="taskTimeHelp">Use the clock button to choose an exact time.</div>
       </div>
       <div class="field">
         <label for="taskDurationInput">Est. minutes</label>
@@ -357,20 +518,12 @@
           <option value="low">Low</option>
         </select>
       </div>
-      <div class="field field-span2">
-        <label>How should progress be counted?</label>
-        <div class="seg" id="progressTypeSeg">
-          <button type="button" data-progress-type="countable" class="active">Count pieces</button>
-          <button type="button" data-progress-type="ongoing">Track time only</button>
-        </div>
-        <div class="setting-desc" id="progressTypeHint" style="margin-top:2px;">Use this when the task has clear pieces, like 4 pages or 3 messages.</div>
-      </div>
-      <div class="field" id="taskUnitsFieldWrap">
-        <label for="taskUnitsInput">Pieces to finish</label>
+      <div class="field">
+        <label for="taskUnitsInput">Focus blocks</label>
         <select id="taskUnitsInput">
           <option>1</option><option>2</option><option>3</option><option selected>4</option>
-          <option>5</option><option>6</option><option>8</option><option>10</option><option>12</option>
         </select>
+        <div class="setting-desc">Choose how many protected blocks this task needs.</div>
       </div>
       <div class="field">
         <label for="taskFlexInput">Schedule behavior</label>
@@ -383,10 +536,47 @@
         <label for="taskNotesInput">Notes (optional)</label>
         <textarea id="taskNotesInput" placeholder="Anything worth remembering"></textarea>
       </div>
+      <div class="field field-span2">
+        <label for="taskRepeatInput">Repeat</label>
+        <select id="taskRepeatInput">
+          <option value="none">Does not repeat</option>
+          <option value="daily">Every day</option>
+          <option value="weekdays">Weekdays</option>
+          <option value="weekly">Every week</option>
+        </select>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="taskModalCancel">Cancel</button>
       <button class="btn btn-primary" id="taskModalConfirm">Save task</button>
+    </div>
+  </div>
+</div>
+
+<div class="time-dialog-overlay" id="timePickerOverlay" role="dialog" aria-modal="true" aria-labelledby="timePickerTitle" aria-hidden="true">
+  <div class="time-dialog">
+    <div class="time-dialog-head">
+      <div>
+        <div class="attention-kicker">Schedule task</div>
+        <h3 id="timePickerTitle">Choose an hour</h3>
+      </div>
+      <button class="icon-btn" id="timePickerClose" type="button" aria-label="Close time picker">x</button>
+    </div>
+    <div class="time-dialog-display">
+      <button id="timeDisplayHour" type="button">09</button><span>:</span><button id="timeDisplayMinute" type="button">00</button>
+      <div class="time-period" role="group" aria-label="AM or PM">
+        <button class="active" type="button" data-time-period="AM">AM</button>
+        <button type="button" data-time-period="PM">PM</button>
+      </div>
+    </div>
+    <div class="time-clock" id="timeClockFace">
+      <div class="time-clock-center"></div>
+      <div class="time-clock-hand" id="timeClockHand"></div>
+      <div id="timeClockOptions"></div>
+    </div>
+    <div class="time-dialog-actions">
+      <button class="btn btn-ghost" id="timePickerClear" type="button">No time</button>
+      <button class="btn btn-primary" id="timePickerApply" type="button">Set time</button>
     </div>
   </div>
 </div>
@@ -438,6 +628,15 @@
     </div>
     <div class="reveal-actions" id="revealActions"></div>
   </div>
+</div>
+
+<div class="rank-upgrade-overlay" id="rankUpgradeOverlay" role="dialog" aria-modal="true" aria-labelledby="rankUpgradeTitle" aria-hidden="true">
+  <div class="rank-upgrade-mark" id="rankUpgradeMark">D</div>
+  <div class="attention-kicker">Rank interface recalibration</div>
+  <h2 id="rankUpgradeTitle">Upgrading your interface</h2>
+  <p id="rankUpgradeMessage" aria-live="polite">Strengthening focus sessions...</p>
+  <div class="rank-upgrade-track"><span id="rankUpgradeFill"></span></div>
+  <button class="btn btn-ghost" id="rankUpgradeSkipBtn" type="button">Continue now</button>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

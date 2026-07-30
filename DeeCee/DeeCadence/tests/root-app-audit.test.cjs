@@ -75,9 +75,9 @@ function createElement(id = "") {
   return element;
 }
 
-function createHarness() {
+function createHarness(initialStore = {}) {
   const elements = new Map();
-  const store = new Map();
+  const store = new Map(Object.entries(initialStore));
   const timers = [];
 
   function byId(id) {
@@ -179,7 +179,7 @@ function createHarness() {
 
   vm.createContext(context);
   vm.runInContext(appSource, context, { filename: "app.js" });
-  return { context, debug: context.window.__DEECADENCE_DEBUG__, timers };
+  return { context, debug: context.window.__DEECADENCE_DEBUG__, timers, store };
 }
 
 function testRankGatesStayExact() {
@@ -251,27 +251,39 @@ function testSessionCanUseChosenBlockCount() {
   assert.deepEqual(state.session.blocks, [900, 900]);
 }
 
-function testWelcomeSetupCreatesPriorityTasks() {
+function testOnboardingRoutesWithoutHiddenTaskCreation() {
   const { context, debug } = createHarness();
   const before = debug.getState().tasks.length;
 
-  context.document.getElementById("welcomeCritical1").value = "Deep study";
-  context.document.getElementById("welcomeNormal1").value = "Reply emails";
-  debug.saveWelcomeSetup();
+  assert.equal(debug.openWelcome(true), true);
+  debug.selectWelcomeOption("purpose", "studying");
+  context.document.getElementById("welcomeTargetInput").value = "Physics";
+  debug.completeWelcome("task");
 
   const state = debug.getState();
   assert.equal(state.settings.welcomeComplete, true);
-  assert.equal(state.tasks.length, before + 2);
-  assert.equal(state.tasks[0].title, "Deep study");
-  assert.equal(state.tasks[0].priority, "high");
-  assert.equal(state.tasks[0].units.total, 3);
-  assert.equal(state.tasks[1].priority, "medium");
+  assert.equal(state.settings.tutorialComplete, true);
+  assert.equal(state.onboarding.purpose, "studying");
+  assert.equal(state.onboarding.target, "Physics");
+  assert.equal(state.onboarding.firstAction, "task");
+  assert.equal(state.tasks.length, before);
+  assert.equal(context.document.getElementById("taskModal").classList.contains("open"), true);
+  assert.equal(context.document.getElementById("taskTitleInput").value, "Physics");
+
+  context.document.getElementById("taskModal").classList.remove("open");
+  debug.openWelcome(true);
+  debug.selectWelcomeOption("purpose", "coding");
+  context.document.getElementById("welcomeTargetInput").value = "App polish";
+  debug.completeWelcome("focus");
+
+  assert.equal(context.document.getElementById("startModal").classList.contains("open"), true);
+  assert.equal(context.document.getElementById("inputTaskTitle").value, "App polish");
 }
 
 function testLinkedTaskDeletionIsBlocked() {
   const { debug } = createHarness();
   const state = debug.getState();
-  const taskId = state.tasks[0].id;
+  const taskId = debug.createInputFocusTask("Linked task", 25).id;
 
   debug.beginSession(25, taskId);
   debug.deleteTask(taskId);
@@ -548,8 +560,8 @@ function testRankOrbGeometryKeepsRingsCentered() {
 
   assert.match(orbWrap, /position:\s*relative/);
   assert.match(progressRing, /position:\s*absolute/);
-  assert.match(progressRing, /inset:\s*14px/);
-  assert.match(progressRing, /width:\s*calc\(100% - 28px\)/);
+  assert.match(progressRing, /inset:\s*5px/);
+  assert.match(progressRing, /width:\s*calc\(100% - 10px\)/);
   assert.match(energyRing, /position:\s*absolute !important/);
   assert.match(energyRing, /inset:\s*-14px !important/);
   assert.match(energyRing, /width:\s*calc\(100% \+ 28px\) !important/);
@@ -585,20 +597,33 @@ function testCoachTutorialExplainsCoreConcepts() {
   assert.match(indexSource, /class="tour-coach"/);
   assert.match(appSource, /DeeCadence rebuilds attention/);
   assert.match(appSource, /What the letters mean/);
-  assert.match(appSource, /Count pieces or track time/);
+  assert.match(appSource, /Fixed or flexible time/);
+  assert.match(indexSource, /Focus blocks/);
   assert.match(appSource, /setup: "taskModal"/);
   assert.match(styleSource, /\.coach-orb/);
 }
 
 function testWelcomeSetupExplainsAttentionTraining() {
-  assert.match(indexSource, /Attention span recovery system/);
-  assert.match(indexSource, /3 non-negotiables/);
-  assert.match(indexSource, /3 normal tasks/);
+  assert.match(indexSource, /Attention span training/);
+  assert.match(indexSource, /Current sustainable focus range/);
+  assert.match(indexSource, /id="startSuggestedFocusBtn"/);
+  assert.match(indexSource, /What are you protecting attention for/);
+  assert.match(indexSource, /data-welcome-purpose="studying"/);
+  assert.match(indexSource, /data-welcome-purpose="coding"/);
+  assert.match(indexSource, /id="welcomeTargetInput"/);
+  assert.match(indexSource, /data-welcome-focus-window="morning"/);
+  assert.match(indexSource, /id="welcomeScheduleBtn"/);
   assert.match(indexSource, /id="welcomeOverlay"/);
   assert.match(indexSource, /data-block-count="1"/);
   assert.match(indexSource, /data-block-count="4"/);
   assert.match(appSource, /function saveWelcomeSetup/);
+  assert.match(appSource, /onboardingIndex === 1/);
+  assert.match(appSource, /welcomeTargetInput/);
+  assert.match(appSource, /function prefillTaskModalFromWelcome/);
+  assert.match(appSource, /function learnedFocusWindow/);
   assert.match(styleSource, /\.welcome-card/);
+  assert.match(styleSource, /\.setup-option-grid/);
+  assert.match(styleSource, /\.onboarding-actions\.is-final-step/);
 }
 
 function testEndBlockFeedbackIsWired() {
@@ -649,12 +674,244 @@ function testContextTipsAreWired() {
   assert.match(styleSource, /\.context-tip/);
 }
 
+function testSustainableFocusRangeUsesCompletedBlocks() {
+  const { debug } = createHarness();
+  const empty = debug.sustainableFocusProfile({ history: [], savedSessions: [], session: null });
+  assert.equal(empty.rangeLabel, "Not measured yet");
+  assert.equal(empty.recommendedMinutes, 10);
+
+  const measured = debug.sustainableFocusProfile({
+    history: [{
+      totalMinutes: 40,
+      blocksPlanned: 4,
+      blocksCompleted: 4,
+      completedAll: true,
+      manualDone: false
+    }],
+    savedSessions: [],
+    session: null
+  });
+  assert.equal(measured.sampleCount, 4);
+  assert.equal(measured.rangeLabel, "10 min");
+  assert.equal(measured.recommendedMinutes, 12);
+  assert.match(measured.evidenceText, /4 completed focus blocks/);
+
+  const duplicate = {
+    id: "same-session",
+    totalMinutes: 40,
+    blocksPlanned: 4,
+    blocksCompleted: 4,
+    completedAt: Date.now()
+  };
+  const deduplicated = debug.sustainableFocusProfile({
+    history: [duplicate],
+    savedSessions: [{ ...duplicate, savedAt: Date.now() }],
+    session: null
+  });
+  assert.equal(deduplicated.sampleCount, 4);
+
+  const longHistory = Array.from({ length: 5 }, (_, index) => ({
+    id: `complete-${index}`,
+    totalMinutes: 40 + (index * 20),
+    blocksPlanned: 4,
+    blocksCompleted: 4,
+    completedAll: true,
+    manualDone: false,
+    completedAt: Date.now() - (index * 1000)
+  }));
+  const allSamples = debug.sustainableFocusProfile({
+    history: longHistory,
+    savedSessions: [],
+    session: null
+  });
+  assert.equal(allSamples.sampleCount, 20);
+  assert.match(allSamples.evidenceText, /all 20 completed focus blocks/);
+}
+
+function testProgressRangesProduceCalculatedInsights() {
+  const { debug } = createHarness();
+  const insights = debug.progressInsights([
+    { date: "2026-07-21", minutes: 0 },
+    { date: "2026-07-22", minutes: 20 },
+    { date: "2026-07-23", minutes: 25 },
+    { date: "2026-07-24", minutes: 30 },
+    { date: "2026-07-25", minutes: 45 },
+    { date: "2026-07-26", minutes: 60 },
+    { date: "2026-07-27", minutes: 70 }
+  ]);
+  assert.equal(insights.length, 3);
+  assert.equal(insights[0].value, "6/7 active days");
+  assert.match(insights[1].value, /^\+\d+%$/);
+  assert.match(insights[2].text, /focused/);
+  assert.match(indexSource, /id="progressRangeSelect"/);
+  assert.match(indexSource, /value="30"/);
+  assert.match(appSource, /progressRangeDays = \[3, 7, 14, 30\]/);
+}
+
+function testHistoryFiltersAndRankArrowsAreWired() {
+  assert.match(indexSource, /data-history-filter="completed"/);
+  assert.match(indexSource, /data-history-filter="partial"/);
+  assert.match(appSource, /currentHistoryFilter === "completed"/);
+  assert.match(appSource, /blocks fully completed/);
+  assert.match(indexSource, /id="rankLadderPrev"/);
+  assert.match(indexSource, /id="rankLadderNext"/);
+  assert.match(appSource, /function scrollRankLadder/);
+  assert.match(styleSource, /\.rank-ladder-arrow/);
+  assert.match(styleSource, /scrollbar-width:\s*none/);
+}
+
+function testCustomTimePickerAndResponsiveOverlaysAreWired() {
+  assert.match(indexSource, /id="timePickerOverlay"/);
+  assert.match(indexSource, /id="timeClockOptions"/);
+  assert.match(appSource, /function openTimePicker/);
+  assert.match(appSource, /function applyTimePicker/);
+  assert.match(styleSource, /\.time-dialog-overlay\.open/);
+  assert.match(styleSource, /orientation:\s*landscape/);
+  assert.match(styleSource, /\.tour-card\.tour-at-side/);
+  assert.match(styleSource, /\.reveal-card/);
+}
+
+function testExitPersistenceCreatesRecoverySnapshot() {
+  const { debug, store } = createHarness();
+  const state = debug.getState();
+  state.tasks.push({
+    id: "exit-task",
+    title: "Keep this",
+    date: debug.localDateKey(new Date()),
+    units: { total: 1, completed: 0 },
+    status: "pending"
+  });
+  debug.persistStateForExit();
+  assert.ok(store.has("deecadence_state_v2"));
+  assert.ok(store.has("deecadence_state_v2_exit_backup"));
+  const recovery = JSON.parse(store.get("deecadence_state_v2_exit_backup"));
+  assert.equal(recovery.state.tasks.at(-1).title, "Keep this");
+  assert.match(appSource, /window\.addEventListener\("pagehide", persistStateForExit\)/);
+  assert.match(appSource, /window\.addEventListener\("beforeunload"/);
+}
+
+function testSmartRecommendationsUseRoutineEvidence() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+  state.history.unshift({
+    linkedTaskTitle: "Review client notes",
+    completedAll: true,
+    completedAt: Date.now(),
+    blocksCompleted: 4,
+    blocksPlanned: 4
+  });
+  const recommendations = debug.smartTaskRecommendations(3);
+  assert.equal(recommendations[0].title, "Review client notes");
+  assert.match(indexSource, /id="taskSmartSuggestions"/);
+  assert.match(indexSource, /id="startTaskSuggestions"/);
+}
+
+function testFlexibleTaskGetsARealScheduleSlot() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+  const task = {
+    id: "flex-test",
+    title: "Flexible review",
+    date: debug.localDateKey(new Date()),
+    time: null,
+    flex: "flexible",
+    estMinutes: 25,
+    status: "pending"
+  };
+  state.tasks.push(task);
+  debug.placeFlexibleTask(task);
+  assert.match(task.time, /^\d{2}:\d{2}$/);
+}
+
+function testSavedTaskCannotStartASecondSession() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+  const taskId = debug.createInputFocusTask("First saved task", 25).id;
+  debug.beginSession(4, taskId);
+  state.session.blockEndsAt = Date.now() - 1000;
+  debug.tick();
+  debug.finalizeSession(false);
+  const savedId = state.savedSessions[0].id;
+
+  debug.beginSession(25, taskId, 4);
+
+  assert.equal(state.session, null);
+  assert.equal(state.savedSessions[0].id, savedId);
+}
+
+function testNewTaskNeverInheritsPreviousRemainingTime() {
+  const { debug } = createHarness();
+  const state = debug.getState();
+  const firstId = debug.createInputFocusTask("First task", 20).id;
+  const secondId = debug.createInputFocusTask("Second task", 40).id;
+  debug.beginSession(20, firstId, 4);
+  state.session.blockRemaining = 17;
+  state.session.blockEndsAt = Date.now() + 17000;
+  debug.finalizeSession(false);
+
+  debug.beginSession(40, secondId, 4);
+
+  assert.equal(state.session.blockIndex, 0);
+  assert.equal(state.session.blockRemaining, 600);
+  assert.equal(state.session.linkedTaskId, secondId);
+}
+
+function testPartialHistoryDoesNotResurrectSavedSession() {
+  const { debug } = createHarness({
+    deecadence_state_v2: JSON.stringify({
+      history: [{
+        id: "old-partial-session",
+        totalMinutes: 40,
+        blocksPlanned: 4,
+        blocksCompleted: 2,
+        completedAll: false,
+        completedAt: Date.now(),
+        xpEarned: 20
+      }],
+      savedSessions: []
+    })
+  });
+
+  assert.equal(debug.getState().savedSessions.length, 0);
+  assert.doesNotMatch(appSource, /historyEntryToSavedSession/);
+}
+
+function testSavedFocusNewBlockUsesInputMode() {
+  const { context, debug } = createHarness();
+  const state = debug.getState();
+  debug.beginSession(4, null, 4);
+  state.session.blockEndsAt = Date.now() - 1000;
+  debug.tick();
+  debug.finalizeSession(false);
+
+  context.document.getElementById("focusStartFromEmpty").onclick();
+
+  assert.equal(context.document.getElementById("startModal").classList.contains("open"), true);
+  assert.equal(context.document.getElementById("inputTaskField").style.display, "flex");
+  assert.equal(context.document.getElementById("scheduleTaskField").style.display, "none");
+}
+
+function testLearnedFocusWindowUsesCompletedHistory() {
+  const { debug } = createHarness();
+  const best = debug.learnedFocusWindow({
+    history: [
+      { id: "m1", completedAt: new Date(2026, 6, 30, 8, 0).getTime(), totalMinutes: 20, blocksPlanned: 4, blocksCompleted: 4 },
+      { id: "a1", completedAt: new Date(2026, 6, 30, 14, 0).getTime(), totalMinutes: 45, blocksPlanned: 4, blocksCompleted: 4 },
+      { id: "a2", completedAt: new Date(2026, 6, 31, 15, 0).getTime(), totalMinutes: 50, blocksPlanned: 4, blocksCompleted: 4 }
+    ]
+  });
+
+  assert.equal(best.id, "afternoon");
+  assert.equal(best.label, "Afternoon");
+  assert.equal(best.sessions, 2);
+}
+
 testRankGatesStayExact();
 testDurationClamp();
 testSoundDefaultsOnForNewUsers();
 testTimestampTimerCompletesElapsedBlock();
 testSessionCanUseChosenBlockCount();
-testWelcomeSetupCreatesPriorityTasks();
+testOnboardingRoutesWithoutHiddenTaskCreation();
 testLinkedTaskDeletionIsBlocked();
 testIncompleteSessionCanBeSavedAndContinued();
 testPartialSavedSessionKeepsRemainingTime();
@@ -683,5 +940,17 @@ testEndBlockFeedbackIsWired();
 testInactiveViewsAreHidden();
 testFeedbackBaselineAndBackupSystemsAreWired();
 testContextTipsAreWired();
+testSustainableFocusRangeUsesCompletedBlocks();
+testProgressRangesProduceCalculatedInsights();
+testHistoryFiltersAndRankArrowsAreWired();
+testCustomTimePickerAndResponsiveOverlaysAreWired();
+testExitPersistenceCreatesRecoverySnapshot();
+testSmartRecommendationsUseRoutineEvidence();
+testFlexibleTaskGetsARealScheduleSlot();
+testSavedTaskCannotStartASecondSession();
+testNewTaskNeverInheritsPreviousRemainingTime();
+testPartialHistoryDoesNotResurrectSavedSession();
+testSavedFocusNewBlockUsesInputMode();
+testLearnedFocusWindowUsesCompletedHistory();
 
 console.log("Root app audit tests passed");

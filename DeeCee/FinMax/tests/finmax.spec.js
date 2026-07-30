@@ -174,6 +174,51 @@ test("Maxwell types its answer progressively without stretching the chat card", 
   await expect(page.locator(".maxwell-message.typing")).toHaveCount(0, { timeout: 8000 });
   const alignment = await page.locator(".maxwell-grid").evaluate(element => getComputedStyle(element).alignItems);
   expect(alignment).toBe("start");
+  const widths = await page.locator(".maxwell-message").last().evaluate(element => ({ bubble: element.getBoundingClientRect().width, feed: element.parentElement.getBoundingClientRect().width }));
+  expect(widths.bubble).toBeLessThanOrEqual(widths.feed * 0.9);
+});
+
+test("Maxwell speed modes persist and unsupported questions fall back honestly", async ({ page }) => {
+  await openApp(page);
+  await page.locator('[data-view="advisor"]').first().click();
+  await page.getByRole("button", { name: "Fast" }).click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("finmax_offline_v5")).profile.maxwellSpeed)).toBe("fast");
+  const input = page.locator('form[data-form="maxwell"] input[name="question"]');
+  await input.fill("What is the live Bitcoin price right now?");
+  await page.locator('form[data-form="maxwell"] button').click();
+  await expect(page.locator(".maxwell-message.fallback").last()).toContainText("cannot verify", { timeout: 8000 });
+});
+
+test("Maxwell proposes a transfer batch and only approves after confirmation", async ({ page }) => {
+  await openApp(page);
+  await page.locator('[data-view="advisor"]').first().click();
+  const input = page.locator('form[data-form="maxwell"] input[name="question"]');
+  await input.fill("Confirm all transactions in the cross-account category");
+  await page.locator('form[data-form="maxwell"] button').click();
+  const action = page.locator("[data-maxwell-confirm]").last();
+  await expect(action).toBeVisible({ timeout: 10000 });
+  let stored = await page.evaluate(() => JSON.parse(localStorage.getItem("finmax_offline_v5")));
+  expect(stored.reviewQueue).toHaveLength(2);
+  await action.click();
+  stored = await page.evaluate(() => JSON.parse(localStorage.getItem("finmax_offline_v5")));
+  expect(stored.reviewQueue).toHaveLength(0);
+  expect(stored.transactions.filter(item => item.type === "transfer")).toHaveLength(2);
+  await page.evaluate(() => undoLastAction());
+  stored = await page.evaluate(() => JSON.parse(localStorage.getItem("finmax_offline_v5")));
+  expect(stored.reviewQueue).toHaveLength(2);
+  expect(stored.transactions.filter(item => item.type === "transfer")).toHaveLength(0);
+});
+
+test("Maxwell learns a reusable pattern from original statement narration", async ({ page }) => {
+  await openApp(page);
+  const learned = await page.evaluate(() => {
+    const item = state.reviewQueue[0];
+    item.rawDescription = "2026-07-08 TRANSFER DEBIT TO STREAMBOX MEDIA REF 88319001";
+    learnRuleFromReview(item, { name: "StreamBox subscription", type: "expense", category: "Subscription", accountId: "a1" });
+    return learnedRuleFor({ name: "Card payment", rawDescription: "2026-08-08 PAYMENT TO STREAMBOX MEDIA REF 99110002" });
+  });
+  expect(learned.category).toBe("Subscription");
+  expect(learned.type).toBe("expense");
 });
 
 test("Everyday and transaction history do not overflow a phone viewport", async ({ page }) => {

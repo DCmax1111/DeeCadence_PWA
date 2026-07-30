@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "check": "node --check app.js && node --check src/app.js",
+    "check": "node --check app.js && node --check src/app.js && node --check service-worker.js",
     "test": "node tests/session-flow.test.cjs && node tests/root-app-audit.test.cjs"
   }
 }

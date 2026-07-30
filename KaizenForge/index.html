@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#18261f" />
-    <title>Orbit | A growth system for polymaths</title>
+    <title>Orbit | Polymath OS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
@@ -13,7 +13,7 @@
   <body>
     <div class="app-shell">
       <aside class="sidebar" id="sidebar">
-        <button class="sidebar-close" id="sidebarClose" aria-label="Close navigation">×</button>
+        <button class="sidebar-close" id="sidebarClose" aria-label="Close navigation">x</button>
         <div class="brand">
           <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
           <div><strong>orbit</strong><small>POLYMATH OS</small></div>
@@ -21,87 +21,133 @@
 
         <nav class="main-nav" aria-label="Main navigation">
           <p class="nav-label">Workspace</p>
-          <button class="nav-item active" data-route="today"><span class="nav-icon">⌂</span>Today<span class="nav-dot"></span></button>
-          <button class="nav-item" data-route="tasks"><span class="nav-icon">✓</span>Tasks<span class="nav-count" id="taskNavCount">0</span></button>
-          <button class="nav-item" data-route="goals"><span class="nav-icon">◎</span>Goals</button>
-          <button class="nav-item" data-route="insights"><span class="nav-icon">↗</span>Insights</button>
+          <button class="nav-item active" data-route="today"><span class="nav-icon">01</span>Today<span class="nav-dot"></span></button>
+          <button class="nav-item" data-route="tasks"><span class="nav-icon">02</span>Tasks<span class="nav-count" id="taskNavCount">0</span></button>
+          <button class="nav-item" data-route="goals"><span class="nav-icon">03</span>Goals</button>
+          <button class="nav-item" data-route="insights"><span class="nav-icon">04</span>Insights</button>
           <p class="nav-label nav-label-spaced">Your practice</p>
-          <button class="nav-item" data-route="domains"><span class="nav-icon">✦</span>Domains</button>
-          <button class="nav-item" data-route="review"><span class="nav-icon">↻</span>Weekly review</button>
+          <button class="nav-item" data-route="domains"><span class="nav-icon">05</span>Domains</button>
+          <button class="nav-item" data-route="review"><span class="nav-icon">06</span>Weekly review</button>
         </nav>
 
         <div class="sidebar-bottom">
           <article class="season-card">
-            <span class="season-icon">◐</span>
-            <div><small>CURRENT SEASON</small><strong>Foundation</strong><p>Week 3 of 8</p></div>
-            <div class="season-meter"><span></span></div>
+            <span class="season-icon">o</span>
+            <div><small>CURRENT SEASON</small><strong id="seasonName">Foundation</strong><p id="seasonNote">Protect the basics first.</p></div>
+            <div class="season-meter"><span id="seasonMeter"></span></div>
           </article>
           <button class="profile-button" id="profileButton">
             <span class="avatar" id="profileInitials">DO</span>
-            <span><strong id="profileName">Daniel O.</strong><small>Free explorer</small></span>
-            <span class="profile-more">•••</span>
+            <span><strong id="profileName">Daniel O.</strong><small>Local-first explorer</small></span>
+            <span class="profile-more">...</span>
           </button>
+          <button class="guide-button" id="openGuide">Open guide</button>
         </div>
       </aside>
       <button class="sidebar-scrim" id="sidebarScrim" aria-label="Close navigation" tabindex="-1"></button>
 
       <div class="app-main">
         <header class="topbar">
-          <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">☰</button>
+          <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">Menu</button>
+          <div class="topbar-title" aria-live="polite">
+            <strong id="topbarRouteTitle">Today</strong>
+            <small id="topbarRouteSubtext">Tiny proof first</small>
+          </div>
           <div class="search-wrap">
-            <span>⌕</span>
-            <input id="globalSearch" type="search" placeholder="Search tasks, goals, ideas..." />
-            <kbd>⌘ K</kbd>
+            <span>Search</span>
+            <input id="globalSearch" type="search" placeholder="Search tasks, goals, tags, stacks..." />
+            <kbd>Ctrl K</kbd>
           </div>
           <div class="topbar-actions">
-            <button class="icon-button theme-toggle" id="themeToggle" aria-label="Switch color theme" title="Switch color theme">☼</button>
-            <button class="icon-button" id="notificationButton" aria-label="Notifications">♢<span class="notification-dot"></span></button>
-            <button class="primary-button" id="quickAddButton"><span>＋</span>Add task</button>
+            <button class="icon-button theme-toggle" id="themeToggle" aria-label="Switch color theme" title="Switch color theme">Light</button>
+            <button class="primary-button" id="quickAddButton"><span>+</span>Add task</button>
+            <div class="utility-menu">
+              <button class="icon-button topbar-more-button" id="utilityMenuButton" aria-haspopup="true" aria-expanded="false" aria-controls="utilityMenu">More</button>
+              <div class="utility-popover" id="utilityMenu" hidden>
+                <button type="button" id="backupButton"><strong>Backup data</strong><span>Export everything saved in this browser</span></button>
+                <button type="button" id="reminderButton"><strong>Reminders</strong><span>Browser notifications while Orbit is open</span></button>
+                <button type="button" id="loginButton"><strong>Login / account</strong><span>Local-only profile for this device</span></button>
+                <button type="button" id="startFocusTop"><strong>Focus session</strong><span>Start a creation or deep-work block</span></button>
+              </div>
+            </div>
           </div>
         </header>
 
         <main class="content">
           <section class="view active" id="view-today" data-view="today">
             <div class="page-heading">
-              <div><p class="overline" id="todayDate"></p><h1>Good morning, <span id="greetingName">Daniel</span>.</h1><p>Small moves. Wide horizon. Let’s shape today.</p></div>
-              <div class="day-nav"><button id="previousDay" aria-label="Previous day">←</button><button id="todayPicker">Today <span>⌄</span></button><button id="nextDay" aria-label="Next day">→</button></div>
+              <div>
+                <p class="overline" id="todayDate"></p>
+                <h1><span id="greetingWord">Good morning</span>, <span id="greetingName">Daniel</span>.</h1>
+                <p>Small moves. Wide horizon. Orbit makes progress visible before discouragement gets loud.</p>
+              </div>
+              <div class="day-nav">
+                <button id="previousDay" aria-label="Previous day">Prev</button>
+                <button id="todayPicker">Today</button>
+                <button id="nextDay" aria-label="Next day">Next</button>
+              </div>
             </div>
+
+            <section class="mobile-today-strip" id="mobileTodayStrip" aria-label="Mobile summary"></section>
 
             <section class="orientation-card">
               <div class="orientation-copy">
                 <span class="signal-pill"><i></i>ORBIT SIGNAL</span>
-                <h2>Your range is healthy. Protect the morning.</h2>
-                <p>You’ve touched 5 of 7 life domains this week. Creative work is fading, so Orbit reserved a tiny creation block for tonight.</p>
-                <div class="orientation-actions"><button class="dark-button" data-scroll="dayPlan">See today’s plan <span>→</span></button><button class="text-button" id="adjustLoad">Adjust day load</button></div>
+                <h2 id="orbitSignalTitle">Your system is ready. Start with the next tiny proof.</h2>
+                <p id="orbitSignalCopy">Orbit tracks full wins, minimum versions, resisted urges, and restarts so your day is never reduced to pass or fail.</p>
+                <div class="orientation-actions">
+                  <button class="dark-button" id="startRoutineButton">Start guided routine</button>
+                  <button class="text-button" id="adjustLoad">Soften today's load</button>
+                </div>
               </div>
-              <div class="orbit-visual" aria-label="Five of seven domains active">
-                <div class="orbit-ring ring-one"></div><div class="orbit-ring ring-two"></div><div class="orbit-core"><strong>5<span>/7</span></strong><small>domains active</small></div>
-                <i class="planet p1"></i><i class="planet p2"></i><i class="planet p3"></i><i class="planet p4"></i><i class="planet p5"></i>
+              <div class="orbit-visual" aria-label="Life domain balance">
+                <div class="orbit-ring ring-one"></div>
+                <div class="orbit-ring ring-two"></div>
+                <div class="orbit-core"><strong id="domainActiveCount">0/7</strong><small>domains active</small></div>
+                <div class="orbit-planets" id="orbitPlanets" aria-hidden="true"></div>
               </div>
             </section>
 
             <section class="metric-grid" id="metricGrid"></section>
 
+            <section class="explainer-grid" aria-label="Orbit concepts">
+              <article><strong>Micro-habit</strong><span>The smallest honest version that keeps identity alive.</span></article>
+              <article><strong>Kaizen</strong><span>Improve the system by one small adjustment, not one heroic burst.</span></article>
+              <article><strong>Friction log</strong><span>Bad habits are tracked as data: resisted, slipped, trigger, replacement.</span></article>
+              <article><strong>Proof</strong><span>Goals advance when a linked daily action creates evidence.</span></article>
+            </section>
+
             <div class="dashboard-grid">
               <section class="card plan-card" id="dayPlan">
-                <div class="card-head"><div><p class="overline">TODAY’S RHYTHM</p><h2>Your adaptive plan</h2></div><div class="load-chip"><span>Balanced load</span><i></i></div></div>
+                <div class="card-head">
+                  <div><p class="overline">TODAY'S RHYTHM</p><h2>Your adaptive plan</h2><p class="card-subtitle">Grouped by real schedule, habit stacks, lecture uncertainty, and minimum versions.</p></div>
+                  <div class="load-chip" id="loadChip"><span>Balanced load</span><i></i></div>
+                </div>
                 <div class="progress-line"><span id="planProgress"></span></div>
                 <div id="todayTaskGroups"></div>
-                <button class="add-inline" data-add-task>＋ Add something for today</button>
+                <div class="card-actions">
+                  <button class="add-inline" data-add-task>+ Add something for today</button>
+                  <button class="add-inline secondary-inline" id="openStackBuilder">Build a stack</button>
+                </div>
               </section>
 
               <div class="right-rail">
                 <section class="card breadth-card">
-                  <div class="card-head"><div><p class="overline">BREADTH COMPASS</p><h3>Your polymath balance</h3></div><button class="more-button" data-route-jump="insights">•••</button></div>
+                  <div class="card-head"><div><p class="overline">BREADTH COMPASS</p><h3>Your polymath balance</h3><p class="mini-help">Shows which life domains have actual proof this week.</p></div><button class="more-button" data-route-jump="insights">...</button></div>
                   <div class="domain-list" id="domainList"></div>
-                  <button class="card-link" data-route-jump="domains">Explore all domains <span>→</span></button>
+                  <button class="card-link" data-route-jump="domains">Explore all domains <span>-></span></button>
+                </section>
+                <section class="card stack-card" id="stackCard"></section>
+                <section class="card focus-card" id="focusPanel">
+                  <p class="overline">FOCUS SESSION</p>
+                  <h3>Creation or deep work sprint</h3>
+                  <p>Use this for coding, writing, drawing, study, or any focused polymath block.</p>
+                  <button class="dark-button" id="startFocusButton">Start focus</button>
                 </section>
                 <section class="card goal-spotlight" id="goalSpotlight"></section>
-                <section class="card recovery-card">
-                  <div class="recovery-icon">↯</div><div><p class="overline">RECOVERY WINS</p><h3>2 gentle restarts</h3><p>You returned within 24 hours twice this week. That matters more than a perfect streak.</p></div>
-                </section>
+                <section class="card recovery-card" id="recoveryCard"></section>
                 <section class="card friction-card">
-                  <div class="card-head"><div><p class="overline">FRICTION LOG</p><h3>Make resistance visible</h3></div><span class="soft-label">No shame</span></div>
+                  <div class="card-head"><div><p class="overline">FRICTION LOG</p><h3>Track urges without shame</h3><p class="mini-help">A resisted urge is progress. A slip becomes recovery data.</p></div><span class="soft-label">No shame</span></div>
                   <div id="frictionLog"></div>
                 </section>
               </div>
@@ -109,25 +155,58 @@
           </section>
 
           <section class="view" id="view-tasks" data-view="tasks">
-            <div class="page-heading compact"><div><p class="overline">ROUTINE LIBRARY</p><h1>Tasks & habits</h1><p>Build repeatable systems, then make them small enough to survive real life.</p></div><button class="primary-button" data-add-task>＋ New task</button></div>
-            <div class="toolbar"><div class="filter-tabs" id="taskFilters"><button class="active" data-filter="all">All</button><button data-filter="daily">Daily</button><button data-filter="weekly">Weekly</button><button data-filter="once">One-off</button></div><label class="table-search">⌕<input id="taskSearch" placeholder="Filter tasks" /></label></div>
-            <section class="card task-library"><div class="task-table-head"><span>Task</span><span>Domain</span><span>Schedule</span><span>Progress</span><span></span></div><div id="taskLibraryList"></div></section>
+            <div class="page-heading compact">
+              <div><p class="overline">ROUTINE LIBRARY</p><h1>Tasks & habits</h1><p>Build repeatable systems with tags, stacks, smarter schedules, archives, templates, and history.</p></div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="exportJson">Export JSON</button>
+                <button class="secondary-button" id="exportCsv">Export CSV</button>
+                <button class="secondary-button" id="importDataButton">Import</button>
+                <input id="importDataInput" type="file" accept="application/json" hidden />
+                <button class="primary-button" data-add-task>+ New task</button>
+              </div>
+            </div>
+            <section class="template-panel" id="templatePanel"></section>
+            <div class="toolbar">
+              <div class="filter-tabs" id="taskFilters">
+                <button class="active" data-filter="all">All</button>
+                <button data-filter="today">Today</button>
+                <button data-filter="daily">Daily</button>
+                <button data-filter="weekly">Weekly</button>
+                <button data-filter="custom">Custom</button>
+                <button data-filter="archived">Archived</button>
+              </div>
+              <div class="toolbar-fields">
+                <label class="table-search">Search<input id="taskSearch" placeholder="Filter tasks, tags, goals" /></label>
+                <select id="domainFilter" class="select-control"><option value="all">All domains</option></select>
+                <select id="tagFilter" class="select-control"><option value="all">All tags</option></select>
+              </div>
+            </div>
+            <section class="card task-library">
+              <div class="task-table-head"><span>Task</span><span>Domain</span><span>Schedule</span><span>Stack / goal</span><span>Recent proof</span><span></span></div>
+              <div id="taskLibraryList"></div>
+            </section>
           </section>
 
           <section class="view" id="view-goals" data-view="goals">
-            <div class="page-heading compact"><div><p class="overline">LONGER ARCS</p><h1>Goals that stay alive</h1><p>Connect daily proof to meaningful outcomes without losing your range.</p></div><button class="primary-button" data-add-goal>＋ New goal</button></div>
+            <div class="page-heading compact">
+              <div><p class="overline">LONGER ARCS</p><h1>Goals that stay alive</h1><p>Every big goal can be linked to daily proof so progress does not disappear between milestones.</p></div>
+              <button class="primary-button" data-add-goal>+ New goal</button>
+            </div>
             <div class="goal-summary" id="goalSummary"></div>
             <div class="goal-grid" id="goalGrid"></div>
           </section>
 
           <section class="view" id="view-insights" data-view="insights">
-            <div class="page-heading compact"><div><p class="overline">SIGNALS, NOT JUDGMENT</p><h1>Insights</h1><p>See what helps you return, where your range is thinning, and what deserves less pressure.</p></div><select id="insightRange" class="select-control"><option>Last 7 days</option><option>Last 30 days</option></select></div>
+            <div class="page-heading compact">
+              <div><p class="overline">SIGNALS, NOT JUDGMENT</p><h1>Insights</h1><p>Built from your real completions, minimum wins, friction logs, reviews, and focus sessions.</p></div>
+              <select id="insightRange" class="select-control"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="84">Last 84 days</option></select>
+            </div>
             <div class="insight-metrics" id="insightMetrics"></div>
             <div class="analytics-grid">
-              <section class="card chart-card"><div class="card-head"><div><p class="overline">MOMENTUM</p><h2>Effort across the week</h2></div><span class="positive-chip">↑ 12% vs last week</span></div><div class="bar-chart" id="weeklyChart"></div></section>
+              <section class="card chart-card"><div class="card-head"><div><p class="overline">MOMENTUM</p><h2>Effort across the week</h2><p class="mini-help" id="weeklyChartInsight">Proof is more useful when it suggests the next tiny move.</p></div><span class="positive-chip" id="trendChip">Live data</span></div><div class="bar-chart" id="weeklyChart"></div></section>
               <section class="card"><div class="card-head"><div><p class="overline">DOMAIN HEALTH</p><h2>Range, not noise</h2></div></div><div class="domain-analytics" id="domainAnalytics"></div></section>
-              <section class="card insight-story"><span class="story-number">01</span><p class="overline">PATTERN FOUND</p><h2>Your best days begin the night before.</h2><p>When your night shutdown reaches 60%, your morning completion nearly doubles. Orbit suggests protecting only three night anchors this week.</p><button class="dark-button" id="applyInsight">Apply suggestion</button></section>
-              <section class="card calendar-card"><div class="card-head"><div><p class="overline">CONSISTENCY MAP</p><h2>Proof over perfection</h2></div></div><div class="heatmap" id="heatmap"></div><div class="heatmap-legend"><span>Less</span><i></i><i></i><i></i><i></i><span>More</span></div></section>
+              <section class="card insight-story" id="insightStory"></section>
+              <section class="card calendar-card"><div class="card-head"><div><p class="overline">CONSISTENCY MAP</p><h2>Proof over perfection</h2><p class="mini-help">Color strength comes from completed tasks, micro-wins, and resisted urges.</p></div></div><div class="heatmap" id="heatmap"></div><div class="heatmap-legend"><span>Less</span><i></i><i></i><i></i><i></i><span>More</span></div></section>
             </div>
           </section>
 
@@ -137,25 +216,216 @@
           </section>
 
           <section class="view" id="view-review" data-view="review">
-            <div class="page-heading compact"><div><p class="overline">WEEKLY RESET</p><h1>Review without a trial</h1><p>Notice, learn, and design a kinder next week.</p></div></div>
-            <section class="review-layout"><div class="card review-prompts"><p class="overline">REFLECTION</p><h2>What made progress easier?</h2><textarea id="reviewEasy" placeholder="A place, person, time, or tiny rule..."></textarea><h2>What created friction?</h2><textarea id="reviewFriction" placeholder="No blame. Just useful information..."></textarea><h2>What will you make smaller?</h2><textarea id="reviewSmaller" placeholder="Choose one habit to reduce to its minimum version..."></textarea><button class="primary-button" id="saveReview">Save weekly review</button></div><aside class="card review-proof"><p class="overline">THIS WEEK’S PROOF</p><div id="reviewStats"></div><blockquote>“The system is working when you return, not only when you never leave.”</blockquote></aside></section>
+            <div class="page-heading compact"><div><p class="overline">WEEKLY RESET</p><h1>Review without a trial</h1><p>Save observations, then let Orbit propose kinder adjustments for next week.</p></div></div>
+            <section class="review-layout">
+              <div class="card review-prompts">
+                <p class="overline">REFLECTION</p>
+                <h2>What made progress easier?</h2>
+                <textarea id="reviewEasy" placeholder="A place, person, time, cue, or tiny rule..."></textarea>
+                <h2>What created friction?</h2>
+                <textarea id="reviewFriction" placeholder="No blame. Just useful information..."></textarea>
+                <h2>What will you make smaller?</h2>
+                <textarea id="reviewSmaller" placeholder="Choose one habit to reduce to its minimum version..."></textarea>
+                <button class="primary-button" id="saveReview">Save weekly review</button>
+              </div>
+              <aside class="card review-proof">
+                <p class="overline">THIS WEEK'S PROOF</p>
+                <div id="reviewStats"></div>
+                <div id="reviewSuggestions" class="review-suggestions"></div>
+              </aside>
+            </section>
           </section>
         </main>
       </div>
+
+      <nav class="mobile-dock" aria-label="Mobile quick navigation">
+        <button class="active" data-route="today"><span>Today</span></button>
+        <button data-route="tasks"><span>Tasks</span></button>
+        <button class="dock-add" data-add-task aria-label="Add task">+</button>
+        <button data-route="goals"><span>Goals</span></button>
+        <button data-route="insights"><span>Insights</span></button>
+      </nav>
     </div>
 
     <div class="modal-backdrop" id="modalBackdrop" hidden>
-      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-head"><div><p class="overline" id="modalEyebrow">NEW PRACTICE</p><h2 id="modalTitle">Add a task</h2></div><button class="modal-close" id="modalClose" aria-label="Close">×</button></div>
+      <section class="modal wide-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-head"><div><p class="overline" id="modalEyebrow">NEW PRACTICE</p><h2 id="modalTitle">Add a task</h2></div><button class="modal-close" id="modalClose" aria-label="Close">x</button></div>
         <form id="entityForm">
           <input type="hidden" id="entityId" /><input type="hidden" id="entityType" value="task" />
-          <label><span>Name</span><input id="entityName" required maxlength="80" placeholder="e.g. Read two pages" /></label>
-          <div class="form-row" id="taskFields"><label><span>Domain</span><select id="entityDomain"></select></label><label><span>Schedule</span><select id="entitySchedule"><option value="daily">Every day</option><option value="weekly">Selected days</option><option value="once">One-off</option></select></label></div>
-          <div class="form-row" id="goalFields" hidden><label><span>Target date</span><input id="goalDate" type="date" /></label><label><span>Progress</span><input id="goalProgress" type="number" min="0" max="100" value="0" /></label></div>
-          <label id="minimumField"><span>Minimum version</span><input id="entityMinimum" maxlength="100" placeholder="What counts on a difficult day?" /></label>
-          <label><span>Why it matters</span><textarea id="entityNote" rows="3" maxlength="220" placeholder="A short reminder for your future self"></textarea></label>
+          <label><span>Name</span><input id="entityName" required maxlength="90" placeholder="e.g. Read two pages" /></label>
+          <div class="form-row">
+            <label><span>Domain</span><select id="entityDomain"></select></label>
+            <label id="taskPeriodField"><span>Period</span><select id="entityPeriod"><option>Morning</option><option>Deep work</option><option>Evening</option></select></label>
+          </div>
+          <div class="form-row" id="taskFields">
+            <label><span>Schedule</span><select id="entitySchedule"><option value="daily">Every day</option><option value="weekly">Selected weekdays</option><option value="every-x">Every X days</option><option value="monthly">Monthly</option><option value="seasonal">Seasonal</option><option value="once">One-off</option></select></label>
+            <label><span>Start time</span><input id="entityTime" placeholder="04:40 or Flexible" /></label>
+          </div>
+          <div class="day-picker" id="dayPicker" aria-label="Selected weekdays"></div>
+          <div class="form-row schedule-advanced" id="advancedScheduleFields">
+            <label><span>Every X days</span><input id="entityEveryDays" type="number" min="1" max="60" value="2" /></label>
+            <label><span>Monthly day</span><input id="entityMonthlyDay" type="number" min="1" max="31" value="1" /></label>
+            <label><span>Season</span><select id="entitySeason"><option value="Foundation">Foundation</option><option value="Exam">Exam</option><option value="Build Sprint">Build Sprint</option><option value="Recovery">Recovery</option></select></label>
+          </div>
+          <div class="form-row" id="goalFields" hidden>
+            <label><span>Target date</span><input id="goalDate" type="date" /></label>
+            <label><span>Progress</span><input id="goalProgress" type="number" min="0" max="100" value="0" /></label>
+          </div>
+          <div class="form-row" id="taskLinkFields">
+            <label><span>Stack after</span><select id="stackAfterSelect"><option value="">No stack trigger</option></select></label>
+            <label><span>Linked goal</span><select id="goalLinkSelect"><option value="">No linked goal</option></select></label>
+          </div>
+          <div class="form-row" id="taskMetaFields">
+            <label><span>Duration minutes</span><input id="entityDuration" type="number" min="1" max="240" value="5" /></label>
+            <label><span>Tags</span><input id="entityTags" maxlength="80" placeholder="study, morning, low-energy" /></label>
+          </div>
+          <label id="minimumField"><span>Minimum version</span><input id="entityMinimum" maxlength="120" placeholder="What counts on a difficult day?" /></label>
+          <label><span>Why it matters</span><textarea id="entityNote" rows="3" maxlength="260" placeholder="A short reminder for your future self"></textarea></label>
           <div class="modal-actions"><button type="button" class="secondary-button" id="modalCancel">Cancel</button><button class="primary-button" type="submit" id="saveEntity">Save task</button></div>
         </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="onboardingBackdrop" hidden>
+      <section class="modal guide-modal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+        <div class="modal-head"><div><p class="overline">FIRST RUN GUIDE</p><h2 id="guideTitle">How Orbit works</h2></div><button class="modal-close" id="closeGuide" aria-label="Close guide">x</button></div>
+        <div class="guide-grid">
+          <article><strong>1. Pick a small proof</strong><p>Do the full task when you can. Use the minimum version when life gets heavy.</p></article>
+          <article><strong>2. Stack habits</strong><p>Attach one action to another: after prayer, read one verse; after shower, open notes.</p></article>
+          <article><strong>3. Log friction</strong><p>Bad habits are not moral verdicts. Record resisted/slipped, the trigger, and the replacement.</p></article>
+          <article><strong>4. Review gently</strong><p>Orbit suggests what to protect, reduce, or move based on real history.</p></article>
+        </div>
+        <label class="settings-field"><span>Your current season</span><select id="guideSeason"><option>Foundation</option><option>Exam</option><option>Build Sprint</option><option>Recovery</option></select></label>
+        <div class="modal-actions"><button class="secondary-button" id="skipGuide">Later</button><button class="primary-button" id="finishGuide">Start using Orbit</button></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="frictionBackdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="frictionTitle">
+        <div class="modal-head"><div><p class="overline">FRICTION DETAIL</p><h2 id="frictionTitle">Log resistance</h2></div><button class="modal-close" id="frictionClose" aria-label="Close friction detail">x</button></div>
+        <form id="frictionForm">
+          <input type="hidden" id="frictionId" /><input type="hidden" id="frictionStatus" />
+          <label><span>Trigger</span><input id="frictionTrigger" placeholder="What happened before the urge?" /></label>
+          <label><span>Replacement action</span><input id="frictionReplacement" placeholder="What did you do, or what will you do next?" /></label>
+          <label><span>Recovery time in minutes</span><input id="frictionRecovery" type="number" min="0" max="1440" value="5" /></label>
+          <label><span>Note</span><textarea id="frictionNote" rows="3" placeholder="Optional: what did you learn?"></textarea></label>
+          <div class="modal-actions"><button type="button" class="secondary-button" id="frictionCancel">Cancel</button><button class="primary-button" type="submit">Save friction log</button></div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="routineBackdrop" hidden>
+      <section class="modal routine-modal" role="dialog" aria-modal="true" aria-labelledby="routineTitle">
+        <div class="modal-head"><div><p class="overline">GUIDED ROUTINE</p><h2 id="routineTitle">Today's next action</h2></div><button class="modal-close" id="routineClose" aria-label="Close routine timer">x</button></div>
+        <div class="timer-face">
+          <span id="routineStepLabel">Ready</span>
+          <strong id="routineClock">00:00</strong>
+          <p id="routineMinimum">Press start to walk through today's plan one action at a time.</p>
+        </div>
+        <label class="checkbox-line"><input id="routineAutoNext" type="checkbox" checked /> Auto-next after each step</label>
+        <div class="timer-actions">
+          <button class="primary-button" id="routineStart" type="button">Start</button>
+          <button class="secondary-button" id="routinePause" type="button">Pause</button>
+          <button class="secondary-button" id="routineSkip" type="button">Skip</button>
+          <button class="secondary-button" id="routineExtend" type="button">+5 min</button>
+          <button class="dark-button" id="routineFinish" type="button">Finish session</button>
+        </div>
+        <div class="routine-list" id="routineList"></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="focusBackdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="focusTitle">
+        <div class="modal-head"><div><p class="overline">FOCUS SESSION</p><h2 id="focusTitle">Create a clean block</h2></div><button class="modal-close" id="focusClose" aria-label="Close focus session">x</button></div>
+        <form id="focusForm">
+          <div class="form-row">
+            <label><span>Session name</span><input id="focusName" placeholder="Creation hour, coding, study..." /></label>
+            <label><span>Minutes</span><input id="focusMinutes" type="number" min="1" max="240" value="25" /></label>
+          </div>
+          <label><span>Session note</span><textarea id="focusNote" rows="3" placeholder="What are you trying to finish?"></textarea></label>
+          <div class="timer-face compact-timer"><span id="focusStatus">Ready</span><strong id="focusClock">25:00</strong></div>
+          <div class="timer-actions">
+            <button class="primary-button" id="focusStart" type="button">Start</button>
+            <button class="secondary-button" id="focusPause" type="button">Pause</button>
+            <button class="secondary-button" id="focusExtend" type="button">+5 min</button>
+            <button class="dark-button" id="focusFinish" type="button">Finish and save</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="stackBackdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="stackTitle">
+        <div class="modal-head"><div><p class="overline">HABIT STACK BUILDER</p><h2 id="stackTitle">Attach one habit to another</h2></div><button class="modal-close" id="stackClose" aria-label="Close stack builder">x</button></div>
+        <form id="stackForm">
+          <label><span>After I finish...</span><select id="stackBase"></select></label>
+          <label><span>I will do...</span><select id="stackNext"></select></label>
+          <div class="modal-actions"><button type="button" class="secondary-button" id="stackCancel">Cancel</button><button class="primary-button" type="submit">Save stack</button></div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="loginBackdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <div class="modal-head"><div><p class="overline">LOCAL ACCOUNT</p><h2 id="loginTitle">Login to Orbit</h2></div><button class="modal-close" id="loginClose" aria-label="Close login">x</button></div>
+        <form id="loginForm">
+          <label><span>Name</span><input id="loginName" autocomplete="name" maxlength="40" placeholder="What should Orbit call you?" required /></label>
+          <label><span>Email</span><input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com" required /></label>
+          <label><span>Local PIN</span><input id="loginPin" inputmode="numeric" maxlength="8" placeholder="Optional local-only PIN" /></label>
+          <p class="modal-note">This prototype uses local login only. Your account stays in this browser until a real backend is connected.</p>
+          <div class="modal-actions"><button type="button" class="secondary-button" id="logoutButton">Logout</button><button class="primary-button" type="submit">Save login</button></div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="reminderBackdrop" hidden>
+      <section class="modal wide-modal" role="dialog" aria-modal="true" aria-labelledby="reminderTitle">
+        <div class="modal-head"><div><p class="overline">BROWSER REMINDERS</p><h2 id="reminderTitle">Notifications & reminders</h2></div><button class="modal-close" id="reminderClose" aria-label="Close reminders">x</button></div>
+        <div class="notification-status" id="notificationStatus"></div>
+        <button class="primary-button" id="enableNotifications" type="button">Enable browser notifications</button>
+        <form id="reminderForm">
+          <div class="form-row">
+            <label><span>Reminder name</span><input id="reminderName" maxlength="60" placeholder="Morning routine, finance tracking..." required /></label>
+            <label><span>Time</span><input id="reminderTime" type="time" required /></label>
+          </div>
+          <label><span>Message</span><input id="reminderMessage" maxlength="120" placeholder="Start tiny. One honest proof is enough." /></label>
+          <div class="form-row">
+            <label><span>Repeat</span><select id="reminderRepeat"><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekends">Weekends</option></select></label>
+            <label><span>Link to task</span><select id="reminderTask"><option value="">No linked task</option></select></label>
+          </div>
+          <div class="modal-actions"><button class="primary-button" type="submit">Add reminder</button></div>
+        </form>
+        <div class="reminder-list" id="reminderList"></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="historyBackdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+        <div class="modal-head"><div><p class="overline">TASK HISTORY</p><h2 id="historyTitle">Recent proof</h2></div><button class="modal-close" id="historyClose" aria-label="Close history">x</button></div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="proofLinkBackdrop" hidden>
+      <section class="modal wide-modal proof-link-modal" role="dialog" aria-modal="true" aria-labelledby="proofLinkTitle">
+        <div class="modal-head">
+          <div><p class="overline">GOAL PROOF</p><h2 id="proofLinkTitle">Link proof habits</h2></div>
+          <button class="modal-close" id="proofLinkClose" aria-label="Close proof habit linker">x</button>
+        </div>
+        <article class="proof-goal-panel" id="proofGoalPanel"></article>
+        <p class="proof-explainer"><strong>What is a proof habit?</strong> It is a repeatable action that creates evidence this goal is still alive. Example: a writing goal can be proven by "write one paragraph" even before the full project is finished.</p>
+        <label class="proof-search-field"><span>Find an unlinked habit</span><input id="proofHabitSearch" placeholder="Search by habit, domain, schedule, or tag..." /></label>
+        <div class="proof-link-layout">
+          <section class="proof-column" aria-labelledby="proofLinkedHeading">
+            <div class="proof-section-head"><h3 id="proofLinkedHeading">Currently proving this goal</h3><span class="proof-count-pill" id="proofLinkedCount">0 linked</span></div>
+            <div class="proof-list" id="proofLinkedList"></div>
+          </section>
+          <section class="proof-column" aria-labelledby="proofSuggestionHeading">
+            <div class="proof-section-head"><h3 id="proofSuggestionHeading">Good habits to link</h3><span class="proof-count-pill" id="proofSuggestionCount">0 found</span></div>
+            <div class="proof-list" id="proofSuggestionList"></div>
+          </section>
+        </div>
+        <div class="modal-actions proof-link-actions"><button type="button" class="secondary-button" id="proofLinkCreate">+ Create new proof habit</button><button type="button" class="primary-button" id="proofLinkDone">Done</button></div>
       </section>
     </div>
 
@@ -163,12 +433,16 @@
       <section class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
         <header class="settings-head">
           <div><p class="overline">YOUR ORBIT</p><h2 id="settingsTitle">Profile & appearance</h2><p>Make the workspace comfortable enough to return to.</p></div>
-          <button class="modal-close" id="settingsClose" aria-label="Close settings">×</button>
+          <button class="modal-close" id="settingsClose" aria-label="Close settings">x</button>
         </header>
         <form id="settingsForm">
           <section class="settings-section">
             <div class="settings-label"><span>Profile</span><small>How Orbit addresses you</small></div>
             <label class="settings-field"><span>Your name</span><input id="displayName" maxlength="40" autocomplete="name" placeholder="What should we call you?" /></label>
+          </section>
+          <section class="settings-section">
+            <div class="settings-label"><span>Current season</span><small>Seasonal tasks use this context</small></div>
+            <label class="settings-field"><span>Season</span><select id="currentSeason"><option>Foundation</option><option>Exam</option><option>Build Sprint</option><option>Recovery</option></select></label>
           </section>
           <section class="settings-section">
             <div class="settings-label"><span>Text size</span><small>Changes the whole interface</small></div>
@@ -187,7 +461,7 @@
           <section class="settings-section">
             <div class="settings-label"><span>Theme</span><small>System follows your device</small></div>
             <div class="segmented-control theme-options" id="themeOptions" aria-label="Color theme">
-              <button type="button" data-theme-choice="light">☼ Light</button><button type="button" data-theme-choice="dark">◐ Dark</button><button type="button" data-theme-choice="system">◑ System</button>
+              <button type="button" data-theme-choice="light">Light</button><button type="button" data-theme-choice="dark">Dark</button><button type="button" data-theme-choice="system">System</button>
             </div>
           </section>
           <footer class="settings-footer"><span>Preferences save automatically.</span><button type="submit" class="primary-button">Done</button></footer>
