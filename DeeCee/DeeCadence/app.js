@@ -1768,6 +1768,14 @@
     return '<div class="unit-rail" aria-label="' + task.units.completed + " of " + task.units.total + ' focus units complete">' + dots + "</div>";
   }
 
+  function applyRankTheme(rank) {
+    var activeRank = rank || currentRank(state.profile.totalXp);
+    document.documentElement.setAttribute("data-rank", activeRank.id);
+    document.body.setAttribute("data-rank", activeRank.id);
+    document.documentElement.style.setProperty("--rank-accent", activeRank.color);
+    document.documentElement.style.setProperty("--rank-glow-color", activeRank.color);
+  }
+
   function renderRankConsole(prefix) {
     var xp = state.profile.totalXp;
     var level = currentLevel(xp);
@@ -1775,7 +1783,7 @@
     var next = nextRank(xp);
     var progress = levelProgress(xp);
     var circumference = 2 * Math.PI * 42;
-    document.documentElement.style.setProperty("--rank-glow-color", rank.color);
+    applyRankTheme(rank);
 
     var letter = document.getElementById(prefix === "today" ? "todayRankLetter" : "rankPageLetter");
     var fill = document.getElementById(prefix === "today" ? "todayOrbFill" : "rankOrbFill");
@@ -2837,6 +2845,7 @@
     document.body.setAttribute("data-theme", state.settings.theme);
     document.documentElement.setAttribute("data-reduced-motion", String(state.settings.reducedMotion));
     document.body.setAttribute("data-reduced-motion", String(state.settings.reducedMotion));
+    applyRankTheme();
   }
 
   function renderSessionIndicators() {
