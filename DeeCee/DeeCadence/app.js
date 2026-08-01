@@ -6,6 +6,7 @@
   var EXIT_BACKUP_KEY = STORAGE_KEY + "_exit_backup";
   var FEEDBACK_ENDPOINT = (document.querySelector('meta[name="deecadence-feedback-endpoint"]') || {}).content || "";
   var FEEDBACK_EMAIL = (document.querySelector('meta[name="deecadence-feedback-email"]') || {}).content || "";
+  var FEEDBACK_WHATSAPP = (document.querySelector('meta[name="deecadence-feedback-whatsapp"]') || {}).content || "";
   var SUPABASE_URL = (document.querySelector('meta[name="deecadence-supabase-url"]') || {}).content || "";
   var SUPABASE_ANON_KEY = (document.querySelector('meta[name="deecadence-supabase-anon-key"]') || {}).content || "";
   var FEEDBACK_TABLE = (document.querySelector('meta[name="deecadence-feedback-table"]') || {}).content || "feedbacks";
@@ -1314,9 +1315,15 @@
     reader.readAsText(file);
   }
 
+  function saveLocalSnapshot() {
+    persistStateForExit();
+    showToast("Saved to this device");
+  }
+
   function feedbackDeliveryMode() {
     if (FEEDBACK_ENDPOINT.trim()) return "endpoint";
     if (SUPABASE_URL.trim() && SUPABASE_ANON_KEY.trim()) return "supabase";
+    if (FEEDBACK_WHATSAPP.trim()) return "whatsapp";
     if (FEEDBACK_EMAIL.trim()) return "email";
     return "outbox";
   }
@@ -1331,6 +1338,8 @@
         ? "Connected to the developer receiver" + (pending ? " - " + pending + " queued" : "") + "."
         : mode === "supabase"
           ? "Connected to Supabase feedback table" + (pending ? " - " + pending + " queued" : "") + "."
+        : mode === "whatsapp"
+          ? "Opens WhatsApp with a ready-to-send message for the developer."
         : mode === "email"
           ? "Uses your email app to address the developer."
           : "Receiver not configured yet" + (pending ? " - " + pending + " saved locally" : "") + ".";
@@ -1340,10 +1349,75 @@
         ? "This report will be sent to the configured DeeCadence developer receiver."
         : mode === "supabase"
           ? "This report will be saved to the configured Supabase table. Email delivery should be handled by an Edge Function or database trigger."
+        : mode === "whatsapp"
+          ? "Tap Send to WhatsApp. DeeCadence will open the chat with your message ready."
         : mode === "email"
           ? "Submitting opens a pre-addressed email draft. You remain in control of sending it."
           : "No receiver is configured yet. Submitting safely stores this report on this device.";
     }
+  }
+
+  function feedbackContextLines(context) {
+    if (!context) return ["Context: Not included"];
+    return [
+      "Context:",
+      "- App version: " + context.appVersion,
+      "- Current screen: " + context.view,
+      "- Device screen: " + context.viewport,
+      "- Theme: " + context.theme,
+      "- Online: " + (context.online ? "Yes" : "No"),
+      "- Saved focus sessions: " + context.sessionCount,
+      "- Saved tasks: " + context.taskCount,
+      "- Total XP: " + context.totalXp,
+      "- Focus in last 7 days: " + formatMinutes(context.focusMinutes7 || 0)
+    ];
+  }
+
+  function formatFeedbackBody(payload) {
+    return [
+      "DeeCadence Feedback",
+      "",
+      "Type: " + payload.type,
+      "Sent: " + new Date(payload.sentAt).toLocaleString(),
+      "",
+      "Message:",
+      payload.message,
+      "",
+      "Reply email: " + (payload.replyEmail || "Not provided"),
+      "",
+      feedbackContextLines(payload.context).join("\n")
+    ].join("\n");
+  }
+
+  function feedbackPhoneDigits() {
+    return FEEDBACK_WHATSAPP.replace(/[^\d]/g, "");
+  }
+
+  function visibleFeedbackPhone() {
+    return FEEDBACK_WHATSAPP.trim() || "+2348125968356";
+  }
+
+  function buildFeedbackPayload(options) {
+    var opts = options || {};
+    var messageInput = document.getElementById("feedbackMessageInput");
+    var emailInput = document.getElementById("feedbackEmailInput");
+    var contextInput = document.getElementById("feedbackContextInput");
+    var message = messageInput ? messageInput.value.trim() : "";
+    return {
+      id: makeId("feedback"),
+      type: feedbackType,
+      message: message || (opts.allowEmpty ? "No message typed yet." : ""),
+      replyEmail: emailInput ? emailInput.value.trim().slice(0, 120) : "",
+      sentAt: new Date().toISOString(),
+      appVersion: APP_VERSION,
+      context: contextInput && contextInput.checked ? anonymousFeedbackContext() : null
+    };
+  }
+
+  function resetFeedbackButton(button) {
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = feedbackDeliveryMode() === "whatsapp" ? "Send to WhatsApp" : "Send feedback";
   }
 
   function updateFeedbackBadge() {
@@ -1358,8 +1432,12 @@
     feedbackType = "Idea";
     var message = document.getElementById("feedbackMessageInput");
     var email = document.getElementById("feedbackEmailInput");
+    var submit = document.getElementById("feedbackSubmitBtn");
+    var phone = document.getElementById("feedbackWhatsappNumber");
     if (message) message.value = "";
     if (email) email.value = "";
+    if (phone) phone.textContent = visibleFeedbackPhone();
+    resetFeedbackButton(submit);
     var count = document.getElementById("feedbackCharCount");
     if (count) count.textContent = "0";
     Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-type]"), function (button) {
@@ -1400,27 +1478,27 @@
       showToast("Add a little more detail");
       return;
     }
-    var payload = {
-      id: makeId("feedback"),
-      type: feedbackType,
-      message: message,
-      replyEmail: document.getElementById("feedbackEmailInput").value.trim().slice(0, 120),
-      sentAt: new Date().toISOString(),
-      appVersion: APP_VERSION,
-      context: document.getElementById("feedbackContextInput").checked ? anonymousFeedbackContext() : null
-    };
+    var payload = buildFeedbackPayload();
     var button = document.getElementById("feedbackSubmitBtn");
     var mode = feedbackDeliveryMode();
     button.disabled = true;
     button.textContent = "Sending...";
+    if (mode === "whatsapp") {
+      var phone = feedbackPhoneDigits();
+      var whatsappBody = encodeURIComponent(formatFeedbackBody(payload));
+      window.open("https://wa.me/" + phone + "?text=" + whatsappBody, "_blank", "noopener");
+      closeFeedback();
+      showToast("WhatsApp message prepared");
+      resetFeedbackButton(button);
+      return;
+    }
     if (mode === "email") {
       var subject = encodeURIComponent("[DeeCadence " + feedbackType + "] Product feedback");
-      var body = encodeURIComponent(message + "\n\nReply email: " + (payload.replyEmail || "Not provided") + "\n\nContext:\n" + JSON.stringify(payload.context, null, 2));
+      var body = encodeURIComponent(formatFeedbackBody(payload));
       window.location.href = "mailto:" + FEEDBACK_EMAIL + "?subject=" + subject + "&body=" + body;
       closeFeedback();
       showToast("Email draft opened");
-      button.disabled = false;
-      button.textContent = "Send feedback";
+      resetFeedbackButton(button);
       return;
     }
     if (mode === "endpoint" && typeof fetch === "function") {
@@ -1438,8 +1516,7 @@
           showToast("Receiver unavailable. Feedback queued.");
         })
         .finally(function () {
-          button.disabled = false;
-          button.textContent = "Send feedback";
+          resetFeedbackButton(button);
           updateFeedbackBadge();
           updateFeedbackDeliveryCopy();
         });
@@ -1459,8 +1536,7 @@
           showToast("Supabase unavailable. Feedback queued.");
         })
         .finally(function () {
-          button.disabled = false;
-          button.textContent = "Send feedback";
+          resetFeedbackButton(button);
           updateFeedbackBadge();
           updateFeedbackDeliveryCopy();
         });
@@ -1471,8 +1547,7 @@
     saveState();
     closeFeedback();
     showToast("Feedback saved locally");
-    button.disabled = false;
-    button.textContent = "Send feedback";
+    resetFeedbackButton(button);
     updateFeedbackBadge();
     updateFeedbackDeliveryCopy();
   }
@@ -2608,8 +2683,21 @@
     var latest = state.attentionTests[state.attentionTests.length - 1] || null;
     var baselineDelta = latest && state.baselineScore !== null ? latest.score - state.baselineScore : null;
     var best = state.attentionTests.length ? Math.max.apply(null, state.attentionTests.map(function (test) { return test.score; })) : null;
+    var focusWindow = learnedFocusWindow();
+    var focusWindowHasData = Boolean(focusWindow.minutes);
+    var focusWindowTitle = focusWindowHasData
+      ? "You usually focus most in the " + focusWindow.label.toLowerCase() + "."
+      : "DeeCadence is still learning your best focus time.";
+    var focusWindowMeta = focusWindowHasData
+      ? formatMinutesCompact(focusWindow.minutes) + " logged across " + focusWindow.sessions + " completed session" + (focusWindow.sessions === 1 ? "" : "s") + "."
+      : (focusWindow.label !== "Not enough data" ? "Using your setup preference: " + focusWindow.label + "." : "Complete a few timed blocks so this becomes accurate.");
     document.getElementById("progressTaskSummary").innerHTML =
       '<div class="progress-summary-line">' + state.history.length + " logs saved - " + formatMinutesCompact(focusMinutesRange) + " focused across " + rangeDays + " days - " + formatNumber(historyXp) + " XP earned - " + doneTasks + " of " + state.tasks.length + " tasks fully completed.</div>" +
+      '<section class="focus-window-card">' +
+        '<div><span>Usual focus window</span><strong>' + escapeHtml(focusWindow.label) + '</strong></div>' +
+        '<p>' + escapeHtml(focusWindowTitle) + " " + escapeHtml(focusWindowMeta) + '</p>' +
+        '<small>' + escapeHtml(focusWindow.confidence) + '</small>' +
+      '</section>' +
       '<section class="baseline-card">' +
         '<div class="baseline-card-head">' +
           '<div><div class="attention-kicker">Attention baseline</div><h3>' + (latest ? latest.score + '/100 latest score' : 'Measure your starting point') + '</h3>' +
@@ -3210,14 +3298,17 @@
     }
 
     (state.history || []).forEach(function (item, index) {
+      if (!item || typeof item !== "object") return;
       var ageWeight = Math.max(1, 8 - Math.floor(index / 4));
       var completedAt = Number(item.completedAt) || 0;
       var hour = completedAt ? new Date(completedAt).getHours() : NaN;
       record(item.linkedTaskTitle, 8 + ageWeight + (item.completedAll ? 4 : 0), completedAt, hour);
     });
     (state.tasks || []).forEach(function (task) {
+      if (!task || typeof task !== "object") return;
       var hour = task.time ? Math.floor(timeToMin(task.time) / 60) : NaN;
-      var timestamp = dateFromKey(task.date).getTime();
+      var date = /^\d{4}-\d{2}-\d{2}$/.test(String(task.date || "")) ? task.date : todayStr();
+      var timestamp = dateFromKey(date).getTime();
       record(task.title, task.status === "completed" ? 4 : 2, timestamp, hour);
     });
 
@@ -3232,8 +3323,14 @@
   function renderSmartTaskSuggestions(containerId, inputId) {
     var container = document.getElementById(containerId);
     var input = document.getElementById(inputId);
-    var recommendations = smartTaskRecommendations(6);
     if (!container || !input) return;
+    var recommendations = [];
+    try {
+      recommendations = smartTaskRecommendations(6);
+    } catch (error) {
+      recommendations = [];
+      console.warn("DeeCadence smart suggestions skipped:", error);
+    }
     container.innerHTML = recommendations.length
       ? '<span>Suggested from your routine</span>' + recommendations.map(function (item, index) {
           return '<button type="button" data-smart-task-index="' + index + '">' + escapeHtml(item.title) + "</button>";
@@ -3249,7 +3346,13 @@
   }
 
   function populateTaskSuggestionSurfaces() {
-    var recommendations = smartTaskRecommendations(12);
+    var recommendations = [];
+    try {
+      recommendations = smartTaskRecommendations(12);
+    } catch (error) {
+      recommendations = [];
+      console.warn("DeeCadence suggestions skipped:", error);
+    }
     var options = recommendations.map(function (item) {
       return '<option value="' + escapeAttribute(item.title) + '"></option>';
     }).join("");
@@ -3797,6 +3900,7 @@
     document.getElementById("rankLadderPrev").onclick = function () { scrollRankLadder(-1); };
     document.getElementById("rankLadderNext").onclick = function () { scrollRankLadder(1); };
     document.getElementById("rankLadder").addEventListener("scroll", updateRankLadderArrows);
+    document.getElementById("saveLocalBtn").onclick = saveLocalSnapshot;
     document.getElementById("exportBackupBtn").onclick = exportBackup;
     document.getElementById("importBackupBtn").onclick = function () { document.getElementById("importBackupInput").click(); };
     document.getElementById("importBackupInput").onchange = importBackup;
@@ -3938,9 +4042,6 @@
   window.addEventListener("pagehide", persistStateForExit);
   window.addEventListener("beforeunload", function (event) {
     persistStateForExit();
-    if (!backupDirty || (!state.history.length && !state.tasks.length)) return;
-    event.preventDefault();
-    event.returnValue = "";
   });
   window.addEventListener("resize", function () {
     if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]);
