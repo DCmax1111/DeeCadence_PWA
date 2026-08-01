@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0c1a14" />
+  <title>Orbit Waitlist Admin</title>
+  <style>
+    :root {
+      --bg: #08110d;
+      --panel: #101d16;
+      --panel-2: #17261e;
+      --paper: #f5f1e7;
+      --ink: #eef7f0;
+      --muted: #97aa9e;
+      --line: rgba(255, 255, 255, .12);
+      --leaf: #c8de91;
+      --sky: #8fc8df;
+      --danger: #ee8c72;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .28);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% -10%, rgba(200, 222, 145, .16), transparent 28rem),
+        radial-gradient(circle at 92% 0%, rgba(143, 200, 223, .13), transparent 30rem),
+        var(--bg);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(143, 200, 223, .55);
+      outline-offset: 3px;
+    }
+
+    .shell {
+      width: min(1220px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 60px;
+    }
+
+    .topbar, .card, .login-panel {
+      border: 1px solid var(--line);
+      background: rgba(16, 29, 22, .86);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding: 16px 18px;
+      border-radius: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 32px;
+      height: 32px;
+    }
+
+    .brand-mark i {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      border: 2px solid var(--sky);
+      border-radius: 50%;
+    }
+
+    .brand-mark i:nth-child(1) { left: 0; top: 8px; }
+    .brand-mark i:nth-child(2) { right: 0; top: 0; }
+    .brand-mark i:nth-child(3) { right: 0; bottom: 0; }
+    .brand strong { display: block; font-size: 20px; letter-spacing: -.05em; }
+    .brand small { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .16em; }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .06);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .button.primary {
+      border-color: transparent;
+      color: #102019;
+      background: var(--leaf);
+    }
+
+    .button.danger { color: var(--danger); }
+    .button[disabled] { cursor: wait; opacity: .6; }
+
+    .login-wrap {
+      display: grid;
+      min-height: calc(100vh - 110px);
+      place-items: center;
+    }
+
+    .login-panel {
+      width: min(430px, 100%);
+      padding: 30px;
+      border-radius: 26px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--leaf);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 { margin: 0; }
+    .login-panel h1 {
+      margin-bottom: 10px;
+      font: 800 34px/1 "Iowan Old Style", Georgia, serif;
+      letter-spacing: -.055em;
+    }
+
+    .login-panel p {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 13px;
+      color: #cddbd2;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .065);
+    }
+
+    textarea {
+      min-height: 74px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .dashboard[hidden], .login-wrap[hidden] { display: none; }
+    .dashboard {
+      display: grid;
+      gap: 16px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      padding: 10px 4px 4px;
+    }
+
+    .hero h1 {
+      margin-bottom: 8px;
+      font: 800 clamp(34px, 5vw, 58px)/.96 "Iowan Old Style", Georgia, serif;
+      letter-spacing: -.065em;
+    }
+
+    .hero p {
+      max-width: 680px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .sync-pill {
+      display: grid;
+      gap: 4px;
+      min-width: 170px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, .055);
+      font-size: 11px;
+    }
+
+    .sync-pill strong { color: var(--ink); font-size: 16px; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, .055);
+    }
+
+    .metric small {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .metric strong { font: 900 30px/1 "Iowan Old Style", Georgia, serif; }
+
+    .card {
+      overflow: hidden;
+      border-radius: 24px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 170px auto;
+      gap: 10px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    th, td {
+      padding: 13px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      text-align: left;
+      vertical-align: top;
+      font-size: 12px;
+    }
+
+    th {
+      color: var(--muted);
+      background: rgba(255, 255, 255, .04);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    td strong { display: block; margin-bottom: 4px; font-size: 13px; }
+    td span, td small { display: block; color: var(--muted); line-height: 1.45; }
+
+    .feature-list {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      max-width: 260px;
+    }
+
+    .feature-list i, .status-chip {
+      padding: 4px 7px;
+      border-radius: 999px;
+      color: #dbe8df;
+      background: rgba(255, 255, 255, .075);
+      font-size: 10px;
+      font-style: normal;
+      font-weight: 900;
+    }
+
+    .status-chip { display: inline-flex; color: #102019; background: var(--leaf); }
+    .row-actions {
+      display: grid;
+      gap: 8px;
+      min-width: 190px;
+    }
+
+    .row-actions select, .row-actions textarea { min-height: 36px; font-size: 11px; }
+    .row-actions textarea { min-height: 54px; }
+    .empty {
+      padding: 38px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      max-width: 360px;
+      padding: 13px 15px;
+      border-radius: 14px;
+      color: #102019;
+      background: var(--leaf);
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
+    .danger-text {
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 780px) {
+      .shell { width: calc(100% - 18px); padding-top: 12px; }
+      .topbar, .hero { grid-template-columns: 1fr; align-items: start; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .toolbar { grid-template-columns: 1fr; }
+      .button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div><strong>orbit</strong><small>WAITLIST VAULT</small></div>
+      </div>
+      <div class="top-actions">
+        <button class="button" id="refreshButton" type="button" hidden>Refresh</button>
+        <button class="button" id="exportButton" type="button" hidden>Export CSV</button>
+        <button class="button danger" id="signOutButton" type="button" hidden>Sign out</button>
+      </div>
+    </header>
+
+    <section class="login-wrap" id="loginWrap">
+      <form class="login-panel" id="loginForm">
+        <p class="eyebrow">Admin only</p>
+        <h1>Open the Orbit vault.</h1>
+        <p>This page is protected by Supabase Auth and database RLS. The page name is intentionally quiet, but real security comes from your admin account.</p>
+        <label class="field">Email <input id="adminEmail" type="email" autocomplete="email" required /></label>
+        <label class="field">Password <input id="adminPassword" type="password" autocomplete="current-password" required /></label>
+        <button class="button primary" id="loginButton" type="submit">Sign in</button>
+        <p class="danger-text" id="loginError" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="dashboard" id="dashboard" hidden>
+      <div class="hero">
+        <div>
+          <p class="eyebrow">Protected waitlist</p>
+          <h1>Early access signals.</h1>
+          <p>Search, segment, export, and update the people who join Orbit. If RLS is configured correctly, only your admin account can read or update this data.</p>
+        </div>
+        <div class="sync-pill"><span>Last sync</span><strong id="lastSync">Never</strong></div>
+      </div>
+
+      <section class="metrics" id="metrics"></section>
+
+      <section class="card">
+        <div class="toolbar">
+          <input id="searchInput" placeholder="Search name, email, country, feature..." />
+          <select id="statusFilter">
+            <option value="all">All statuses</option>
+            <option value="new">New</option>
+            <option value="contacted">Contacted</option>
+            <option value="invited">Invited</option>
+            <option value="converted">Converted</option>
+            <option value="not_fit">Not fit</option>
+          </select>
+          <button class="button primary" id="applyFilter" type="button">Apply filter</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>Country</th>
+                <th>Signal</th>
+                <th>Priorities</th>
+                <th>Struggle</th>
+                <th>Status</th>
+                <th>Admin</th>
+              </tr>
+            </thead>
+            <tbody id="waitlistRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="emptyState" hidden>No waitlist submissions match this view yet.</div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="waitlist-config.js"></script>
+  <script>
+    const config = window.ORBIT_WAITLIST_CONFIG || {};
+    const configured = config.supabaseUrl && !config.supabaseUrl.includes("YOUR_PROJECT_REF") && config.publishableKey && !config.publishableKey.includes("YOUR_SUPABASE");
+    const client = configured && window.supabase ? window.supabase.createClient(config.supabaseUrl, config.publishableKey) : null;
+    let submissions = [];
+    let filtered = [];
+
+    const loginWrap = document.querySelector("#loginWrap");
+    const dashboard = document.querySelector("#dashboard");
+    const loginForm = document.querySelector("#loginForm");
+    const loginError = document.querySelector("#loginError");
+    const rows = document.querySelector("#waitlistRows");
+    const metrics = document.querySelector("#metrics");
+    const emptyState = document.querySelector("#emptyState");
+    const refreshButton = document.querySelector("#refreshButton");
+    const exportButton = document.querySelector("#exportButton");
+    const signOutButton = document.querySelector("#signOutButton");
+
+    document.querySelector("#adminEmail").value = config.adminEmail || "";
+    loginForm.addEventListener("submit", signIn);
+    refreshButton.addEventListener("click", loadSubmissions);
+    exportButton.addEventListener("click", exportCsv);
+    signOutButton.addEventListener("click", signOut);
+    document.querySelector("#applyFilter").addEventListener("click", applyFilters);
+    document.querySelector("#searchInput").addEventListener("input", applyFilters);
+    document.querySelector("#statusFilter").addEventListener("change", applyFilters);
+
+    init();
+
+    async function init() {
+      if (!configured || !client) {
+        loginError.textContent = "Configure waitlist-config.js with your Supabase URL and publishable key.";
+        return;
+      }
+      const { data } = await client.auth.getSession();
+      if (data.session) showDashboard();
+    }
+
+    async function signIn(event) {
+      event.preventDefault();
+      if (!configured || !client) {
+        loginError.textContent = "Supabase config is missing.";
+        return;
+      }
+      loginError.textContent = "";
+      const email = document.querySelector("#adminEmail").value.trim();
+      const password = document.querySelector("#adminPassword").value;
+      const { error } = await client.auth.signInWithPassword({ email, password });
+      if (error) {
+        loginError.textContent = error.message;
+        return;
+      }
+      showDashboard();
+    }
+
+    async function showDashboard() {
+      loginWrap.hidden = true;
+      dashboard.hidden = false;
+      refreshButton.hidden = false;
+      exportButton.hidden = false;
+      signOutButton.hidden = false;
+      await loadSubmissions();
+    }
+
+    async function loadSubmissions() {
+      refreshButton.disabled = true;
+      try {
+        const { data, error } = await client
+          .from("waitlist_submissions")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(1000);
+        if (error) throw error;
+        submissions = data || [];
+        document.querySelector("#lastSync").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        applyFilters();
+        toast("Waitlist synced.");
+      } catch (error) {
+        toast(error.message || "Could not load waitlist. Check admin role and RLS.");
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
+    function applyFilters() {
+      const query = document.querySelector("#searchInput").value.trim().toLowerCase();
+      const status = document.querySelector("#statusFilter").value;
+      filtered = submissions.filter(item => {
+        const haystack = [
+          item.full_name,
+          item.email,
+          item.country,
+          item.role_label,
+          item.current_tool,
+          item.biggest_struggle,
+          (item.desired_features || []).join(" ")
+        ].join(" ").toLowerCase();
+        return (!query || haystack.includes(query)) && (status === "all" || item.status === status);
+      });
+      renderMetrics();
+      renderRows();
+    }
+
+    function renderMetrics() {
+      const total = submissions.length;
+      const newCount = submissions.filter(item => item.status === "new").length;
+      const avg = total ? (submissions.reduce((sum, item) => sum + Number(item.interest_score || 0), 0) / total).toFixed(1) : "0.0";
+      const topCountry = topValue(submissions.map(item => item.country)) || "None";
+      metrics.innerHTML = [
+        ["Total", total, "All signups"],
+        ["New", newCount, "Needs attention"],
+        ["Interest", avg, "Average score"],
+        ["Top country", topCountry, "Largest cluster"]
+      ].map(([label, value, note]) => `<article class="metric"><small>${label}</small><strong>${escapeHtml(value)}</strong><span>${escapeHtml(note)}</span></article>`).join("");
+    }
+
+    function renderRows() {
+      emptyState.hidden = filtered.length > 0;
+      rows.innerHTML = filtered.map(item => {
+        const features = (item.desired_features || []).map(feature => `<i>${escapeHtml(feature)}</i>`).join("");
+        return `<tr>
+          <td><strong>${escapeHtml(item.full_name)}</strong><span>${escapeHtml(item.email)}</span><small>${formatDate(item.created_at)}</small></td>
+          <td><strong>${escapeHtml(item.country || "Unknown")}</strong><span>${escapeHtml(item.role_label || "No role")}</span><small>${escapeHtml(item.current_tool || "No tool listed")}</small></td>
+          <td><strong>${escapeHtml(item.interest_score || "-")} / 5</strong><span>${item.consent_research ? "Research allowed" : "Access emails only"}</span></td>
+          <td><div class="feature-list">${features || "<span>No features</span>"}</div></td>
+          <td><span>${escapeHtml(item.biggest_struggle || "No answer")}</span></td>
+          <td><span class="status-chip">${escapeHtml(item.status || "new")}</span>${item.contacted_at ? `<small>Contacted ${formatDate(item.contacted_at)}</small>` : ""}</td>
+          <td>
+            <div class="row-actions">
+              <select data-status="${item.id}">
+                ${["new", "contacted", "invited", "converted", "not_fit"].map(status => `<option value="${status}" ${status === item.status ? "selected" : ""}>${status}</option>`).join("")}
+              </select>
+              <textarea data-note="${item.id}" placeholder="Admin note">${escapeHtml(item.admin_notes || "")}</textarea>
+              <button class="button primary" type="button" data-save="${item.id}">Save</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join("");
+      document.querySelectorAll("[data-save]").forEach(button => button.addEventListener("click", () => saveRow(button.dataset.save)));
+    }
+
+    async function saveRow(id) {
+      const status = document.querySelector(`[data-status="${id}"]`).value;
+      const admin_notes = document.querySelector(`[data-note="${id}"]`).value.trim();
+      const update = {
+        status,
+        admin_notes,
+        contacted_at: status === "contacted" ? new Date().toISOString() : undefined
+      };
+      Object.keys(update).forEach(key => update[key] === undefined && delete update[key]);
+      const { error } = await client.from("waitlist_submissions").update(update).eq("id", id);
+      if (error) {
+        toast(error.message || "Could not update row.");
+        return;
+      }
+      toast("Admin update saved.");
+      await loadSubmissions();
+    }
+
+    function exportCsv() {
+      const headers = ["full_name", "email", "country", "role_label", "current_tool", "interest_score", "desired_features", "biggest_struggle", "status", "admin_notes", "created_at"];
+      const lines = [headers.join(",")].concat(filtered.map(item => headers.map(header => csvCell(header === "desired_features" ? (item[header] || []).join("; ") : item[header])).join(",")));
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orbit-waitlist-${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function signOut() {
+      await client.auth.signOut();
+      location.reload();
+    }
+
+    function topValue(values) {
+      const counts = values.filter(Boolean).reduce((map, value) => ({ ...map, [value]: (map[value] || 0) + 1 }), {});
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+    }
+
+    function formatDate(value) {
+      if (!value) return "";
+      return new Date(value).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function csvCell(value = "") {
+      return `"${String(value ?? "").replace(/"/g, '""')}"`;
+    }
+
+    function escapeHtml(value = "") {
+      return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
+    }
+
+    function toast(message) {
+      const item = document.createElement("div");
+      item.className = "toast";
+      item.textContent = message;
+      document.body.appendChild(item);
+      setTimeout(() => item.remove(), 3600);
+    }
+  </script>
+</body>
+</html>

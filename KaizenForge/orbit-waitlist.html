@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#102019" />
+  <title>Join the Orbit Waitlist</title>
+  <style>
+    :root {
+      --forest-950: #07110d;
+      --forest-900: #0c1a14;
+      --forest-800: #11251c;
+      --forest-700: #18352a;
+      --forest-600: #285541;
+      --leaf: #c8de91;
+      --sky: #8fc8df;
+      --coral: #e28468;
+      --cream: #f3efe4;
+      --paper: rgba(255, 253, 246, .92);
+      --ink: #17231c;
+      --muted: #67756c;
+      --line: rgba(31, 46, 37, .14);
+      --shadow: 0 30px 90px rgba(6, 20, 13, .24);
+      --radius-xl: 32px;
+      --radius-lg: 22px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 18% -10%, rgba(200, 222, 145, .34), transparent 28rem),
+        radial-gradient(circle at 88% 0%, rgba(143, 200, 223, .28), transparent 30rem),
+        linear-gradient(135deg, #eef0e4, #f8f1e3 48%, #e8eee2);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -4;
+      pointer-events: none;
+      opacity: .23;
+      background-image:
+        linear-gradient(rgba(12, 26, 20, .05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(12, 26, 20, .045) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: linear-gradient(to bottom, black, transparent 92%);
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(143, 200, 223, .62);
+      outline-offset: 3px;
+    }
+
+    .constellation-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .ambient {
+      position: fixed;
+      inset: auto auto 9% -8rem;
+      z-index: -2;
+      width: 28rem;
+      height: 28rem;
+      border-radius: 50%;
+      opacity: .42;
+      background: radial-gradient(circle, rgba(40, 85, 65, .46), transparent 66%);
+      filter: blur(22px);
+      animation: drift 18s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .ambient.two {
+      inset: 12% -10rem auto auto;
+      width: 34rem;
+      height: 34rem;
+      background: radial-gradient(circle, rgba(143, 200, 223, .4), transparent 68%);
+      animation-duration: 22s;
+    }
+
+    @keyframes drift {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to { transform: translate3d(4rem, -2rem, 0) scale(1.08); }
+    }
+
+    .progress-track {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 20;
+      height: 4px;
+      background: rgba(255, 255, 255, .42);
+      backdrop-filter: blur(10px);
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      border-radius: 0 999px 999px 0;
+      background: linear-gradient(90deg, var(--forest-600), var(--sky), var(--leaf));
+      transition: width .25s ease;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: minmax(280px, 380px) minmax(0, 760px);
+      gap: 44px;
+      width: min(1230px, calc(100% - 42px));
+      margin: 0 auto;
+      padding: 56px 0 86px;
+    }
+
+    .context {
+      position: sticky;
+      top: 34px;
+      align-self: start;
+      min-height: calc(100vh - 68px);
+      overflow: hidden;
+      padding: 32px;
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: var(--radius-xl);
+      color: #edf7f0;
+      background:
+        linear-gradient(145deg, rgba(24, 53, 42, .96), rgba(8, 18, 13, .95)),
+        var(--forest-900);
+      box-shadow: var(--shadow);
+    }
+
+    .context::before, .context::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .context::before {
+      width: 20rem;
+      height: 20rem;
+      right: -11rem;
+      top: 7rem;
+      border: 1px solid rgba(255, 255, 255, .13);
+      box-shadow: 0 0 0 52px rgba(255, 255, 255, .025), 0 0 0 104px rgba(255, 255, 255, .015);
+    }
+
+    .context::after {
+      inset: auto -5rem -8rem auto;
+      width: 16rem;
+      height: 16rem;
+      background: radial-gradient(circle, rgba(200, 222, 145, .2), transparent 70%);
+      filter: blur(8px);
+    }
+
+    .brand {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 56px;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 34px;
+      height: 34px;
+    }
+
+    .brand-mark i {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--sky);
+      border-radius: 50%;
+      box-shadow: 0 0 22px rgba(143, 200, 223, .34);
+    }
+
+    .brand-mark i:nth-child(1) { left: 0; top: 9px; }
+    .brand-mark i:nth-child(2) { right: 0; top: 0; }
+    .brand-mark i:nth-child(3) { right: 0; bottom: 0; }
+    .brand strong { display: block; font-size: 23px; letter-spacing: -.06em; }
+    .brand small { display: block; margin-top: 2px; color: #9eb0a5; font-size: 9px; font-weight: 800; letter-spacing: .18em; }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--forest-600);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .context .eyebrow { color: var(--leaf); }
+    .context h1 {
+      position: relative;
+      z-index: 1;
+      max-width: 310px;
+      margin: 0 0 18px;
+      font: 800 clamp(36px, 5vw, 52px)/.98 "Iowan Old Style", Georgia, serif;
+      letter-spacing: -.06em;
+    }
+
+    .context > p {
+      position: relative;
+      z-index: 1;
+      margin: 0 0 26px;
+      color: #b4c6ba;
+      font-size: 14px;
+      line-height: 1.68;
+    }
+
+    .signal-card {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 11px;
+      margin: 30px 0;
+      padding: 17px;
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, .065);
+      backdrop-filter: blur(18px);
+    }
+
+    .signal-card strong { font-size: 14px; }
+    .signal-card span { color: #aabcb1; font-size: 12px; line-height: 1.5; }
+
+    .promise-list {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 13px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .promise-list li {
+      display: flex;
+      gap: 11px;
+      color: #deebe3;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .promise-list span {
+      display: grid;
+      flex: 0 0 24px;
+      height: 24px;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--leaf);
+      background: rgba(200, 222, 145, .1);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .form-column { min-width: 0; }
+    .form-intro {
+      display: grid;
+      gap: 14px;
+      padding: 8px 4px 28px;
+    }
+
+    .form-intro h2 {
+      max-width: 720px;
+      margin: 0;
+      font: 800 clamp(38px, 6vw, 66px)/.96 "Iowan Old Style", Georgia, serif;
+      letter-spacing: -.07em;
+    }
+
+    .form-intro p:not(.eyebrow) {
+      max-width: 650px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .meta-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .meta-row span {
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, .55);
+      border-radius: 999px;
+      color: #516359;
+      background: rgba(255, 255, 255, .58);
+      font-size: 10px;
+      font-weight: 800;
+      backdrop-filter: blur(14px);
+    }
+
+    .status-banner {
+      display: none;
+      margin: 0 0 18px;
+      padding: 14px 15px;
+      border: 1px solid rgba(226, 132, 104, .34);
+      border-radius: 14px;
+      color: #80422f;
+      background: rgba(255, 237, 229, .88);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .status-banner.visible { display: block; }
+
+    .section {
+      margin-bottom: 18px;
+      padding: 28px;
+      border: 1px solid rgba(255, 255, 255, .62);
+      border-radius: var(--radius-lg);
+      background: var(--paper);
+      box-shadow: 0 18px 54px rgba(30, 45, 36, .08);
+      backdrop-filter: blur(18px);
+    }
+
+    .section-head {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .section-number {
+      display: grid;
+      flex: 0 0 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 11px;
+      color: var(--forest-700);
+      background: #e5eed7;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .section-head h3 {
+      margin: 0 0 5px;
+      font: 800 22px/1.1 "Iowan Old Style", Georgia, serif;
+      letter-spacing: -.035em;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .question { margin-top: 22px; }
+    .question:first-of-type { margin-top: 0; }
+
+    .question-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 13px;
+      margin-bottom: 10px;
+      color: #26332b;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
+    .required { color: var(--coral); }
+    .helper {
+      margin: -4px 0 11px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+    }
+
+    .text-input, select, textarea {
+      width: 100%;
+      min-height: 46px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      background: rgba(255, 255, 250, .86);
+      font-size: 14px;
+      transition: border .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+
+    textarea {
+      min-height: 96px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    .text-input:focus, select:focus, textarea:focus {
+      border-color: var(--forest-600);
+      box-shadow: 0 0 0 4px rgba(40, 85, 65, .09);
+    }
+
+    .options {
+      display: grid;
+      gap: 8px;
+    }
+
+    .option-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .option {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-height: 46px;
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: #4d5c52;
+      background: rgba(255, 255, 250, .84);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.4;
+      transition: .16s ease;
+    }
+
+    .option:hover {
+      border-color: rgba(40, 85, 65, .34);
+      transform: translateY(-1px);
+    }
+
+    .option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .control {
+      display: grid;
+      flex: 0 0 18px;
+      height: 18px;
+      place-items: center;
+      border: 1px solid #b7c4ba;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .checkbox .control { border-radius: 6px; }
+    .option input:checked + .control {
+      border-color: var(--forest-600);
+      background: var(--forest-600);
+    }
+
+    .option input:checked + .control::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: inherit;
+      background: white;
+    }
+
+    .checkbox input:checked + .control::after {
+      width: 8px;
+      height: 5px;
+      margin-top: -2px;
+      border: solid white;
+      border-width: 0 0 2px 2px;
+      border-radius: 0;
+      background: transparent;
+      transform: rotate(-45deg);
+    }
+
+    .option:has(input:checked) {
+      border-color: rgba(40, 85, 65, .42);
+      color: #203126;
+      background: #eff6e6;
+    }
+
+    .scale {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .scale .option {
+      display: grid;
+      place-items: center;
+      padding: 13px 6px;
+      text-align: center;
+    }
+
+    .scale .control { display: none; }
+    .scale strong { display: block; color: var(--forest-700); font-size: 17px; }
+    .scale small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; font-weight: 900; }
+    .scale .option:has(input:checked) {
+      color: white;
+      border-color: var(--forest-600);
+      background: linear-gradient(135deg, var(--forest-600), #1a3d2f);
+      box-shadow: 0 14px 28px rgba(40, 85, 65, .18);
+    }
+    .scale .option:has(input:checked) strong, .scale .option:has(input:checked) small { color: white; }
+
+    .concept-card {
+      position: relative;
+      overflow: hidden;
+      margin: 3px 0 24px;
+      padding: 24px;
+      border-radius: 20px;
+      color: #f5fbf6;
+      background:
+        radial-gradient(circle at 92% 18%, rgba(143, 200, 223, .2), transparent 15rem),
+        linear-gradient(135deg, #102019, #285541);
+    }
+
+    .concept-card::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      bottom: -88px;
+      width: 190px;
+      height: 190px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 50%;
+      box-shadow: 0 0 0 40px rgba(255, 255, 255, .025);
+    }
+
+    .concept-card span {
+      color: var(--leaf);
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .16em;
+    }
+
+    .concept-card h4 {
+      max-width: 610px;
+      margin: 12px 0 9px;
+      font: 800 25px/1.14 "Iowan Old Style", Georgia, serif;
+      letter-spacing: -.03em;
+    }
+
+    .concept-card p {
+      max-width: 640px;
+      margin: 0;
+      color: #b8cabe;
+      font-size: 13px;
+      line-height: 1.62;
+    }
+
+    .count-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .count-note.warning { color: var(--coral); }
+
+    .privacy {
+      display: flex;
+      gap: 11px;
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 14px;
+      color: var(--muted);
+      background: rgba(231, 236, 226, .82);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .privacy strong { color: var(--ink); }
+
+    .submit-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 8px 4px 0;
+    }
+
+    .submit-row p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .submit-button, .secondary-button {
+      display: inline-flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 13px 19px;
+      border-radius: 13px;
+      font-size: 13px;
+      font-weight: 900;
+      transition: .16s ease;
+    }
+
+    .submit-button {
+      border: 0;
+      color: white;
+      background: linear-gradient(135deg, var(--forest-600), #174031);
+      box-shadow: 0 18px 32px rgba(40, 85, 65, .22);
+    }
+
+    .submit-button:hover, .secondary-button:hover { transform: translateY(-1px); }
+    .submit-button[disabled] { cursor: wait; opacity: .68; transform: none; }
+
+    .secondary-button {
+      border: 1px solid var(--line);
+      color: var(--forest-700);
+      background: rgba(255, 255, 255, .56);
+    }
+
+    .success {
+      display: none;
+      padding: 44px 30px;
+      border: 1px solid rgba(255, 255, 255, .68);
+      border-radius: var(--radius-lg);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+      text-align: center;
+      backdrop-filter: blur(18px);
+    }
+
+    .success.visible { display: block; animation: reveal .25s ease; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(8px); } }
+
+    .success-icon {
+      display: grid;
+      width: 62px;
+      height: 62px;
+      place-items: center;
+      margin: 0 auto 18px;
+      border-radius: 20px;
+      color: var(--forest-700);
+      background: #e5eed7;
+      font-size: 27px;
+      font-weight: 900;
+    }
+
+    .success h2 {
+      margin: 0 0 10px;
+      font: 800 34px/1.05 "Iowan Old Style", Georgia, serif;
+      letter-spacing: -.045em;
+    }
+
+    .success p {
+      max-width: 520px;
+      margin: 0 auto 21px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .success-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 40;
+      max-width: 360px;
+      padding: 13px 15px;
+      border-radius: 13px;
+      color: white;
+      background: #102019;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      line-height: 1.45;
+      animation: reveal .2s ease;
+    }
+
+    .error-text {
+      display: none;
+      margin-top: 8px;
+      color: #9c432d;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .error-text.visible { display: block; }
+    .honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+    @media (max-width: 940px) {
+      .shell {
+        grid-template-columns: 1fr;
+        width: min(760px, calc(100% - 28px));
+        gap: 24px;
+        padding-top: 28px;
+      }
+
+      .context {
+        position: relative;
+        top: 0;
+        min-height: auto;
+      }
+
+      .brand { margin-bottom: 34px; }
+      .context h1 { max-width: 620px; }
+      .promise-list { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: calc(100% - 18px); padding-bottom: 48px; }
+      .context, .section, .success { border-radius: 22px; }
+      .context { padding: 25px; }
+      .context h1 { font-size: 36px; }
+      .form-intro h2 { font-size: 40px; }
+      .section { padding: 22px 17px; }
+      .field-grid, .option-grid, .scale, .promise-list { grid-template-columns: 1fr; }
+      .scale .option { display: flex; justify-content: space-between; text-align: left; }
+      .submit-row { align-items: stretch; flex-direction: column; }
+      .submit-button, .secondary-button { width: 100%; }
+      .toast { right: 12px; bottom: 12px; left: 12px; max-width: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: 0ms !important; }
+      .constellation-canvas, .ambient { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <canvas class="constellation-canvas" id="constellationCanvas" aria-hidden="true"></canvas>
+  <div class="ambient" aria-hidden="true"></div>
+  <div class="ambient two" aria-hidden="true"></div>
+  <div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progressBar"></div></div>
+
+  <main class="shell">
+    <aside class="context">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div><strong>orbit</strong><small>POLYMATH OS</small></div>
+      </div>
+      <p class="eyebrow">Private early access</p>
+      <h1>Join the waitlist for a calmer way to become many things.</h1>
+      <p>Orbit is being shaped for ambitious people who want to grow across learning, health, creativity, work, faith, money, and relationships without turning life into a punishment board.</p>
+      <article class="signal-card">
+        <strong>What makes this different?</strong>
+        <span>It tracks proof, not perfection: tiny wins, adaptive plans, neglected domains, resisted bad habits, and recovery after life gets messy.</span>
+      </article>
+      <ul class="promise-list">
+        <li><span>01</span>Adaptive routines that shrink before they break</li>
+        <li><span>02</span>Polymath balance across life domains</li>
+        <li><span>03</span>Admin-managed waitlist with real privacy boundaries</li>
+      </ul>
+    </aside>
+
+    <section class="form-column">
+      <header class="form-intro">
+        <p class="eyebrow">Orbit waitlist</p>
+        <h2>Reserve your place in the first Orbit cohort.</h2>
+        <p>Answer a few questions so we can invite the right early users first. This is not a public group signup, and your details go into a protected Supabase waitlist.</p>
+        <div class="meta-row"><span>2 minutes</span><span>No WhatsApp required</span><span>Early access priority</span></div>
+      </header>
+
+      <div class="status-banner" id="configWarning">
+        Backend not configured yet. Add your Supabase URL and publishable key in <strong>waitlist-config.js</strong>, then deploy the <strong>submit-waitlist</strong> Edge Function.
+      </div>
+
+      <form id="waitlistForm" novalidate>
+        <input class="honeypot" id="company" name="company" tabindex="-1" autocomplete="off" />
+
+        <section class="section">
+          <header class="section-head"><span class="section-number">01</span><div><h3>Your access details</h3><p>Where should Orbit send your invite when the early version is ready?</p></div></header>
+          <div class="field-grid">
+            <div>
+              <div class="question-title"><label for="fullName">Full name <b class="required">*</b></label></div>
+              <input class="text-input" id="fullName" name="fullName" maxlength="120" autocomplete="name" placeholder="e.g. Dominique Cee" required />
+              <span class="error-text" data-error-for="fullName"></span>
+            </div>
+            <div>
+              <div class="question-title"><label for="email">Email address <b class="required">*</b></label></div>
+              <input class="text-input" id="email" name="email" type="email" maxlength="160" autocomplete="email" placeholder="you@example.com" required />
+              <span class="error-text" data-error-for="email"></span>
+            </div>
+          </div>
+          <div class="question">
+            <div class="question-title"><label for="country">Country <b class="required">*</b></label></div>
+            <select id="country" name="country" required>
+              <option value="">Choose your country</option>
+              <option>United States</option>
+              <option>United Kingdom</option>
+              <option>India</option>
+              <option>Nigeria</option>
+              <option>Other</option>
+            </select>
+            <span class="error-text" data-error-for="country"></span>
+          </div>
+        </section>
+
+        <section class="section">
+          <header class="section-head"><span class="section-number">02</span><div><h3>Your many-sided life</h3><p>This helps us understand who Orbit should serve first.</p></div></header>
+          <div class="question">
+            <div class="question-title"><span>Which describes you best right now? <b class="required">*</b></span></div>
+            <div class="options option-grid">
+              <label class="option"><input type="radio" name="roleLabel" value="Student" required><span class="control"></span>Student</label>
+              <label class="option"><input type="radio" name="roleLabel" value="Creator"><span class="control"></span>Creator / artist / writer</label>
+              <label class="option"><input type="radio" name="roleLabel" value="Founder"><span class="control"></span>Founder / freelancer</label>
+              <label class="option"><input type="radio" name="roleLabel" value="Professional"><span class="control"></span>Working professional</label>
+              <label class="option"><input type="radio" name="roleLabel" value="Lifelong learner"><span class="control"></span>Lifelong learner</label>
+              <label class="option"><input type="radio" name="roleLabel" value="Other"><span class="control"></span>Something else</label>
+            </div>
+            <span class="error-text" data-error-for="roleLabel"></span>
+          </div>
+
+          <div class="question">
+            <div class="question-title"><label for="currentTool">What do you currently use to track routines?</label></div>
+            <select id="currentTool" name="currentTool">
+              <option value="">Choose one</option>
+              <option>Nothing consistently</option>
+              <option>Paper journal or planner</option>
+              <option>Notes app or spreadsheet</option>
+              <option>Todoist, TickTick, Notion, or similar</option>
+              <option>Dedicated habit tracker</option>
+              <option>Calendar reminders</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="section">
+          <header class="section-head"><span class="section-number">03</span><div><h3>The Orbit fit</h3><p>We want demand from people whose problem is real, not just polite curiosity.</p></div></header>
+          <article class="concept-card">
+            <span>THE EARLY ACCESS PROMISE</span>
+            <h4>Orbit makes progress visible before discouragement gets loud.</h4>
+            <p>It combines daily routines, adaptive minimum versions, goals, domain balance, bad-habit recovery, and proof-based analytics for people building a polymath life.</p>
+          </article>
+
+          <div class="question">
+            <div class="question-title"><span>How interested are you in trying Orbit? <b class="required">*</b></span></div>
+            <div class="scale">
+              <label class="option"><input type="radio" name="interestScore" value="1" required><span class="control"></span><span><strong>1</strong><small>Not yet</small></span></label>
+              <label class="option"><input type="radio" name="interestScore" value="2"><span class="control"></span><span><strong>2</strong><small>Slightly</small></span></label>
+              <label class="option"><input type="radio" name="interestScore" value="3"><span class="control"></span><span><strong>3</strong><small>Curious</small></span></label>
+              <label class="option"><input type="radio" name="interestScore" value="4"><span class="control"></span><span><strong>4</strong><small>Interested</small></span></label>
+              <label class="option"><input type="radio" name="interestScore" value="5"><span class="control"></span><span><strong>5</strong><small>Very</small></span></label>
+            </div>
+            <span class="error-text" data-error-for="interestScore"></span>
+          </div>
+
+          <div class="question">
+            <div class="question-title"><span>Which parts should Orbit prioritize for you? <b class="required">*</b></span></div>
+            <p class="helper">Choose up to three. This helps us segment invites and build the right first version.</p>
+            <div class="options limited-options" data-limit="3">
+              <label class="option checkbox"><input type="checkbox" name="features" value="Adaptive daily plan"><span class="control"></span>Adaptive daily plan that shrinks when life gets heavy</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Proof-linked goals"><span class="control"></span>Goals connected to tiny proof habits</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Polymath balance"><span class="control"></span>Balance across study, body, creativity, money, faith, and relationships</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Bad habit recovery"><span class="control"></span>Bad-habit tracking without shame</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Insights"><span class="control"></span>Insights that explain what helps you follow through</label>
+              <label class="option checkbox"><input type="checkbox" name="features" value="Guided routines"><span class="control"></span>Guided routine sessions with timers and next actions</label>
+            </div>
+            <div class="count-note" id="featureCount">0 of 3 selected</div>
+            <span class="error-text" data-error-for="features"></span>
+          </div>
+
+          <div class="question">
+            <div class="question-title"><label for="biggestStruggle">What usually makes your self-improvement system collapse? <b class="required">*</b></label></div>
+            <textarea id="biggestStruggle" name="biggestStruggle" maxlength="600" placeholder="For example: too many interests, missed days, invisible progress, distractions, schedule changes..." required></textarea>
+            <span class="error-text" data-error-for="biggestStruggle"></span>
+          </div>
+        </section>
+
+        <section class="section">
+          <header class="section-head"><span class="section-number">04</span><div><h3>Consent and privacy</h3><p>We only want permission that is clear enough to respect later.</p></div></header>
+          <div class="options">
+            <label class="option checkbox"><input type="checkbox" id="consentContact" name="consentContact" checked required><span class="control"></span>I agree to be contacted about Orbit early access by email.</label>
+            <label class="option checkbox"><input type="checkbox" id="consentResearch" name="consentResearch"><span class="control"></span>You may contact me for short product research or beta feedback.</label>
+          </div>
+          <span class="error-text" data-error-for="consentContact"></span>
+          <div class="privacy"><span aria-hidden="true">o</span><div><strong>Privacy note:</strong> Your details are stored in Supabase and visible only to the Orbit admin account configured with RLS. We are not using WhatsApp for this waitlist.</div></div>
+        </section>
+
+        <div class="submit-row">
+          <p>If the network fails, Orbit will keep a pending local copy and show you a retry option instead of silently losing your response.</p>
+          <button class="submit-button" type="submit" id="submitButton">Join waitlist <span>-></span></button>
+        </div>
+      </form>
+
+      <section class="success" id="successState" aria-live="polite">
+        <div class="success-icon">OK</div>
+        <h2>You are on the Orbit waitlist.</h2>
+        <p id="successCopy">Your response has been safely received. When the early version is ready, Orbit can reach you through the email you provided.</p>
+        <div class="success-actions">
+          <button class="secondary-button" type="button" id="downloadReceipt">Download my confirmation</button>
+          <button class="secondary-button" type="button" id="editResponse">Edit response</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="waitlist-config.js"></script>
+  <script>
+    const config = window.ORBIT_WAITLIST_CONFIG || {};
+    const form = document.querySelector("#waitlistForm");
+    const successState = document.querySelector("#successState");
+    const progressBar = document.querySelector("#progressBar");
+    const submitButton = document.querySelector("#submitButton");
+    const featureCount = document.querySelector("#featureCount");
+    const configWarning = document.querySelector("#configWarning");
+    const receiptButton = document.querySelector("#downloadReceipt");
+    const editButton = document.querySelector("#editResponse");
+    const pendingKey = "orbit_waitlist_pending_submission";
+    const receiptKey = "orbit_waitlist_last_receipt";
+    const configured = config.supabaseUrl && !config.supabaseUrl.includes("YOUR_PROJECT_REF") && config.publishableKey && !config.publishableKey.includes("YOUR_SUPABASE");
+
+    if (!configured) configWarning.classList.add("visible");
+
+    form.addEventListener("input", () => {
+      updateProgress();
+      updateFeatureLimit();
+      clearVisibleErrors();
+    });
+    form.addEventListener("change", () => {
+      updateProgress();
+      updateFeatureLimit();
+      clearVisibleErrors();
+    });
+    form.addEventListener("submit", handleSubmit);
+    receiptButton.addEventListener("click", downloadReceipt);
+    editButton.addEventListener("click", () => {
+      successState.classList.remove("visible");
+      form.hidden = false;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    restorePending();
+    updateProgress();
+    updateFeatureLimit();
+    initConstellation();
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+      clearVisibleErrors();
+      const payload = buildPayload();
+      const errors = validatePayload(payload);
+      if (Object.keys(errors).length) {
+        showErrors(errors);
+        toast("A few fields need attention before joining.");
+        return;
+      }
+
+      if (!configured) {
+        queuePayload(payload);
+        toast("Backend is not configured yet. Your response is saved locally for retry.");
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Joining waitlist...";
+      try {
+        const result = await submitPayload(payload);
+        localStorage.removeItem(pendingKey);
+        const receipt = { ...payload, server: result, savedAt: new Date().toISOString() };
+        localStorage.setItem(receiptKey, JSON.stringify(receipt));
+        showSuccess(result);
+      } catch (error) {
+        queuePayload(payload);
+        toast(error.message || "Could not join the waitlist. A pending copy was saved locally.");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = "Join waitlist <span>-></span>";
+      }
+    }
+
+    async function submitPayload(payload) {
+      const endpoint = `${config.supabaseUrl.replace(/\/$/, "")}/functions/v1/${config.functionName || "submit-waitlist"}`;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": config.publishableKey,
+          "Authorization": `Bearer ${config.publishableKey}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = body.error || body.message || `Waitlist request failed with status ${response.status}`;
+        throw new Error(message);
+      }
+      return body;
+    }
+
+    function buildPayload() {
+      const data = new FormData(form);
+      return {
+        fullName: clean(data.get("fullName")),
+        email: clean(data.get("email")).toLowerCase(),
+        country: clean(data.get("country")),
+        roleLabel: clean(data.get("roleLabel")),
+        currentTool: clean(data.get("currentTool")),
+        biggestStruggle: clean(data.get("biggestStruggle")),
+        interestScore: Number(data.get("interestScore") || 0),
+        desiredFeatures: data.getAll("features").slice(0, 3).map(clean),
+        consentContact: Boolean(data.get("consentContact")),
+        consentResearch: Boolean(data.get("consentResearch")),
+        source: "orbit_waitlist_public",
+        honeypot: clean(data.get("company")),
+        metadata: {
+          locale: navigator.language || "",
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+          screen: `${window.screen.width}x${window.screen.height}`,
+          referrer: document.referrer || "",
+          submittedFrom: location.href,
+          submittedAt: new Date().toISOString()
+        }
+      };
+    }
+
+    function validatePayload(payload) {
+      const errors = {};
+      if (payload.honeypot) errors.form = "Submission blocked.";
+      if (payload.fullName.length < 2) errors.fullName = "Enter your name.";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) errors.email = "Enter a valid email.";
+      if (!payload.country) errors.country = "Choose your country.";
+      if (!payload.roleLabel) errors.roleLabel = "Choose the closest role.";
+      if (!payload.interestScore) errors.interestScore = "Choose your interest level.";
+      if (!payload.desiredFeatures.length) errors.features = "Choose at least one priority.";
+      if (payload.biggestStruggle.length < 8) errors.biggestStruggle = "Share a short but useful answer.";
+      if (!payload.consentContact) errors.consentContact = "Email consent is required for the waitlist.";
+      return errors;
+    }
+
+    function showErrors(errors) {
+      Object.entries(errors).forEach(([name, message]) => {
+        const target = document.querySelector(`[data-error-for="${name}"]`);
+        if (target) {
+          target.textContent = message;
+          target.classList.add("visible");
+        }
+      });
+      const first = Object.keys(errors)[0];
+      const field = document.querySelector(`[name="${first}"], #${first}`);
+      field?.focus();
+    }
+
+    function clearVisibleErrors() {
+      document.querySelectorAll(".error-text.visible").forEach(item => {
+        item.classList.remove("visible");
+        item.textContent = "";
+      });
+    }
+
+    function updateProgress() {
+      const payload = buildPayload();
+      const checks = [
+        payload.fullName.length > 1,
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email),
+        Boolean(payload.country),
+        Boolean(payload.roleLabel),
+        Boolean(payload.currentTool),
+        Boolean(payload.interestScore),
+        payload.desiredFeatures.length > 0,
+        payload.biggestStruggle.length > 7,
+        payload.consentContact
+      ];
+      const complete = checks.filter(Boolean).length;
+      progressBar.style.width = `${Math.round((complete / checks.length) * 100)}%`;
+    }
+
+    function updateFeatureLimit() {
+      const boxes = [...document.querySelectorAll('[name="features"]')];
+      const selected = boxes.filter(box => box.checked);
+      boxes.forEach(box => { box.disabled = !box.checked && selected.length >= 3; });
+      featureCount.textContent = `${selected.length} of 3 selected`;
+      featureCount.classList.toggle("warning", selected.length >= 3);
+    }
+
+    function queuePayload(payload) {
+      localStorage.setItem(pendingKey, JSON.stringify({ payload, savedAt: new Date().toISOString() }));
+    }
+
+    function restorePending() {
+      const pending = safeJson(localStorage.getItem(pendingKey));
+      if (!pending?.payload) return;
+      const payload = pending.payload;
+      setValue("fullName", payload.fullName);
+      setValue("email", payload.email);
+      setValue("country", payload.country);
+      setRadio("roleLabel", payload.roleLabel);
+      setValue("currentTool", payload.currentTool);
+      setRadio("interestScore", String(payload.interestScore || ""));
+      setValue("biggestStruggle", payload.biggestStruggle);
+      (payload.desiredFeatures || []).forEach(value => setCheckbox("features", value));
+      document.querySelector("#consentContact").checked = payload.consentContact !== false;
+      document.querySelector("#consentResearch").checked = Boolean(payload.consentResearch);
+      toast("Restored a pending waitlist response from this browser.");
+    }
+
+    function showSuccess(result) {
+      form.hidden = true;
+      successState.classList.add("visible");
+      document.querySelector("#successCopy").textContent = result?.duplicate
+        ? "You were already on the waitlist, so we refreshed your latest preferences."
+        : "Your response has been safely received. When the early version is ready, Orbit can reach you through the email you provided.";
+      successState.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function downloadReceipt() {
+      const receipt = safeJson(localStorage.getItem(receiptKey));
+      if (!receipt) {
+        toast("No confirmation is available yet.");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orbit-waitlist-confirmation-${Date.now()}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clean(value = "") {
+      return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function safeJson(value) {
+      try { return JSON.parse(value); } catch { return null; }
+    }
+
+    function setValue(name, value) {
+      const field = document.querySelector(`[name="${name}"]`);
+      if (field) field.value = value || "";
+    }
+
+    function setRadio(name, value) {
+      const field = [...document.querySelectorAll(`[name="${name}"]`)].find(item => item.value === value);
+      if (field) field.checked = true;
+    }
+
+    function setCheckbox(name, value) {
+      const field = [...document.querySelectorAll(`[name="${name}"]`)].find(item => item.value === value);
+      if (field) field.checked = true;
+    }
+
+    function toast(message) {
+      const item = document.createElement("div");
+      item.className = "toast";
+      item.textContent = message;
+      document.body.appendChild(item);
+      setTimeout(() => item.remove(), 4200);
+    }
+
+    function initConstellation() {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const canvas = document.querySelector("#constellationCanvas");
+      const ctx = canvas.getContext("2d");
+      const pointer = { x: -9999, y: -9999 };
+      const nodes = [];
+      let width = 0;
+      let height = 0;
+      let dpr = 1;
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        seed();
+      }
+
+      function seed() {
+        nodes.length = 0;
+        const count = Math.min(86, Math.max(38, Math.floor((width * height) / 18000)));
+        for (let i = 0; i < count; i += 1) {
+          nodes.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            orbit: 18 + Math.random() * 54,
+            angle: Math.random() * Math.PI * 2,
+            speed: (Math.random() * .004 + .0015) * (Math.random() > .5 ? 1 : -1),
+            size: Math.random() * 1.7 + .7,
+            hue: Math.random() > .72 ? "143,200,223" : "200,222,145"
+          });
+        }
+      }
+
+      function frame() {
+        ctx.clearRect(0, 0, width, height);
+        const time = performance.now() * .00012;
+        const centerX = width * .52;
+        const centerY = height * .42;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        for (let ring = 0; ring < 4; ring += 1) {
+          ctx.rotate(.0015 + ring * .0007);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, width * (.18 + ring * .095), height * (.11 + ring * .055), time + ring, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(24, 53, 42, ${.05 - ring * .006})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        for (const node of nodes) {
+          node.angle += node.speed;
+          const ox = Math.cos(node.angle) * node.orbit;
+          const oy = Math.sin(node.angle) * node.orbit * .38;
+          const x = node.x + ox;
+          const y = node.y + oy;
+          const dx = pointer.x - x;
+          const dy = pointer.y - y;
+          const distance = Math.hypot(dx, dy);
+          const pull = Math.max(0, 1 - distance / 180);
+          const drawX = x - dx * pull * .035;
+          const drawY = y - dy * pull * .035;
+
+          ctx.beginPath();
+          ctx.arc(drawX, drawY, node.size + pull * 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${node.hue}, ${.28 + pull * .46})`;
+          ctx.fill();
+
+          nodes.forEach(other => {
+            if (other === node) return;
+            const otherX = other.x + Math.cos(other.angle) * other.orbit;
+            const otherY = other.y + Math.sin(other.angle) * other.orbit * .38;
+            const gap = Math.hypot(otherX - drawX, otherY - drawY);
+            if (gap < 116) {
+              ctx.beginPath();
+              ctx.moveTo(drawX, drawY);
+              ctx.lineTo(otherX, otherY);
+              ctx.strokeStyle = `rgba(24, 53, 42, ${.055 * (1 - gap / 116)})`;
+              ctx.stroke();
+            }
+          });
+        }
+
+        requestAnimationFrame(frame);
+      }
+
+      window.addEventListener("resize", resize);
+      window.addEventListener("pointermove", event => {
+        pointer.x = event.clientX;
+        pointer.y = event.clientY;
+      });
+      window.addEventListener("pointerleave", () => {
+        pointer.x = -9999;
+        pointer.y = -9999;
+      });
+      resize();
+      frame();
+    }
+  </script>
+</body>
+</html>
