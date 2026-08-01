@@ -24,4 +24,5 @@ index_*.html
 .codex/
 .vscode/
 package.json
+package-lock.json
 KaizenForge/WAITLIST_SUPABASE_SETUP.md

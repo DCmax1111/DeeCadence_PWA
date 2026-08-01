@@ -1,4 +1,4 @@
-import { createClient } from "supabase";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 type WaitlistPayload = {
   fullName?: string;
@@ -23,7 +23,7 @@ type CleanPayload = {
   role_label: string;
   current_tool: string;
   biggest_struggle: string;
-  interest_score: number;
+  interest_score: number | null;
   desired_features: string[];
   consent_contact: boolean;
   consent_research: boolean;
@@ -124,10 +124,8 @@ function normalizePayload(payload: WaitlistPayload, request: Request): CleanPayl
   if (fullName.length < 2) throw new PublicError("Please enter your name.", 422);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new PublicError("Please enter a valid email address.", 422);
   if (!country) throw new PublicError("Please choose your country.", 422);
-  if (!roleLabel) throw new PublicError("Please choose the closest role.", 422);
-  if (!Number.isInteger(interestScore) || interestScore < 1 || interestScore > 5) throw new PublicError("Please choose your interest level.", 422);
-  if (!desiredFeatures.length) throw new PublicError("Please choose at least one Orbit priority.", 422);
-  if (biggestStruggle.length < 8) throw new PublicError("Please share a little more about what usually breaks your routine.", 422);
+  if (interestScore && (!Number.isInteger(interestScore) || interestScore < 1 || interestScore > 5)) throw new PublicError("Please choose a valid interest level.", 422);
+  if (biggestStruggle && biggestStruggle.length < 8) throw new PublicError("Please share a little more about what usually breaks your routine.", 422);
   if (payload.consentContact !== true) throw new PublicError("Email consent is required for the waitlist.", 422);
 
   return {
@@ -137,7 +135,7 @@ function normalizePayload(payload: WaitlistPayload, request: Request): CleanPayl
     role_label: roleLabel,
     current_tool: currentTool,
     biggest_struggle: biggestStruggle,
-    interest_score: interestScore,
+    interest_score: interestScore || null,
     desired_features: desiredFeatures,
     consent_contact: true,
     consent_research: payload.consentResearch === true,
