@@ -1,0 +1,4 @@
+project_id = "orbit-waitlist"
+
+[functions.submit-waitlist]
+verify_jwt = true
