@@ -1,4 +1,4 @@
-const CACHE_NAME = "deecadence-v3-2-current";
+const CACHE_NAME = "deecadence-v3-3-cachefirst";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -26,13 +26,33 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html")))
+    caches.match(event.request).then((cached) => {
+      // Always kick off a background network fetch to keep the cache fresh,
+      // but never make the user wait on it.
+      const networkUpdate = fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => null);
+
+      if (cached) {
+        // Serve instantly from cache; update happens silently in the background.
+        networkUpdate;
+        return cached;
+      }
+
+      // Nothing cached yet (e.g. first visit) — wait on the network, but
+      // give up after 8s instead of hanging indefinitely on a slow connection.
+      const timeout = new Promise((resolve) =>
+        setTimeout(() => resolve(caches.match("./index.html")), 8000)
+      );
+      return Promise.race([networkUpdate, timeout]).then(
+        (result) => result || caches.match("./index.html")
+      );
+    })
   );
 });
