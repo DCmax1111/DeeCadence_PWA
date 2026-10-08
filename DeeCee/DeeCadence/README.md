@@ -1,42 +1,32 @@
-# DeeCadence Web App
+# DeeCadence
 
-DeeCadence is now being shaped as a free-first focus web app that helps people start, finish, and come back to focus sessions without feeling like partial progress was wasted.
+DeeCadence is a local-first attention and focus app. It helps people start at a sustainable pace, keep partial progress, and see their own attention practice over time.
 
-This folder now contains only the files directly supporting the current DeeCadence launch build:
+## Included
 
-- dashboard
-- 4-block focus timer
-- progress and insights
-- levels and streak motivation
-- history
-- settings and feedback handoff
-- survey reference flow
+- Structured focus sessions, task planning, saved-session recovery, and progress history
+- A selective-attention check for personal trend tracking
+- On-device storage and backup export/import
+- Optional email sign-in and cross-device sync through Supabase
 
-The current frontend is local-first and browser-based. It uses saved local state to support testing the launch loop before adding monetization or deeper cloud features.
+## Local-first and sync behavior
 
-## Design Direction
+The app works without an account or network connection. Tasks, completed sessions, attention checks, settings, and progress stay in this browser until sync is enabled. When signed in and online, those records sync to the account. A running timer and pending feedback delivery queue remain on the device where they were created.
 
-The current UI direction in this folder follows the desktop reference images in `images/`:
+If this device and the cloud copy both change since the last sync, DeeCadence asks which version to keep. It saves a local recovery copy before applying cloud data. Signing out leaves local data in place. Resetting data clears the local copy and reconciles with the cloud snapshot on the next sync. If both copies changed, DeeCadence asks you to choose.
 
-- bright, premium light interface
-- blue and violet focus accents
-- left navigation on desktop
-- mobile layout adapted from the same card system
-- calm, progress-forward tone
+The browser uses only the Supabase publishable key. User data is protected by row-level security and the save function checks a revision before writing. Never put a service-role key in this app.
 
-## Run It
+## Supabase setup
 
-Open [index.html](/C:/Users/domin/DC Projects/DeeCadence_PWA/DeeCee/DeeCadence/index.html) directly in a browser.
+The current DeeCadence Supabase project has the sync table, row policies, and revision-checked save function applied. The supabase/setup_sync.sql file records the schema for another environment. Keep the project URL and publishable key in the two deecadence-sync meta tags in index.html; never put a secret key there.
 
-If you want a quick syntax check:
+Add the local development URL and eventual HTTPS production URL to Supabase Auth's allowed redirect URLs. The sign-in link returns to the current page, so the local port and deployed domain must be allowlisted. Configure an SMTP sender before public launch so sign-in links are reliable and branded. The current Supabase project is on the Free plan and was restored for this integration; Free projects with low activity over a 7-day period can be paused, so monitor it or upgrade before relying on continuous availability.
 
-```powershell
-cd DeeCee/DeeCadence
-npm run check
-```
+## Run locally
 
-## Notes
+Serve this folder over localhost or HTTPS when testing sign-in and cloud sync. Opening index.html with a file URL still permits local use but cannot complete the account callback.
 
-- The launch version is intentionally free first.
-- The feedback flow currently points to `deecadence_feedback_form_reference.html`.
-- Older backend, payment, and deployment leftovers were removed so the folder only reflects the current frontend direction.
+## Checks
+
+Run npm run check and npm test in a Node.js environment. The first checks the shipped app, sync module, source copy, and service worker; the second runs the existing session-flow and root-app audits.

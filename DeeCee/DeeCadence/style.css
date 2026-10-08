@@ -7645,3 +7645,762 @@ textarea {
   background: var(--card-bg-soft) !important;
   border-color: var(--border) !important;
 }
+
+.sync-card { margin-bottom: 14px; }
+.sync-status { margin: 14px 0 10px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.sync-status[data-status="success"] { color: var(--accent, #68d7ae); }
+.sync-status[data-status="error"], .sync-status[data-status="conflict"] { color: var(--warning, #f4c66a); }
+.sync-signin, .sync-account-controls, .sync-conflict-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.sync-signin input { flex: 1 1 220px; min-width: 0; min-height: 42px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-2); color: var(--text); }
+.sync-signin input:focus { outline: 2px solid var(--accent, #75a7ff); outline-offset: 2px; }
+.sync-account-email { color: var(--text-muted); font-size: 13px; overflow-wrap: anywhere; }
+.sync-conflict { margin-top: 14px; padding: 14px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface-2); }
+.sync-conflict p { color: var(--text-muted); font-size: 13px; line-height: 1.5; margin: 7px 0 12px; }
+@media (max-width: 599px) {
+  .sync-signin, .sync-account-controls { align-items: stretch; flex-direction: column; }
+  .sync-signin .btn, .sync-account-controls .btn, .sync-conflict-actions .btn { width: 100%; }
+  .sync-account-email { width: 100%; }
+}
+.sync-signin[hidden], .sync-account-controls[hidden], .sync-conflict[hidden] { display: none !important; }
+
+/* Theme-aware, rank-tinted hero art with responsive greeting metadata. */
+.capacity-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 clamp(18px, 2vw, 26px);
+}
+.capacity-meta .capacity-kicker {
+  flex: 0 1 auto;
+  margin: 0;
+}
+.capacity-date {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--rank-accent) 72%, #c5d2cd);
+  font: 700 clamp(0.64rem, 0.76vw, 0.74rem)/1.2 var(--font-mono, monospace);
+  letter-spacing: 0.12em;
+  text-align: right;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+:root[data-theme="dark"] #view-today .capacity-hero {
+  background-color: #020607 !important;
+  background-image:
+    linear-gradient(120deg, color-mix(in srgb, var(--rank-accent) 16%, transparent), transparent 70%),
+    linear-gradient(90deg, rgba(2, 8, 11, 0.93) 0%, rgba(2, 8, 11, 0.78) 52%, rgba(2, 8, 11, 0.34) 100%),
+    url("./assets/images/deecadence-home-dark.jpg") !important;
+  background-position: center, center, center !important;
+  background-size: cover, cover, cover !important;
+  background-repeat: no-repeat, no-repeat, no-repeat !important;
+}
+:root[data-theme="light"] #view-today .capacity-hero {
+  background-color: #f8fbf8 !important;
+  background-image:
+    linear-gradient(120deg, color-mix(in srgb, var(--rank-accent) 14%, transparent), transparent 70%),
+    linear-gradient(90deg, rgba(249, 252, 249, 0.94) 0%, rgba(249, 252, 249, 0.82) 52%, rgba(249, 252, 249, 0.42) 100%),
+    url("./assets/images/deecadence-home-light.jpg") !important;
+  background-position: center, center, center !important;
+  background-size: cover, cover, cover !important;
+  background-repeat: no-repeat, no-repeat, no-repeat !important;
+}
+@media (max-width: 720px) {
+  :root[data-theme="dark"] #view-today .capacity-hero {
+    background-image:
+      linear-gradient(120deg, color-mix(in srgb, var(--rank-accent) 14%, transparent), transparent 74%),
+      linear-gradient(180deg, rgba(2, 8, 11, 0.82) 0%, rgba(2, 8, 11, 0.9) 52%, rgba(2, 8, 11, 0.96) 100%),
+      url("./assets/images/deecadence-home-dark.jpg") !important;
+    background-position: center, center, 56% center !important;
+  }
+  :root[data-theme="light"] #view-today .capacity-hero {
+    background-image:
+      linear-gradient(120deg, color-mix(in srgb, var(--rank-accent) 12%, transparent), transparent 74%),
+      linear-gradient(180deg, rgba(249, 252, 249, 0.82) 0%, rgba(249, 252, 249, 0.9) 52%, rgba(249, 252, 249, 0.96) 100%),
+      url("./assets/images/deecadence-home-light.jpg") !important;
+    background-position: center, center, 56% center !important;
+  }
+  .capacity-meta { gap: 8px; }
+  .capacity-meta .capacity-kicker {
+    max-width: 58%;
+    letter-spacing: 0.12em;
+  }
+  .capacity-date {
+    max-width: 38%;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    white-space: normal;
+  }
+}
+/* Clear celestial marker; full landscape remains a larger-screen treatment. */
+.capacity-meta-end {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  gap: clamp(8px, 1.2vw, 14px);
+  min-width: 0;
+}
+.capacity-sky-icon {
+  display: grid;
+  flex: 0 0 clamp(28px, 3.4vw, 42px);
+  place-items: center;
+  width: clamp(28px, 3.4vw, 42px);
+  height: clamp(28px, 3.4vw, 42px);
+  color: var(--rank-accent);
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--rank-accent) 34%, transparent));
+}
+.capacity-sky-icon svg { width: 100%; height: 100%; }
+:root[data-theme="dark"] .capacity-sun,
+:root[data-theme="light"] .capacity-moon { display: none; }
+:root[data-theme="light"] .capacity-sun { display: block; }
+:root[data-theme="dark"] .capacity-moon { display: block; }
+
+@media (max-width: 720px) {
+  :root[data-theme="dark"] #view-today .capacity-hero {
+    background-color: #050b09 !important;
+    background-image:
+      radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--rank-accent) 20%, transparent), transparent 13rem),
+      linear-gradient(145deg, #07110f 0%, #030807 100%) !important;
+    background-position: center, center !important;
+    background-size: cover, cover !important;
+    background-repeat: no-repeat, no-repeat !important;
+  }
+  :root[data-theme="light"] #view-today .capacity-hero {
+    background-color: #f7faf7 !important;
+    background-image:
+      radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--rank-accent) 16%, transparent), transparent 13rem),
+      linear-gradient(145deg, #ffffff 0%, color-mix(in srgb, var(--rank-accent) 5%, #eef6f1) 100%) !important;
+    background-position: center, center !important;
+    background-size: cover, cover !important;
+    background-repeat: no-repeat, no-repeat !important;
+  }
+  .capacity-meta { gap: 6px; }
+  .capacity-meta .capacity-kicker { max-width: 54%; }
+  .capacity-meta-end { max-width: 40%; gap: 6px; }
+  .capacity-sky-icon {
+    flex-basis: 22px;
+    width: 22px;
+    height: 22px;
+    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--rank-accent) 28%, transparent));
+  }
+  .capacity-date {
+    max-width: none;
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    white-space: normal;
+  }
+}
+@media (max-width: 380px) {
+  .capacity-meta .capacity-kicker { max-width: 52%; font-size: 0.6rem; letter-spacing: 0.1em; }
+  .capacity-meta-end { max-width: 44%; gap: 5px; }
+  .capacity-sky-icon { flex-basis: 20px; width: 20px; height: 20px; }
+  .capacity-date { font-size: 0.56rem; }
+}
+
+/* Keep onboarding actions legible on phones and landscape screens. */
+.onboarding-actions .btn { white-space: nowrap; }
+@media (max-width: 599px) {
+  .onboarding-actions .btn { padding-inline: 8px; font-size: 12px; }
+}
+@media (max-width: 380px) {
+  .onboarding-actions { gap: 6px; }
+  .onboarding-actions .btn { padding-inline: 5px; font-size: 11.5px; }
+}/* Calm light mode: neutral paper surfaces keep rank color in small accents. */
+:root[data-theme="light"],
+body[data-theme="light"] {
+  --bg: #f3f2ee;
+  --bg-elev: #faf9f6;
+  --surface: #fffefa;
+  --surface-2: #f5f4f0;
+  --surface-3: #eceae4;
+  --surface-hover: #e7e5df;
+  --border: #dedcd5;
+  --border-strong: color-mix(in srgb, var(--rank-accent) 18%, #c9c7bf);
+  --text: #252720;
+  --text-dim: #62645e;
+  --text-faint: #83847d;
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.84) inset, 0 8px 24px rgba(38, 38, 31, 0.055);
+  --page-bg: linear-gradient(145deg, #f5f4f0 0%, #efeee9 100%);
+  --chrome-bg: rgba(250, 249, 246, 0.98);
+  --card-bg: #fffefa;
+  --card-bg-soft: color-mix(in srgb, var(--rank-accent) 2%, #fffefa);
+}
+
+:root[data-theme="light"] .navbtn.active,
+:root[data-theme="light"] .navbtn[aria-current="page"],
+:root[data-theme="light"] .bottomnav button.active {
+  background: color-mix(in srgb, var(--rank-accent) 7%, var(--surface-2)) !important;
+  border-color: color-mix(in srgb, var(--rank-accent) 20%, var(--border)) !important;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--rank-accent) 76%, #77766f) !important;
+}
+
+:root[data-theme="light"] .xp-bar-track,
+:root[data-theme="light"] .capacity-evidence,
+:root[data-theme="light"] .rank-upgrade-track {
+  background: color-mix(in srgb, var(--rank-accent) 5%, var(--surface-2)) !important;
+}
+
+:root[data-theme="light"] .btn-primary,
+:root[data-theme="light"] .focus-cta,
+:root[data-theme="light"] .next-block-card .btn-primary,
+:root[data-theme="light"] .saved-session-stack > .btn-secondary {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--rank-accent) 48%, #fffefa),
+    color-mix(in srgb, var(--rank-accent) 32%, #f0efe9)
+  ) !important;
+  border-color: color-mix(in srgb, var(--rank-accent) 35%, #d2d0c8) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 5px 14px rgba(38, 38, 31, 0.07) !important;
+}
+
+:root[data-theme="light"] .feedback-fab {
+  color: var(--text-dim) !important;
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 4px 14px rgba(38, 38, 31, 0.09) !important;
+}
+
+/* Restore card breathing room and keep the sign-in field compact on phones. */
+#view-settings > .sync-card {
+  padding: 16px 18px !important;
+}
+
+.sync-card .setting-desc {
+  margin-top: 4px;
+}
+
+.sync-signin input {
+  box-sizing: border-box;
+}
+
+@media (max-width: 599px) {
+  .sync-signin {
+    width: 100%;
+  }
+
+  .sync-signin input {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+/* Focus and Plan: clear hierarchy, calm controls, and responsive work areas. */
+#view-focus #focusRoot {
+  width: 100%;
+  max-width: 1020px;
+  margin-inline: auto;
+}
+
+#view-focus .focus-stage {
+  min-height: min(680px, calc(100dvh - 180px));
+  padding: clamp(24px, 4vw, 44px);
+  border-radius: 26px;
+}
+
+#view-focus .focus-stage-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+#view-focus .focus-stage-head > div:first-child {
+  min-width: 0;
+}
+
+#view-focus .focus-stage-head h2 {
+  display: -webkit-box;
+  max-width: none;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+#view-focus .focus-stage-progress {
+  min-width: max-content;
+}
+
+#view-focus .focus-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+#view-focus .focus-controls .btn {
+  min-height: 48px;
+}
+
+#view-focus .empty-focus .btn {
+  width: min(100%, 320px);
+  min-height: 52px;
+}
+
+#view-focus .saved-session-stack {
+  width: 100%;
+  max-width: 780px;
+  margin-inline: auto;
+}
+
+#view-focus .saved-session-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+}
+
+#view-focus .saved-session-heading h3 {
+  margin: 6px 0 0;
+  font-size: clamp(1.2rem, 2.5vw, 1.55rem);
+}
+
+#view-focus .saved-session-heading small {
+  max-width: 34ch;
+  color: var(--text-faint);
+  line-height: 1.45;
+}
+
+#view-focus .focus-linked {
+  text-wrap: balance;
+}
+
+/* Label each Plan control group so layout and range filters are self-explanatory. */
+#view-plan .plan-controls {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.8fr) minmax(280px, 1.2fr) minmax(150px, auto);
+  align-items: end;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+
+#view-plan .plan-control-group {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+#view-plan .plan-control-label {
+  color: var(--text-faint);
+  font: 800 0.66rem/1.2 "IBM Plex Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+#view-plan .plan-mode-seg,
+#view-plan .tabs {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: auto;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+}
+
+#view-plan .plan-mode-seg button,
+#view-plan .tabs .tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--text-dim);
+  background: transparent;
+  font: 700 0.76rem/1.1 "Manrope", sans-serif;
+  text-align: center;
+  white-space: nowrap;
+}
+
+#view-plan .plan-mode-seg button.active,
+#view-plan .tabs .tab.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--rank-accent) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--rank-accent) 25%, var(--border));
+  box-shadow: none;
+}
+
+#view-plan .plan-mode-seg button:focus-visible,
+#view-plan .tabs .tab:focus-visible,
+#view-plan #autoArrangeBtnPlan:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--rank-accent) 68%, white);
+  outline-offset: 2px;
+}
+
+#view-plan #autoArrangeBtnPlan {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  justify-self: stretch;
+  white-space: nowrap;
+}
+
+#view-plan #planList {
+  width: 100%;
+  max-width: 1440px;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+#view-plan .schedule-main {
+  width: 100%;
+  min-height: 0;
+  padding: 0 0 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#view-plan .schedule-main .schedule-head {
+  align-items: flex-end;
+  gap: 14px;
+}
+
+#view-plan .schedule-main .schedule-head h3 {
+  margin-top: 4px;
+  font-size: clamp(1.2rem, 2.4vw, 1.7rem);
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+#view-plan .schedule-head-actions {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+#view-plan .schedule-main .schedule-scroll {
+  height: clamp(420px, calc(100dvh - 340px), 720px);
+  min-height: 420px;
+  max-height: none;
+  margin-top: 14px;
+  padding-top: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-2);
+  overscroll-behavior: contain;
+}
+
+#view-plan .schedule-main .schedule-timeline {
+  border-radius: 15px;
+}
+
+#view-plan .schedule-empty-timeline {
+  max-width: 30ch;
+  padding: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  line-height: 1.5;
+}
+
+#view-plan .task-list-stack {
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+#view-plan .task-list-heading {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+#view-plan .task-row {
+  gap: 12px;
+}
+
+#view-plan .task-card-title {
+  overflow-wrap: anywhere;
+}
+
+#view-plan .task-card-actions {
+  align-items: center;
+  gap: 7px;
+}
+
+#view-plan .schedule-block:focus-visible,
+#view-plan .schedule-mini-block:focus-visible,
+#view-plan [data-open-task]:focus-visible,
+#view-plan [data-toggle-task]:focus-visible,
+#view-plan [data-edit-task]:focus-visible,
+#view-plan [data-focus-task]:focus-visible,
+#view-plan [data-delete-task]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--rank-accent) 72%, white);
+  outline-offset: 2px;
+}
+
+/* Keep the two workspaces free of the floating feedback control. */
+#app:has(#view-focus.active) .feedback-fab,
+#app:has(#view-plan.active) .feedback-fab {
+  display: none !important;
+}
+
+@media (max-width: 860px) {
+  #view-plan .plan-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  }
+
+  #view-plan #autoArrangeBtnPlan {
+    grid-column: 1 / -1;
+  }
+
+  #view-plan .schedule-main .schedule-scroll {
+    height: clamp(380px, calc(100dvh - 330px), 640px);
+    min-height: 380px;
+  }
+}
+
+@media (max-width: 599px) {
+  #view-plan .plan-controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  #view-plan .plan-control-group {
+    gap: 6px;
+  }
+
+  #view-plan .plan-mode-seg button,
+  #view-plan .tabs .tab {
+    min-height: 42px;
+    padding-inline: 7px;
+    font-size: 0.72rem;
+  }
+
+  #view-plan .schedule-main {
+    padding-bottom: 10px;
+  }
+
+  #view-plan .schedule-main .schedule-head {
+    align-items: flex-start;
+  }
+
+  #view-plan .schedule-head-actions {
+    gap: 6px;
+  }
+
+  #view-plan .schedule-head-actions button {
+    min-height: 40px;
+    padding-inline: 10px;
+  }
+
+  #view-plan .schedule-main .schedule-scroll {
+    width: calc(100% + 32px);
+    height: min(54dvh, 440px);
+    min-height: 300px;
+    margin-left: -16px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  #view-plan .schedule-main .schedule-timeline {
+    border-radius: 0;
+  }
+
+  #view-plan .task-list-stack {
+    width: 100%;
+  }
+
+  #view-plan .task-card-actions {
+    flex-wrap: wrap;
+  }
+
+  #view-focus .focus-stage {
+    min-height: min(650px, calc(100dvh - 185px));
+    padding: 92px 16px 24px;
+    border-radius: 20px;
+  }
+
+  #view-focus .focus-stage-head {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    gap: 8px;
+  }
+
+  #view-focus .focus-stage-head h2 {
+    font-size: clamp(1rem, 4.5vw, 1.2rem);
+  }
+
+  #view-focus .focus-stage-progress > span {
+    font-size: 0.62rem;
+  }
+
+  #view-focus .focus-stage .timer-ring-wrap {
+    width: min(68vw, 260px);
+    height: min(68vw, 260px);
+    margin: 12px 0 14px;
+  }
+
+  #view-focus .focus-stage .timer-digits {
+    font-size: clamp(2.5rem, 12vw, 3.6rem);
+  }
+
+  #view-focus .focus-stage .focus-controls {
+    width: min(100%, 360px);
+  }
+
+  #view-focus .focus-stage .focus-controls .btn {
+    flex: 1 1 145px;
+  }
+}
+
+@media (max-width: 430px) {
+  #view-focus .focus-stage .focus-controls {
+    flex-direction: column;
+  }
+
+  #view-focus .focus-stage .focus-controls .btn {
+    width: 100%;
+    flex: none;
+  }
+
+  #view-plan .schedule-head-actions > span {
+    display: none;
+  }
+}
+
+@media (max-height: 620px) and (max-width: 900px) {
+  #view-focus .focus-stage {
+    min-height: 0;
+    padding-top: 76px;
+    padding-bottom: 18px;
+  }
+
+  #view-focus .focus-stage .timer-ring-wrap {
+    width: min(42vh, 220px);
+    height: min(42vh, 220px);
+    margin: 6px 0 10px;
+  }
+
+  #view-focus .focus-stage .focus-linked {
+    margin-bottom: 12px;
+  }
+
+  #view-focus .focus-stage .focus-controls .btn {
+    min-height: 44px;
+  }
+}
+
+/* A running block gets an uncluttered workspace; pause to return to navigation. */
+#app:has(#view-focus.active .focus-stage[data-focus-status="running"]) .sidenav,
+#app:has(#view-focus.active .focus-stage[data-focus-status="running"]) .bottomnav,
+#app:has(#view-focus.active .focus-stage[data-focus-status="running"]) .feedback-fab,
+#app:has(#view-focus.active .focus-stage[data-focus-status="running"]) #view-focus > .topbar {
+  display: none !important;
+}
+
+#app:has(#view-focus.active .focus-stage[data-focus-status="running"]) main {
+  flex: 1 1 auto;
+  width: min(100%, 1020px);
+  max-width: 1020px;
+  margin: 0 auto;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+
+#app:has(#view-focus.active .focus-stage[data-focus-status="running"]) #view-focus {
+  width: 100%;
+  max-width: none;
+  padding-inline: 0;
+}
+
+#app:has(#view-focus.active .focus-stage[data-focus-status="running"]) #view-focus #focusRoot {
+  max-width: none;
+}
+
+#app:has(#view-focus.active .focus-stage[data-focus-status="running"]) #view-focus .focus-stage {
+  min-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  margin: 0;
+}
+
+@media (max-height: 620px) and (max-width: 900px) {
+  #app:has(#view-focus.active .focus-stage[data-focus-status="running"]) #view-focus .focus-stage {
+    min-height: 0;
+    padding-top: 20px;
+  }
+}
+
+/* Keep Plan labels and segmented controls aligned at every width. */
+#view-plan .plan-control-group {
+  grid-template-rows: 16px 48px;
+  align-content: stretch;
+  align-self: end;
+  gap: 6px;
+}
+
+#view-plan .plan-control-label {
+  display: block;
+  height: 16px;
+  line-height: 16px;
+  align-self: end;
+  text-align: left;
+}
+
+#view-plan .plan-mode-seg,
+#view-plan .tabs {
+  height: 48px;
+  min-height: 48px;
+  flex-wrap: nowrap;
+}
+
+#view-plan .plan-mode-seg button,
+#view-plan .tabs .tab {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+#view-plan #autoArrangeBtnPlan {
+  min-height: 48px;
+}
+
+/* Give the live schedule marker a readable, high-contrast time chip. */
+#view-plan .schedule-now-line {
+  z-index: 12;
+}
+
+#view-plan .schedule-now-line span {
+  position: absolute;
+  top: -14px;
+  right: 8px;
+  z-index: 13;
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--rank-accent) 68%, #07110e) !important;
+  border-radius: 999px;
+  color: #08130f !important;
+  background: var(--rank-accent) !important;
+  font: 800 0.7rem/1 "IBM Plex Mono", monospace;
+  letter-spacing: 0.01em;
+  text-shadow: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28), 0 0 12px color-mix(in srgb, var(--rank-accent) 30%, transparent);
+}
+
+:root[data-theme="light"] #view-plan .schedule-now-line span {
+  color: #252720 !important;
+  background: color-mix(in srgb, var(--rank-accent) 30%, #fffefa) !important;
+  border-color: color-mix(in srgb, var(--rank-accent) 56%, #a5a59b) !important;
+  box-shadow: 0 2px 8px rgba(38, 38, 31, 0.14);
+}

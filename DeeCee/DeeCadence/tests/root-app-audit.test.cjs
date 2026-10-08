@@ -535,22 +535,18 @@ function testScheduleModeIsFullDayOnly() {
   assert.match(styleSource, /data-plan-mode-current="schedule"/);
 }
 
-function testPausePenaltyStartsAfterFivePauses() {
+function testPausingDoesNotReduceEarnedXp() {
   const { debug } = createHarness();
   const state = debug.getState();
   state.profile.totalXp = 20;
-
   debug.beginSession(25, null);
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < 6; i += 1) {
     debug.pauseSession();
     debug.resumeSession();
   }
-  assert.equal(state.profile.totalXp, 20);
-
-  debug.pauseSession();
   assert.equal(state.session.pauseCount, 6);
-  assert.equal(state.session.penaltyXp, 1);
-  assert.equal(state.profile.totalXp, 19);
+  assert.equal(state.session.penaltyXp, 0);
+  assert.equal(state.profile.totalXp, 20);
 }
 
 function testRankOrbGeometryKeepsRingsCentered() {
@@ -678,7 +674,7 @@ function testSustainableFocusRangeUsesCompletedBlocks() {
   const { debug } = createHarness();
   const empty = debug.sustainableFocusProfile({ history: [], savedSessions: [], session: null });
   assert.equal(empty.rangeLabel, "Not measured yet");
-  assert.equal(empty.recommendedMinutes, 10);
+  assert.equal(empty.recommendedMinutes, 5);
 
   const measured = debug.sustainableFocusProfile({
     history: [{
@@ -930,7 +926,7 @@ testManualDoneGivesSmallXpWithoutBlockCredit();
 testFocusXpRewardsTimeNotBlockCount();
 testProgressGraphBackfillsFromHistory();
 testScheduleModeIsFullDayOnly();
-testPausePenaltyStartsAfterFivePauses();
+testPausingDoesNotReduceEarnedXp();
 testRankOrbGeometryKeepsRingsCentered();
 testThemeAndMotionContractsStayWired();
 testSoundAssetsAreWired();

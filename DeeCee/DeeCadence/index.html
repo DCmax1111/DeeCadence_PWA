@@ -13,6 +13,8 @@
 <meta name="deecadence-feedback-whatsapp" content="+2348125968356">
 <meta name="deecadence-supabase-url" content="">
 <meta name="deecadence-supabase-anon-key" content="">
+<meta name="deecadence-sync-url" content="https://rmzaxfsaezegahwfignu.supabase.co">
+<meta name="deecadence-sync-publishable-key" content="sb_publishable_Mk5daTraq55Lw2zCchXtlw_X1_uTOuz">
 <meta name="deecadence-feedback-table" content="feedbacks">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icons/deecadence.svg" type="image/svg+xml">
@@ -58,7 +60,21 @@
 
       <div class="attention-brief capacity-hero card">
         <div class="capacity-copy">
-          <div class="capacity-kicker">Attention span training</div>
+          <div class="capacity-meta">
+            <span class="capacity-kicker" id="todayGreeting">Good morning</span>
+            <div class="capacity-meta-end">
+            <time class="capacity-date" id="todayHeroDate"></time>
+            <span class="capacity-sky-icon" aria-hidden="true">
+              <svg class="capacity-sun" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="4.25" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56m11.02 11.02 1.56 1.56M2 12h2.2m15.6 0H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <svg class="capacity-moon" viewBox="0 0 24 24" fill="none">
+                <path d="M20.5 14.2A8.7 8.7 0 0 1 9.8 3.5 8.8 8.8 0 1 0 20.5 14.2Z" fill="currentColor"/>
+              </svg>
+            </span>
+          </div>
+          </div>
           <h1 id="todayHeroTitle">Build focus you can actually sustain.</h1>
           <p id="todayHeroCopy">DeeCadence learns from the blocks you finish, then helps you stretch your focus gradually instead of forcing a fixed timer.</p>
         </div>
@@ -69,7 +85,7 @@
           <div class="capacity-evidence" aria-hidden="true"><i id="capacityEvidenceFill"></i></div>
           <div class="capacity-reading-footer">
             <small id="capacityConfidence">Building evidence</small>
-            <button class="btn btn-primary" id="startSuggestedFocusBtn" type="button">Start with 10 min</button>
+            <button class="btn btn-primary" id="startSuggestedFocusBtn" type="button">Start with 5 min</button>
           </div>
         </div>
       </div>
@@ -123,18 +139,24 @@
         <button class="btn btn-primary" id="addTaskBtn" data-tour="add-task" style="padding:9px 14px; font-size:13px; min-height:38px;">+ Add task</button>
       </div>
       <div class="plan-controls" data-tour="plan-controls">
-        <div class="seg plan-mode-seg" id="planModeSeg" aria-label="Plan mode">
-          <button class="active" data-plan-mode="schedule">Schedule</button>
-          <button data-plan-mode="tasks">Tasks</button>
+        <div class="plan-control-group">
+          <span class="plan-control-label" id="planLayoutLabel">Layout</span>
+          <div class="seg plan-mode-seg" id="planModeSeg" role="group" aria-labelledby="planLayoutLabel">
+            <button class="active" type="button" data-plan-mode="schedule" aria-pressed="true">Schedule</button>
+            <button type="button" data-plan-mode="tasks" aria-pressed="false">Tasks</button>
+          </div>
         </div>
-        <div class="tabs" role="tablist" aria-label="Task filter">
-          <button class="tab active" data-planview="day">Day</button>
-          <button class="tab" data-planview="week">Week</button>
-          <button class="tab" data-planview="pending">Pending</button>
+        <div class="plan-control-group">
+          <span class="plan-control-label" id="planShowLabel">Show</span>
+          <div class="tabs" role="group" aria-labelledby="planShowLabel">
+            <button class="tab active" type="button" data-planview="day" aria-pressed="true">Day</button>
+            <button class="tab" type="button" data-planview="week" aria-pressed="false">Week</button>
+            <button class="tab" type="button" data-planview="pending" aria-pressed="false">Pending</button>
+          </div>
         </div>
-        <button class="btn btn-secondary" id="autoArrangeBtnPlan" style="padding:9px 14px; font-size:13px; min-height:38px;">Auto-arrange</button>
+        <button class="btn btn-secondary" id="autoArrangeBtnPlan" type="button" aria-label="Auto-arrange open tasks into available time slots" title="Place open tasks into available time slots" style="padding:9px 14px; font-size:13px; min-height:38px;">Auto-arrange</button>
       </div>
-      <div id="planList"></div>
+      <div id="planList" role="region" aria-label="Plan results" tabindex="-1"></div>
     </section>
 
     <!-- ===== RANK ===== -->
@@ -255,9 +277,32 @@
           </select>
         </div>
       </div>
+      <div class="card sync-card" id="syncCard">
+        <div class="setting-label">Sync across devices</div>
+        <div class="setting-desc">Enter an email address you can open on this device. We will email you a sign-in link; open it here to connect this device. Use the same email on each device you want to sync. Your work is saved here even before sign-in, and active timers stay on the device where they start.</div>
+        <p class="sync-status" id="syncStatus" role="status" aria-live="polite">Not signed in. Your work is saved here; sign in to sync it across devices.</p>
+        <form class="sync-signin" id="syncSignInForm">
+          <label class="sr-only" for="syncEmail">Email address</label>
+          <input id="syncEmail" type="email" autocomplete="email" required maxlength="254" placeholder="Email address">
+          <button class="btn btn-primary" id="syncSignInBtn" type="submit">Email me a sign-in link</button>
+        </form>
+        <div class="sync-account-controls" id="syncAccountControls" hidden>
+          <span class="sync-account-email" id="syncAccountEmail"></span>
+          <button class="btn btn-secondary" id="syncNowBtn" type="button">Sync now</button>
+          <button class="btn btn-secondary" id="syncSignOutBtn" type="button">Sign out</button>
+        </div>
+        <div class="sync-conflict" id="syncConflict" hidden>
+          <strong>This device and your cloud copy both changed.</strong>
+          <p>Choose which saved version to keep. DeeCadence saves a local recovery copy before applying cloud data.</p>
+          <div class="sync-conflict-actions">
+            <button class="btn btn-secondary" id="syncUseCloudBtn" type="button">Use cloud copy</button>
+            <button class="btn btn-primary" id="syncKeepDeviceBtn" type="button">Keep this device</button>
+          </div>
+        </div>
+      </div>
       <div class="card" style="margin-top:14px;">
         <div class="setting-row">
-          <div><div class="setting-label">Data backup</div><div class="setting-desc">Your work saves locally as you go and again when this tab closes. Export before switching browsers or devices.</div></div>
+          <div><div class="setting-label">Data backup</div><div class="setting-desc">Your work saves locally as you go. Export a recovery copy or transfer data manually.</div></div>
           <div class="settings-data-actions">
             <button class="btn btn-secondary" id="saveLocalBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Save now</button>
             <button class="btn btn-secondary" id="exportBackupBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Export</button>
@@ -270,7 +315,7 @@
           <button class="btn btn-secondary" id="openFeedbackSettingsBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Send feedback</button>
         </div>
         <div class="setting-row" style="border:none; padding-top:2px;">
-          <div><div class="setting-label">Reset all data</div><div class="setting-desc">Clears rank, tasks, and history on this device.</div></div>
+          <div><div class="setting-label">Reset all data</div><div class="setting-desc">Clears rank, tasks, and history here. The next sync reconciles this reset with your cloud copy.</div></div>
           <button class="btn btn-danger" id="resetDataBtn" style="padding:9px 14px; font-size:13px; min-height:38px;">Reset</button>
         </div>
       </div>
@@ -308,39 +353,39 @@
 
     <div class="onboarding-slides">
       <article class="onboarding-slide active" data-onboarding-panel="0">
-        <h2 id="welcomeTitle">What are you protecting attention for?</h2>
-        <p>Choose the closest fit. DeeCadence will shape the first task and schedule around it.</p>
+        <h2 id="welcomeTitle">What do you want to focus on?</h2>
+        <p>Choose a starting point. DeeCadence will adapt as your routine develops.</p>
         <div class="setup-option-grid" role="radiogroup" aria-label="What are you using DeeCadence for?">
           <button class="setup-option" type="button" data-welcome-purpose="studying" aria-pressed="false">
             <strong>Studying</strong>
-            <span>Subjects, courses, exams, revision blocks.</span>
+            <span>Classes, exams, and revision.</span>
           </button>
           <button class="setup-option" type="button" data-welcome-purpose="work" aria-pressed="false">
             <strong>Work</strong>
-            <span>Daily tasks, deep work, admin, meetings.</span>
+            <span>Projects, deep work, and admin.</span>
           </button>
           <button class="setup-option" type="button" data-welcome-purpose="business" aria-pressed="false">
             <strong>Business</strong>
-            <span>Sales, delivery, operations, follow-ups.</span>
+            <span>Clients, delivery, and operations.</span>
           </button>
           <button class="setup-option" type="button" data-welcome-purpose="coding" aria-pressed="false">
             <strong>Coding</strong>
-            <span>Build sessions, debugging, technical practice.</span>
+            <span>Building, debugging, and practice.</span>
           </button>
           <button class="setup-option" type="button" data-welcome-purpose="skill" aria-pressed="false">
             <strong>Learning a skill</strong>
-            <span>Practice, drills, lessons, creative reps.</span>
+            <span>Lessons, drills, and creative practice.</span>
           </button>
           <button class="setup-option" type="button" data-welcome-purpose="discipline" aria-pressed="false">
-            <strong>Personal discipline</strong>
-            <span>Habits, routines, chores, life admin.</span>
+            <strong>Personal routines</strong>
+            <span>Habits, chores, and everyday routines.</span>
           </button>
         </div>
       </article>
 
       <article class="onboarding-slide" data-onboarding-panel="1">
-        <h2>What should stay consistent?</h2>
-        <p id="welcomeConsistencyHint">Name the thing you want to keep showing up for. Keep it simple.</p>
+        <h2 id="welcomeStepTwoTitle">Choose your focus area</h2>
+        <p id="welcomeConsistencyHint">Add one area to return to. The challenge and next goal are optional.</p>
         <div class="onboarding-form-grid">
           <div class="field">
             <label for="welcomeTargetInput" id="welcomeTargetLabel">Main area</label>
@@ -364,20 +409,20 @@
           <span></span>
           <span></span>
         </div>
-        <h2>When do you focus best?</h2>
-        <p>This helps DeeCadence suggest a realistic first block. You can change your schedule anytime.</p>
+        <h2 id="welcomeStepThreeTitle">When do you usually focus best?</h2>
+        <p>We will use this to suggest a starting time. You can change it anytime.</p>
         <div class="setup-option-grid compact" role="radiogroup" aria-label="Best focus time">
           <button class="setup-option" type="button" data-welcome-focus-window="morning" aria-pressed="false">
             <strong>Morning</strong>
-            <span>6 AM to 11 AM</span>
+            <span>6–11 AM</span>
           </button>
           <button class="setup-option" type="button" data-welcome-focus-window="afternoon" aria-pressed="false">
             <strong>Afternoon</strong>
-            <span>12 PM to 4 PM</span>
+            <span>12–4 PM</span>
           </button>
           <button class="setup-option" type="button" data-welcome-focus-window="evening" aria-pressed="false">
             <strong>Evening</strong>
-            <span>5 PM to 9 PM</span>
+            <span>5–9 PM</span>
           </button>
           <button class="setup-option" type="button" data-welcome-focus-window="late-night" aria-pressed="false">
             <strong>Late night</strong>
@@ -385,7 +430,7 @@
           </button>
           <button class="setup-option" type="button" data-welcome-focus-window="not-sure" aria-pressed="false">
             <strong>Not sure yet</strong>
-            <span>Start small and learn from data.</span>
+            <span>We will learn as you go.</span>
           </button>
         </div>
       </article>
@@ -395,33 +440,33 @@
           <div class="rank-orbit">E</div>
           <div>
             <strong>Level 1</strong>
-            <span>E-Rank starting point</span>
+            <span>Starting rank: E</span>
           </div>
         </div>
-        <h2>Your path starts here.</h2>
-        <p>XP comes mostly from protected focus minutes. Ranks get harder as your attention span grows.</p>
+        <h2 id="welcomeStepFourTitle">How would you like to start?</h2>
+        <p>Start with one task, a planned block, or a short focus session. You can change this later.</p>
         <div class="onboarding-choice-stack">
           <button class="onboarding-choice primary-choice" type="button" id="welcomeAddTaskBtn">
-            <strong>Add my first task</strong>
-            <span>Save one thing you want to stay consistent with.</span>
+            <strong>Add a task</strong>
+            <span>Choose one thing you want to return to.</span>
           </button>
           <button class="onboarding-choice" type="button" id="welcomeScheduleBtn">
-            <strong>Schedule first block</strong>
-            <span>Put your first protected block on today's plan.</span>
+            <strong>Schedule a focus block</strong>
+            <span>Choose a time for your first planned session.</span>
           </button>
           <button class="onboarding-choice" type="button" id="welcomeStartFocusBtn">
-            <strong>Start a focus block</strong>
-            <span>Try the timer immediately with a short session.</span>
+            <strong>Start a focus session</strong>
+            <span>Try the suggested starting length now.</span>
           </button>
         </div>
       </article>
     </div>
 
-    <div class="welcome-note" id="welcomeNote" aria-live="polite">Choose your lane first. DeeCadence adapts after that.</div>
+    <div class="welcome-note" id="welcomeNote" aria-live="polite">Pick a starting point. You can adjust the details later.</div>
     <div class="modal-actions onboarding-actions">
-      <button class="btn btn-ghost" id="welcomeSkipBtn">Set up later</button>
-      <button class="btn btn-secondary" id="welcomeBackBtn" disabled>Back</button>
-      <button class="btn btn-primary" id="welcomeSaveBtn">Next</button>
+      <button class="btn btn-ghost" id="welcomeSkipBtn" type="button">Skip setup</button>
+      <button class="btn btn-secondary" id="welcomeBackBtn" type="button" disabled>Back</button>
+      <button class="btn btn-primary" id="welcomeSaveBtn" type="button">Continue</button>
     </div>
   </section>
 </div>
@@ -715,5 +760,6 @@
 </div>
 
 <script src="app.js" defer></script>
+<script src="sync.js" defer></script>
 </body>
 </html>

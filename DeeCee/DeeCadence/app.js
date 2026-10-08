@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.2.current";
+  var APP_VERSION = "3.3.0";
   var STORAGE_KEY = "deecadence_state_v2";
   var EXIT_BACKUP_KEY = STORAGE_KEY + "_exit_backup";
   var FEEDBACK_ENDPOINT = (document.querySelector('meta[name="deecadence-feedback-endpoint"]') || {}).content || "";
@@ -10,12 +10,12 @@
   var SUPABASE_URL = (document.querySelector('meta[name="deecadence-supabase-url"]') || {}).content || "";
   var SUPABASE_ANON_KEY = (document.querySelector('meta[name="deecadence-supabase-anon-key"]') || {}).content || "";
   var FEEDBACK_TABLE = (document.querySelector('meta[name="deecadence-feedback-table"]') || {}).content || "feedbacks";
-  var REFERENCE_BENCHMARK = { score: 70, label: "Provisional reference average", version: "launch-2026" };
+  var REFERENCE_BENCHMARK = { score: 70, label: "DeeCadence calibration marker", version: "calibration-2026" };
   var XP_PER_FOCUS_MINUTE = 1;
   var XP_MANUAL_DONE_RATE = 0.25;
   var XP_SESSION_BONUS_RATE = 0.1;
-  var XP_PAUSE_FREE_LIMIT = 5;
-  var XP_PAUSE_PENALTY = 1;
+
+
   var RECOVERY_SECONDS = 60;
   var MAX_CUSTOM_MINUTES = 240;
   var MIN_CUSTOM_MINUTES = 4;
@@ -220,10 +220,10 @@
   };
 
   var ONBOARDING_NOTES = [
-    "Choose your lane first. DeeCadence adapts after that.",
-    "A clear target makes the first task and schedule feel personal.",
-    "Your focus window helps the first block feel realistic.",
-    "You start at Level 1, E-Rank. Choose your first move."
+    "Choose the closest fit. You can change it later.",
+    "Only the focus area is required. The other details can wait.",
+    "This is a starting suggestion, not a fixed schedule.",
+    "Your rank grows with completed focus minutes. Start at a pace that feels manageable."
   ];
 
   var TOUR_STEPS = [
@@ -348,13 +348,6 @@
     return Math.max(1, Math.round(focusXpForSeconds(minutes * 60) * XP_MANUAL_DONE_RATE));
   }
 
-  function applyXpPenalty(amount) {
-    var penalty = Math.max(0, Math.round(Number(amount) || 0));
-    if (!penalty) return 0;
-    var applied = Math.min(state.profile.totalXp, penalty);
-    state.profile.totalXp -= applied;
-    return applied;
-  }
 
   function addDaysKey(dateKey, delta) {
     var base = parseDateKey(dateKey);
@@ -480,8 +473,9 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       backupDirty = true;
+      if (typeof window.CustomEvent === "function") window.dispatchEvent(new CustomEvent("deecadence:local-save"));
     } catch (error) {
-      // Local-only build: keep running even when storage is unavailable.
+      // Storage is best-effort; the app remains usable when browser storage is unavailable.
     }
   }
 
@@ -771,11 +765,6 @@
     state.session.blockEndsAt = null;
     state.session.status = "paused";
     state.session.pauseCount = (state.session.pauseCount || 0) + 1;
-    if (state.session.pauseCount > XP_PAUSE_FREE_LIMIT) {
-      var penalty = applyXpPenalty(XP_PAUSE_PENALTY);
-      state.session.penaltyXp = (state.session.penaltyXp || 0) + penalty;
-      showToast(penalty ? "Pause limit passed. -" + penalty + " XP" : "Pause limit passed.");
-    }
     stopTicker();
     saveState();
     renderFocus();
@@ -1008,12 +997,11 @@
     var saved = state.savedSessions.find(function (item) { return item.id === sessionId; });
     if (!saved) return;
     if (!confirm("Remove this saved focus session?")) return;
-    var penalty = saved.blocksCompleted < saved.blocks.length ? applyXpPenalty(Math.min(10, Math.max(1, Math.round(saved.totalMinutes * 0.02)))) : 0;
     state.savedSessions = state.savedSessions.filter(function (item) { return item.id !== sessionId; });
     saveState();
     renderFocus();
     renderToday();
-    showToast(penalty ? "Saved session removed. -" + penalty + " XP" : "Saved session removed.");
+    showToast("Saved session removed.");
   }
 
   function applyDailyStreak() {
@@ -1729,13 +1717,11 @@
     saveState();
     var previous = state.attentionTests[state.attentionTests.length - 2] || null;
     var change = previous ? result.score - previous.score : null;
-    var referenceDelta = result.score - REFERENCE_BENCHMARK.score;
-    var referenceCopy = Math.abs(referenceDelta) <= 5 ? "within the reference band" : referenceDelta > 0 ? referenceDelta + " points above the reference" : Math.abs(referenceDelta) + " points below the reference";
     document.getElementById("attentionTestBody").innerHTML =
       '<section class="test-result">' +
         '<div class="attention-kicker">' + (previous ? "New check saved" : "Starting baseline saved") + '</div>' +
         '<h3 id="attentionTestTitle">' + result.score + '<span class="score-denominator">/100</span></h3>' +
-        '<p>' + (previous ? "That is " + (change >= 0 ? "+" : "") + change + " compared with your previous check." : "This is your personal starting point. You landed " + referenceCopy + ".") + ' Treat the pattern across several checks as useful, not one isolated score.</p>' +
+        '<p>' + (previous ? "That is " + (change >= 0 ? "+" : "") + change + " compared with your previous check." : "This is your personal starting point.") + ' Treat the pattern across several checks as useful, not one isolated score. The marker is a product guide, not a population or clinical norm.</p>' +
         '<div class="benchmark-comparison">' +
           '<div class="benchmark-comparison-head"><span>Your score <strong>' + result.score + '</strong></span><span>' + REFERENCE_BENCHMARK.label + ' <strong>' + REFERENCE_BENCHMARK.score + '</strong></span></div>' +
           '<div class="benchmark-track"><i></i><b style="left:' + REFERENCE_BENCHMARK.score + '%"></b><em style="left:' + result.score + '%"></em></div>' +
@@ -1915,7 +1901,7 @@
       return {
         sampleCount: 0,
         rangeLabel: "Not measured yet",
-        recommendedMinutes: 10,
+        recommendedMinutes: 5,
         evidenceText: "Complete three focus blocks to establish your starting range. DeeCadence also learns which time of day works best.",
         confidence: "Building evidence",
         evidenceProgress: 0,
@@ -1990,8 +1976,33 @@
     };
   }
 
+  function renderTodayGreeting() {
+    var now = new Date();
+    var hour = now.getHours();
+    var greeting = hour < 5 ? "Hello"
+      : hour < 12 ? "Good morning"
+      : hour < 17 ? "Good afternoon"
+      : hour < 22 ? "Good evening"
+      : "Welcome";
+    var greetingNode = document.getElementById("todayGreeting");
+    var dateNode = document.getElementById("todayHeroDate");
+    if (greetingNode) greetingNode.textContent = greeting;
+    if (dateNode) {
+      dateNode.textContent = now.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric"
+      });
+      var year = now.getFullYear();
+      var month = String(now.getMonth() + 1).padStart(2, "0");
+      var day = String(now.getDate()).padStart(2, "0");
+      dateNode.setAttribute("datetime", year + "-" + month + "-" + day);
+    }
+  }
+
   function renderToday() {
     var hero = todayHeroText();
+    renderTodayGreeting();
     var heroTitle = document.getElementById("todayHeroTitle");
     var heroCopy = document.getElementById("todayHeroCopy");
     if (heroTitle) heroTitle.textContent = hero.title;
@@ -2086,7 +2097,7 @@
     }).join("");
     var statusLabel = session.status === "running" ? "Block " + (session.blockIndex + 1) + " of " + session.blocks.length : session.status === "paused" ? "Paused" : "Recovery";
     var taskName = linkedTask ? escapeHtml(linkedTask.title) : "Free focus";
-    var html = '<section class="card focus-stage" data-focus-status="' + session.status + '"><header class="focus-stage-head"><div><span class="attention-kicker">' + (session.status === "recovery" ? "Block secured" : "Protected focus") + '</span><h2>' + taskName + '</h2></div><div class="focus-stage-progress"><span>' + statusLabel + '</span><div class="block-indicator">' + pips + "</div></div></header>";
+    var html = '<section class="card focus-stage" data-focus-status="' + session.status + '"><header class="focus-stage-head"><div><span class="attention-kicker">' + (session.status === "recovery" ? "Block secured" : "Protected focus") + '</span><h2>' + taskName + '</h2></div><div class="focus-stage-progress"><span>' + statusLabel + '</span><div class="block-indicator" aria-hidden="true">' + pips + "</div></div></header>";
 
     if (session.status === "recovery") {
       html += '<div class="timer-ring-wrap"><svg viewBox="0 0 260 260"><circle cx="130" cy="130" r="118" fill="none" stroke="var(--surface-2)" stroke-width="10"/><circle cx="130" cy="130" r="118" fill="none" stroke="var(--success)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference + '" stroke-dashoffset="0"/></svg><div class="timer-center"><div class="timer-digits mono">Saved</div><div class="timer-caption">Block ' + (session.blockIndex + 1) + " complete</div></div></div>";
@@ -2099,7 +2110,7 @@
       if (session.status === "paused") {
         html += '<div class="paused-session-card"><strong>Most recently paused block</strong><span>Block ' + (session.blockIndex + 1) + " is waiting with " + fmtClock(session.blockRemaining) + " left.</span></div>";
       }
-      html += '<div class="focus-controls">' + (session.status === "running" ? '<button class="btn btn-secondary" id="pauseBtn">Pause</button>' : '<button class="btn btn-primary" id="resumeBtn">Continue paused block</button>') + '<button class="btn btn-danger" id="stopBtn">Stop and save</button></div>';
+      html += '<div class="focus-controls">' + (session.status === "running" ? '<button class="btn btn-secondary" id="pauseBtn">Pause</button>' : '<button class="btn btn-primary" id="resumeBtn">Continue paused block</button>') + '<button class="btn btn-secondary" id="stopBtn">Stop and save</button></div>';
     }
     root.innerHTML = html + "</section>";
 
@@ -2199,13 +2210,17 @@
 
   function syncPlanModeButtons() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-plan-mode]"), function (button) {
-      button.classList.toggle("active", button.getAttribute("data-plan-mode") === currentPlanMode);
+      var isActive = button.getAttribute("data-plan-mode") === currentPlanMode;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
     });
   }
 
   function syncPlanTabButtons() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-planview]"), function (button) {
-      button.classList.toggle("active", button.getAttribute("data-planview") === currentPlanTab);
+      var isActive = button.getAttribute("data-planview") === currentPlanTab;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
     });
   }
 
@@ -2716,10 +2731,10 @@
           '<div><span>Starting score</span><strong>' + (state.baselineScore == null ? "-" : state.baselineScore) + '</strong></div>' +
           '<div><span>Latest score</span><strong>' + (latest ? latest.score : "-") + '</strong></div>' +
           '<div><span>From baseline</span><strong>' + (baselineDelta == null ? "-" : (baselineDelta >= 0 ? "+" : "") + baselineDelta) + '</strong></div>' +
-          '<div><span>Reference</span><strong>' + REFERENCE_BENCHMARK.score + '</strong></div>' +
+          '<div><span>Calibration guide</span><strong>' + REFERENCE_BENCHMARK.score + '</strong></div>' +
           '<div><span>Personal best</span><strong>' + (best == null ? "-" : best) + '</strong></div>' +
         '</div>' +
-        '<p class="benchmark-disclaimer">This is a product benchmark, not a diagnosis. Repeat it under similar conditions to make the trend useful.</p>' +
+        '<p class="benchmark-disclaimer">This calibration guide is not a population norm or diagnosis. Compare your own checks under similar conditions.</p>' +
       '</section>';
     wireProgressChart(days);
     var runBaseline = document.getElementById("runAttentionTestBtn");
@@ -3022,8 +3037,8 @@
     }
     if (hint) {
       hint.textContent = state.onboarding.purpose === "studying"
-        ? "Add a subject or course first. The struggle and goal can stay optional."
-        : "Name the main work first. The hard part and next goal can stay optional.";
+        ? "Add one subject or course. The challenge and goal are optional."
+        : "Add one focus area. The challenge and next goal are optional.";
     }
   }
 
@@ -3083,12 +3098,19 @@
     var note = document.getElementById("welcomeNote");
     var back = document.getElementById("welcomeBackBtn");
     var next = document.getElementById("welcomeSaveBtn");
+    var activePanel = slides[onboardingIndex];
+    var activeHeading = activePanel ? activePanel.querySelector("h2") : null;
+    if (welcomeOverlay && activeHeading && activeHeading.id) {
+      welcomeOverlay.setAttribute("aria-labelledby", activeHeading.id);
+    }
+    var skip = document.getElementById("welcomeSkipBtn");
     if (label) label.textContent = "Step " + (onboardingIndex + 1) + " of " + (lastIndex + 1);
+    if (skip) skip.textContent = onboardingIndex === lastIndex ? "Finish setup" : "Skip setup";
     if (note) note.textContent = ONBOARDING_NOTES[onboardingIndex] || ONBOARDING_NOTES[0];
     if (back) back.disabled = onboardingIndex === 0;
     if (next) {
       var isLast = onboardingIndex === lastIndex;
-      next.textContent = "Next";
+      next.textContent = "Continue";
       next.classList.toggle("is-hidden", isLast);
       next.setAttribute("aria-hidden", String(isLast));
       if (next.parentNode) next.parentNode.classList.toggle("is-final-step", isLast);
@@ -3105,7 +3127,7 @@
       var note = document.getElementById("welcomeNote");
       if (note) {
         note.textContent = onboardingIndex === 1
-          ? "Add the main thing you want to stay consistent with first."
+          ? "Add a focus area to continue. You can fill in the other details later."
           : "Choose the closest option first. You can still change direction later.";
       }
       return;
@@ -3930,7 +3952,7 @@
       };
     });
     document.getElementById("resetDataBtn").onclick = function () {
-      if (confirm("This clears all rank progress, tasks, and history on this device. Continue?")) {
+      if (confirm("This clears rank progress, tasks, and history here. If signed in, the reset will sync to the cloud copy. Continue?")) {
         localStorage.removeItem(STORAGE_KEY);
         state = defaultState();
         saveState();
@@ -4040,7 +4062,25 @@
     endTour: endTour,
     persistStateForExit: persistStateForExit,
     getTourState: function () { return { active: tourActive, index: tourIndex }; },
-    getState: function () { return state; }
+    getState: function () { return state; },
+    applySyncedState: function (incoming) {
+      if (!incoming || typeof incoming !== "object") return false;
+      var activeSession = state.session;
+      var merged = Object.assign({}, incoming, { session: activeSession, feedbackOutbox: state.feedbackOutbox || [] });
+      if (activeSession && activeSession.linkedTaskId) {
+        var activeTask = state.tasks.find(function (task) { return task.id === activeSession.linkedTaskId; });
+        var syncedTasks = Array.isArray(merged.tasks) ? merged.tasks.slice() : [];
+        if (activeTask && !syncedTasks.some(function (task) { return task.id === activeTask.id; })) syncedTasks.push(activeTask);
+        merged.tasks = syncedTasks;
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      state = loadState();
+      if (state.session) startTicker(); else stopTicker();
+      saveState();
+      renderAll();
+      showToast("Cloud copy applied.");
+      return true;
+    }
   };
 
   wireEvents();
@@ -4055,6 +4095,10 @@
   window.addEventListener("resize", function () {
     if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]);
   });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", function () { if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]); });
+    window.visualViewport.addEventListener("scroll", function () { if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]); });
+  }
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator && typeof location !== "undefined" && location.protocol !== "file:") {
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("./service-worker.js").catch(function () {});

@@ -1,12 +1,15 @@
-const CACHE_NAME = "deecadence-v3-3-cachefirst";
+const CACHE_NAME = "deecadence-v3-5-hero-art-cachefirst";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./app.js",
+  "./sync.js",
   "./style.css",
   "./src/styles/theme.css",
   "./manifest.json",
   "./assets/icons/deecadence.svg",
+  "./assets/images/deecadence-home-dark.jpg",
+  "./assets/images/deecadence-home-light.jpg",
   "./assets/sounds/block-complete.wav",
   "./assets/sounds/session-complete.wav"
 ];
