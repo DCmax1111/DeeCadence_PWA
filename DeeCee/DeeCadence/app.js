@@ -736,6 +736,7 @@
     renderFocus(true);
     renderSessionIndicators();
     saveState();
+    if (session.status === "recovery" && session.recoveryRemaining <= 0) stopTicker();
   }
 
   function secondsUntil(epochMs) {
@@ -872,6 +873,7 @@
     saveState();
     renderAll();
     showSystemReveal(session.lastReveal);
+    startTicker();
   }
 
   function continueSession() {
@@ -3980,6 +3982,11 @@
     if (syncSessionClock()) return;
     saveState();
     renderAll();
+    if (document.visibilityState === "visible" && state.session &&
+        ["running", "recovery"].indexOf(state.session.status) > -1 &&
+        !(state.session.status === "recovery" && state.session.recoveryRemaining <= 0)) {
+      startTicker();
+    }
   }
 
   function handleStorageChange(event) {
@@ -4114,6 +4121,6 @@
     if (activeView === "today") renderToday();
     if (activeView === "plan" && currentPlanMode === "schedule" && currentPlanTab === "day") renderPlan();
   }, 60000);
-  if (state.session && state.session.status === "running") startTicker();
+  if (state.session && ["running", "recovery"].indexOf(state.session.status) > -1) startTicker();
   document.body.classList.add("booted");
 })();

@@ -240,7 +240,7 @@
   async function signIn(event) {
     event.preventDefault();
     if (location.protocol === "file:") {
-      message("Open DeeCadence from its website or localhost to use sign-in. Your work is still saved on this device.", "info");
+      message("Cloud backup needs the website or localhost. Your progress remains saved on this device.", "info");
       return;
     }
     busy = true;
@@ -268,7 +268,7 @@
       return;
     }
     if (location.protocol === "file:" || !navigator.onLine) {
-      message("Sync needs DeeCadence opened from its website or localhost and an internet connection. Your work is saved on this device.", "info");
+      message("Cloud backup needs the website or localhost and an internet connection. Your progress remains saved on this device.", "info");
       return;
     }
     try {
@@ -280,10 +280,10 @@
         if (conflictBox) conflictBox.hidden = true;
         render();
         if (user) {
-          message("Signed in. Checking your cloud copy...", "info");
+          message("Signed in. Checking your cloud backup...", "info");
           window.setTimeout(function () { synchronize(true); }, 0);
         } else {
-          message("Not signed in. Your work is saved here; sign in to sync it across devices.", "info");
+          message("Your progress is saved on this device. Sign in to back it up and sync across devices.", "info");
         }
       });
       var result = await client.auth.getSession();
