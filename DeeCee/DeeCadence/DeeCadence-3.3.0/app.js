@@ -1,9 +1,29 @@
 (function () {
   "use strict";
 
+  // The splash is owned by the inline boot gate in index.html: it shows on a
+  // first open or after a long gap, and clears itself. app.js must never
+  // dismiss it early or the first-run moment is lost.
+  function dismissBootLoader() {
+    try {
+      document.body.classList.add("booted");
+      var bootLoader = document.getElementById("bootLoader");
+      if (!bootLoader) return;
+      bootLoader.style.opacity = "0";
+      bootLoader.style.visibility = "hidden";
+      setTimeout(function () {
+        if (bootLoader.parentNode) bootLoader.parentNode.removeChild(bootLoader);
+      }, 400);
+    } catch (e) {}
+  }
+
+  // Global error handler: never leave the user staring at a stuck splash.
+  window.addEventListener("error", dismissBootLoader);
+
   var APP_VERSION = "3.3.0";
-  var STORAGE_KEY = "deecadence_state_v2";
+  var STORAGE_KEY = "deecadence_state_v3";
   var EXIT_BACKUP_KEY = STORAGE_KEY + "_exit_backup";
+  var STORAGE_QUOTA_WARN_SHOWN_KEY = STORAGE_KEY + "_quota_warn";
   var FEEDBACK_ENDPOINT = (document.querySelector('meta[name="deecadence-feedback-endpoint"]') || {}).content || "";
   var FEEDBACK_EMAIL = (document.querySelector('meta[name="deecadence-feedback-email"]') || {}).content || "";
   var FEEDBACK_WHATSAPP = (document.querySelector('meta[name="deecadence-feedback-whatsapp"]') || {}).content || "";
@@ -14,6 +34,9 @@
   var XP_PER_FOCUS_MINUTE = 1;
   var XP_MANUAL_DONE_RATE = 0.25;
   var XP_SESSION_BONUS_RATE = 0.1;
+  var XP_GOAL_REACHED_BONUS = 30;
+  var XP_GOAL_SURPASSED_BONUS = 20;
+  var GOAL_SURPASS_MULTIPLIER = 1.5;
 
 
   var RECOVERY_SECONDS = 60;
@@ -24,9 +47,20 @@
   var DAY_START_MINUTES = 8 * 60;
   var DAY_END_MINUTES = 20 * 60;
   var SOUND_FILES = {
-    blockComplete: "assets/sounds/block-complete.wav",
-    sessionComplete: "assets/sounds/session-complete.wav"
+    blockComplete: "sounds/block-complete.wav",
+    sessionComplete: "sounds/session-complete.wav",
+    brown: "sounds/brown-noise.wav",
+    rain: "sounds/rain_and_thunder.mp3",
+    classical: "sounds/classical_music.mp3",
+    wind: "sounds/wind.wav"
   };
+  var AMBIENT_SOUND_LABELS = {
+    brown: "Brown noise",
+    rain: "Rain & Thunder",
+    classical: "Classical",
+    wind: "Wind"
+  };
+  var AMBIENT_SOUND_IDS = ["brown", "rain", "classical", "wind"];
 
   var RANKS = [
     { id: "E", name: "E-Rank", minLevel: 1, minXp: 0, desc: "Learning consistency", color: "var(--rank-E)" },
@@ -127,10 +161,12 @@
 
   var idCounter = 1;
   var timerHandle = null;
+  var lastTickSaveAt = 0;
   var activeView = "today";
   var currentPlanTab = "day";
   var currentPlanMode = "schedule";
   var pendingStartTask = null;
+  var startDurationLocked = false;
   var editingTaskId = null;
   var activeDetailTaskId = null;
   var onboardingIndex = 0;
@@ -141,21 +177,30 @@
   var chosenBlockCount = 4;
   var selectedProgressDate = "";
   var progressRangeDays = 7;
+  var progressRangeOffset = 0;
+  var personalizeDraft = null;
   var currentHistoryFilter = "all";
   var startTaskSource = "schedule";
   var feedbackType = "Idea";
+  var feedbackChannel = "whatsapp";
   var attentionRuntime = null;
   var attentionTimer = null;
   var audioCache = {};
+  var ambientAudio = null;
+  var brownNoiseEnabled = false;
+  var ambientSoundId = "brown";
+  var ambientMenuOpen = false;
   var milestoneQueue = [];
   var milestoneActive = false;
   var backupDirty = false;
   var timePickerState = { hour: 9, minute: 0, period: "AM", stage: "hour" };
+  var selectedRepeatDays = [];
 
   var startModal = document.getElementById("startModal");
   var taskModal = document.getElementById("taskModal");
   var taskDetailModal = document.getElementById("taskDetailModal");
   var feedbackModal = document.getElementById("feedbackModal");
+  var personalizeModal = document.getElementById("personalizeModal");
   var attentionTestModal = document.getElementById("attentionTestModal");
   var welcomeOverlay = document.getElementById("welcomeOverlay");
   var tourOverlay = document.getElementById("tourOverlay");
@@ -225,6 +270,30 @@
     "This is a starting suggestion, not a fixed schedule.",
     "Your rank grows with completed focus minutes. Start at a pace that feels manageable."
   ];
+
+  var PERSONAL_PURPOSE_LABELS = {
+    studying: "Studying",
+    work: "Work",
+    business: "Business",
+    coding: "Coding",
+    skill: "Learning a skill",
+    discipline: "Personal discipline"
+  };
+
+  var PERSONAL_DISTRACTION_LABELS = {
+    phone: "Phone & notifications",
+    thoughts: "My own thoughts",
+    interrupt: "Interruptions",
+    fatigue: "Fatigue",
+    other: "Other"
+  };
+
+  var PERSONAL_LENGTH_LABELS = {
+    "5": "5-10 minutes",
+    "15": "15-20 minutes",
+    "25": "25-30 minutes",
+    "45": "45+ minutes"
+  };
 
   var TOUR_STEPS = [
     {
@@ -320,6 +389,208 @@
     }
   }
 
+  function currentAmbientSound() {
+    return AMBIENT_SOUND_IDS.indexOf(ambientSoundId) > -1 ? ambientSoundId : "brown";
+  }
+
+  function ambientSoundLabel(id) {
+    return AMBIENT_SOUND_LABELS[id] || AMBIENT_SOUND_LABELS.brown;
+  }
+
+  function isFocusRunning() {
+    return Boolean(state.session && state.session.status === "running");
+  }
+
+  function syncAmbientPlayback() {
+    if (brownNoiseEnabled && isFocusRunning()) startAmbientSound();
+    else stopAmbientSound();
+    syncAmbientUI();
+  }
+
+  function sessionBlockIndexForLearning() {
+    return state.session ? Math.max(0, Number(state.session.blockIndex) || 0) : null;
+  }
+
+  function startAmbientSound() {
+    var id = currentAmbientSound();
+    if (ambientAudio && ambientAudio.getAttribute("data-sound") === id && !ambientAudio.paused) return;
+    if (!ambientAudio || ambientAudio.getAttribute("data-sound") !== id) {
+      if (ambientAudio) {
+        ambientAudio.pause();
+        ambientAudio.currentTime = 0;
+      }
+      ambientAudio = getSound(id);
+      if (!ambientAudio) return;
+      ambientAudio.loop = true;
+      ambientAudio.volume = 0.55;
+      ambientAudio.setAttribute("data-sound", id);
+    }
+    var attempt = ambientAudio.play();
+    if (attempt && typeof attempt.catch === "function") {
+      attempt.catch(function (error) {
+        console.warn("Ambient audio did not start:", error && error.name, error && error.message);
+        showToast("Ambient sound paused. Tap anywhere to restart it.");
+      });
+    }
+  }
+
+  function stopAmbientSound() {
+    if (!ambientAudio) return;
+    ambientAudio.pause();
+    try { ambientAudio.currentTime = 0; } catch (error) {}
+  }
+
+  function setAmbientEnabled(enabled, options) {
+    brownNoiseEnabled = Boolean(enabled);
+    state.settings.brownNoise = brownNoiseEnabled;
+    if (!(options && options.silent)) {
+      recordLearningEvent("brown_noise", {
+        on: brownNoiseEnabled,
+        duringSession: isFocusRunning(),
+        sound: currentAmbientSound(),
+        blockIndex: sessionBlockIndexForLearning(),
+        change: options && options.change ? options.change : "toggle"
+      });
+    }
+    saveState();
+    syncAmbientPlayback();
+    if (brownNoiseEnabled && !isFocusRunning() && !(options && options.quiet)) {
+      showToast("Ambient sound is on. It will start with your next focus block.");
+    }
+    syncAmbientUI();
+  }
+
+  function toggleAmbientSound() {
+    setAmbientEnabled(!brownNoiseEnabled);
+  }
+
+  function selectAmbientSound(id) {
+    if (AMBIENT_SOUND_IDS.indexOf(id) === -1) return;
+    var changed = ambientSoundId !== id;
+    ambientSoundId = id;
+    state.settings.ambientSound = id;
+    if (!brownNoiseEnabled) {
+      // Choosing a sound is an intent to hear it. The small speaker button
+      // stays the explicit on/off switch.
+      setAmbientEnabled(true, { change: "source" });
+      return;
+    }
+    if (changed) {
+      if (brownNoiseEnabled && isFocusRunning()) {
+        stopAmbientSound();
+        startAmbientSound();
+      }
+      recordLearningEvent("brown_noise", {
+        on: true,
+        duringSession: isFocusRunning(),
+        sound: id,
+        blockIndex: sessionBlockIndexForLearning(),
+        change: "source"
+      });
+    }
+    saveState();
+    syncAmbientUI();
+  }
+
+  function setAmbientMenu(open) {
+    ambientMenuOpen = Boolean(open);
+    syncAmbientUI();
+    if (ambientMenuOpen) {
+      var first = document.querySelector("#focusNoiseMenu [data-noise-sound]");
+      if (first) first.focus();
+    }
+  }
+
+  function ambientLearning() {
+    var noise = learningProfile().brownNoise;
+    var on = noise.on;
+    var off = noise.off;
+    var onNeeded = Math.max(0, 3 - on.sessions);
+    var offNeeded = Math.max(0, 3 - off.sessions);
+    if (onNeeded || offNeeded) {
+      var needs = [];
+      if (onNeeded) needs.push(onNeeded + " with it");
+      if (offNeeded) needs.push(offNeeded + " without");
+      return {
+        hasEvidence: false,
+        recommended: null,
+        text: "still learning when sound helps - needs " + needs.join(" and ") + " to compare"
+      };
+    }
+    var completionDiff = on.completionRate - off.completionRate;
+    var pauseDiff = on.pauseRate - off.pauseRate;
+    var confident = Math.abs(completionDiff) >= 8 || Math.abs(pauseDiff) >= 0.6;
+    if (!confident) {
+      return {
+        hasEvidence: true,
+        recommended: null,
+        text: "finish rate is even so far (" + on.completionRate + "% with it vs " + off.completionRate + "% without)"
+      };
+    }
+    var score = completionDiff - (pauseDiff * 8);
+    var recommended = score >= 0;
+    var evidence = [on.completionRate + "% finished with it vs " + off.completionRate + "% without"];
+    if (on.pauseRate !== off.pauseRate) {
+      evidence.push(on.pauseRate + " pauses per session vs " + off.pauseRate);
+    }
+    return {
+      hasEvidence: true,
+      recommended: recommended,
+      text: (recommended ? "sound is helping your focus" : "sound is not helping yet") + " - " + evidence.join(", ")
+    };
+  }
+
+  function syncAmbientUI() {
+    var sw = document.getElementById("brownNoiseSwitch");
+    if (sw) {
+      sw.classList.toggle("on", brownNoiseEnabled);
+      sw.setAttribute("aria-pressed", String(brownNoiseEnabled));
+    }
+    var current = currentAmbientSound();
+    var currentLabel = ambientSoundLabel(current);
+    var running = isFocusRunning();
+    var playbackLabel = brownNoiseEnabled ? (running ? "playing" : "on - starts with a running block") : "off";
+    var chip = document.getElementById("focusNoiseBtn");
+    if (chip) {
+      chip.classList.toggle("active", brownNoiseEnabled);
+      chip.classList.toggle("is-waiting", brownNoiseEnabled && !running);
+      chip.setAttribute("aria-expanded", String(ambientMenuOpen));
+      chip.setAttribute("aria-label", currentLabel + ". " + (brownNoiseEnabled ? (running ? "Playing. " : "On, waiting for a running focus block. ") : "Off. ") + "Choose ambient sound.");
+      var advice = ambientLearning();
+      chip.setAttribute("title", currentLabel + " " + playbackLabel + " - " + (advice.text || "") + (advice.recommended === true ? " - consider using it for focus blocks" : ""));
+    }
+    var label = document.getElementById("focusNoiseLabel");
+    if (label) label.textContent = currentLabel;
+    var toggle = document.getElementById("focusNoiseToggle");
+    if (toggle) {
+      toggle.classList.toggle("active", brownNoiseEnabled);
+      toggle.setAttribute("aria-pressed", String(brownNoiseEnabled));
+      toggle.setAttribute("aria-label", brownNoiseEnabled ? "Turn ambient sound off" : "Turn ambient sound on");
+      toggle.setAttribute("title", brownNoiseEnabled ? (running ? "Ambient sound playing - turn off" : "Ambient sound on - starts with a running block") : "Turn ambient sound on");
+    }
+    Array.prototype.forEach.call(document.querySelectorAll("#focusNoiseMenu [data-noise-sound]"), function (button) {
+      var active = button.getAttribute("data-noise-sound") === current;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-checked", String(active));
+    });
+    var menu = document.getElementById("focusNoiseMenu");
+    if (menu) {
+      menu.hidden = !ambientMenuOpen;
+      if (ambientMenuOpen && !window.matchMedia("(min-width: 401px)").matches && chip) {
+        // On narrow screens the chip sits near the right edge, so anchor the
+        // menu to the screen's left edge instead of under the chip.
+        var picker = chip.parentNode;
+        var pickerRect = picker.getBoundingClientRect();
+        var chipRect = chip.getBoundingClientRect();
+        menu.style.left = Math.round(10 - pickerRect.left) + "px";
+        menu.style.top = Math.round(chipRect.bottom + 8 - pickerRect.top) + "px";
+      } else {
+        menu.style.left = "";
+        menu.style.top = "";
+      }
+    }
+  }
+
   function clampMinutes(value, fallback) {
     var parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) parsed = fallback || 25;
@@ -371,8 +642,13 @@
       challenge: "",
       goal: "",
       focusWindow: "not-sure",
+      distraction: "",
+      focusLength: 0,
+      capacityMinutes: 0,
+      baseAttentionCapacity: 0,
       firstAction: "",
-      completedAt: ""
+      completedAt: "",
+      refinedAt: ""
     };
   }
 
@@ -381,25 +657,36 @@
     var allowedPurposes = ["studying", "work", "business", "coding", "skill", "discipline"];
     var allowedWindows = ["morning", "afternoon", "evening", "late-night", "not-sure"];
     var allowedActions = ["task", "schedule", "focus", "today"];
+    var allowedDistractions = ["phone", "thoughts", "interrupt", "fatigue", "other"];
+    var rawLength = Math.max(0, Math.min(180, parseInt(source.focusLength || source.capacityMinutes, 10) || 0));
+    var capacity = Math.max(0, Math.min(180, parseInt(source.capacityMinutes, 10) || rawLength || 0));
     return {
       purpose: allowedPurposes.indexOf(source.purpose) > -1 ? source.purpose : "",
       target: String(source.target || "").trim().slice(0, 80),
       challenge: String(source.challenge || "").trim().slice(0, 80),
       goal: String(source.goal || "").trim().slice(0, 120),
       focusWindow: allowedWindows.indexOf(source.focusWindow) > -1 ? source.focusWindow : "not-sure",
+      distraction: allowedDistractions.indexOf(source.distraction) > -1 ? source.distraction : "",
+      focusLength: rawLength,
+      capacityMinutes: capacity,
+      baseAttentionCapacity: Math.max(0, Math.min(100, parseInt(source.baseAttentionCapacity, 10) || 0)),
       firstAction: allowedActions.indexOf(source.firstAction) > -1 ? source.firstAction : "",
-      completedAt: String(source.completedAt || "")
+      completedAt: String(source.completedAt || ""),
+      refinedAt: String(source.refinedAt || "")
     };
   }
 
   function defaultState() {
     return {
       appVersion: APP_VERSION,
-      profile: { totalXp: 0, streak: 0, lastActiveDate: null, dailyGoalBlocks: 4, dailyGoalMinutes: 60 },
+      profile: { totalXp: 0, streak: 0, momentum: 75, lastActiveDate: null, dailyGoalBlocks: 4, dailyGoalMinutes: 60, goalBonus: {} },
       settings: {
         theme: "dark",
         sound: true,
         soundPreferenceTouched: false,
+        brownNoise: false,
+        ambientSound: "brown",
+        chartType: "bars",
         welcomeComplete: false,
         tutorialComplete: false,
         reducedMotion: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -416,7 +703,11 @@
       baselineTestId: "",
       baselineCompletedAt: "",
       feedbackOutbox: [],
-      dismissedContextTips: {}
+      dismissedContextTips: {},
+      // Bumping this revision re-shows the tab notices once after a
+      // notification-behaviour change (see loadState).
+      contextTipRevision: 2,
+      learning: { events: [] }
     };
   }
 
@@ -453,14 +744,26 @@
         baselineTestId: String(parsed.baselineTestId || ""),
         baselineCompletedAt: String(parsed.baselineCompletedAt || ""),
         feedbackOutbox: Array.isArray(parsed.feedbackOutbox) ? parsed.feedbackOutbox.slice(-50) : [],
-        dismissedContextTips: parsed.dismissedContextTips && typeof parsed.dismissedContextTips === "object" ? parsed.dismissedContextTips : {}
+        dismissedContextTips: parsed.dismissedContextTips && typeof parsed.dismissedContextTips === "object" ? parsed.dismissedContextTips : {},
+        learning: parsed.learning && Array.isArray(parsed.learning.events)
+          ? { events: parsed.learning.events.filter(function (ev) { return ev && typeof ev === "object"; }).slice(-500) }
+          : { events: [] }
       });
+      if (parsed.contextTipRevision !== 2) {
+        // The old notices faded on a timer. They now wait for a manual
+        // dismissal, so show every tab's notice one more time.
+        loaded.dismissedContextTips = {};
+        loaded.contextTipRevision = 2;
+      }
       if (loaded.baselineScore === null && loaded.attentionTests.length) {
         loaded.baselineScore = loaded.attentionTests[0].score;
         loaded.baselineTestId = loaded.attentionTests[0].id;
         loaded.baselineCompletedAt = loaded.attentionTests[0].takenAt;
       }
       if (!loaded.profile.dailyGoalMinutes) loaded.profile.dailyGoalMinutes = loaded.profile.dailyGoalBlocks ? loaded.profile.dailyGoalBlocks * 15 : 60;
+      if (!loaded.profile.goalBonus || typeof loaded.profile.goalBonus !== "object") loaded.profile.goalBonus = {};
+      if (AMBIENT_SOUND_IDS.indexOf(loaded.settings.ambientSound) === -1) loaded.settings.ambientSound = "brown";
+      if (["bars", "line"].indexOf(loaded.settings.chartType) === -1) loaded.settings.chartType = "bars";
       if (!Object.prototype.hasOwnProperty.call(parsed.settings || {}, "soundPreferenceTouched")) loaded.settings.sound = true;
       loaded.session = normalizeSession(parsed.session);
       return loaded;
@@ -475,8 +778,16 @@
       backupDirty = true;
       if (typeof window.CustomEvent === "function") window.dispatchEvent(new CustomEvent("deecadence:local-save"));
     } catch (error) {
-      // Storage is best-effort; the app remains usable when browser storage is unavailable.
+      // Storage quota exceeded or unavailable — notify user once.
+      if (!localStorage.getItem(STORAGE_QUOTA_WARN_SHOWN_KEY)) {
+        try { localStorage.setItem(STORAGE_QUOTA_WARN_SHOWN_KEY, "1"); } catch (_) {}
+        showToast("Storage full — export a backup before adding more data.");
+      }
     }
+  }
+
+  function flushBeforeUnload() {
+    try { saveState(); } catch (_) {}
   }
 
   function normalizeTask(input) {
@@ -493,7 +804,8 @@
       estMinutes: clampMinutes(source.estMinutes, 25),
       priority: ["high", "medium", "low"].indexOf(source.priority) > -1 ? source.priority : "medium",
       notes: String(source.notes || ""),
-      repeat: ["daily", "weekdays", "weekly"].indexOf(source.repeat) > -1 ? source.repeat : "none",
+      repeat: ["daily", "weekdays", "weekly", "custom"].indexOf(source.repeat) > -1 ? source.repeat : "none",
+      repeatDays: Array.isArray(source.repeatDays) ? source.repeatDays.filter(function (d) { return d >= 0 && d <= 6; }) : [],
       repeatSourceId: String(source.repeatSourceId || ""),
       units: { total: total, completed: completed },
       manualDoneXpAwarded: Boolean(source.manualDoneXpAwarded),
@@ -617,6 +929,7 @@
       return priorityDelta || a.estMinutes - b.estMinutes;
     });
 
+    var arrangedCount = 0;
     flexible.forEach(function (task) {
       var moved = true;
       while (moved) {
@@ -634,6 +947,7 @@
       task.time = minToTime(cursor);
       placed.push({ task: task, start: cursor, end: cursor + duration });
       cursor = Math.max(DAY_START_MINUTES, Math.min(DAY_END_MINUTES, cursor + duration + gap));
+      arrangedCount += 1;
     });
 
     saveState();
@@ -676,7 +990,7 @@
     });
   }
 
-  function beginSession(totalMinutes, linkedTaskId, blockCount) {
+  function beginSession(totalMinutes, linkedTaskId, blockCount, options) {
     if (state.session) {
       switchView("focus");
       showToast("A focus block is already active.");
@@ -689,6 +1003,7 @@
     }
     var minutes = clampMinutes(totalMinutes, 25);
     var blocks = splitIntoBlocks(minutes, blockCount);
+    var linkedTask = linkedTaskId ? getTask(linkedTaskId) : null;
     state.session = {
       id: makeId("sess"),
       totalMinutes: minutes,
@@ -708,9 +1023,21 @@
       lastReveal: null,
       blockFeedback: []
     };
-    if (linkedTaskId && getTask(linkedTaskId)) getTask(linkedTaskId).status = "in_progress";
+    if (linkedTask) linkedTask.status = "in_progress";
+    recordLearningEvent("session_start", {
+      minutes: minutes,
+      blocks: blocks.length,
+      taskId: linkedTaskId || "",
+      taskTitle: linkedTask ? linkedTask.title : "",
+      taskTime: linkedTask ? linkedTask.time || "" : "",
+      locked: Boolean(options && options.locked),
+      noise: Boolean(brownNoiseEnabled),
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
+      source: startTaskSource
+    });
     pendingStartTask = null;
     saveState();
+    syncAmbientPlayback();
     startTicker();
     switchView("focus");
     renderAll();
@@ -733,9 +1060,14 @@
       return;
     }
     if (syncSessionClock()) return;
-    renderFocus(true);
+    // Only the countdown text and ring move each second. Rebuilding the whole
+    // stage every tick made the Focus view look like it was refreshing.
+    renderFocus();
     renderSessionIndicators();
-    saveState();
+    if (Date.now() - lastTickSaveAt > 5000) {
+      lastTickSaveAt = Date.now();
+      saveState();
+    }
     if (session.status === "recovery" && session.recoveryRemaining <= 0) stopTicker();
   }
 
@@ -766,7 +1098,12 @@
     state.session.blockEndsAt = null;
     state.session.status = "paused";
     state.session.pauseCount = (state.session.pauseCount || 0) + 1;
+    recordLearningEvent("session_pause", {
+      blockIndex: state.session.blockIndex,
+      remainingSeconds: state.session.blockRemaining
+    });
     stopTicker();
+    syncAmbientPlayback();
     saveState();
     renderFocus();
   }
@@ -776,6 +1113,7 @@
     state.session.blockRemaining = Math.max(1, state.session.blockRemaining);
     state.session.blockEndsAt = Date.now() + (state.session.blockRemaining * 1000);
     state.session.status = "running";
+    syncAmbientPlayback();
     saveState();
     startTicker();
     renderFocus();
@@ -792,10 +1130,25 @@
 
   function createNextRecurringTask(task) {
     if (!task || task.repeat === "none") return null;
-    var nextDate = task.repeat === "weekly" ? addDaysKey(task.date, 7) : addDaysKey(task.date, 1);
-    if (task.repeat === "weekdays") {
-      while ([0, 6].indexOf(dateFromKey(nextDate).getDay()) > -1) nextDate = addDaysKey(nextDate, 1);
+    var nextDate;
+    if (task.repeat === "custom" && task.repeatDays && task.repeatDays.length) {
+      var nextDay = null;
+      for (var offset = 1; offset <= 7; offset += 1) {
+        var candidate = addDaysKey(task.date, offset);
+        var day = parseDateKey(candidate).getDay();
+        if (task.repeatDays.indexOf(day) > -1) {
+          nextDay = candidate;
+          break;
+        }
+      }
+      nextDate = nextDay;
+    } else {
+      nextDate = task.repeat === "weekly" ? addDaysKey(task.date, 7) : addDaysKey(task.date, 1);
+      if (task.repeat === "weekdays") {
+        while ([0, 6].indexOf(parseDateKey(nextDate).getDay()) > -1) nextDate = addDaysKey(nextDate, 1);
+      }
     }
+    if (!nextDate) return null;
     var duplicate = state.tasks.some(function (item) {
       return item.repeatSourceId === task.id && item.date === nextDate;
     });
@@ -809,7 +1162,8 @@
       priority: task.priority,
       units: task.units.total,
       notes: task.notes,
-      repeat: task.repeat
+      repeat: task.repeat,
+      repeatDays: task.repeatDays
     });
     next.repeatSourceId = task.id;
     state.tasks.push(next);
@@ -847,7 +1201,12 @@
     var linkedTask = session.linkedTaskId ? advanceLinkedTaskProgress(session.linkedTaskId) : null;
 
     applyDailyStreak();
+    state.profile.momentum = Math.min(100, state.profile.momentum + 5);
+    var goalBefore = state.dailyFocusMinutes[todayStr()] || 0;
     logDailyFocus(blockSeconds);
+    var goalAfter = state.dailyFocusMinutes[todayStr()] || 0;
+    var goalBonus = awardDailyGoalBonus(goalBefore, goalAfter);
+    xpGained += goalBonus.xp;
     state.profile.totalXp += xpGained;
     session.blocksCompleted += 1;
     session.xpEarned += xpGained;
@@ -858,6 +1217,8 @@
     session.recoveryEndsAt = Date.now() + (RECOVERY_SECONDS * 1000);
     session.lastReveal = {
       xpGained: xpGained,
+      goalBonusXp: goalBonus.xp,
+      goalMessages: goalBonus.messages,
       prevXp: prevXp,
       newXp: state.profile.totalXp,
       leveledUp: detectLevelUp(prevXp, state.profile.totalXp),
@@ -867,7 +1228,17 @@
       focusedMinutes: Math.round(blockSeconds / 60),
       penaltyXp: session.penaltyXp || 0
     };
+    recordLearningEvent("block_complete", {
+      seconds: blockSeconds,
+      finalBlock: isFinalBlock,
+      xpGained: xpGained,
+      goalBonusXp: goalBonus.xp,
+      goalReached: goalBonus.reached,
+      goalSurpassed: goalBonus.surpassed,
+      taskTitle: linkedTask ? linkedTask.title : ""
+    });
 
+    syncAmbientPlayback();
     playSound(isFinalBlock ? "sessionComplete" : "blockComplete");
     showXpFloat(xpGained);
     saveState();
@@ -892,6 +1263,7 @@
     closeReveal();
     saveState();
     startTicker();
+    syncAmbientPlayback();
     renderAll();
     switchView("focus");
   }
@@ -900,6 +1272,7 @@
     var session = state.session;
     if (!session) return;
     stopTicker();
+    stopAmbientSound();
     var currentDuration = session.blocks[session.blockIndex] || 0;
     var hasPartialProgress = session.blockRemaining < currentDuration;
     if (!completedAll && session.blocksCompleted < session.blocks.length && (session.blocksCompleted > 0 || hasPartialProgress)) {
@@ -936,6 +1309,16 @@
       completedAll: Boolean(completedAll),
       blockFeedback: session.blockFeedback || []
     });
+    recordLearningEvent("session_end", {
+      minutes: session.totalMinutes,
+      blocksCompleted: session.blocksCompleted,
+      blocksPlanned: session.blocks.length,
+      pauseCount: session.pauseCount || 0,
+      xpEarned: session.xpEarned,
+      penaltyXp: session.penaltyXp || 0,
+      completedAll: Boolean(completedAll),
+      taskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : ""
+    });
     state.session = null;
     closeReveal();
     saveState();
@@ -964,6 +1347,11 @@
       blockFeedback: session.blockFeedback || []
     });
     if (!saved) return;
+    recordLearningEvent("session_saved", {
+      minutes: session.totalMinutes,
+      blocksCompleted: session.blocksCompleted,
+      blocksPlanned: session.blocks.length
+    });
     state.savedSessions = [saved]
       .concat(state.savedSessions.filter(function (item) { return item.id !== saved.id; }))
       .slice(0, 4);
@@ -988,6 +1376,7 @@
       recoveryEndsAt: null,
       recoveryRemaining: 0
     }));
+    syncAmbientPlayback();
     saveState();
     startTicker();
     renderAll();
@@ -1009,15 +1398,57 @@
   function applyDailyStreak() {
     var today = todayStr();
     if (state.profile.lastActiveDate === today) return;
-    var yesterday = addDaysKey(today, -1);
-    state.profile.streak = state.profile.lastActiveDate === yesterday ? state.profile.streak + 1 : 1;
+    var last = state.profile.lastActiveDate;
+    var daysMissed = 0;
+    if (last) {
+      var d1 = parseDateKey(today);
+      var d2 = parseDateKey(last);
+      daysMissed = Math.max(0, Math.round((d1 - d2) / 86400000));
+    }
+    if (daysMissed === 0) return;
+    if (daysMissed === 1) {
+      state.profile.streak += 1;
+      state.profile.momentum = Math.min(100, state.profile.momentum + 5);
+    } else {
+      state.profile.streak = 1;
+      state.profile.momentum = Math.max(0, state.profile.momentum - daysMissed * 5);
+    }
     state.profile.lastActiveDate = today;
+    state.profile.momentumMissedDays = daysMissed;
   }
 
   function logDailyFocus(blockSeconds) {
     var today = todayStr();
     state.dailyBlockLog[today] = (state.dailyBlockLog[today] || 0) + 1;
     state.dailyFocusMinutes[today] = (state.dailyFocusMinutes[today] || 0) + Math.max(1, Math.round((Number(blockSeconds) || 0) / 60));
+  }
+
+  function awardDailyGoalBonus(beforeMinutes, afterMinutes) {
+    var today = todayStr();
+    if (!state.profile.goalBonus || typeof state.profile.goalBonus !== "object") state.profile.goalBonus = {};
+    var record = state.profile.goalBonus[today];
+    if (!record || typeof record !== "object") record = { reached: false, surpassed: false };
+    var goal = Math.max(1, Number(state.profile.dailyGoalMinutes) || 60);
+    var result = { xp: 0, messages: [], reached: false, surpassed: false };
+    if (!record.reached && beforeMinutes < goal && afterMinutes >= goal) {
+      record.reached = true;
+      result.reached = true;
+      result.xp += XP_GOAL_REACHED_BONUS;
+      result.messages.push("Daily goal reached +" + XP_GOAL_REACHED_BONUS + " XP");
+    }
+    var surpassAt = Math.ceil(goal * GOAL_SURPASS_MULTIPLIER);
+    if (!record.surpassed && beforeMinutes < surpassAt && afterMinutes >= surpassAt) {
+      record.surpassed = true;
+      result.surpassed = true;
+      result.xp += XP_GOAL_SURPASSED_BONUS;
+      result.messages.push("Goal surpassed +" + XP_GOAL_SURPASSED_BONUS + " XP");
+    }
+    state.profile.goalBonus[today] = record;
+    var cutoff = addDaysKey(today, -14);
+    Object.keys(state.profile.goalBonus).forEach(function (key) {
+      if (key < cutoff) delete state.profile.goalBonus[key];
+    });
+    return result;
   }
 
   function showSystemReveal(data) {
@@ -1045,8 +1476,9 @@
         ring.setAttribute("stroke-dashoffset", String(circumference * (1 - progress)));
       });
     }
-    flags.innerHTML = "";
-    flags.innerHTML = "";
+    flags.innerHTML = (data.goalMessages || []).map(function (message) {
+      return '<div class="reveal-flag goal-bonus">' + escapeHtml(message) + "</div>";
+    }).join("");
 
     document.getElementById("revealTaskLine").innerHTML = linkedTask
       ? "<b>" + escapeHtml(linkedTask.title) + "</b> - " + linkedTask.units.completed + " of " + linkedTask.units.total + " units complete"
@@ -1061,6 +1493,9 @@
       : data.isFinalBlock
         ? '<button class="btn btn-primary btn-block" id="revealFinishBtn">Finish session</button>'
         : '<button class="btn btn-primary btn-block" id="revealContinueBtn">Continue to next block</button><button class="btn btn-ghost btn-block" id="revealStopBtn">Stop and save progress</button>';
+
+    // Manual closes have no feedback panel, so collapse the desktop stage.
+    revealOverlay.classList.toggle("is-single", Boolean(data.isManualDone));
 
     revealOverlay.classList.add("open");
     var finish = document.getElementById("revealFinishBtn");
@@ -1163,6 +1598,7 @@
     flags.innerHTML = '<div class="reveal-flag">' + (item.type === "rank" ? "Rank up" : "Level up") + "</div>";
     document.getElementById("blockFeedbackPanel").style.display = "none";
     document.getElementById("revealActions").innerHTML = '<button class="btn btn-primary btn-block" id="milestoneContinueBtn">' + (item.type === "rank" ? "Enter " + escapeHtml(rank.name) : "View progress") + "</button>";
+    revealOverlay.classList.add("is-single");
     revealOverlay.classList.add("open");
     switchView("rank");
     document.getElementById("milestoneContinueBtn").onclick = function () {
@@ -1313,6 +1749,8 @@
   function feedbackDeliveryMode() {
     if (FEEDBACK_ENDPOINT.trim()) return "endpoint";
     if (SUPABASE_URL.trim() && SUPABASE_ANON_KEY.trim()) return "supabase";
+    if (feedbackChannel === "email" && FEEDBACK_EMAIL.trim()) return "email";
+    if (feedbackChannel === "whatsapp" && FEEDBACK_WHATSAPP.trim()) return "whatsapp";
     if (FEEDBACK_WHATSAPP.trim()) return "whatsapp";
     if (FEEDBACK_EMAIL.trim()) return "email";
     return "outbox";
@@ -1349,46 +1787,93 @@
 
   function feedbackContextLines(context) {
     if (!context) return ["Context: Not included"];
-    return [
-      "Context:",
-      "- App version: " + context.appVersion,
-      "- Current screen: " + context.view,
-      "- Device screen: " + context.viewport,
-      "- Theme: " + context.theme,
-      "- Online: " + (context.online ? "Yes" : "No"),
-      "- Saved focus sessions: " + context.sessionCount,
-      "- Saved tasks: " + context.taskCount,
-      "- Total XP: " + context.totalXp,
-      "- Focus in last 7 days: " + formatMinutes(context.focusMinutes7 || 0)
-    ];
+    var lines = ["Context:"];
+    function add(label, value) {
+      if (value === undefined || value === null || value === "") return;
+      lines.push("- " + label + ": " + value);
+    }
+    add("App version", context.appVersion);
+    add("Current tab", context.view);
+    add("Screen", context.screen);
+    add("Viewport", context.viewport);
+    add("Platform", context.platform);
+    add("Language", context.locale);
+    add("Timezone", context.timezone);
+    add("Theme", context.theme);
+    add("Reduced motion", typeof context.reducedMotion === "boolean" ? (context.reducedMotion ? "Yes" : "No") : "");
+    add("Online", typeof context.online === "boolean" ? (context.online ? "Yes" : "No") : "");
+    add("Rank", context.rank);
+    add("Level", context.level);
+    add("Streak", context.streak === undefined || context.streak === null ? "" : context.streak + " days");
+    add("Daily goal", context.dailyGoalMinutes === undefined ? "" : formatMinutes(context.dailyGoalMinutes || 0));
+    add("Current focus", context.focusState);
+    add("Saved focus sessions", context.sessionCount);
+    add("Saved tasks", context.taskCount);
+    add("Total XP", context.totalXp);
+    add("Focus in last 7 days", formatMinutes(context.focusMinutes7 || 0));
+    add("Attention tests", context.attentionTests);
+    return lines;
   }
 
   function formatFeedbackBody(payload) {
     return [
-      "DeeCadence Feedback",
+      "DeeCadence FEEDBACK — " + String(payload.type || "Other").toUpperCase(),
       "",
-      "Type: " + payload.type,
+      "From: " + (payload.senderName || "Not provided"),
       "Sent: " + new Date(payload.sentAt).toLocaleString(),
+      "Reply email: " + (payload.replyEmail || "Not provided"),
       "",
       "Message:",
       payload.message,
-      "",
-      "Reply email: " + (payload.replyEmail || "Not provided"),
       "",
       feedbackContextLines(payload.context).join("\n")
     ].join("\n");
   }
 
   function feedbackPhoneDigits() {
-    return FEEDBACK_WHATSAPP.replace(/[^\d]/g, "");
+    return visibleFeedbackPhone().replace(/[^\d]/g, "");
   }
 
   function visibleFeedbackPhone() {
-    return FEEDBACK_WHATSAPP.trim() || "+2348125968356";
+    return FEEDBACK_WHATSAPP.trim() || "+2348085318908";
+  }
+
+  function visibleFeedbackEmail() {
+    return FEEDBACK_EMAIL.trim() || "dominiqueglobal24@gmail.com";
+  }
+
+  function updateFeedbackDestination() {
+    var mode = feedbackDeliveryMode();
+    var mark = document.getElementById("feedbackDestinationMark");
+    var label = document.getElementById("feedbackDestinationLabel");
+    var value = document.getElementById("feedbackDestinationValue");
+    if (!mark || !label || !value) return;
+    if (mode === "email") {
+      mark.textContent = "@";
+      label.textContent = "To: DeeCadence by email";
+      value.textContent = visibleFeedbackEmail();
+      return;
+    }
+    if (mode === "whatsapp") {
+      mark.textContent = "WA";
+      label.textContent = "To: DeeCadence on WhatsApp";
+      value.textContent = visibleFeedbackPhone();
+      return;
+    }
+    if (mode === "endpoint" || mode === "supabase") {
+      mark.textContent = "DC";
+      label.textContent = "To: DeeCadence";
+      value.textContent = "Secure feedback receiver";
+      return;
+    }
+    mark.textContent = "DC";
+    label.textContent = "To: This device";
+    value.textContent = "Saved locally - no receiver configured";
   }
 
   function buildFeedbackPayload(options) {
     var opts = options || {};
+    var nameInput = document.getElementById("feedbackNameInput");
     var messageInput = document.getElementById("feedbackMessageInput");
     var emailInput = document.getElementById("feedbackEmailInput");
     var contextInput = document.getElementById("feedbackContextInput");
@@ -1396,18 +1881,20 @@
     return {
       id: makeId("feedback"),
       type: feedbackType,
+      senderName: nameInput ? nameInput.value.trim().slice(0, 60) : "",
       message: message || (opts.allowEmpty ? "No message typed yet." : ""),
       replyEmail: emailInput ? emailInput.value.trim().slice(0, 120) : "",
       sentAt: new Date().toISOString(),
       appVersion: APP_VERSION,
-      context: contextInput && contextInput.checked ? anonymousFeedbackContext() : null
+      context: contextInput && contextInput.checked ? feedbackContextSnapshot() : null
     };
   }
 
   function resetFeedbackButton(button) {
     if (!button) return;
+    var mode = feedbackDeliveryMode();
     button.disabled = false;
-    button.textContent = feedbackDeliveryMode() === "whatsapp" ? "Send to WhatsApp" : "Send feedback";
+    button.textContent = mode === "whatsapp" ? "Send to WhatsApp" : mode === "email" ? "Send as Email" : "Send feedback";
   }
 
   function updateFeedbackBadge() {
@@ -1420,20 +1907,28 @@
 
   function openFeedback() {
     feedbackType = "Idea";
+    feedbackChannel = "whatsapp";
+    var name = document.getElementById("feedbackNameInput");
     var message = document.getElementById("feedbackMessageInput");
     var email = document.getElementById("feedbackEmailInput");
     var submit = document.getElementById("feedbackSubmitBtn");
-    var phone = document.getElementById("feedbackWhatsappNumber");
+    if (name) {
+      name.value = "";
+      name.removeAttribute("aria-invalid");
+    }
     if (message) message.value = "";
     if (email) email.value = "";
-    if (phone) phone.textContent = visibleFeedbackPhone();
     resetFeedbackButton(submit);
     var count = document.getElementById("feedbackCharCount");
     if (count) count.textContent = "0";
     Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-type]"), function (button) {
       button.classList.toggle("active", button.getAttribute("data-feedback-type") === feedbackType);
     });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-channel]"), function (button) {
+      button.classList.toggle("active", button.getAttribute("data-feedback-channel") === feedbackChannel);
+    });
     updateFeedbackDeliveryCopy();
+    updateFeedbackDestination();
     feedbackModal.classList.add("open");
     setTimeout(function () { if (message) message.focus(); }, 80);
   }
@@ -1442,18 +1937,32 @@
     if (feedbackModal) feedbackModal.classList.remove("open");
   }
 
-  function anonymousFeedbackContext() {
+  function feedbackContextSnapshot() {
     var minutesByDate = focusMinutesByDate();
     var focus7 = 0;
     for (var i = 0; i < 7; i += 1) focus7 += minutesByDate[addDaysKey(todayStr(), -i)] || 0;
+    var timezone = "";
+    try {
+      timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    } catch (error) {
+      timezone = "";
+    }
     return {
       appVersion: APP_VERSION,
       view: activeView,
+      screen: window.screen ? window.screen.width + "x" + window.screen.height : "",
       viewport: window.innerWidth + "x" + window.innerHeight,
       platform: navigator.platform || "unknown",
+      locale: navigator.language || "",
+      timezone: timezone,
       online: navigator.onLine,
       theme: state.settings.theme,
       reducedMotion: state.settings.reducedMotion,
+      rank: currentRank(state.profile.totalXp).name,
+      level: currentLevel(state.profile.totalXp),
+      streak: state.profile.streak,
+      dailyGoalMinutes: state.profile.dailyGoalMinutes,
+      focusState: state.session ? state.session.status : "idle",
       sessionCount: state.history.length,
       taskCount: state.tasks.length,
       totalXp: state.profile.totalXp,
@@ -1463,6 +1972,16 @@
   }
 
   function submitFeedback() {
+    var nameInput = document.getElementById("feedbackNameInput");
+    var senderName = nameInput ? nameInput.value.trim() : "";
+    if (!senderName) {
+      if (nameInput) {
+        nameInput.setAttribute("aria-invalid", "true");
+        nameInput.focus();
+      }
+      showToast("Add your name so the developer can follow up");
+      return;
+    }
     var message = document.getElementById("feedbackMessageInput").value.trim();
     if (message.length < 8) {
       showToast("Add a little more detail");
@@ -1483,9 +2002,13 @@
       return;
     }
     if (mode === "email") {
-      var subject = encodeURIComponent("[DeeCadence " + feedbackType + "] Product feedback");
+      var subject = encodeURIComponent(
+        "[DeeCadence FEEDBACK — " + String(feedbackType).toUpperCase() + "] " +
+        (payload.senderName || "Feedback") + " — " +
+        new Date(payload.sentAt).toLocaleDateString()
+      );
       var body = encodeURIComponent(formatFeedbackBody(payload));
-      window.location.href = "mailto:" + FEEDBACK_EMAIL + "?subject=" + subject + "&body=" + body;
+      window.location.href = "mailto:" + visibleFeedbackEmail() + "?subject=" + subject + "&body=" + body;
       closeFeedback();
       showToast("Email draft opened");
       resetFeedbackButton(button);
@@ -1571,11 +2094,12 @@
     var row = {
       id: payload.id,
       feedback_type: payload.type,
+      sender_name: payload.senderName || null,
       message: payload.message,
       reply_email: payload.replyEmail || null,
       app_version: payload.appVersion,
       context: payload.context || null,
-      recipient_email: FEEDBACK_EMAIL || "dominiquecreations24@gmail.com",
+      recipient_email: FEEDBACK_EMAIL || "dominiqueglobal24@gmail.com",
       created_at: payload.sentAt
     };
     return fetch(base + "/rest/v1/" + table, {
@@ -1986,9 +2510,16 @@
       : hour < 17 ? "Good afternoon"
       : hour < 22 ? "Good evening"
       : "Welcome";
+    var skyPhase = hour < 5 ? "night"
+      : hour < 12 ? "morning"
+      : hour < 17 ? "afternoon"
+      : hour < 22 ? "evening"
+      : "night";
     var greetingNode = document.getElementById("todayGreeting");
     var dateNode = document.getElementById("todayHeroDate");
+    var skyIcon = document.getElementById("todaySkyIcon");
     if (greetingNode) greetingNode.textContent = greeting;
+    if (skyIcon) skyIcon.setAttribute("data-phase", skyPhase);
     if (dateNode) {
       dateNode.textContent = now.toLocaleDateString(undefined, {
         weekday: "short",
@@ -2003,6 +2534,22 @@
   }
 
   function renderToday() {
+    var missed = state.profile.momentumMissedDays || 0;
+    if (missed >= 3) {
+      var wrap = document.getElementById("todayNextTaskWrap");
+      if (wrap) {
+        wrap.innerHTML = '<div class="recovery-hook" style="padding:16px; border:1px solid var(--border); border-radius:16px; background:color-mix(in srgb, var(--rank-accent) 10%, transparent); margin-bottom:16px;">' +
+          '<div class="eyebrow" style="font-size:0.75rem; color:var(--rank-accent); text-transform:uppercase;">Momentum recovery</div>' +
+          '<div style="font-size:1rem; color:var(--text); margin-bottom:8px;">Your focus momentum dipped to <strong>' + state.profile.momentum + '%</strong> after ' + missed + ' days away.</div>' +
+          '<div style="font-size:0.85rem; color:var(--text-dim); margin-bottom:12px;">No guilt — just a warm-up to rebuild your rhythm.</div>' +
+          '<button class="btn btn-primary" id="recoveryWarmupBtn" style="width:100%;">Start warm-up block</button></div>';
+        document.getElementById("recoveryWarmupBtn").onclick = function () {
+          switchView("focus");
+          openStartModal(null, Math.max(5, Math.round(state.profile.momentum / 10)));
+          showToast("Warm-up block: rebuild at your pace.");
+        };
+      }
+    }
     var hero = todayHeroText();
     renderTodayGreeting();
     var heroTitle = document.getElementById("todayHeroTitle");
@@ -2071,6 +2618,30 @@
       renderTaskUnitRail(item) + "</div></div>";
   }
 
+  function focusStageSignature(session) {
+    return [session.id || "", session.status, session.blockIndex, session.blocks.length].join("|");
+  }
+
+  function refreshFocusStage(root, session) {
+    var stage = root.querySelector(".focus-stage");
+    if (!stage || stage.getAttribute("data-signature") !== focusStageSignature(session)) return false;
+    var digits = stage.querySelector(".timer-digits");
+    var center = stage.querySelector(".timer-center");
+    if (!digits || !center) return false;
+    if (session.status === "recovery") {
+      var recoveryClock = stage.querySelector(".recovery-note strong");
+      if (recoveryClock) recoveryClock.textContent = fmtClock(session.recoveryRemaining);
+      return true;
+    }
+    var blockTotal = session.blocks[session.blockIndex] || 1;
+    var progress = Math.max(0, Math.min(1, (blockTotal - session.blockRemaining) / blockTotal));
+    var ring = stage.querySelector(".timer-ring-progress");
+    digits.textContent = fmtClock(session.blockRemaining);
+    center.setAttribute("aria-label", fmtClock(session.blockRemaining) + " remaining in current block");
+    if (ring) ring.setAttribute("stroke-dashoffset", String((2 * Math.PI * 118) * (1 - progress)));
+    return true;
+  }
+
   function renderFocus() {
     var root = document.getElementById("focusRoot");
     var session = state.session;
@@ -2089,6 +2660,11 @@
       return;
     }
 
+    if (refreshFocusStage(root, session)) {
+      renderSessionIndicators();
+      return;
+    }
+
     var linkedTask = session.linkedTaskId ? getTask(session.linkedTaskId) : null;
     var blockTotal = session.blocks[session.blockIndex] || 1;
     var progress = Math.max(0, Math.min(1, (blockTotal - session.blockRemaining) / blockTotal));
@@ -2099,15 +2675,15 @@
     }).join("");
     var statusLabel = session.status === "running" ? "Block " + (session.blockIndex + 1) + " of " + session.blocks.length : session.status === "paused" ? "Paused" : "Recovery";
     var taskName = linkedTask ? escapeHtml(linkedTask.title) : "Free focus";
-    var html = '<section class="card focus-stage" data-focus-status="' + session.status + '"><header class="focus-stage-head"><div><span class="attention-kicker">' + (session.status === "recovery" ? "Block secured" : "Protected focus") + '</span><h2>' + taskName + '</h2></div><div class="focus-stage-progress"><span>' + statusLabel + '</span><div class="block-indicator" aria-hidden="true">' + pips + "</div></div></header>";
+    var html = '<section class="card focus-stage" data-focus-status="' + session.status + '" data-signature="' + focusStageSignature(session) + '"><header class="focus-stage-head"><div><span class="attention-kicker">' + (session.status === "recovery" ? "Block secured" : "Protected focus") + '</span><h2>' + taskName + '</h2></div><div class="focus-stage-progress"><span>' + statusLabel + '</span><div class="block-indicator" aria-hidden="true">' + pips + "</div></div></header>";
 
     if (session.status === "recovery") {
-      html += '<div class="timer-ring-wrap"><svg viewBox="0 0 260 260"><circle cx="130" cy="130" r="118" fill="none" stroke="var(--surface-2)" stroke-width="10"/><circle cx="130" cy="130" r="118" fill="none" stroke="var(--success)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference + '" stroke-dashoffset="0"/></svg><div class="timer-center"><div class="timer-digits mono">Saved</div><div class="timer-caption">Block ' + (session.blockIndex + 1) + " complete</div></div></div>";
+      html += '<div class="timer-ring-wrap"><svg viewBox="0 0 260 260"><circle class="timer-ring-track" cx="130" cy="130" r="118" fill="none" stroke="var(--surface-2)" stroke-width="10"/><circle class="timer-ring-progress" cx="130" cy="130" r="118" fill="none" stroke="var(--success)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference + '" stroke-dashoffset="0"/></svg><div class="timer-center"><div class="timer-digits mono">Saved</div><div class="timer-caption">Block ' + (session.blockIndex + 1) + " complete</div></div></div>";
       html += '<div class="focus-linked">' + (linkedTask ? "Progress saved to this task." : "Free focus block logged.") + "</div>";
       html += '<div class="recovery-note"><span>Recovery window</span><strong>' + fmtClock(session.recoveryRemaining) + "</strong><small>The next block will wait for your confirmation.</small></div>";
       html += '<div class="focus-controls"><button class="btn btn-primary" id="reopenReveal">View result</button><button class="btn btn-ghost" id="stopBtn">Stop and save</button></div>';
     } else {
-      html += '<div class="timer-ring-wrap"><svg viewBox="0 0 260 260"><circle cx="130" cy="130" r="118" fill="none" stroke="var(--surface-2)" stroke-width="10"/><circle cx="130" cy="130" r="118" fill="none" stroke="var(--cyan)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference + '" stroke-dashoffset="' + (circumference * (1 - progress)) + '"/></svg><div class="timer-center" role="timer" aria-label="' + fmtClock(session.blockRemaining) + ' remaining in current block"><div class="timer-digits mono">' + fmtClock(session.blockRemaining) + '</div><div class="timer-caption">' + statusLabel + "</div></div></div>";
+      html += '<div class="timer-ring-wrap"><svg viewBox="0 0 260 260"><circle class="timer-ring-track" cx="130" cy="130" r="118" fill="none" stroke="var(--surface-2)" stroke-width="10"/><circle class="timer-ring-progress" cx="130" cy="130" r="118" fill="none" stroke="var(--cyan)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + circumference + '" stroke-dashoffset="' + (circumference * (1 - progress)) + '"/></svg><div class="timer-center" role="timer" aria-label="' + fmtClock(session.blockRemaining) + ' remaining in current block"><div class="timer-digits mono">' + fmtClock(session.blockRemaining) + '</div><div class="timer-caption">' + statusLabel + "</div></div></div>";
       html += '<div class="focus-linked">' + (session.status === "running" ? "Stay with this one block. Everything else can wait." : "Your remaining time is saved on this device.") + "</div>";
       if (session.status === "paused") {
         html += '<div class="paused-session-card"><strong>Most recently paused block</strong><span>Block ' + (session.blockIndex + 1) + " is waiting with " + fmtClock(session.blockRemaining) + " left.</span></div>";
@@ -2371,12 +2947,15 @@
   }
 
   function renderWeekSchedule(root) {
-    var start = todayStr();
+    var today = todayStr();
+    // Weeks start on Sunday. Show the current Sunday-to-Saturday week so the
+    // week view matches the repeat-day picker and the calendar people expect.
+    var start = addDaysKey(today, -parseDateKey(today).getDay());
     var days = [];
     for (var i = 0; i < 7; i += 1) days.push(addDaysKey(start, i));
-    root.innerHTML = '<section class="schedule-shell"><div class="schedule-head"><div><div class="eyebrow">Week schedule</div><h3>Next seven days</h3></div><span>Auto-arrange keeps the lane tidy</span></div><div class="schedule-week-grid">' + days.map(function (date) {
+    root.innerHTML = '<section class="schedule-shell"><div class="schedule-head"><div><div class="eyebrow">Week schedule</div><h3>This week</h3></div><span>Sunday to Saturday</span></div><div class="schedule-week-grid">' + days.map(function (date) {
       var dayTasks = state.tasks.filter(function (task) { return task.date === date && task.status !== "completed"; }).sort(sortTasksForPlan);
-      return '<article class="schedule-day-card"><div class="schedule-day-head"><strong>' + shortDayLabel(date) + '</strong><span>' + dayTasks.length + " task" + (dayTasks.length === 1 ? "" : "s") + '</span></div>' + (dayTasks.length ? dayTasks.map(renderMiniScheduleBlock).join("") : '<p>No blocks</p>') + '</article>';
+      return '<article class="schedule-day-card' + (date === today ? " is-today" : "") + '"><div class="schedule-day-head"><strong>' + shortDayLabel(date) + '</strong><span>' + dayTasks.length + " task" + (dayTasks.length === 1 ? "" : "s") + '</span></div>' + (dayTasks.length ? dayTasks.map(renderMiniScheduleBlock).join("") : '<p>No blocks</p>') + '</article>';
     }).join("") + '</div></section>';
   }
 
@@ -2465,6 +3044,14 @@
         completionType: "outside_timer"
       });
       createNextRecurringTask(task);
+      recordLearningEvent("task_done", {
+        taskId: task.id,
+        title: task.title,
+        estMinutes: task.estMinutes,
+        units: task.units.total,
+        time: task.time || "",
+        repeat: task.repeat
+      });
       showXpFloat(xpAward);
     }
     saveState();
@@ -2549,72 +3136,231 @@
     return byDate;
   }
 
-  function renderAttentionLineChart(days, maxMinutes) {
+  function focusSessionsByDate() {
+    var byDate = {};
+    state.history.forEach(function (item) {
+      if (!item || item.manualDone) return;
+      var key = item.date && /^\d{4}-\d{2}-\d{2}$/.test(String(item.date))
+        ? item.date
+        : localDateKey(new Date(item.completedAt || Date.now()));
+      byDate[key] = (byDate[key] || 0) + 1;
+    });
+    return byDate;
+  }
+
+  function progressDayMeta(day, goal) {
+    if (!day || day.future) return "Upcoming";
+    var parts = [];
+    if (!day.minutes) parts.push("No focus logged");
+    if (day.sessions) parts.push(day.sessions + " session" + (day.sessions === 1 ? "" : "s"));
+    if (day.minutes >= goal) parts.push("goal reached");
+    else parts.push(Math.max(0, goal - day.minutes) + "m to goal");
+    return parts.join(" \u00b7 ");
+  }
+
+  function progressDayTip(day, goal) {
+    var dateValue = new Date(day.date + "T00:00:00");
+    var shortDate = dateValue.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    var meta = progressDayMeta(day, goal);
+    return '<span class="cadence-tip" aria-hidden="true">' +
+      '<span class="cadence-tip-date">' + escapeHtml(shortDate) + '</span>' +
+      '<strong>' + (day.future ? "Coming up" : formatMinutesCompact(day.minutes) + ' focused') + '</strong>' +
+      '<span class="cadence-tip-meta">' + escapeHtml(meta) + '</span>' +
+    '</span>';
+  }
+
+  function renderCadenceChart(days, maxMinutes) {
     if (!days.length) return "";
-    var width = 720;
-    var height = 260;
-    var paddingX = 42;
-    var paddingTop = 28;
-    var paddingBottom = 46;
-    var innerW = width - (paddingX * 2);
-    var innerH = height - paddingTop - paddingBottom;
+    var goal = Math.max(15, Number(state.profile.dailyGoalMinutes) || 60);
+    var max = Math.max(1, Number(maxMinutes) || goal);
     var selectedDate = selectedProgressDate || (days[days.length - 1] || {}).date;
     var selected = days.find(function (day) { return day.date === selectedDate; }) || days[days.length - 1];
     var selectedFullDate = new Date(selected.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-    var points = days.map(function (day, index) {
-      var x = paddingX + (days.length === 1 ? 0 : (innerW * index / (days.length - 1)));
-      var y = paddingTop + innerH - ((day.minutes / Math.max(1, maxMinutes)) * innerH);
-      return { x: x, y: y, day: day };
-    });
-    var path = points.map(function (point, index) {
-      return (index ? "L" : "M") + point.x.toFixed(1) + " " + point.y.toFixed(1);
-    }).join(" ");
-    var area = path + " L " + points[points.length - 1].x.toFixed(1) + " " + (height - paddingBottom) + " L " + points[0].x.toFixed(1) + " " + (height - paddingBottom) + " Z";
-    var grid = [0, 0.25, 0.5, 0.75, 1].map(function (ratio) {
-      var y = paddingTop + innerH - (innerH * ratio);
-      return '<line x1="' + paddingX + '" x2="' + (width - paddingX) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"></line>';
-    }).join("");
+    var selectedMeta = progressDayMeta(selected, goal);
+    var total = days.reduce(function (sum, day) { return sum + day.minutes; }, 0);
+    var goalRatio = Math.max(4, Math.min(100, Math.round((goal / max) * 100)));
     var labelStep = days.length <= 7 ? 1 : days.length <= 14 ? 2 : 5;
-    var labels = points.map(function (point, index) {
-      if (index !== 0 && index !== points.length - 1 && index % labelStep !== 0) return "";
-      var label = new Date(point.day.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
-      return '<text x="' + point.x.toFixed(1) + '" y="' + (height - 12) + '">' + label + '</text>';
+    var chartClass = days.length <= 3 ? 3 : days.length <= 7 ? 7 : days.length <= 21 ? 14 : 30;
+    var columns = days.map(function (day, index) {
+      var height = Math.max(0, Math.min(100, Math.round((day.minutes / max) * 100)));
+      var isZero = !day.minutes;
+      var isFuture = Boolean(day.future);
+      var isSelected = day.date === selectedDate;
+      var showLabel = index === 0 || index === days.length - 1 || index % labelStep === 0;
+      var dateValue = new Date(day.date + "T00:00:00");
+      var dayLabel = dateValue.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
+      var fullDate = dateValue.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+      var meta = progressDayMeta(day, goal);
+      return '<button type="button" class="cadence-col' + (isZero ? " is-zero" : "") + (isFuture ? " is-future" : "") + (isSelected ? " active" : "") + '" data-progress-day="' + day.date + '"' + (isFuture ? ' aria-disabled="true"' : "") + ' style="--h:' + height + '%" aria-pressed="' + (isSelected ? "true" : "false") + '" aria-label="' + escapeHtml(fullDate) + ": " + (isFuture ? "coming up" : formatMinutesCompact(day.minutes) + " focused. " + meta) + '">' +
+        progressDayTip(day, goal) +
+        '<span class="cadence-bar" aria-hidden="true"></span>' +
+        (showLabel ? '<span class="cadence-day" aria-hidden="true">' + dayLabel + '</span>' : "") +
+      '</button>';
     }).join("");
-    var dots = points.map(function (point) {
-      return '<circle cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="' + (point.day.date === selectedDate ? "7" : "5") + '" class="' + (point.day.date === selectedDate ? "selected" : "") + '"></circle>';
+    return '<div class="progress-attention-chart cadence-chart-' + chartClass + '" aria-label="' + days.length + ' day focus cadence">' +
+      '<div class="progress-chart-head"><div><span>Selected day</span><strong>' + escapeHtml(selectedFullDate) + '</strong><small class="progress-selected-meta">' + escapeHtml(selectedMeta) + '</small></div><b>' + formatMinutesCompact(selected.minutes) + ' focused</b></div>' +
+      '<div class="progress-graph-stage cadence-stage">' +
+        '<div class="cadence-plot" style="--goal:' + goalRatio + '%">' +
+          '<div class="cadence-goal" aria-hidden="true"><span>Goal ' + goal + 'm</span></div>' +
+          '<div class="cadence-bars">' + columns + '</div>' +
+        '</div>' +
+        (total ? "" : '<p class="cadence-empty">No protected focus in this ' + days.length + '-day window yet.</p>') +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderLineChart(days, maxMinutes) {
+    if (!days.length) return "";
+    var goal = Math.max(15, Number(state.profile.dailyGoalMinutes) || 60);
+    var dataMax = Math.max(1, Number(maxMinutes) || goal);
+    // A little headroom keeps peaks clear of the card edge without flattening
+    // quiet weeks. The goal rule stays readable at every range.
+    var scaleMax = Math.max(goal, dataMax) * 1.12;
+    var selectedDate = selectedProgressDate || (days[days.length - 1] || {}).date;
+    var selected = days.find(function (day) { return day.date === selectedDate; }) || days[days.length - 1];
+    var selectedFullDate = new Date(selected.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    var selectedMeta = progressDayMeta(selected, goal);
+    var total = days.reduce(function (sum, day) { return sum + day.minutes; }, 0);
+    var goalRatio = Math.max(2, Math.min(98, (goal / scaleMax) * 100));
+    var labelStep = days.length <= 7 ? 1 : days.length <= 14 ? 2 : 5;
+    var chartClass = days.length <= 3 ? 3 : days.length <= 7 ? 7 : days.length <= 21 ? 14 : 30;
+    var axis = days.map(function (day, index) {
+      var x = days.length === 1 ? 50 : (index / (days.length - 1)) * 100;
+      var y = Math.max(0, Math.min(100, (day.minutes / scaleMax) * 100));
+      return { day: day, index: index, x: x, y: y };
+    });
+    var plotted = axis.filter(function (entry) { return !entry.day.future; });
+    var points = plotted.map(function (entry) {
+      var day = entry.day;
+      var isZero = !day.minutes;
+      var isSelected = day.date === selectedDate;
+      var dateValue = new Date(day.date + "T00:00:00");
+      var fullDate = dateValue.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+      var meta = progressDayMeta(day, goal);
+      var edgeClass = entry.index === 0 ? " is-first" : entry.index === days.length - 1 ? " is-last" : "";
+      return '<button type="button" class="line-point' + (isZero ? " is-zero" : "") + (isSelected ? " active" : "") + edgeClass + '" data-progress-day="' + day.date + '" style="left:' + entry.x.toFixed(3) + '%;bottom:' + entry.y.toFixed(3) + '%" aria-pressed="' + (isSelected ? "true" : "false") + '" aria-label="' + escapeHtml(fullDate) + ": " + formatMinutesCompact(day.minutes) + ' focused. ' + meta + '">' +
+        '<span class="line-dot" aria-hidden="true"></span>' +
+        progressDayTip(day, goal) +
+      '</button>';
     }).join("");
-    var hitTargets = points.map(function (point) {
-      var left = (point.x / width) * 100;
-      var top = (point.y / height) * 100;
-      var fullDate = new Date(point.day.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-      return '<button class="progress-chart-point ' + (point.day.date === selectedDate ? "active" : "") + '" style="left:' + left.toFixed(3) + '%;top:' + top.toFixed(3) + '%" data-progress-day="' + point.day.date + '" aria-pressed="' + (point.day.date === selectedDate ? "true" : "false") + '" aria-label="' + fullDate + ": " + formatMinutesCompact(point.day.minutes) + ' focused"><span>' + formatMinutesCompact(point.day.minutes) + '</span></button>';
+    var labels = axis.filter(function (entry) {
+      return entry.index === 0 || entry.index === days.length - 1 || entry.index % labelStep === 0;
+    }).map(function (entry) {
+      var dateValue = new Date(entry.day.date + "T00:00:00");
+      var dayLabel = dateValue.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
+      var align = entry.index === 0 ? " is-start" : entry.index === days.length - 1 ? " is-end" : "";
+      return '<span class="line-day' + align + '" style="left:' + entry.x.toFixed(3) + '%" aria-hidden="true">' + dayLabel + "</span>";
     }).join("");
-    return '<div class="progress-attention-chart" style="--progress-point-count:' + days.length + '" aria-label="' + days.length + ' day attention span trend">' +
-      '<div class="progress-chart-head"><div><span>Selected day</span><strong>' + escapeHtml(selectedFullDate) + '</strong></div><b>' + formatMinutesCompact(selected.minutes) + ' focused</b></div>' +
-      '<div class="progress-graph-stage"><svg viewBox="0 0 ' + width + " " + height + '" preserveAspectRatio="none">' +
-        '<g class="progress-line-grid">' + grid + '</g>' +
-        '<path class="progress-line-area" d="' + area + '"></path>' +
-        '<path class="progress-line-stroke" d="' + path + '"></path>' +
-        '<g class="progress-line-dots">' + dots + '</g>' +
-        '<g class="progress-line-labels">' + labels + '</g>' +
-      '</svg>' + hitTargets + '</div>' +
+    var svgPoints = plotted.map(function (entry) {
+      var x = days.length === 1 ? 500 : (entry.index / (days.length - 1)) * 1000;
+      var y = 100 - Math.max(0, Math.min(100, (entry.day.minutes / scaleMax) * 100));
+      return x.toFixed(2) + "," + y.toFixed(2);
+    }).join(" ");
+    var areaEndX = plotted.length && days.length > 1 ? (plotted[plotted.length - 1].index / (days.length - 1)) * 1000 : 1000;
+    var areaPoints = "0,100 " + svgPoints + " " + areaEndX.toFixed(2) + ",100";
+    return '<div class="progress-attention-chart line-chart line-chart-' + chartClass + '" aria-label="' + days.length + ' day focus line chart">' +
+      '<div class="progress-chart-head"><div><span>Selected day</span><strong>' + escapeHtml(selectedFullDate) + '</strong><small class="progress-selected-meta">' + escapeHtml(selectedMeta) + '</small></div><b>' + formatMinutesCompact(selected.minutes) + ' focused</b></div>' +
+      '<div class="progress-graph-stage line-stage">' +
+        '<div class="line-plot" style="--goal:' + goalRatio.toFixed(2) + '%">' +
+          '<div class="line-grid" aria-hidden="true"><i style="bottom:25%"></i><i style="bottom:50%"></i><i style="bottom:75%"></i></div>' +
+          '<div class="cadence-goal" aria-hidden="true"><span>Goal ' + goal + 'm</span></div>' +
+          '<svg class="line-svg" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"><polygon class="line-area" points="' + areaPoints + '"/><polyline class="line-path" points="' + svgPoints + '"/></svg>' +
+          points +
+          '<div class="line-days" aria-hidden="true">' + labels + '</div>' +
+        '</div>' +
+        (total ? "" : '<p class="cadence-empty">No protected focus in this ' + days.length + '-day window yet.</p>') +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderHeatmapChart(days) {
+    if (!days.length) return "";
+    var goal = Math.max(15, Number(state.profile.dailyGoalMinutes) || 60);
+    var selectedDate = selectedProgressDate || (days[days.length - 1] || {}).date;
+    var selected = days.find(function (day) { return day.date === selectedDate; }) || days[days.length - 1];
+    var selectedFullDate = new Date(selected.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    var selectedMeta = progressDayMeta(selected, goal);
+    var total = days.reduce(function (sum, day) { return sum + day.minutes; }, 0);
+    var startWeekday = new Date(days[0].date + "T00:00:00").getDay();
+    var cells = [];
+    var weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    function heatmapMinutes(minutes) {
+      if (!minutes) return "";
+      if (minutes >= 60) {
+        var hours = Math.round((minutes / 60) * 10) / 10;
+        return (hours % 1 === 0 ? hours.toFixed(0) : hours.toFixed(1)) + "h";
+      }
+      return Math.round(minutes) + "m";
+    }
+
+    for (var blank = 0; blank < startWeekday; blank += 1) {
+      cells.push('<span class="heatmap-cell is-empty" aria-hidden="true"></span>');
+    }
+
+    days.forEach(function (day, index) {
+      var dateValue = new Date(day.date + "T00:00:00");
+      var weekday = dateValue.getDay();
+      var rowIndex = Math.floor((startWeekday + index) / 7);
+      var isSelected = day.date === selectedDate;
+      var intensity = !day.minutes ? 0 : Math.min(4, Math.ceil((day.minutes / goal) * 4));
+      var fullDate = dateValue.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+      var meta = progressDayMeta(day, goal);
+      var classes = [
+        "heatmap-cell",
+        "heatmap-level-" + intensity,
+        weekday === 0 ? "is-sun" : "",
+        weekday === 6 ? "is-sat" : "",
+        rowIndex === 0 ? "is-top-row" : "",
+        isSelected ? "active" : "",
+        day.future ? "is-future" : ""
+      ].filter(Boolean).join(" ");
+      cells.push(
+        '<button type="button" class="' + classes + '" data-progress-day="' + day.date + '"' +
+          (day.future ? ' aria-disabled="true"' : "") +
+          ' aria-pressed="' + (isSelected ? "true" : "false") + '"' +
+          ' aria-label="' + escapeHtml(fullDate) + ": " + (day.future ? "coming up" : formatMinutesCompact(day.minutes) + " focused. " + meta) + '">' +
+          '<span class="heatmap-date">' + dateValue.getDate() + '</span>' +
+          (day.minutes ? '<span class="heatmap-value">' + heatmapMinutes(day.minutes) + '</span>' : "") +
+          progressDayTip(day, goal) +
+        '</button>'
+      );
+    });
+
+    while (cells.length % 7 !== 0) {
+      cells.push('<span class="heatmap-cell is-empty" aria-hidden="true"></span>');
+    }
+
+    return '<div class="progress-attention-chart heatmap-chart" aria-label="30 day focus calendar">' +
+      '<div class="progress-chart-head"><div><span>Selected day</span><strong>' + escapeHtml(selectedFullDate) + '</strong><small class="progress-selected-meta">' + escapeHtml(selectedMeta) + '</small></div><b>' + formatMinutesCompact(selected.minutes) + ' focused</b></div>' +
+      '<div class="heatmap-stage">' +
+        '<div class="heatmap-weekdays" aria-hidden="true">' + weekdayLabels.map(function (label) {
+          return '<span>' + label + '</span>';
+        }).join("") + '</div>' +
+        '<div class="heatmap-grid">' + cells.join("") + '</div>' +
+        '<div class="heatmap-legend" aria-hidden="true"><span>Less</span><i class="heatmap-level-0"></i><i class="heatmap-level-1"></i><i class="heatmap-level-2"></i><i class="heatmap-level-3"></i><i class="heatmap-level-4"></i><span>More</span></div>' +
+        (total ? "" : '<p class="heatmap-empty">No protected focus in this 30-day window yet. Select any day to inspect it.</p>') +
+      '</div>' +
     '</div>';
   }
 
   function progressInsights(days) {
-    var total = days.reduce(function (sum, day) { return sum + day.minutes; }, 0);
-    var active = days.filter(function (day) { return day.minutes > 0; });
+    // Future days in the Sunday-first week view are placeholders, not missed days.
+    var elapsed = days.filter(function (day) { return !day.future; });
+    if (!elapsed.length) elapsed = days;
+    var total = elapsed.reduce(function (sum, day) { return sum + day.minutes; }, 0);
+    var active = elapsed.filter(function (day) { return day.minutes > 0; });
     var goal = Math.max(15, Number(state.profile.dailyGoalMinutes) || 60);
-    var goalDays = days.filter(function (day) { return day.minutes >= goal; }).length;
-    var strongest = days.reduce(function (best, day) {
+    var goalDays = elapsed.filter(function (day) { return day.minutes >= goal; }).length;
+    var strongest = elapsed.reduce(function (best, day) {
       return !best || day.minutes > best.minutes ? day : best;
     }, null);
-    var midpoint = Math.max(1, Math.floor(days.length / 2));
-    var first = days.slice(0, midpoint);
-    var second = days.slice(midpoint);
+    var midpoint = Math.max(1, Math.floor(elapsed.length / 2));
+    var first = elapsed.slice(0, midpoint);
+    var second = elapsed.slice(midpoint);
     var firstAverage = first.reduce(function (sum, day) { return sum + day.minutes; }, 0) / Math.max(1, first.length);
     var secondAverage = second.reduce(function (sum, day) { return sum + day.minutes; }, 0) / Math.max(1, second.length);
-    var activeRatio = active.length / Math.max(1, days.length);
+    var activeRatio = active.length / Math.max(1, elapsed.length);
     var cadenceText = !active.length
       ? "No protected focus is recorded in this window yet."
       : activeRatio >= 0.7
@@ -2645,7 +3391,7 @@
     return [
       {
         label: "Cadence",
-        value: active.length + "/" + days.length + " active days",
+        value: active.length + "/" + elapsed.length + " active days",
         text: cadenceText
       },
       {
@@ -2671,10 +3417,179 @@
     if (!progressRoot) return;
     Array.prototype.forEach.call(progressRoot.querySelectorAll("[data-progress-day]"), function (button) {
       button.onclick = function () {
+        if (button.getAttribute("aria-disabled") === "true") return;
         selectedProgressDate = button.getAttribute("data-progress-day");
         renderProgress();
       };
     });
+  }
+
+  function renderPersonalSetup() {
+    var root = document.getElementById("personalSetupCard");
+    if (!root) return;
+    var setup = normalizeOnboarding(state.onboarding);
+    var purpose = PERSONAL_PURPOSE_LABELS[setup.purpose] || "";
+    var windowLabel = setup.focusWindow && setup.focusWindow !== "not-sure" ? focusWindowLabel(setup.focusWindow) : "";
+    var lengthLabel = PERSONAL_LENGTH_LABELS[String(setup.focusLength)] || "";
+    var title = setup.target ? "Built around " + setup.target + "." : "Tell DeeCadence what matters now.";
+    var details = [];
+    if (purpose) details.push("Protecting attention for " + purpose.toLowerCase());
+    if (windowLabel) details.push("best focus window: " + windowLabel.toLowerCase());
+    if (lengthLabel) details.push("natural block: " + lengthLabel);
+    if (setup.challenge) details.push("hard part: " + setup.challenge);
+    if (setup.goal) details.push("next goal: " + setup.goal);
+    var summary = details.length
+      ? details.join(". ") + "."
+      : "A few optional answers shape task suggestions, first-block length, and focus-window guidance.";
+    var tags = [];
+    if (purpose) tags.push(purpose);
+    if (windowLabel) tags.push(windowLabel);
+    if (lengthLabel) tags.push(lengthLabel);
+    if (PERSONAL_DISTRACTION_LABELS[setup.distraction]) tags.push(PERSONAL_DISTRACTION_LABELS[setup.distraction]);
+    root.innerHTML =
+      '<div class="personal-setup-copy">' +
+        '<div class="eyebrow">Personal setup</div>' +
+        '<h3>' + escapeHtml(title) + '</h3>' +
+        '<p>' + escapeHtml(summary) + '</p>' +
+        (tags.length ? '<div class="personal-setup-tags">' + tags.map(function (tag) {
+          return '<span>' + escapeHtml(tag) + '</span>';
+        }).join("") + '</div>' : "") +
+      '</div>' +
+      '<button class="btn btn-secondary" type="button" id="openPersonalizeBtn">' +
+        (purpose || setup.target || setup.focusLength ? "Refine setup" : "Set up") +
+      '</button>';
+    var open = document.getElementById("openPersonalizeBtn");
+    if (open) open.onclick = openPersonalize;
+  }
+
+  function personalizeCopy() {
+    return ONBOARDING_PURPOSE_COPY[personalizeDraft && personalizeDraft.purpose] || {
+      targetLabel: "Focus area",
+      targetPlaceholder: "e.g. Physics, client work, JavaScript",
+      challengeLabel: "Hardest part",
+      challengePlaceholder: "e.g. Past questions, outreach, algorithms",
+      goalLabel: "Next goal",
+      goalPlaceholder: "e.g. Finish the first chapter"
+    };
+  }
+
+  function syncPersonalizeForm() {
+    if (!personalizeModal || !personalizeDraft) return;
+    Array.prototype.forEach.call(personalizeModal.querySelectorAll("[data-personalize-purpose]"), function (button) {
+      var active = button.getAttribute("data-personalize-purpose") === personalizeDraft.purpose;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    Array.prototype.forEach.call(personalizeModal.querySelectorAll("[data-personalize-window]"), function (button) {
+      var active = button.getAttribute("data-personalize-window") === personalizeDraft.focusWindow;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    Array.prototype.forEach.call(personalizeModal.querySelectorAll("[data-personalize-distraction]"), function (button) {
+      var active = button.getAttribute("data-personalize-distraction") === personalizeDraft.distraction;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    Array.prototype.forEach.call(personalizeModal.querySelectorAll("[data-personalize-length]"), function (button) {
+      var active = Number(button.getAttribute("data-personalize-length")) === Number(personalizeDraft.focusLength);
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    var copy = personalizeCopy();
+    var targetLabel = document.getElementById("personalizeTargetLabel");
+    var targetInput = document.getElementById("personalizeTargetInput");
+    var challengeLabel = document.getElementById("personalizeChallengeLabel");
+    var challengeInput = document.getElementById("personalizeChallengeInput");
+    var goalLabel = document.getElementById("personalizeGoalLabel");
+    var goalInput = document.getElementById("personalizeGoalInput");
+    if (targetLabel) targetLabel.textContent = copy.targetLabel;
+    if (targetInput) targetInput.placeholder = copy.targetPlaceholder;
+    if (challengeLabel) challengeLabel.textContent = copy.challengeLabel;
+    if (challengeInput) challengeInput.placeholder = copy.challengePlaceholder;
+    if (goalLabel) goalLabel.textContent = copy.goalLabel;
+    if (goalInput) goalInput.placeholder = copy.goalPlaceholder;
+  }
+
+  function openPersonalize() {
+    if (!personalizeModal) return;
+    personalizeDraft = normalizeOnboarding(state.onboarding);
+    var targetInput = document.getElementById("personalizeTargetInput");
+    var challengeInput = document.getElementById("personalizeChallengeInput");
+    var goalInput = document.getElementById("personalizeGoalInput");
+    if (targetInput) targetInput.value = personalizeDraft.target;
+    if (challengeInput) challengeInput.value = personalizeDraft.challenge;
+    if (goalInput) goalInput.value = personalizeDraft.goal;
+    syncPersonalizeForm();
+    personalizeModal.classList.add("open");
+    personalizeModal.setAttribute("aria-hidden", "false");
+    setTimeout(function () { if (targetInput) targetInput.focus(); }, 60);
+  }
+
+  function closePersonalize() {
+    if (personalizeModal) {
+      personalizeModal.classList.remove("open");
+      personalizeModal.setAttribute("aria-hidden", "true");
+    }
+    personalizeDraft = null;
+  }
+
+  function savePersonalize() {
+    if (!personalizeDraft) personalizeDraft = normalizeOnboarding(state.onboarding);
+    var next = normalizeOnboarding(Object.assign({}, personalizeDraft, {
+      target: String((document.getElementById("personalizeTargetInput") || {}).value || "").trim().slice(0, 80),
+      challenge: String((document.getElementById("personalizeChallengeInput") || {}).value || "").trim().slice(0, 80),
+      goal: String((document.getElementById("personalizeGoalInput") || {}).value || "").trim().slice(0, 120),
+      refinedAt: new Date().toISOString()
+    }));
+    state.onboarding = next;
+    recordLearningEvent("personalization_saved", {
+      purpose: next.purpose || "",
+      focusWindow: next.focusWindow || "",
+      focusLength: next.focusLength || 0
+    });
+    saveState();
+    closePersonalize();
+    renderProgress();
+    showToast("Personal setup saved.");
+  }
+
+  function wirePersonalizeModal() {
+    if (!personalizeModal) return;
+    Array.prototype.forEach.call(personalizeModal.querySelectorAll("[data-personalize-purpose]"), function (button) {
+      button.onclick = function () {
+        if (!personalizeDraft) personalizeDraft = normalizeOnboarding(state.onboarding);
+        personalizeDraft.purpose = button.getAttribute("data-personalize-purpose") || "";
+        syncPersonalizeForm();
+      };
+    });
+    Array.prototype.forEach.call(personalizeModal.querySelectorAll("[data-personalize-window]"), function (button) {
+      button.onclick = function () {
+        if (!personalizeDraft) personalizeDraft = normalizeOnboarding(state.onboarding);
+        personalizeDraft.focusWindow = button.getAttribute("data-personalize-window") || "not-sure";
+        syncPersonalizeForm();
+      };
+    });
+    Array.prototype.forEach.call(personalizeModal.querySelectorAll("[data-personalize-distraction]"), function (button) {
+      button.onclick = function () {
+        if (!personalizeDraft) personalizeDraft = normalizeOnboarding(state.onboarding);
+        personalizeDraft.distraction = button.getAttribute("data-personalize-distraction") || "";
+        syncPersonalizeForm();
+      };
+    });
+    Array.prototype.forEach.call(personalizeModal.querySelectorAll("[data-personalize-length]"), function (button) {
+      button.onclick = function () {
+        if (!personalizeDraft) personalizeDraft = normalizeOnboarding(state.onboarding);
+        personalizeDraft.focusLength = Number(button.getAttribute("data-personalize-length")) || 0;
+        personalizeDraft.capacityMinutes = personalizeDraft.focusLength;
+        syncPersonalizeForm();
+      };
+    });
+    var cancel = document.getElementById("personalizeCancelBtn");
+    var close = document.getElementById("personalizeCloseBtn");
+    var save = document.getElementById("personalizeSaveBtn");
+    if (cancel) cancel.onclick = closePersonalize;
+    if (close) close.onclick = closePersonalize;
+    if (save) save.onclick = savePersonalize;
   }
 
   function renderProgress() {
@@ -2683,24 +3598,92 @@
     var days = [];
     var focusMinutesRange = 0;
     var minutesByDate = focusMinutesByDate();
-    for (var i = rangeDays - 1; i >= 0; i -= 1) {
-      var date = addDaysKey(todayStr(), -i);
+    var sessionsByDate = focusSessionsByDate();
+    var today = todayStr();
+    var weekView = rangeDays === 7;
+    if (progressRangeOffset > 0) progressRangeOffset = 0;
+    // Seven days is a Sunday-to-Saturday week. The other ranges are rolling
+    // lookbacks that end today, so 3 means exactly 3 days and 30 means the
+    // current day plus the previous 29.
+    var currentSunday = addDaysKey(today, -new Date(today + "T00:00:00").getDay());
+    var rangeStart;
+    var rangeEnd;
+    if (weekView) {
+      rangeStart = addDaysKey(currentSunday, progressRangeOffset * 7);
+      rangeEnd = addDaysKey(rangeStart, 6);
+    } else {
+      rangeEnd = addDaysKey(today, progressRangeOffset * rangeDays);
+      rangeStart = addDaysKey(rangeEnd, -(rangeDays - 1));
+    }
+    for (var date = rangeStart; date <= rangeEnd; date = addDaysKey(date, 1)) {
       var minutes = minutesByDate[date] || 0;
       focusMinutesRange += minutes;
-      days.push({ date: date, minutes: minutes });
+      days.push({ date: date, minutes: minutes, sessions: sessionsByDate[date] || 0, future: date > today });
     }
     if (!selectedProgressDate || !days.some(function (day) { return day.date === selectedProgressDate; })) {
-      selectedProgressDate = (days[days.length - 1] || {}).date || "";
+      if (progressRangeOffset < 0) {
+        var activePastDay = days.slice().reverse().find(function (day) { return day.minutes > 0; });
+        selectedProgressDate = activePastDay ? activePastDay.date : rangeEnd;
+      } else {
+        selectedProgressDate = days.some(function (day) { return day.date === today; })
+          ? today
+          : rangeEnd;
+      }
     }
     document.getElementById("statStreak").textContent = state.profile.streak;
     document.getElementById("statFocus7").textContent = formatMinutesCompact(focusMinutesRange);
-    document.getElementById("statFocusRangeLabel").textContent = "Focus time / " + rangeDays + "d";
-    document.getElementById("progressRangeTitle").textContent = "Last " + rangeDays + " days";
+    document.getElementById("statFocusRangeLabel").textContent = weekView
+      ? "Focus time / week"
+      : "Focus time / " + rangeDays + "d";
+    var rangeStartLabel = new Date(rangeStart + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    var rangeTitle;
+    if (weekView) {
+      rangeTitle = progressRangeOffset === 0
+        ? "This week"
+        : progressRangeOffset === -1
+          ? "Last week"
+          : "Week of " + rangeStartLabel;
+    } else if (progressRangeOffset < 0) {
+      rangeTitle = progressRangeOffset === -1 ? "Previous period" : "Earlier period";
+    } else if (rangeDays === 3) {
+      rangeTitle = "Recent days";
+    } else if (rangeDays === 14) {
+      rangeTitle = "Recent weeks";
+    } else {
+      rangeTitle = "Past month";
+    }
+    document.getElementById("progressRangeTitle").textContent = rangeTitle;
+    var weekPrev = document.getElementById("progressWeekPrev");
+    var weekNext = document.getElementById("progressWeekNext");
+    if (weekPrev) {
+      weekPrev.hidden = false;
+      weekPrev.disabled = false;
+      weekPrev.setAttribute("aria-label", weekView ? "Previous week" : "Previous " + rangeDays + "-day period");
+    }
+    if (weekNext) {
+      weekNext.hidden = false;
+      weekNext.disabled = progressRangeOffset >= 0;
+      weekNext.setAttribute("aria-label", weekView ? "Next week" : "Next " + rangeDays + "-day period");
+      weekNext.setAttribute("aria-disabled", String(progressRangeOffset >= 0));
+    }
     document.getElementById("progressRangeSelect").value = String(rangeDays);
     var doneTasks = state.tasks.filter(function (task) { return task.status === "completed"; }).length;
     document.getElementById("statCompletion").textContent = state.tasks.length ? Math.round((doneTasks / state.tasks.length) * 100) + "%" : "0%";
     var max = Math.max(state.profile.dailyGoalMinutes || 60, Math.max.apply(null, days.map(function (day) { return day.minutes; })), 1);
-    document.getElementById("progressChart").innerHTML = renderAttentionLineChart(days, max);
+    var chartType = state.settings.chartType === "line" ? "line" : "bars";
+    var heatmapView = rangeDays === 30;
+    var chartTypeToggle = document.querySelector(".chart-type-toggle");
+    if (chartTypeToggle) chartTypeToggle.style.display = heatmapView ? "none" : "";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-chart-type]"), function (button) {
+      var active = button.getAttribute("data-chart-type") === chartType;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    document.getElementById("progressChart").innerHTML = heatmapView
+      ? renderHeatmapChart(days)
+      : chartType === "line"
+        ? renderLineChart(days, max)
+        : renderCadenceChart(days, max);
     document.getElementById("progressInsights").innerHTML = progressInsights(days).map(function (insight) {
       return '<article class="progress-insight"><span>' + escapeHtml(insight.label) + '</span><strong>' + escapeHtml(insight.value) + '</strong><p>' + escapeHtml(insight.text) + '</p></article>';
     }).join("");
@@ -2717,7 +3700,12 @@
       ? formatMinutesCompact(focusWindow.minutes) + " logged across " + focusWindow.sessions + " completed session" + (focusWindow.sessions === 1 ? "" : "s") + "."
       : (focusWindow.label !== "Not enough data" ? "Using your setup preference: " + focusWindow.label + "." : "Complete a few timed blocks so this becomes accurate.");
     document.getElementById("progressTaskSummary").innerHTML =
-      '<div class="progress-summary-line">' + state.history.length + " logs saved - " + formatMinutesCompact(focusMinutesRange) + " focused across " + rangeDays + " days - " + formatNumber(historyXp) + " XP earned - " + doneTasks + " of " + state.tasks.length + " tasks fully completed.</div>" +
+      '<div class="progress-summary-line">' +
+        "<span>" + state.history.length + (state.history.length === 1 ? " log saved" : " logs saved") + "</span>" +
+        "<span>" + formatMinutesCompact(focusMinutesRange) + (weekView ? (progressRangeOffset === 0 ? " focused this week" : " focused that week") : " focused in this view") + "</span>" +
+        "<span>" + formatNumber(historyXp) + " XP earned</span>" +
+        "<span>" + doneTasks + " of " + state.tasks.length + " tasks fully completed</span>" +
+      "</div>" +
       '<section class="focus-window-card">' +
         '<div><span>Usual focus window</span><strong>' + escapeHtml(focusWindow.label) + '</strong></div>' +
         '<p>' + escapeHtml(focusWindowTitle) + " " + escapeHtml(focusWindowMeta) + '</p>' +
@@ -2738,6 +3726,7 @@
         '</div>' +
         '<p class="benchmark-disclaimer">This calibration guide is not a population norm or diagnosis. Compare your own checks under similar conditions.</p>' +
       '</section>';
+    renderPersonalSetup();
     wireProgressChart(days);
     var runBaseline = document.getElementById("runAttentionTestBtn");
     if (runBaseline) runBaseline.onclick = openAttentionTest;
@@ -2771,7 +3760,7 @@
         : currentHistoryFilter === "partial"
           ? "No partial sessions. Your saved activity is fully complete."
           : "No sessions yet. Your first block will show up here.";
-      root.innerHTML = '<div class="empty-state">' + emptyCopy + '</div>';
+      root.innerHTML = '<div class="empty-state history-empty"><span class="history-empty-mark" aria-hidden="true"></span><p>' + emptyCopy + '</p></div>';
       return;
     }
     root.innerHTML = entries.map(function (item) {
@@ -2793,6 +3782,10 @@
     });
     document.getElementById("soundSwitch").classList.toggle("on", state.settings.sound);
     document.getElementById("soundSwitch").setAttribute("aria-pressed", String(state.settings.sound));
+    brownNoiseEnabled = Boolean(state.settings.brownNoise);
+    ambientSoundId = AMBIENT_SOUND_IDS.indexOf(state.settings.ambientSound) > -1 ? state.settings.ambientSound : "brown";
+    syncAmbientPlayback();
+    syncAmbientUI();
     document.getElementById("motionSwitch").classList.toggle("on", state.settings.reducedMotion);
     document.getElementById("motionSwitch").setAttribute("aria-pressed", String(state.settings.reducedMotion));
     document.getElementById("dailyGoalSelect").value = String(state.profile.dailyGoalMinutes || 60);
@@ -2833,6 +3826,8 @@
     }
   };
 
+  var contextTipsShownThisSession = {};
+
   function renderContextTip(viewName) {
     var view = document.getElementById("view-" + viewName);
     var tip = CONTEXT_TIPS[viewName];
@@ -2842,19 +3837,32 @@
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
       return;
     }
-    if (!existing) {
-      existing = document.createElement("div");
-      existing.className = "context-tip";
-      var topbar = view.querySelector(".topbar");
-      if (topbar && topbar.parentNode) topbar.parentNode.insertBefore(existing, topbar.nextSibling);
-    }
-    existing.innerHTML = '<div><div class="attention-kicker">' + escapeHtml(tip.eyebrow) + '</div><strong>' + escapeHtml(tip.title) + '</strong><p>' + escapeHtml(tip.body) + '</p></div><button type="button" class="icon-btn" data-dismiss-context="' + viewName + '" aria-label="Dismiss tip">x</button>';
-    var dismiss = existing.querySelector("[data-dismiss-context]");
-    if (dismiss) dismiss.onclick = function () {
+    // One gentle notice per tab per app session. A notice that is already on
+    // screen is left alone so live re-renders never restart its animation.
+    if (existing || contextTipsShownThisSession[viewName]) return;
+    contextTipsShownThisSession[viewName] = true;
+
+    var el = document.createElement("div");
+    el.className = "context-tip context-tip-notify";
+    el.innerHTML = '<span class="context-tip-mark" aria-hidden="true"></span>' +
+      '<div class="context-tip-copy"><div class="attention-kicker">' + escapeHtml(tip.eyebrow) + '</div><strong>' + escapeHtml(tip.title) + '</strong><p>' + escapeHtml(tip.body) + '</p></div>' +
+      '<button type="button" class="context-tip-close" aria-label="Dismiss notice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+    var topbar = view.querySelector(".topbar");
+    if (topbar && topbar.parentNode) topbar.parentNode.insertBefore(el, topbar.nextSibling);
+    else view.insertBefore(el, view.firstChild);
+
+    function hideTip() {
+      if (el.classList.contains("is-leaving")) return;
       state.dismissedContextTips[viewName] = true;
       saveState();
-      renderContextTip(viewName);
-    };
+      el.classList.add("is-leaving");
+      window.setTimeout(function () {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, 340);
+    }
+    var close = el.querySelector(".context-tip-close");
+    if (close) close.onclick = hideTip;
+    // No fade timer: the notice waits until the reader presses ✕.
   }
 
   function applyTheme() {
@@ -2862,6 +3870,8 @@
     document.body.setAttribute("data-theme", state.settings.theme);
     document.documentElement.setAttribute("data-reduced-motion", String(state.settings.reducedMotion));
     document.body.setAttribute("data-reduced-motion", String(state.settings.reducedMotion));
+    var themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.setAttribute("content", state.settings.theme === "light" ? "#fbfaf4" : "#020706");
     applyRankTheme();
   }
 
@@ -2874,33 +3884,55 @@
   }
 
   function renderAll() {
-    renderToday();
-    renderFocus();
-    renderPlan();
-    renderRankPage();
-    renderProgress();
-    renderHistory();
-    renderSettings();
+    try { renderToday(); } catch (e) { console.error("renderToday error:", e); }
+    try { renderFocus(); } catch (e) { console.error("renderFocus error:", e); }
+    try { renderPlan(); } catch (e) { console.error("renderPlan error:", e); }
+    try { renderRankPage(); } catch (e) { console.error("renderRankPage error:", e); }
+    try { renderProgress(); } catch (e) { console.error("renderProgress error:", e); }
+    try { renderHistory(); } catch (e) { console.error("renderHistory error:", e); }
+    try { renderSettings(); } catch (e) { console.error("renderSettings error:", e); }
     applyTheme();
     renderSessionIndicators();
-    renderContextTip(activeView);
+    try { renderContextTip(activeView); } catch (e) { console.error("renderContextTip error:", e); }
   }
 
   function switchView(name) {
     activeView = name;
+    try { document.body.setAttribute("data-active-view", name); } catch (e) {}
     Array.prototype.forEach.call(document.querySelectorAll(".view"), function (view) {
-      view.classList.toggle("active", view.id === "view-" + name);
+      var isActive = view.id === "view-" + name;
+      view.classList.toggle("active", isActive);
+      if (isActive) {
+        view.style.display = "block";
+        view.style.opacity = "1";
+        view.style.transform = "translateY(0)";
+        view.style.visibility = "visible";
+      } else {
+        view.style.display = "none";
+        view.style.opacity = "0";
+        view.style.transform = "translateY(8px)";
+        view.style.visibility = "hidden";
+      }
     });
     Array.prototype.forEach.call(document.querySelectorAll(".navbtn, .bottomnav button"), function (button) {
       button.classList.toggle("active", button.getAttribute("data-view") === name);
     });
-    if (name === "today") renderToday();
-    if (name === "focus") renderFocus();
-    if (name === "plan") renderPlan();
-    if (name === "rank") renderRankPage();
-    if (name === "progress") renderProgress();
-    if (name === "history") renderHistory();
-    if (name === "settings") renderSettings();
+    try {
+      if (name === "today") renderToday();
+      if (name === "focus") renderFocus();
+      if (name === "plan") renderPlan();
+      if (name === "rank") renderRankPage();
+      if (name === "progress") renderProgress();
+      if (name === "history") renderHistory();
+      if (name === "settings") renderSettings();
+    } catch (e) {
+      console.error("switchView render error:", e);
+      // Fallback: ensure something is visible
+      var viewRoot = document.getElementById("view-" + name);
+      if (viewRoot && !viewRoot.innerHTML.trim()) {
+        viewRoot.innerHTML = '<div class="empty-state"><h3>Loading...</h3><p>Please refresh the page if this persists.</p></div>';
+      }
+    }
     renderContextTip(name);
     var viewRoot = document.getElementById("view-" + name);
     if (viewRoot) viewRoot.scrollTop = 0;
@@ -2920,6 +3952,7 @@
 
   function closeWelcome(markComplete) {
     if (!welcomeOverlay) return;
+    if (welcomeOverlay.contains(document.activeElement)) document.activeElement.blur();
     welcomeOverlay.classList.remove("open");
     welcomeOverlay.setAttribute("aria-hidden", "true");
     if (markComplete) {
@@ -2967,27 +4000,38 @@
 
   function saveWelcomeSetup(action) {
     var existing = state.onboarding || defaultOnboarding();
+    var timeBtn = document.querySelector('.q-btn[data-q^="time-"].active');
+    var distBtn = document.querySelector('.q-btn[data-q^="dist-"].active');
+    var lenBtn = document.querySelector('.q-btn[data-q^="len-"].active');
+    var focusLength = lenBtn ? parseInt(String(lenBtn.dataset.q || "").replace("len-", ""), 10) || 0 : existing.focusLength;
     var next = normalizeOnboarding(Object.assign({}, existing, {
       target: readWelcomeInput("welcomeTargetInput", 80) || existing.target,
       challenge: readWelcomeInput("welcomeChallengeInput", 80) || existing.challenge,
-      goal: readWelcomeInput("welcomeGoalInput", 120) || existing.goal
+      goal: readWelcomeInput("welcomeGoalInput", 120) || existing.goal,
+      distraction: distBtn ? String(distBtn.dataset.q || "").replace("dist-", "") : existing.distraction,
+      focusLength: focusLength || existing.focusLength,
+      capacityMinutes: focusLength || existing.capacityMinutes,
+      focusWindow: (timeBtn && timeBtn.dataset.q === "time-morning") ? "morning"
+        : (timeBtn && timeBtn.dataset.q === "time-afternoon") ? "afternoon"
+        : (timeBtn && timeBtn.dataset.q === "time-evening") ? "evening"
+        : (timeBtn && timeBtn.dataset.q === "time-late") ? "late-night"
+        : "not-sure"
     }));
     if (action) {
       next.firstAction = action;
       next.completedAt = new Date().toISOString();
     }
     state.onboarding = next;
+    recordLearningEvent("onboarding_saved", {
+      purpose: next.purpose || "",
+      focusWindow: next.focusWindow || "",
+      firstAction: next.firstAction || ""
+    });
     saveState();
     return next;
   }
 
   function canContinueWelcomeStep() {
-    if (onboardingIndex === 0 && !(state.onboarding && state.onboarding.purpose)) return false;
-    if (onboardingIndex === 1) {
-      var targetInput = document.getElementById("welcomeTargetInput");
-      var target = targetInput ? targetInput.value : (state.onboarding && state.onboarding.target);
-      if (!String(target || "").trim()) return false;
-    }
     return true;
   }
 
@@ -3070,10 +4114,12 @@
       if (flexInput) flexInput.value = timeInput && timeInput.value ? "fixed" : "flexible";
       if (sub) sub.textContent = "Add the first block to your plan. DeeCadence can split the work into smaller focus pieces.";
       showToast("Add a time for the first block, then save it to your plan.");
+      updateTaskTimeHelp();
       return;
     }
     if (sub) sub.textContent = "Add one thing you want to stay consistent with. You can schedule it now or later.";
     showToast("Add one task. DeeCadence will handle the details as you go.");
+    updateTaskTimeHelp();
   }
 
   function prefillStartModalFromWelcome() {
@@ -3120,6 +4166,28 @@
     }
     renderWelcomePurposeFields();
     syncWelcomeOptionButtons();
+    updateCapacityPreview();
+  }
+
+  function updateCapacityPreview() {
+    var preview = document.getElementById("capacityPreview");
+    if (!preview) return;
+    var timeBtn = document.querySelector('.q-btn[data-q^="time-"].active');
+    var distBtn = document.querySelector('.q-btn[data-q^="dist-"].active');
+    var lenBtn = document.querySelector('.q-btn[data-q^="len-"].active');
+    var score = 75;
+    if (timeBtn && timeBtn.dataset.q === "time-unsure") score -= 5;
+    if (distBtn && distBtn.dataset.q === "dist-phone") score -= 5;
+    if (distBtn && distBtn.dataset.q === "dist-thoughts") score -= 3;
+    if (lenBtn && lenBtn.dataset.q === "len-5") score -= 5;
+    if (lenBtn && lenBtn.dataset.q === "len-45") score += 5;
+    score = Math.max(40, Math.min(95, score));
+    preview.style.display = "block";
+    var scoreEl = document.getElementById("capacityPreviewScore");
+    if (scoreEl) scoreEl.textContent = score + "%";
+    state.onboarding = state.onboarding || {};
+    state.onboarding.baseAttentionCapacity = score;
+    saveState();
   }
 
   function nextWelcomeStep() {
@@ -3173,6 +4241,15 @@
       openStartModal(null, sustainableFocusProfile().recommendedMinutes);
       prefillStartModalFromWelcome();
       showToast("Start with a length that feels possible today.");
+      return;
+    }
+    if (action === "calibrate") {
+      switchView("focus");
+      var cap = state.onboarding && state.onboarding.baseAttentionCapacity ? state.onboarding.baseAttentionCapacity : 75;
+      var minutes = cap >= 75 ? 5 : cap >= 60 ? 7 : 10;
+      openStartModal(null, minutes);
+      prefillStartModalFromWelcome();
+      showToast("Calibration block: " + minutes + " minutes. Go at your own pace.");
       return;
     }
     switchView("today");
@@ -3341,7 +4418,7 @@
       if (!task || typeof task !== "object") return;
       var hour = task.time ? Math.floor(timeToMin(task.time) / 60) : NaN;
       var date = /^\d{4}-\d{2}-\d{2}$/.test(String(task.date || "")) ? task.date : todayStr();
-      var timestamp = dateFromKey(date).getTime();
+      var timestamp = parseDateKey(date).getTime();
       record(task.title, task.status === "completed" ? 4 : 2, timestamp, hour);
     });
 
@@ -3351,6 +4428,451 @@
         return b.score - a.score || b.frequency - a.frequency || b.lastSeen - a.lastSeen || a.title.localeCompare(b.title);
       })
       .slice(0, Math.max(1, limit || 6));
+  }
+
+  /* ============================================================
+     LEARNING ENGINE — signal capture + derived profile.
+     Foundation for the coming "Pet Dee" feature: records
+     compact behavioral events (capped at 500) and builds an
+     aggregate profile that powers personalized suggestions.
+     ============================================================ */
+  var LEARNING_EVENT_CAP = 500;
+
+  function recordLearningEvent(type, data) {
+    try {
+      if (!state.learning || !Array.isArray(state.learning.events)) state.learning = { events: [] };
+      state.learning.events.push({
+        t: Date.now(),
+        type: String(type || "event"),
+        d: data && typeof data === "object" ? data : {}
+      });
+      if (state.learning.events.length > LEARNING_EVENT_CAP) {
+        state.learning.events = state.learning.events.slice(-LEARNING_EVENT_CAP);
+      }
+    } catch (error) {
+      // Learning must never break the app.
+    }
+  }
+
+  function learningEmptyCounters(size) {
+    var arr = [];
+    for (var i = 0; i < size; i += 1) arr.push(0);
+    return arr;
+  }
+
+  function learningTopBuckets(arr, count) {
+    return arr
+      .map(function (value, index) { return { index: index, count: value }; })
+      .sort(function (a, b) { return b.count - a.count || a.index - b.index; })
+      .slice(0, count)
+      .filter(function (entry) { return entry.count > 0; });
+  }
+
+  function learningMode(counter) {
+    var bestKey = null;
+    var bestCount = 0;
+    Object.keys(counter).forEach(function (key) {
+      if (counter[key] > bestCount) {
+        bestCount = counter[key];
+        bestKey = key;
+      }
+    });
+    return bestKey === null ? null : { value: bestKey, count: bestCount };
+  }
+
+  function learningMean(numbers) {
+    if (!numbers.length) return null;
+    var total = numbers.reduce(function (sum, value) { return sum + value; }, 0);
+    return Math.round(total / numbers.length);
+  }
+
+  function learningProfile() {
+    var events = state.learning && Array.isArray(state.learning.events) ? state.learning.events : [];
+    var history = Array.isArray(state.history) ? state.history : [];
+    var tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    var onboarding = state.onboarding || defaultOnboarding();
+
+    var hourHistogram = learningEmptyCounters(24);
+    var weekdayHistogram = learningEmptyCounters(7);
+    var completionHourHistogram = learningEmptyCounters(24);
+    var sessionMinutesCounter = {};
+    var blockCountCounter = {};
+    var taskMinutesCounter = {};
+    var titleStats = Object.create(null);
+    var recentSessionMinutes = [];
+    var totals = {
+      sessionsStarted: 0,
+      sessionsCompleted: 0,
+      sessionsSaved: 0,
+      blocksCompleted: 0,
+      pauses: 0,
+      tasksDoneManually: 0,
+      xpFromSessions: 0
+    };
+    var durationPicks = { locked: 0, free: 0 };
+    function noiseGroupEmpty() {
+      return { sessions: 0, completedAll: 0, blocksCompleted: 0, blocksPlanned: 0, pauses: 0, minutes: 0 };
+    }
+    var noiseStats = { on: noiseGroupEmpty(), off: noiseGroupEmpty() };
+    var noiseBySound = { brown: noiseGroupEmpty(), rain: noiseGroupEmpty(), classical: noiseGroupEmpty(), wind: noiseGroupEmpty() };
+    var noiseMixed = {
+      sessions: 0, completedAll: 0, blocksCompleted: 0, blocksPlanned: 0,
+      pauses: 0, minutes: 0, toggledOn: 0, toggledOff: 0, sourceChanges: 0
+    };
+    var noiseToggles = {
+      on: { count: 0, duringSession: 0, hours: learningEmptyCounters(24), weekdays: learningEmptyCounters(7), blockIndexes: [] },
+      off: { count: 0, duringSession: 0, hours: learningEmptyCounters(24), weekdays: learningEmptyCounters(7), blockIndexes: [] }
+    };
+    var currentNoise = null;
+
+    function addToNoiseGroup(group, data) {
+      group.sessions += 1;
+      group.blocksPlanned += Number(data.blocksPlanned) || 0;
+      group.blocksCompleted += Number(data.blocksCompleted) || 0;
+      group.pauses += Number(data.pauseCount) || 0;
+      group.minutes += Number(data.minutes) || 0;
+      if (data.completedAll) group.completedAll += 1;
+    }
+
+    function dominantNoiseState(track) {
+      // Mixed sessions are not thrown away: the state that covered most of the
+      // session earns the outcome, and the switch itself is kept as preference
+      // evidence (people may toggle because the sound became distracting).
+      var endT = Math.max(track.endT, track.startT);
+      var lastT = track.startT;
+      var segmentState = track.key;
+      var segmentSound = track.startSound;
+      var onMs = 0;
+      var offMs = 0;
+      var soundMs = { brown: 0, rain: 0, classical: 0, wind: 0 };
+      function closeSegment(until) {
+        var ms = Math.max(0, until - lastT);
+        if (segmentState === "on") {
+          onMs += ms;
+          if (soundMs[segmentSound] !== undefined) soundMs[segmentSound] += ms;
+        } else {
+          offMs += ms;
+        }
+      }
+      track.toggles.slice().sort(function (a, b) { return a.t - b.t; }).forEach(function (toggle) {
+        var at = Math.max(lastT, Math.min(endT, toggle.t));
+        closeSegment(at);
+        lastT = at;
+        segmentState = toggle.on ? "on" : "off";
+        if (toggle.on) segmentSound = toggle.sound || segmentSound;
+      });
+      closeSegment(endT);
+      if (endT === track.startT) {
+        if (track.key === "on") onMs = 1; else offMs = 1;
+      }
+      var state = onMs >= offMs ? "on" : "off";
+      var bestSound = "brown";
+      var bestMs = -1;
+      AMBIENT_SOUND_IDS.forEach(function (id) {
+        if (soundMs[id] > bestMs) {
+          bestMs = soundMs[id];
+          bestSound = id;
+        }
+      });
+      return { state: state, sound: bestSound, mixed: track.toggles.length > 0 };
+    }
+
+    function titleEntry(title) {
+      var clean = String(title || "").trim().replace(/\s+/g, " ").slice(0, 90);
+      if (!clean) return null;
+      var key = clean.toLowerCase();
+      if (!titleStats[key]) {
+        titleStats[key] = {
+          title: clean, created: 0, completed: 0, sessions: 0,
+          hours: [], weekdays: [], minutesSeen: [], lastSeen: 0
+        };
+      }
+      return titleStats[key];
+    }
+
+    function bumpCounter(counter, value) {
+      if (value === undefined || value === null || value === "") return;
+      var key = String(value);
+      counter[key] = (counter[key] || 0) + 1;
+    }
+
+    events.forEach(function (event) {
+      var ts = Number(event.t) || 0;
+      var data = event.d && typeof event.d === "object" ? event.d : {};
+      var when = ts ? new Date(ts) : new Date();
+      var hour = when.getHours();
+      var weekday = when.getDay();
+      var entry;
+      if (event.type === "session_start") {
+        totals.sessionsStarted += 1;
+        hourHistogram[hour] += 2;
+        weekdayHistogram[weekday] += 1;
+        bumpCounter(sessionMinutesCounter, data.minutes);
+        bumpCounter(blockCountCounter, data.blocks);
+        if (data.locked) durationPicks.locked += 1; else durationPicks.free += 1;
+        currentNoise = data.noise === undefined || data.noise === null ? null : {
+          key: data.noise ? "on" : "off",
+          startT: ts || Date.now(),
+          startSound: data.noiseType || data.sound || "brown",
+          toggles: []
+        };
+        recentSessionMinutes.push(Number(data.minutes) || 0);
+        entry = titleEntry(data.taskTitle);
+        if (entry) {
+          entry.sessions += 1;
+          entry.hours.push(hour);
+          entry.weekdays.push(weekday);
+          entry.lastSeen = Math.max(entry.lastSeen, ts);
+        }
+      } else if (event.type === "block_complete") {
+        totals.blocksCompleted += 1;
+        entry = titleEntry(data.taskTitle);
+        if (entry) entry.minutesSeen.push(Math.round((Number(data.seconds) || 0) / 60));
+      } else if (event.type === "session_end") {
+        totals.sessionsCompleted += 1;
+        totals.xpFromSessions += Number(data.xpEarned) || 0;
+        completionHourHistogram[hour] += 1;
+        if (currentNoise) {
+          currentNoise.endT = Math.max(ts || Date.now(), currentNoise.startT);
+          var attribution = dominantNoiseState(currentNoise);
+          var noiseGroup = noiseStats[attribution.state];
+          addToNoiseGroup(noiseGroup, data);
+          if (attribution.state === "on") {
+            addToNoiseGroup(noiseBySound[attribution.sound] || noiseBySound.brown, data);
+          }
+          if (attribution.mixed) {
+            addToNoiseGroup(noiseMixed, data);
+            currentNoise.toggles.forEach(function (toggle) {
+              if (toggle.on) noiseMixed.toggledOn += 1;
+              else noiseMixed.toggledOff += 1;
+              if (toggle.change === "source") noiseMixed.sourceChanges += 1;
+            });
+          }
+          currentNoise = null;
+        }
+        entry = titleEntry(data.taskTitle);
+        if (entry) {
+          entry.minutesSeen.push(Number(data.minutes) || 0);
+          entry.lastSeen = Math.max(entry.lastSeen, ts);
+        }
+      } else if (event.type === "session_saved") {
+        totals.sessionsSaved += 1;
+      } else if (event.type === "task_done") {
+        totals.tasksDoneManually += 1;
+        bumpCounter(taskMinutesCounter, data.estMinutes);
+        entry = titleEntry(data.title);
+        if (entry) {
+          entry.completed += 1;
+          if (data.time) entry.hours.push(Math.floor(timeToMin(data.time) / 60));
+          entry.lastSeen = Math.max(entry.lastSeen, ts);
+        }
+      } else if (event.type === "task_created" || event.type === "task_updated") {
+        bumpCounter(taskMinutesCounter, data.estMinutes);
+        entry = titleEntry(data.title);
+        if (entry && event.type === "task_created") entry.created += 1;
+        if (entry) entry.lastSeen = Math.max(entry.lastSeen, ts);
+      } else if (event.type === "brown_noise") {
+        var toggleBucket = data.on ? noiseToggles.on : noiseToggles.off;
+        toggleBucket.count += 1;
+        toggleBucket.hours[hour] += 1;
+        toggleBucket.weekdays[weekday] += 1;
+        if (data.duringSession) {
+          toggleBucket.duringSession += 1;
+          if (currentNoise) {
+            currentNoise.toggles.push({
+              t: ts || Date.now(),
+              on: Boolean(data.on),
+              sound: data.sound || currentNoise.startSound || "brown",
+              change: data.change || "toggle"
+            });
+          }
+        }
+        if (data.blockIndex !== null && data.blockIndex !== undefined) {
+          toggleBucket.blockIndexes.push(Math.max(0, Number(data.blockIndex) || 0));
+        }
+      }
+    });
+
+    // Authoritative totals from logged history (covers pre-events data).
+    var historyMinutes = 0;
+    history.forEach(function (item) {
+      if (!item || typeof item !== "object") return;
+      var planned = Math.max(1, Number(item.blocksPlanned) || 1);
+      var done = Math.max(0, Number(item.blocksCompleted) || 0);
+      var minutes = Number(item.totalMinutes) || 0;
+      historyMinutes += Math.round(minutes * Math.max(0, Math.min(1, done / planned)));
+      totals.pauses += Number(item.pauseCount) || 0;
+    });
+
+    // Task library stats.
+    var taskLib = { total: tasks.length, completed: 0, open: 0, withTime: 0, withRepeat: 0, minutes: [] };
+    tasks.forEach(function (task) {
+      if (!task || typeof task !== "object") return;
+      if (task.status === "completed") taskLib.completed += 1; else taskLib.open += 1;
+      if (task.time) taskLib.withTime += 1;
+      if (task.repeat && task.repeat !== "none") taskLib.withRepeat += 1;
+      var est = Number(task.estMinutes);
+      if (est > 0) taskLib.minutes.push(est);
+    });
+    // Teaching signal: a library task marked done counts even without events.
+    tasks.forEach(function (task) {
+      var entry = titleEntry(task.title);
+      if (entry && task.status === "completed") entry.completed = Math.max(entry.completed, 1);
+    });
+
+    var recent = recentSessionMinutes.slice(-12).filter(function (m) { return m > 0; });
+    var recommendedMinutes = null;
+    if (recent.length) {
+      var recentCounter = {};
+      recent.forEach(function (m) { bumpCounter(recentCounter, m); });
+      var recentMode = learningMode(recentCounter);
+      recommendedMinutes = recentMode ? Number(recentMode.value) : learningMean(recent);
+    }
+    if (!recommendedMinutes) {
+      var learnedCapacity = Number(onboarding.capacityMinutes) || Number(onboarding.focusLength) || 0;
+      recommendedMinutes = learnedCapacity > 0 ? learnedCapacity : (learningMean(taskLib.minutes) || 25);
+    }
+
+    var recommendedBlocks = (function () {
+      var mode = learningMode(blockCountCounter);
+      if (mode) return Number(mode.value);
+      var todaysOpen = tasks.filter(function (task) { return task.date === todayStr() && task.status !== "completed"; }).length;
+      return clampBlockCount(todaysOpen || 4, 4);
+    })();
+
+    var topTitles = Object.keys(titleStats)
+      .map(function (key) {
+        var entry = titleStats[key];
+        var hourCounter = {};
+        entry.hours.forEach(function (hour) { bumpCounter(hourCounter, hour); });
+        var weekdayCounter = {};
+        entry.weekdays.forEach(function (day) { bumpCounter(weekdayCounter, day); });
+        var hourMode = learningMode(hourCounter);
+        var weekdayMode = learningMode(weekdayCounter);
+        var recency = Math.round(entry.lastSeen / 1e10);
+        return {
+          title: entry.title,
+          score: entry.created * 2 + entry.completed * 6 + entry.sessions * 4 + recency,
+          created: entry.created,
+          completed: entry.completed,
+          sessions: entry.sessions,
+          usualMinutes: learningMean(entry.minutesSeen),
+          usualHour: hourMode ? Number(hourMode.value) : null,
+          usualWeekday: weekdayMode ? Number(weekdayMode.value) : null,
+          lastSeen: entry.lastSeen
+        };
+      })
+      .sort(function (a, b) { return b.score - a.score; })
+      .slice(0, 20);
+
+    var now = new Date();
+    var momentum = Number(state.profile && state.profile.momentum);
+    if (!Number.isFinite(momentum)) momentum = 75;
+
+    function noiseSummary(group) {
+      return {
+        sessions: group.sessions,
+        completionRate: group.sessions ? Math.round((group.completedAll / group.sessions) * 100) : null,
+        blockRate: group.blocksPlanned ? Math.round((group.blocksCompleted / group.blocksPlanned) * 100) : null,
+        pauseRate: group.sessions ? Math.round((group.pauses / group.sessions) * 10) / 10 : null,
+        avgMinutes: group.sessions ? Math.round(group.minutes / group.sessions) : null
+      };
+    }
+    function toggleSummary(bucket) {
+      return {
+        count: bucket.count,
+        duringSession: bucket.duringSession,
+        topHours: learningTopBuckets(bucket.hours, 2).map(function (entry) {
+          return { hour: entry.index, count: entry.count };
+        }),
+        topWeekdays: learningTopBuckets(bucket.weekdays, 2).map(function (entry) {
+          return { weekday: entry.index, count: entry.count };
+        }),
+        avgBlockIndex: learningMean(bucket.blockIndexes)
+      };
+    }
+    var mixedNoise = noiseSummary(noiseMixed);
+    mixedNoise.toggledOn = noiseMixed.toggledOn;
+    mixedNoise.toggledOff = noiseMixed.toggledOff;
+    mixedNoise.sourceChanges = noiseMixed.sourceChanges;
+    var brownNoise = {
+      on: noiseSummary(noiseStats.on),
+      off: noiseSummary(noiseStats.off),
+      // Mixed sessions are retained and attributed to the state that covered
+      // most of the session. Toggle direction, time and block are kept too.
+      mixed: mixedNoise,
+      bySound: {
+        brown: noiseSummary(noiseBySound.brown),
+        rain: noiseSummary(noiseBySound.rain),
+        classical: noiseSummary(noiseBySound.classical),
+        wind: noiseSummary(noiseBySound.wind)
+      },
+      toggles: { on: toggleSummary(noiseToggles.on), off: toggleSummary(noiseToggles.off) },
+      attribution: "dominant_exposure"
+    };
+    var noiseEvidence = brownNoise.on.sessions >= 3 && brownNoise.off.sessions >= 3;
+    var noiseRecommended = null;
+    if (noiseEvidence) {
+      var noiseScore = (brownNoise.on.completionRate - brownNoise.off.completionRate) - ((brownNoise.on.pauseRate - brownNoise.off.pauseRate) * 8);
+      noiseRecommended = noiseScore >= 0;
+    }
+
+    return {
+      version: 1,
+      generatedAt: Date.now(),
+      eventCount: events.length,
+      totals: {
+        sessionsStarted: totals.sessionsStarted,
+        sessionsCompleted: totals.sessionsCompleted,
+        sessionsSaved: totals.sessionsSaved,
+        blocksCompleted: totals.blocksCompleted,
+        focusMinutesFromHistory: historyMinutes,
+        pauses: totals.pauses,
+        tasksDoneManually: totals.tasksDoneManually,
+        xpFromSessions: totals.xpFromSessions
+      },
+      taskLibrary: taskLib,
+      histograms: {
+        hour: hourHistogram,
+        weekday: weekdayHistogram,
+        completionHour: completionHourHistogram,
+        sessionMinutes: sessionMinutesCounter,
+        blockCounts: blockCountCounter,
+        taskMinutes: taskMinutesCounter
+      },
+      durationPicks: durationPicks,
+      onboarding: {
+        purpose: onboarding.purpose || "",
+        focusWindow: onboarding.focusWindow || "",
+        firstAction: onboarding.firstAction || ""
+      },
+      momentum: momentum,
+      topTitles: topTitles,
+      brownNoise: brownNoise,
+      suggest: {
+        sessionMinutes: clampMinutes(recommendedMinutes, 25),
+        sessionBlocks: recommendedBlocks,
+        bestHours: learningTopBuckets(hourHistogram, 3).map(function (entry) { return entry.index; }),
+        bestWeekdays: learningTopBuckets(weekdayHistogram, 3).map(function (entry) { return entry.index; }),
+        rightNow: {
+          hour: now.getHours(),
+          weekday: now.getDay(),
+          isTypicalFocusHour: hourHistogram[now.getHours()] > 0,
+          inBestWindow: learningTopBuckets(hourHistogram, 3).some(function (entry) { return entry.index === now.getHours(); })
+        },
+        topTask: topTitles.length ? topTitles[0] : null,
+        brownNoise: {
+          hasEvidence: noiseEvidence,
+          recommended: noiseRecommended,
+          on: brownNoise.on,
+          off: brownNoise.off,
+          mixed: brownNoise.mixed,
+          bySound: brownNoise.bySound,
+          toggles: brownNoise.toggles,
+          attribution: brownNoise.attribution
+        }
+      }
+    };
   }
 
   function renderSmartTaskSuggestions(containerId, inputId) {
@@ -3428,8 +4950,16 @@
       ? "Pick a task already on your schedule."
       : "Name the task you want this focus session to move forward.";
     if (startTaskSource === "input") {
+      unlockStartDuration();
       syncBlockCountButtons(4, "Input sessions can use any block count. Four gives the full focus rhythm.");
       document.getElementById("inputTaskTitle").focus();
+    } else {
+      var selected = getTask(document.getElementById("linkTaskSelect").value) || pendingStartTask;
+      if (applyStartDurationLock(selected)) {
+        syncBlockCountButtons(suggestedBlockCount(selected), "Suggested from this task's remaining pieces. You can change it.");
+      }
+      var sub = document.getElementById("startModalSub");
+      if (sub) sub.textContent = startModalSubtitleFor(selected || null);
     }
   }
 
@@ -3509,6 +5039,42 @@
     chosenMinutes = minutes;
   }
 
+  /* Scheduled tasks define their own length: the picker is hidden and the
+     session length is locked to the task's estimate. Block count stays free. */
+  function applyStartDurationLock(task) {
+    var grid = document.getElementById("durationGrid");
+    var customWrap = document.getElementById("customMinWrap");
+    var note = document.getElementById("durationLockNote");
+    var valueEl = document.getElementById("durationLockValue");
+    var est = task ? Number(task.estMinutes) : NaN;
+    if (task && Number.isFinite(est) && est > 0) {
+      startDurationLocked = true;
+      chosenMinutes = clampMinutes(est, 25);
+      if (grid) grid.hidden = true;
+      if (customWrap) customWrap.style.display = "none";
+      if (note) note.hidden = false;
+      if (valueEl) valueEl.textContent = chosenMinutes + " min";
+      return true;
+    }
+    unlockStartDuration();
+    return false;
+  }
+
+  function unlockStartDuration() {
+    startDurationLocked = false;
+    var grid = document.getElementById("durationGrid");
+    var note = document.getElementById("durationLockNote");
+    if (grid) grid.hidden = false;
+    if (note) note.hidden = true;
+  }
+
+  function startModalSubtitleFor(task) {
+    if (!task) return "Choose length, blocks, then choose from Schedule or type a task title.";
+    var timeBit = task.time ? " (scheduled " + task.time + ")" : "";
+    if (startDurationLocked) return 'For "' + task.title + '"' + timeBit + ". Length is set from your plan.";
+    return 'For "' + task.title + '"' + timeBit + ". Choose length and blocks.";
+  }
+
   function openStartModal(task, suggestedMinutes, preferredSource) {
     if (state.session) {
       switchView("focus");
@@ -3528,19 +5094,57 @@
     var minutes = Number.isFinite(Number(suggestedMinutes))
       ? clampMinutes(suggestedMinutes, 10)
       : (task ? task.estMinutes : chosenMinutes);
-    syncDurationButtons(minutes);
+    if (task) {
+      applyStartDurationLock(task);
+    } else {
+      syncDurationButtons(minutes);
+    }
     syncBlockCountButtons(suggestedBlockCount(task), task ? "Suggested from this task's remaining pieces. You can change it." : "Suggested from today's open plan. You can change it.");
     populateLinkTaskSelect(task ? task.id : "");
     document.getElementById("inputTaskTitle").value = "";
     populateTaskSuggestionSurfaces();
     syncStartTaskSource(preferredSource || (task || scheduledFocusTasks().length ? "schedule" : "input"));
-    document.getElementById("startModalSub").textContent = task ? 'For "' + task.title + '". Choose length and blocks.' : "Choose length, blocks, then choose from Schedule or type a task title.";
+    var headerTask = task || getTask(document.getElementById("linkTaskSelect").value) || null;
+    document.getElementById("startModalSub").textContent = startModalSubtitleFor(headerTask);
     startModal.classList.add("open");
   }
 
   function startScheduledTask(taskId) {
     var task = getTask(taskId);
     if (task) openStartModal(task);
+  }
+
+  /* Setting a clock time pins the block: Schedule behavior switches to
+     Fixed automatically. Clearing the time releases it back to Flexible. */
+  function updateTaskTimeHelp() {
+    var help = document.getElementById("taskTimeHelp");
+    var flexHelp = document.getElementById("taskFlexHelp");
+    var timeInput = document.getElementById("taskTimeInput");
+    if (!timeInput) return;
+    var hasTime = Boolean(timeInput.value);
+    if (help) {
+      help.textContent = hasTime
+        ? "This time is protected. Clear the time to let auto-arrange move it."
+        : "No time set - auto-arrange can place this task. Add a time to pin it.";
+    }
+    if (flexHelp) {
+      flexHelp.textContent = hasTime
+        ? "Pinned to the time above. Clear the time to make it flexible."
+        : "Flexible because no time is set. Add a time above to pin it.";
+    }
+  }
+
+  function syncTaskFlexFromTime() {
+    var timeInput = document.getElementById("taskTimeInput");
+    var flexInput = document.getElementById("taskFlexInput");
+    if (!timeInput || !flexInput) return;
+    var hasTime = Boolean(timeInput.value);
+    flexInput.value = hasTime ? "fixed" : "flexible";
+    var fixedOption = flexInput.querySelector('option[value="fixed"]');
+    if (fixedOption) fixedOption.disabled = !hasTime;
+    var flexibleOption = flexInput.querySelector('option[value="flexible"]');
+    if (flexibleOption) flexibleOption.disabled = hasTime;
+    updateTaskTimeHelp();
   }
 
   function openTaskModal(taskOrId) {
@@ -3556,7 +5160,35 @@
     document.getElementById("taskPriorityInput").value = task ? task.priority : "medium";
     document.getElementById("taskUnitsInput").value = task ? task.units.total : "4";
     document.getElementById("taskFlexInput").value = task ? task.flex : "flexible";
+    var taskTimeField = document.getElementById("taskTimeInput");
+    var taskFlexField = document.getElementById("taskFlexInput");
+    taskTimeField.onchange = function () { syncTaskFlexFromTime(); };
+    taskTimeField.oninput = function () { if (!taskTimeField.value) syncTaskFlexFromTime(); };
+    taskFlexField.onchange = updateTaskTimeHelp;
+    syncTaskFlexFromTime();
     document.getElementById("taskRepeatInput").value = task ? task.repeat : "none";
+    var repeatDaysWrap = document.getElementById("taskRepeatDaysWrap");
+    var repeatSelect = document.getElementById("taskRepeatInput");
+    function toggleRepeatDaysUI() {
+      if (repeatSelect.value === "custom") {
+        repeatDaysWrap.style.display = "block";
+      } else {
+        repeatDaysWrap.style.display = "none";
+      }
+    }
+    toggleRepeatDaysUI();
+    repeatSelect.onchange = toggleRepeatDaysUI;
+    Array.prototype.forEach.call(document.querySelectorAll(".repeat-day-btn"), function (btn) {
+      var day = parseInt(btn.getAttribute("data-repeat-day"), 10);
+      btn.classList.toggle("active", task && task.repeatDays && task.repeatDays.indexOf(day) > -1);
+      btn.onclick = function () {
+        btn.classList.toggle("active");
+        var idx = selectedRepeatDays.indexOf(day);
+        if (idx > -1) selectedRepeatDays.splice(idx, 1);
+        else selectedRepeatDays.push(day);
+        selectedRepeatDays.sort(function (a, b) { return a - b; });
+      };
+    });
     document.getElementById("taskNotesInput").value = task ? task.notes : "";
     populateTaskSuggestionSurfaces();
     taskModal.classList.add("open");
@@ -3565,6 +5197,7 @@
 
   function closeTaskModal() {
     editingTaskId = null;
+    selectedRepeatDays = [];
     taskModal.classList.remove("open");
   }
 
@@ -3659,15 +5292,27 @@
     var hour = timePickerState.hour % 12;
     if (timePickerState.period === "PM") hour += 12;
     document.getElementById("taskTimeInput").value = String(hour).padStart(2, "0") + ":" + String(timePickerState.minute).padStart(2, "0");
+    syncTaskFlexFromTime();
     closeTimePicker();
   }
 
   function wireEvents() {
     document.getElementById("welcomeSaveBtn").onclick = nextWelcomeStep;
     document.getElementById("welcomeBackBtn").onclick = previousWelcomeStep;
-    document.getElementById("welcomeAddTaskBtn").onclick = function () { completeWelcome("task"); };
-    document.getElementById("welcomeScheduleBtn").onclick = function () { completeWelcome("schedule"); };
-    document.getElementById("welcomeStartFocusBtn").onclick = function () { completeWelcome("focus"); };
+    document.getElementById("welcomeCalibrateBtn").onclick = function () {
+      completeWelcome("calibrate");
+    };
+    document.getElementById("welcomeSkipCalibrateBtn").onclick = function () {
+      completeWelcome("today");
+    };
+    Array.prototype.forEach.call(document.querySelectorAll(".q-btn"), function (button) {
+      button.onclick = function () {
+        var group = button.parentElement;
+        Array.prototype.forEach.call(group.querySelectorAll(".q-btn"), function (b) { b.classList.remove("active"); });
+        button.classList.add("active");
+        updateCapacityPreview();
+      };
+    });
     document.getElementById("welcomeSkipBtn").onclick = function () {
       completeWelcome("today");
     };
@@ -3706,13 +5351,21 @@
     };
     document.getElementById("startModalCancel").onclick = function () { startModal.classList.remove("open"); };
     document.getElementById("startModalConfirm").onclick = function () {
-      var minutes = document.querySelector('.duration-opt[data-min="custom"]').classList.contains("active")
-        ? clampMinutes(document.getElementById("customMinInput").value, 20)
-        : chosenMinutes;
+      var scheduleTask = startTaskSource === "schedule"
+        ? (getTask(document.getElementById("linkTaskSelect").value) || pendingStartTask)
+        : null;
+      var minutes;
+      if (startDurationLocked && scheduleTask && Number(scheduleTask.estMinutes) > 0) {
+        minutes = clampMinutes(scheduleTask.estMinutes, 25);
+      } else {
+        minutes = document.querySelector('.duration-opt[data-min="custom"]').classList.contains("active")
+          ? clampMinutes(document.getElementById("customMinInput").value, 20)
+          : chosenMinutes;
+      }
       var selectedTaskId = resolveStartTaskId(clampMinutes(minutes, 25));
       if (!selectedTaskId) return;
       startModal.classList.remove("open");
-      beginSession(clampMinutes(minutes, 25), selectedTaskId, chosenBlockCount);
+      beginSession(clampMinutes(minutes, 25), selectedTaskId, chosenBlockCount, { locked: Boolean(startDurationLocked && scheduleTask) });
     };
     Array.prototype.forEach.call(document.querySelectorAll("[data-start-source]"), function (button) {
       button.onclick = function () {
@@ -3734,6 +5387,14 @@
     document.getElementById("linkTaskSelect").onchange = function () {
       var task = getTask(this.value);
       syncBlockCountButtons(suggestedBlockCount(task), task ? "Suggested from this task's remaining pieces. You can change it." : "Pick based on how much of your plan this session should move.");
+      if (task) {
+        // The schedule defines the length: lock the picker to the task's estimate.
+        applyStartDurationLock(task);
+      } else {
+        unlockStartDuration();
+      }
+      var sub = document.getElementById("startModalSub");
+      if (sub) sub.textContent = startModalSubtitleFor(task || null);
     };
     Array.prototype.forEach.call(document.querySelectorAll("[data-block-count]"), function (button) {
       button.onclick = function () {
@@ -3756,7 +5417,7 @@
         title: title,
         date: document.getElementById("taskDateInput").value || todayStr(),
         time: document.getElementById("taskTimeInput").value || null,
-        flex: document.getElementById("taskFlexInput").value,
+        flex: document.getElementById("taskTimeInput").value ? document.getElementById("taskFlexInput").value : "flexible",
         estMinutes: clampMinutes(document.getElementById("taskDurationInput").value, 50),
         priority: document.getElementById("taskPriorityInput").value,
         units: clampBlockCount(document.getElementById("taskUnitsInput").value, 4),
@@ -3765,6 +5426,7 @@
         manualDoneXpAwarded: existingTask ? existingTask.manualDoneXpAwarded : false,
         notes: document.getElementById("taskNotesInput").value,
         repeat: document.getElementById("taskRepeatInput").value,
+        repeatDays: selectedRepeatDays.slice(),
         repeatSourceId: existingTask ? existingTask.repeatSourceId : ""
       });
       if (task.time) task.flex = "fixed";
@@ -3775,6 +5437,16 @@
       } else {
         state.tasks.push(task);
       }
+      recordLearningEvent(existingTask ? "task_updated" : "task_created", {
+        title: task.title,
+        date: task.date,
+        time: task.time || "",
+        estMinutes: task.estMinutes,
+        units: task.units.total,
+        priority: task.priority,
+        repeat: task.repeat,
+        repeatDays: task.repeatDays || []
+      });
       saveState();
       closeTaskModal();
       renderAll();
@@ -3785,6 +5457,7 @@
     document.getElementById("timePickerApply").onclick = applyTimePicker;
     document.getElementById("timePickerClear").onclick = function () {
       document.getElementById("taskTimeInput").value = "";
+      syncTaskFlexFromTime();
       closeTimePicker();
     };
     document.getElementById("timeDisplayHour").onclick = function () {
@@ -3829,7 +5502,7 @@
     document.getElementById("tourBackBtn").onclick = previousTourStep;
     document.getElementById("tourSkipBtn").onclick = function () { endTour(true); };
     document.getElementById("replayTourBtn").onclick = function () { openWelcome(true); };
-    [welcomeOverlay, startModal, taskModal, taskDetailModal, feedbackModal, attentionTestModal].forEach(function (overlay) {
+    [welcomeOverlay, startModal, taskModal, taskDetailModal, feedbackModal, personalizeModal, attentionTestModal].forEach(function (overlay) {
       if (!overlay) return;
       overlay.addEventListener("click", function (event) {
         if (event.target === overlay) {
@@ -3839,6 +5512,10 @@
           }
           if (overlay === feedbackModal) {
             closeFeedback();
+            return;
+          }
+          if (overlay === personalizeModal) {
+            closePersonalize();
             return;
           }
           if (overlay === attentionTestModal) {
@@ -3855,14 +5532,14 @@
       button.addEventListener("click", function () { switchView(button.getAttribute("data-view")); });
     });
     document.getElementById("autoArrangeBtnToday").onclick = function () {
-      autoArrangeSchedule();
+      var placed = autoArrangeSchedule();
       renderAll();
-      showToast("Plan arranged");
+      showToast(placed.length ? placed.length + " task" + (placed.length === 1 ? "" : "s") + " arranged" : "Nothing to arrange");
     };
     document.getElementById("autoArrangeBtnPlan").onclick = function () {
-      autoArrangeSchedule();
+      var placed = autoArrangeSchedule();
       renderAll();
-      showToast("Plan arranged");
+      showToast(placed.length ? placed.length + " task" + (placed.length === 1 ? "" : "s") + " arranged" : "Nothing to arrange");
     };
     Array.prototype.forEach.call(document.querySelectorAll(".tab[data-planview]"), function (tab) {
       tab.onclick = function () {
@@ -3907,6 +5584,52 @@
       saveState();
       renderSettings();
     };
+    document.getElementById("brownNoiseSwitch").onclick = function () {
+      toggleAmbientSound();
+    };
+    var focusNoiseBtn = document.getElementById("focusNoiseBtn");
+    if (focusNoiseBtn) {
+      focusNoiseBtn.onclick = function (event) {
+        event.stopPropagation();
+        setAmbientMenu(!ambientMenuOpen);
+      };
+    }
+    var focusNoiseToggle = document.getElementById("focusNoiseToggle");
+    if (focusNoiseToggle) {
+      focusNoiseToggle.onclick = function () {
+        setAmbientMenu(false);
+        toggleAmbientSound();
+      };
+    }
+    Array.prototype.forEach.call(document.querySelectorAll("#focusNoiseMenu [data-noise-sound]"), function (button) {
+      button.onclick = function () {
+        selectAmbientSound(button.getAttribute("data-noise-sound"));
+        setAmbientMenu(false);
+        if (focusNoiseBtn) focusNoiseBtn.focus();
+      };
+    });
+    var noiseMenu = document.getElementById("focusNoiseMenu");
+    if (noiseMenu) {
+      noiseMenu.addEventListener("keydown", function (event) {
+        var items = Array.prototype.slice.call(noiseMenu.querySelectorAll("[data-noise-sound]"));
+        var index = items.indexOf(document.activeElement);
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          var next = event.key === "ArrowDown" ? (index + 1) % items.length : (index - 1 + items.length) % items.length;
+          items[next].focus();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          setAmbientMenu(false);
+          if (focusNoiseBtn) focusNoiseBtn.focus();
+        }
+      });
+    }
+    document.addEventListener("click", function (event) {
+      if (!ambientMenuOpen) return;
+      var picker = document.querySelector(".noise-picker");
+      if (picker && picker.contains(event.target)) return;
+      setAmbientMenu(false);
+    });
     document.getElementById("motionSwitch").onclick = function () {
       state.settings.reducedMotion = !state.settings.reducedMotion;
       saveState();
@@ -3921,9 +5644,28 @@
     document.getElementById("progressRangeSelect").onchange = function () {
       var nextRange = parseInt(this.value, 10);
       progressRangeDays = [3, 7, 14, 30].indexOf(nextRange) > -1 ? nextRange : 7;
+      progressRangeOffset = 0;
       selectedProgressDate = "";
       renderProgress();
     };
+    document.getElementById("progressWeekPrev").onclick = function () {
+      progressRangeOffset -= 1;
+      selectedProgressDate = "";
+      renderProgress();
+    };
+    document.getElementById("progressWeekNext").onclick = function () {
+      if (progressRangeOffset >= 0) return;
+      progressRangeOffset += 1;
+      selectedProgressDate = "";
+      renderProgress();
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-chart-type]"), function (button) {
+      button.onclick = function () {
+        state.settings.chartType = button.getAttribute("data-chart-type") === "line" ? "line" : "bars";
+        saveState();
+        renderProgress();
+      };
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-history-filter]"), function (button) {
       button.onclick = function () {
         currentHistoryFilter = button.getAttribute("data-history-filter") || "all";
@@ -3937,11 +5679,15 @@
     document.getElementById("exportBackupBtn").onclick = exportBackup;
     document.getElementById("importBackupBtn").onclick = function () { document.getElementById("importBackupInput").click(); };
     document.getElementById("importBackupInput").onchange = importBackup;
+    wirePersonalizeModal();
     document.getElementById("feedbackFab").onclick = openFeedback;
     document.getElementById("openFeedbackSettingsBtn").onclick = openFeedback;
     document.getElementById("feedbackCloseBtn").onclick = closeFeedback;
     document.getElementById("feedbackCancelBtn").onclick = closeFeedback;
     document.getElementById("feedbackSubmitBtn").onclick = submitFeedback;
+    document.getElementById("feedbackNameInput").oninput = function () {
+      this.removeAttribute("aria-invalid");
+    };
     document.getElementById("feedbackMessageInput").oninput = function () {
       document.getElementById("feedbackCharCount").textContent = String(this.value.length);
     };
@@ -3951,6 +5697,17 @@
         Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-type]"), function (item) {
           item.classList.toggle("active", item === button);
         });
+      };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-channel]"), function (button) {
+      button.onclick = function () {
+        feedbackChannel = button.getAttribute("data-feedback-channel") || "whatsapp";
+        Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-channel]"), function (item) {
+          item.classList.toggle("active", item === button);
+        });
+        resetFeedbackButton(document.getElementById("feedbackSubmitBtn"));
+        updateFeedbackDeliveryCopy();
+        updateFeedbackDestination();
       };
     });
     document.getElementById("resetDataBtn").onclick = function () {
@@ -3999,6 +5756,7 @@
     if (event.key === "Escape") {
       if (timePickerOverlay && timePickerOverlay.classList.contains("open")) closeTimePicker();
       if (feedbackModal && feedbackModal.classList.contains("open")) closeFeedback();
+      if (personalizeModal && personalizeModal.classList.contains("open")) closePersonalize();
       if (attentionTestModal && attentionTestModal.classList.contains("open")) closeAttentionTest();
     }
     if (event.code === "Space" && attentionRuntime && attentionRuntime.running && !["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes((document.activeElement || {}).tagName)) {
@@ -4036,7 +5794,15 @@
     sustainableFocusProfile: sustainableFocusProfile,
     learnedFocusWindow: learnedFocusWindow,
     progressInsights: progressInsights,
+    renderCadenceChart: renderCadenceChart,
+    renderLineChart: renderLineChart,
+    awardDailyGoalBonus: awardDailyGoalBonus,
+    setAmbientEnabled: setAmbientEnabled,
+    selectAmbientSound: selectAmbientSound,
+    currentAmbientSound: currentAmbientSound,
     smartTaskRecommendations: smartTaskRecommendations,
+    learningProfile: learningProfile,
+    recordLearningEvent: recordLearningEvent,
     currentLevel: currentLevel,
     currentRank: currentRank,
     ranks: RANKS,
@@ -4090,7 +5856,40 @@
     }
   };
 
-  wireEvents();
+  try {
+    wireEvents();
+  } catch (wireError) {
+    console.error("wireEvents error:", wireError);
+  }
+  if (typeof Notification !== "undefined" && Notification.permission === "default") {
+    Notification.requestPermission().catch(function () {});
+  }
+  var remindedTaskIds = new Set();
+  function checkTaskReminders() {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    var now = new Date();
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+    var today = todayStr();
+    state.tasks.forEach(function (task) {
+      if (!task.time || task.status === "completed") return;
+      if (remindedTaskIds.has(task.id)) return;
+      var taskMin = timeToMin(task.time);
+      var diff = taskMin - nowMin;
+      if (diff >= 0 && diff <= 5) {
+        remindedTaskIds.add(task.id);
+        new Notification("DeeCadence: " + task.title, {
+          body: task.time + " · " + task.estMinutes + " min · " + task.priority + " priority",
+          icon: "./icons/deecadence.svg",
+          tag: "task-" + task.id
+        });
+      }
+    });
+  }
+  setInterval(checkTaskReminders, 30000);
+  checkTaskReminders();
+  document.addEventListener("pointerdown", function () {
+    if (brownNoiseEnabled && isFocusRunning() && (!ambientAudio || ambientAudio.paused)) startAmbientSound();
+  }, true);
   document.addEventListener("visibilitychange", handleVisibilityChange);
   document.addEventListener("keydown", handleKeydown);
   window.addEventListener("storage", handleStorageChange);
@@ -4111,16 +5910,25 @@
       navigator.serviceWorker.register("./service-worker.js").catch(function () {});
     });
   }
-  renderAll();
-  switchView("today");
-  if (state.settings.sound) primeSounds();
-  setTimeout(function () {
-    openWelcome(false);
-  }, 450);
-  setInterval(function () {
-    if (activeView === "today") renderToday();
-    if (activeView === "plan" && currentPlanMode === "schedule" && currentPlanTab === "day") renderPlan();
-  }, 60000);
-  if (state.session && ["running", "recovery"].indexOf(state.session.status) > -1) startTicker();
-  document.body.classList.add("booted");
+  try {
+    renderAll();
+    switchView("today");
+    if (state.settings.sound) primeSounds();
+    if (brownNoiseEnabled && isFocusRunning()) {
+      document.addEventListener("pointerdown", function resumeBrownNoise() {
+        if (brownNoiseEnabled && isFocusRunning() && (!ambientAudio || ambientAudio.paused)) startAmbientSound();
+      }, { once: true });
+    }
+    setTimeout(function () {
+      openWelcome(false);
+    }, 450);
+    setInterval(function () {
+      if (activeView === "today") renderToday();
+      if (activeView === "plan" && currentPlanMode === "schedule" && currentPlanTab === "day") renderPlan();
+    }, 60000);
+    if (state.session && ["running", "recovery"].indexOf(state.session.status) > -1) startTicker();
+  } catch (error) {
+    console.error("DeeCadence init error:", error);
+  }
+  // The splash clears itself from the inline boot gate (or on error).
 })();
