@@ -9722,15 +9722,15 @@ textarea:focus {
   .view {
     transition: none;
   }
-  
+
   .xp-float {
     transition: none;
   }
-  
+
   .card:hover {
     transform: none;
   }
-  
+
   .task-line:hover {
     transform: none;
   }

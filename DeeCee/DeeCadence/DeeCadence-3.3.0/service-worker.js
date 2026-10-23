@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "deecadence-v3-3-34";
+﻿const CACHE_NAME = "deecadence-v3-3-35";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -95,5 +95,3 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-
-

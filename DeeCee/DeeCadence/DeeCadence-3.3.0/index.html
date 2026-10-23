@@ -11,9 +11,12 @@
 <meta name="deecadence-feedback-endpoint" content="">
 <meta name="deecadence-feedback-email" content="dominiqueglobal24@gmail.com">
 <meta name="deecadence-feedback-whatsapp" content="+2348085318908">
-<!-- Supabase cloud sync is coming soon in a future release. Keys intentionally left empty. -->
+<!-- Feedback stays on WhatsApp/email until the Supabase feedback table and
+     sender_name column are ready. Cloud sync uses its own publishable key below. -->
 <meta name="deecadence-supabase-url" content="">
 <meta name="deecadence-supabase-anon-key" content="">
+<meta name="deecadence-sync-url" content="https://rmzaxfsaezegahwfignu.supabase.co">
+<meta name="deecadence-sync-publishable-key" content="sb_publishable_Mk5daTraq55Lw2zCchXtlw_X1_uTOuz">
 <meta name="deecadence-feedback-table" content="feedbacks">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/deecadence.svg" type="image/svg+xml">
@@ -401,9 +404,27 @@
         </div>
       </div>
       <div class="card sync-card" id="syncCard">
-        <div class="setting-label">Cloud backup &amp; sync <span class="coming-soon">Coming Soon</span></div>
-        <div class="setting-desc">Your progress is saved on this device automatically. Cloud backup and cross-device sync will be available in a future update. Until then, use Export to save a manual backup.</div>
-        <p class="sync-status" id="syncStatus" role="status" aria-live="polite" style="color:var(--text-dim);">Local-only. Cloud sync coming soon.</p>
+        <div class="setting-label">Back up and sync your progress</div>
+        <div class="setting-desc">DeeCadence saves your work on this device automatically. Enter your email to get a secure sign-in link and open it here. Repeat on each device with the same email to back up and sync your tasks, completed focus blocks, attention checks, settings, and rank. A running timer and pending feedback stay on the device where they started.</div>
+        <p class="sync-status" id="syncStatus" role="status" aria-live="polite">Your progress is saved on this device. Sign in to back it up and sync across devices.</p>
+        <form class="sync-signin" id="syncSignInForm">
+          <label class="sr-only" for="syncEmail">Email address</label>
+          <input id="syncEmail" type="email" autocomplete="email" required maxlength="254" placeholder="Email address">
+          <button class="btn btn-primary" id="syncSignInBtn" type="submit">Email me a sign-in link</button>
+        </form>
+        <div class="sync-account-controls" id="syncAccountControls" hidden>
+          <span class="sync-account-email" id="syncAccountEmail"></span>
+          <button class="btn btn-secondary" id="syncNowBtn" type="button">Sync now</button>
+          <button class="btn btn-secondary" id="syncSignOutBtn" type="button">Sign out</button>
+        </div>
+        <div class="sync-conflict" id="syncConflict" hidden>
+          <strong>This device and your cloud copy both changed.</strong>
+          <p>Choose which saved version to keep. DeeCadence saves a local recovery copy before applying cloud data.</p>
+          <div class="sync-conflict-actions">
+            <button class="btn btn-secondary" id="syncUseCloudBtn" type="button">Use cloud copy</button>
+            <button class="btn btn-primary" id="syncKeepDeviceBtn" type="button">Keep this device</button>
+          </div>
+        </div>
       </div>
       <div class="card" style="margin-top:14px;">
         <div class="setting-row">

@@ -17,6 +17,7 @@ progress.md
 PAYMENTS_SETUP.md
 *.pdf
 *.png
+!icons/*.png
 index_*.html
 *.txt
 devils_advocate_fable5_competitor_prompt.txt
