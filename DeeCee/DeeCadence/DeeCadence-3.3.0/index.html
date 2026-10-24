@@ -17,6 +17,10 @@
 <meta name="deecadence-supabase-anon-key" content="">
 <meta name="deecadence-sync-url" content="https://rmzaxfsaezegahwfignu.supabase.co">
 <meta name="deecadence-sync-publishable-key" content="sb_publishable_Mk5daTraq55Lw2zCchXtlw_X1_uTOuz">
+<!-- Optional: set this to the stable production URL so sign-in links always
+     return there, even if the request came from a preview deployment. Leave
+     empty for localhost testing. The URL must also be allowlisted in Supabase. -->
+<meta name="deecadence-sync-redirect-url" content="">
 <meta name="deecadence-feedback-table" content="feedbacks">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/deecadence.svg" type="image/svg+xml">
@@ -399,13 +403,14 @@
             <option value="15">15 minutes</option>
             <option value="30">30 minutes</option>
             <option value="60">60 minutes</option>
+            <option value="90">90 minutes</option>
             <option value="120">120 minutes</option>
           </select>
         </div>
       </div>
       <div class="card sync-card" id="syncCard">
         <div class="setting-label">Back up and sync your progress</div>
-        <div class="setting-desc">DeeCadence saves your work on this device automatically. Enter your email to get a secure sign-in link and open it here. Repeat on each device with the same email to back up and sync your tasks, completed focus blocks, attention checks, settings, and rank. A running timer and pending feedback stay on the device where they started.</div>
+        <div class="setting-desc">DeeCadence saves your work on this device automatically. Enter your email to get a secure sign-in link and open it here. After the first sign-in, you'll add your name and a couple of preferences before the first backup. One device stays active per account for now; if you change devices, use “Use this device instead” here. A running timer and pending feedback stay on the device where they started.</div>
         <p class="sync-status" id="syncStatus" role="status" aria-live="polite">Your progress is saved on this device. Sign in to back it up and sync across devices.</p>
         <form class="sync-signin" id="syncSignInForm">
           <label class="sr-only" for="syncEmail">Email address</label>
@@ -423,6 +428,13 @@
           <div class="sync-conflict-actions">
             <button class="btn btn-secondary" id="syncUseCloudBtn" type="button">Use cloud copy</button>
             <button class="btn btn-primary" id="syncKeepDeviceBtn" type="button">Keep this device</button>
+          </div>
+        </div>
+        <div class="sync-device-lock" id="syncDeviceLock" hidden>
+          <strong>This account is active on another device.</strong>
+          <p><span id="syncDeviceLockLabel">Another device</span> currently holds this account. DeeCadence allows one active device per account for now. Sign out there first, or move the account to this device.</p>
+          <div class="sync-conflict-actions">
+            <button class="btn btn-primary" id="syncUseThisDeviceBtn" type="button">Use this device instead</button>
           </div>
         </div>
       </div>
@@ -824,6 +836,57 @@
       <button class="btn btn-ghost" id="personalizeCancelBtn" type="button">Cancel</button>
       <button class="btn btn-primary" id="personalizeSaveBtn" type="button">Save setup</button>
     </div>
+  </div>
+</div>
+
+<!-- First cloud account profile -->
+<div class="modal-overlay account-setup-overlay" id="accountSetupModal" role="dialog" aria-modal="true" aria-labelledby="accountSetupTitle" aria-hidden="true">
+  <div class="modal account-setup-modal">
+    <div class="personalize-head">
+      <div>
+        <div class="eyebrow">Cloud account</div>
+        <h3 id="accountSetupTitle">Finish setting up your account</h3>
+        <p class="modal-sub">Your name and focus preferences travel with your synced progress. This step comes before the first cloud backup, so a new device can pick up where you left off.</p>
+      </div>
+    </div>
+    <form id="accountSetupForm" novalidate>
+      <div class="field">
+        <label for="accountSetupName">What should we call you?</label>
+        <input id="accountSetupName" type="text" maxlength="60" autocomplete="name" required placeholder="Your name">
+      </div>
+      <div class="account-setup-grid">
+        <div class="field">
+          <label for="accountSetupFocus">Main focus</label>
+          <select id="accountSetupFocus">
+            <option value="studying">Studying</option>
+            <option value="work" selected>Work</option>
+            <option value="business">Business</option>
+            <option value="coding">Coding</option>
+            <option value="skill">Learning a skill</option>
+            <option value="discipline">Personal discipline</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="accountSetupGoal">Daily focus goal</label>
+          <select id="accountSetupGoal">
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60" selected>60 minutes</option>
+            <option value="90">90 minutes</option>
+            <option value="120">120 minutes</option>
+          </select>
+        </div>
+      </div>
+      <div class="account-setup-account">
+        <span class="account-setup-account-label">Syncing with</span>
+        <strong id="accountSetupEmail">Your DeeCadence account</strong>
+      </div>
+      <p class="account-setup-note" id="accountSetupNote" aria-live="polite">This profile is saved with your synced progress, so it follows you to your next device. You can change the daily goal later in Settings.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="accountSetupSignOutBtn" type="button">Sign out instead</button>
+        <button class="btn btn-primary" id="accountSetupSaveBtn" type="submit">Save and sync</button>
+      </div>
+    </form>
   </div>
 </div>
 

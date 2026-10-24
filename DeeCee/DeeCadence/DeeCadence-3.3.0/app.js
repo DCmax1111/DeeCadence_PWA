@@ -190,6 +190,10 @@
   var brownNoiseEnabled = false;
   var ambientSoundId = "brown";
   var ambientMenuOpen = false;
+  var ambientPlayStartedAt = 0;
+  var ambientPlayedMs = 0;
+  var revealShownAt = 0;
+  var lastBlockCompletedAt = 0;
   var milestoneQueue = [];
   var milestoneActive = false;
   var backupDirty = false;
@@ -201,6 +205,7 @@
   var taskDetailModal = document.getElementById("taskDetailModal");
   var feedbackModal = document.getElementById("feedbackModal");
   var personalizeModal = document.getElementById("personalizeModal");
+  var accountSetupModal = document.getElementById("accountSetupModal");
   var attentionTestModal = document.getElementById("attentionTestModal");
   var welcomeOverlay = document.getElementById("welcomeOverlay");
   var tourOverlay = document.getElementById("tourOverlay");
@@ -279,6 +284,9 @@
     skill: "Learning a skill",
     discipline: "Personal discipline"
   };
+
+  var ACCOUNT_FOCUS_IDS = ["studying", "work", "business", "coding", "skill", "discipline"];
+  var ACCOUNT_GOAL_MINUTES = [15, 30, 60, 90, 120];
 
   var PERSONAL_DISTRACTION_LABELS = {
     phone: "Phone & notifications",
@@ -393,6 +401,40 @@
     return AMBIENT_SOUND_IDS.indexOf(ambientSoundId) > -1 ? ambientSoundId : "brown";
   }
 
+  function ambientIsPlaying() {
+    return Boolean(ambientAudio && !ambientAudio.paused);
+  }
+
+  function bindAmbientTracking(audio) {
+    if (!audio || audio.__deeAmbientTracking) return;
+    audio.__deeAmbientTracking = true;
+    audio.addEventListener("play", function () {
+      if (!ambientPlayStartedAt) ambientPlayStartedAt = Date.now();
+    });
+    audio.addEventListener("pause", function () {
+      if (!ambientPlayStartedAt) return;
+      ambientPlayedMs += Math.max(0, Date.now() - ambientPlayStartedAt);
+      ambientPlayStartedAt = 0;
+    });
+  }
+
+  function markAmbientStarted() {
+    if (!ambientPlayStartedAt && ambientIsPlaying()) ambientPlayStartedAt = Date.now();
+  }
+
+  function ambientPlayedSeconds() {
+    var elapsed = ambientPlayedMs;
+    if (ambientPlayStartedAt) {
+      elapsed += Math.max(0, Date.now() - ambientPlayStartedAt);
+    }
+    return Math.round(elapsed / 1000);
+  }
+
+  function resetAmbientTracking() {
+    ambientPlayedMs = 0;
+    ambientPlayStartedAt = ambientIsPlaying() ? Date.now() : 0;
+  }
+
   function ambientSoundLabel(id) {
     return AMBIENT_SOUND_LABELS[id] || AMBIENT_SOUND_LABELS.brown;
   }
@@ -411,6 +453,28 @@
     return state.session ? Math.max(0, Number(state.session.blockIndex) || 0) : null;
   }
 
+  function sessionRestartContext() {
+    var events = state.learning && Array.isArray(state.learning.events) ? state.learning.events : [];
+    for (var i = events.length - 1; i >= 0; i -= 1) {
+      var event = events[i];
+      if (!event || event.type !== "session_end") continue;
+      var data = event.d && typeof event.d === "object" ? event.d : {};
+      var gap = Math.max(0, Math.round((Date.now() - (Number(event.t) || Date.now())) / 1000));
+      return {
+        gapSinceLastSessionSeconds: gap,
+        quickRestart: gap <= 120,
+        previousSessionAudio: Boolean(data.noiseEnabled || data.noisePlayingAtEnd),
+        previousSessionCompletedAll: Boolean(data.completedAll)
+      };
+    }
+    return {
+      gapSinceLastSessionSeconds: null,
+      quickRestart: false,
+      previousSessionAudio: false,
+      previousSessionCompletedAll: false
+    };
+  }
+
   function startAmbientSound() {
     var id = currentAmbientSound();
     if (ambientAudio && ambientAudio.getAttribute("data-sound") === id && !ambientAudio.paused) return;
@@ -421,20 +485,27 @@
       }
       ambientAudio = getSound(id);
       if (!ambientAudio) return;
+      bindAmbientTracking(ambientAudio);
       ambientAudio.loop = true;
       ambientAudio.volume = 0.55;
       ambientAudio.setAttribute("data-sound", id);
     }
     var attempt = ambientAudio.play();
-    if (attempt && typeof attempt.catch === "function") {
-      attempt.catch(function (error) {
+    if (attempt && typeof attempt.then === "function") {
+      attempt.then(markAmbientStarted).catch(function (error) {
         console.warn("Ambient audio did not start:", error && error.name, error && error.message);
         showToast("Ambient sound paused. Tap anywhere to restart it.");
       });
+    } else {
+      markAmbientStarted();
     }
   }
 
   function stopAmbientSound() {
+    if (ambientPlayStartedAt) {
+      ambientPlayedMs += Math.max(0, Date.now() - ambientPlayStartedAt);
+      ambientPlayStartedAt = 0;
+    }
     if (!ambientAudio) return;
     ambientAudio.pause();
     try { ambientAudio.currentTime = 0; } catch (error) {}
@@ -446,9 +517,12 @@
     if (!(options && options.silent)) {
       recordLearningEvent("brown_noise", {
         on: brownNoiseEnabled,
+        noiseEnabled: brownNoiseEnabled,
+        noisePlaying: ambientIsPlaying(),
         duringSession: isFocusRunning(),
         sound: currentAmbientSound(),
         blockIndex: sessionBlockIndexForLearning(),
+        audioPlayedSeconds: ambientPlayedSeconds(),
         change: options && options.change ? options.change : "toggle"
       });
     }
@@ -482,9 +556,12 @@
       }
       recordLearningEvent("brown_noise", {
         on: true,
+        noiseEnabled: true,
+        noisePlaying: ambientIsPlaying(),
         duringSession: isFocusRunning(),
         sound: id,
         blockIndex: sessionBlockIndexForLearning(),
+        audioPlayedSeconds: ambientPlayedSeconds(),
         change: "source"
       });
     }
@@ -676,6 +753,114 @@
     };
   }
 
+  function defaultAccountProfile() {
+    return { name: "", focus: "", dailyGoalMinutes: 0, completedAt: "" };
+  }
+
+  function normalizeAccountProfile(input) {
+    var source = input && typeof input === "object" ? input : {};
+    var goal = parseInt(source.dailyGoalMinutes, 10) || 0;
+    if (ACCOUNT_GOAL_MINUTES.indexOf(goal) === -1) goal = 0;
+    return {
+      name: String(source.name || "").trim().slice(0, 60),
+      focus: ACCOUNT_FOCUS_IDS.indexOf(source.focus) > -1 ? source.focus : "",
+      dailyGoalMinutes: goal,
+      completedAt: String(source.completedAt || "")
+    };
+  }
+
+  function accountProfileName() {
+    return state.accountProfile && state.accountProfile.name ? String(state.accountProfile.name).trim() : "";
+  }
+
+  function applyAccountProfile(profile) {
+    var next = normalizeAccountProfile(profile);
+    if (!next.name) return false;
+    var goal = next.dailyGoalMinutes || Number(state.profile.dailyGoalMinutes) || 60;
+    if (ACCOUNT_GOAL_MINUTES.indexOf(goal) === -1) goal = 60;
+    next.dailyGoalMinutes = goal;
+    state.accountProfile = next;
+    state.profile.dailyGoalMinutes = goal;
+    state.profile.dailyGoalBlocks = Math.max(1, Math.round(goal / 15));
+    if (!state.onboarding.purpose) state.onboarding.purpose = next.focus;
+    saveState();
+    renderAll();
+    return true;
+  }
+
+  function openAccountSetup(detail) {
+    if (!accountSetupModal) return;
+    if (accountSetupModal.classList.contains("open")) return;
+    var current = normalizeAccountProfile(state.accountProfile);
+    var nameInput = document.getElementById("accountSetupName");
+    var focusSelect = document.getElementById("accountSetupFocus");
+    var goalSelect = document.getElementById("accountSetupGoal");
+    var emailLabel = document.getElementById("accountSetupEmail");
+    var note = document.getElementById("accountSetupNote");
+    var focus = current.focus || (ACCOUNT_FOCUS_IDS.indexOf(state.onboarding.purpose) > -1 ? state.onboarding.purpose : "work");
+    var goal = current.dailyGoalMinutes || Number(state.profile.dailyGoalMinutes) || 60;
+    if (ACCOUNT_GOAL_MINUTES.indexOf(goal) === -1) goal = 60;
+    if (nameInput) {
+      nameInput.value = current.name || "";
+      nameInput.removeAttribute("aria-invalid");
+    }
+    if (focusSelect) focusSelect.value = focus;
+    if (goalSelect) goalSelect.value = String(goal);
+    if (emailLabel) emailLabel.textContent = detail && detail.email ? String(detail.email) : "Your DeeCadence account";
+    if (note) {
+      note.setAttribute("data-status", "info");
+      note.textContent = "This profile is saved with your synced progress, so it follows you to your next device. You can change the daily goal later in Settings.";
+    }
+    accountSetupModal.classList.add("open");
+    accountSetupModal.setAttribute("aria-hidden", "false");
+    setTimeout(function () { if (nameInput) nameInput.focus(); }, 80);
+  }
+
+  function closeAccountSetup() {
+    if (!accountSetupModal) return;
+    accountSetupModal.classList.remove("open");
+    accountSetupModal.setAttribute("aria-hidden", "true");
+  }
+
+  function saveAccountSetup(event) {
+    if (event) event.preventDefault();
+    var nameInput = document.getElementById("accountSetupName");
+    var focusSelect = document.getElementById("accountSetupFocus");
+    var goalSelect = document.getElementById("accountSetupGoal");
+    var note = document.getElementById("accountSetupNote");
+    var name = nameInput ? nameInput.value.trim().slice(0, 60) : "";
+    if (!name) {
+      if (nameInput) {
+        nameInput.setAttribute("aria-invalid", "true");
+        nameInput.focus();
+      }
+      if (note) {
+        note.setAttribute("data-status", "error");
+        note.textContent = "Add the name you want DeeCadence to use.";
+      }
+      return;
+    }
+    var focus = focusSelect && ACCOUNT_FOCUS_IDS.indexOf(focusSelect.value) > -1 ? focusSelect.value : "work";
+    var goal = parseInt(goalSelect ? goalSelect.value : "", 10) || Number(state.profile.dailyGoalMinutes) || 60;
+    if (ACCOUNT_GOAL_MINUTES.indexOf(goal) === -1) goal = 60;
+    state.accountProfile = normalizeAccountProfile({
+      name: name,
+      focus: focus,
+      dailyGoalMinutes: goal,
+      completedAt: state.accountProfile.completedAt || new Date().toISOString()
+    });
+    state.profile.dailyGoalMinutes = goal;
+    state.profile.dailyGoalBlocks = Math.max(1, Math.round(goal / 15));
+    if (!state.onboarding.purpose) state.onboarding.purpose = focus;
+    saveState();
+    closeAccountSetup();
+    renderAll();
+    showToast("Account setup saved. Syncing your progress.");
+    try {
+      window.dispatchEvent(new CustomEvent("deecadence:account-profile-saved", { detail: { profile: state.accountProfile } }));
+    } catch (_) {}
+  }
+
   function defaultState() {
     return {
       appVersion: APP_VERSION,
@@ -692,6 +877,7 @@
         reducedMotion: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
       },
       onboarding: defaultOnboarding(),
+      accountProfile: defaultAccountProfile(),
       tasks: [],
       session: null,
       savedSessions: [],
@@ -734,6 +920,7 @@
         profile: Object.assign({}, base.profile, parsed.profile || {}),
         settings: Object.assign({}, base.settings, parsed.settings || {}),
         onboarding: normalizeOnboarding(parsed.onboarding),
+        accountProfile: normalizeAccountProfile(parsed.accountProfile),
         tasks: Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : base.tasks,
         savedSessions: Array.isArray(parsed.savedSessions) ? parsed.savedSessions.map(normalizeSavedSession).filter(Boolean).slice(0, 4) : [],
         history: Array.isArray(parsed.history) ? parsed.history : [],
@@ -746,7 +933,15 @@
         feedbackOutbox: Array.isArray(parsed.feedbackOutbox) ? parsed.feedbackOutbox.slice(-50) : [],
         dismissedContextTips: parsed.dismissedContextTips && typeof parsed.dismissedContextTips === "object" ? parsed.dismissedContextTips : {},
         learning: parsed.learning && Array.isArray(parsed.learning.events)
-          ? { events: parsed.learning.events.filter(function (ev) { return ev && typeof ev === "object"; }).slice(-500) }
+          ? {
+              events: parsed.learning.events
+                .filter(function (ev) { return ev && typeof ev === "object"; })
+                .map(function (ev) {
+                  if (!ev.id || typeof ev.id !== "string") ev.id = makeId("le");
+                  return ev;
+                })
+                .slice(-500)
+            }
           : { events: [] }
       });
       if (parsed.contextTipRevision !== 2) {
@@ -828,11 +1023,16 @@
       blockEndsAt: Number.isFinite(Number(session.blockEndsAt)) ? Number(session.blockEndsAt) : null,
       status: ["running", "paused", "recovery"].indexOf(session.status) > -1 ? session.status : "paused",
       linkedTaskId: session.linkedTaskId || null,
+      source: String(session.source || "schedule"),
       startedAt: session.startedAt || Date.now(),
       blocksCompleted: Math.max(0, Math.min(blocks.length, parseInt(session.blocksCompleted, 10) || 0)),
       xpEarned: Math.max(0, parseInt(session.xpEarned, 10) || 0),
       pauseCount: Math.max(0, parseInt(session.pauseCount, 10) || 0),
       penaltyXp: Math.max(0, parseInt(session.penaltyXp, 10) || 0),
+      quickRestart: Boolean(session.quickRestart),
+      previousSessionAudio: Boolean(session.previousSessionAudio),
+      previousSessionCompletedAll: Boolean(session.previousSessionCompletedAll),
+      gapSinceLastSessionSeconds: Number.isFinite(Number(session.gapSinceLastSessionSeconds)) ? Number(session.gapSinceLastSessionSeconds) : null,
       recoveryRemaining: Math.max(0, parseInt(session.recoveryRemaining, 10) || 0),
       recoveryEndsAt: Number.isFinite(Number(session.recoveryEndsAt)) ? Number(session.recoveryEndsAt) : null,
       lastReveal: session.lastReveal || null,
@@ -1004,6 +1204,7 @@
     var minutes = clampMinutes(totalMinutes, 25);
     var blocks = splitIntoBlocks(minutes, blockCount);
     var linkedTask = linkedTaskId ? getTask(linkedTaskId) : null;
+    var restartContext = sessionRestartContext();
     state.session = {
       id: makeId("sess"),
       totalMinutes: minutes,
@@ -1013,6 +1214,7 @@
       blockEndsAt: Date.now() + (blocks[0] * 1000),
       status: "running",
       linkedTaskId: linkedTaskId || null,
+      source: String(startTaskSource || "schedule"),
       startedAt: Date.now(),
       blocksCompleted: 0,
       xpEarned: 0,
@@ -1020,11 +1222,19 @@
       penaltyXp: 0,
       recoveryRemaining: 0,
       recoveryEndsAt: null,
+      quickRestart: restartContext.quickRestart,
+      previousSessionAudio: restartContext.previousSessionAudio,
+      previousSessionCompletedAll: restartContext.previousSessionCompletedAll,
+      gapSinceLastSessionSeconds: restartContext.gapSinceLastSessionSeconds,
       lastReveal: null,
       blockFeedback: []
     };
     if (linkedTask) linkedTask.status = "in_progress";
+    revealShownAt = 0;
+    lastBlockCompletedAt = 0;
+    resetAmbientTracking();
     recordLearningEvent("session_start", {
+      startedAt: state.session.startedAt,
       minutes: minutes,
       blocks: blocks.length,
       taskId: linkedTaskId || "",
@@ -1032,8 +1242,15 @@
       taskTime: linkedTask ? linkedTask.time || "" : "",
       locked: Boolean(options && options.locked),
       noise: Boolean(brownNoiseEnabled),
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlaying: ambientIsPlaying(),
       noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
-      source: startTaskSource
+      audioPlayedSeconds: 0,
+      source: state.session.source,
+      quickRestart: restartContext.quickRestart,
+      previousSessionAudio: restartContext.previousSessionAudio,
+      previousSessionCompletedAll: restartContext.previousSessionCompletedAll,
+      gapSinceLastSessionSeconds: restartContext.gapSinceLastSessionSeconds
     });
     pendingStartTask = null;
     saveState();
@@ -1100,7 +1317,11 @@
     state.session.pauseCount = (state.session.pauseCount || 0) + 1;
     recordLearningEvent("session_pause", {
       blockIndex: state.session.blockIndex,
-      remainingSeconds: state.session.blockRemaining
+      remainingSeconds: state.session.blockRemaining,
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlaying: ambientIsPlaying(),
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
+      audioPlayedSeconds: ambientPlayedSeconds()
     });
     stopTicker();
     syncAmbientPlayback();
@@ -1113,6 +1334,13 @@
     state.session.blockRemaining = Math.max(1, state.session.blockRemaining);
     state.session.blockEndsAt = Date.now() + (state.session.blockRemaining * 1000);
     state.session.status = "running";
+    recordLearningEvent("session_resume", {
+      blockIndex: state.session.blockIndex,
+      remainingSeconds: state.session.blockRemaining,
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlaying: ambientIsPlaying(),
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : ""
+    });
     syncAmbientPlayback();
     saveState();
     startTicker();
@@ -1197,6 +1425,8 @@
     var prevXp = state.profile.totalXp;
     var isFinalBlock = session.blockIndex >= session.blocks.length - 1;
     var blockSeconds = session.blocks[session.blockIndex] || 60;
+    var noisePlaying = ambientIsPlaying();
+    var audioPlayedSeconds = ambientPlayedSeconds();
     var xpGained = focusXpForSeconds(blockSeconds) + (isFinalBlock ? sessionCompletionBonus(session.totalMinutes) : 0);
     var linkedTask = session.linkedTaskId ? advanceLinkedTaskProgress(session.linkedTaskId) : null;
 
@@ -1228,14 +1458,21 @@
       focusedMinutes: Math.round(blockSeconds / 60),
       penaltyXp: session.penaltyXp || 0
     };
+    lastBlockCompletedAt = Date.now();
     recordLearningEvent("block_complete", {
+      blockIndex: session.blockIndex,
+      blocksPlanned: session.blocks.length,
       seconds: blockSeconds,
       finalBlock: isFinalBlock,
       xpGained: xpGained,
       goalBonusXp: goalBonus.xp,
       goalReached: goalBonus.reached,
       goalSurpassed: goalBonus.surpassed,
-      taskTitle: linkedTask ? linkedTask.title : ""
+      taskTitle: linkedTask ? linkedTask.title : "",
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlaying: noisePlaying,
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
+      audioPlayedSeconds: audioPlayedSeconds
     });
 
     syncAmbientPlayback();
@@ -1251,9 +1488,26 @@
     var session = state.session;
     if (!session) return;
     if (session.blockIndex >= session.blocks.length - 1) {
-      finalizeSession(true);
+      finalizeSession(true, null, "final_block_auto");
       return;
     }
+    var fromBlockIndex = session.blockIndex;
+    var feedbackGiven = (session.blockFeedback || []).some(function (entry) {
+      return entry && entry.blockIndex === fromBlockIndex;
+    });
+    var now = Date.now();
+    recordLearningEvent("block_continue", {
+      fromBlockIndex: fromBlockIndex,
+      toBlockIndex: fromBlockIndex + 1,
+      blocksPlanned: session.blocks.length,
+      secondsSinceBlockComplete: lastBlockCompletedAt ? Math.max(0, Math.round((now - lastBlockCompletedAt) / 1000)) : 0,
+      secondsInReveal: revealShownAt ? Math.max(0, Math.round((now - revealShownAt) / 1000)) : 0,
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlaying: ambientIsPlaying(),
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
+      taskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : "",
+      feedbackGiven: feedbackGiven
+    });
     session.blockIndex += 1;
     session.blockRemaining = session.blocks[session.blockIndex];
     session.blockEndsAt = Date.now() + (session.blockRemaining * 1000);
@@ -1268,16 +1522,66 @@
     switchView("focus");
   }
 
-  function finalizeSession(completedAll, milestoneData) {
+  function recordSessionEnd(session, completedAll, reason, extra) {
+    var feedback = session.blockFeedback || [];
+    var lastFeedback = feedback.length ? feedback[feedback.length - 1] : null;
+    var details = extra || {};
+    recordLearningEvent("session_end", {
+      startedAt: session.startedAt,
+      endedAt: Date.now(),
+      minutes: session.totalMinutes,
+      blocksCompleted: session.blocksCompleted,
+      blocksPlanned: session.blocks.length,
+      blockIndex: session.blockIndex,
+      partialBlock: Boolean(details.partialBlock),
+      pauseCount: session.pauseCount || 0,
+      xpEarned: session.xpEarned,
+      penaltyXp: session.penaltyXp || 0,
+      completedAll: Boolean(completedAll),
+      endedBy: reason || "unknown",
+      saved: Boolean(details.saved),
+      taskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : "",
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlayingAtEnd: Boolean(details.noisePlayingAtEnd),
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
+      audioPlayedSeconds: Number.isFinite(Number(details.audioPlayedSeconds)) ? Number(details.audioPlayedSeconds) : ambientPlayedSeconds(),
+      quickRestart: Boolean(session.quickRestart),
+      previousSessionAudio: Boolean(session.previousSessionAudio),
+      previousSessionCompletedAll: Boolean(session.previousSessionCompletedAll),
+      gapSinceLastSessionSeconds: session.gapSinceLastSessionSeconds,
+      blockFeedbackCount: feedback.length,
+      lastFeeling: lastFeedback ? lastFeedback.feeling || "" : "",
+      secondsInReveal: Number.isFinite(Number(details.secondsInReveal)) ? Number(details.secondsInReveal) : 0,
+      secondsSinceBlockComplete: Number.isFinite(Number(details.secondsSinceBlockComplete)) ? Number(details.secondsSinceBlockComplete) : 0,
+      source: session.source || ""
+    });
+  }
+
+  function finalizeSession(completedAll, milestoneData, reason) {
     var session = state.session;
     if (!session) return;
     stopTicker();
+    var noisePlayingAtEnd = ambientIsPlaying();
+    var audioPlayedSeconds = ambientPlayedSeconds();
+    var endedAt = Date.now();
+    var secondsInReveal = revealShownAt ? Math.max(0, Math.round((endedAt - revealShownAt) / 1000)) : 0;
+    var secondsSinceBlockComplete = lastBlockCompletedAt ? Math.max(0, Math.round((endedAt - lastBlockCompletedAt) / 1000)) : 0;
     stopAmbientSound();
     var currentDuration = session.blocks[session.blockIndex] || 0;
-    var hasPartialProgress = session.blockRemaining < currentDuration;
+    var hasPartialProgress = session.status !== "recovery" && session.blockRemaining > 0 && session.blockRemaining < currentDuration;
+    var endDetails = {
+      partialBlock: hasPartialProgress,
+      noisePlayingAtEnd: noisePlayingAtEnd,
+      audioPlayedSeconds: audioPlayedSeconds,
+      secondsInReveal: secondsInReveal,
+      secondsSinceBlockComplete: secondsSinceBlockComplete
+    };
     if (!completedAll && session.blocksCompleted < session.blocks.length && (session.blocksCompleted > 0 || hasPartialProgress)) {
+      recordSessionEnd(session, false, reason || "saved_partial", Object.assign({}, endDetails, { saved: true }));
       saveIncompleteSession(session);
       state.session = null;
+      revealShownAt = 0;
+      lastBlockCompletedAt = 0;
       closeReveal();
       saveState();
       renderAll();
@@ -1286,7 +1590,10 @@
       return;
     }
     if (!completedAll && !session.blocksCompleted && !hasPartialProgress) {
+      recordSessionEnd(session, false, reason || "cleared", endDetails);
       state.session = null;
+      revealShownAt = 0;
+      lastBlockCompletedAt = 0;
       closeReveal();
       saveState();
       renderAll();
@@ -1297,7 +1604,8 @@
     state.history.unshift({
       id: session.id,
       date: todayStr(),
-      completedAt: Date.now(),
+      completedAt: endedAt,
+      startedAt: session.startedAt,
       totalMinutes: session.totalMinutes,
       blocksCompleted: session.blocksCompleted,
       blocksPlanned: session.blocks.length,
@@ -1307,19 +1615,18 @@
       linkedTaskId: session.linkedTaskId,
       linkedTaskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : null,
       completedAll: Boolean(completedAll),
+      endedBy: reason || "unknown",
+      audioPlayedSeconds: audioPlayedSeconds,
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlayingAtEnd: noisePlayingAtEnd,
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
+      quickRestart: Boolean(session.quickRestart),
       blockFeedback: session.blockFeedback || []
     });
-    recordLearningEvent("session_end", {
-      minutes: session.totalMinutes,
-      blocksCompleted: session.blocksCompleted,
-      blocksPlanned: session.blocks.length,
-      pauseCount: session.pauseCount || 0,
-      xpEarned: session.xpEarned,
-      penaltyXp: session.penaltyXp || 0,
-      completedAll: Boolean(completedAll),
-      taskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : ""
-    });
+    recordSessionEnd(session, completedAll, reason || "unknown", endDetails);
     state.session = null;
+    revealShownAt = 0;
+    lastBlockCompletedAt = 0;
     closeReveal();
     saveState();
     renderAll();
@@ -1337,11 +1644,16 @@
       blockRemaining: session.blockRemaining,
       status: "saved",
       linkedTaskId: session.linkedTaskId,
+      source: session.source,
       startedAt: session.startedAt,
       blocksCompleted: session.blocksCompleted,
       xpEarned: session.xpEarned,
       pauseCount: session.pauseCount || 0,
       penaltyXp: session.penaltyXp || 0,
+      quickRestart: session.quickRestart,
+      previousSessionAudio: session.previousSessionAudio,
+      previousSessionCompletedAll: session.previousSessionCompletedAll,
+      gapSinceLastSessionSeconds: session.gapSinceLastSessionSeconds,
       savedAt: Date.now(),
       lastReveal: session.lastReveal,
       blockFeedback: session.blockFeedback || []
@@ -1350,7 +1662,11 @@
     recordLearningEvent("session_saved", {
       minutes: session.totalMinutes,
       blocksCompleted: session.blocksCompleted,
-      blocksPlanned: session.blocks.length
+      blocksPlanned: session.blocks.length,
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
+      audioPlayedSeconds: ambientPlayedSeconds(),
+      saved: true
     });
     state.savedSessions = [saved]
       .concat(state.savedSessions.filter(function (item) { return item.id !== saved.id; }))
@@ -1376,6 +1692,17 @@
       recoveryEndsAt: null,
       recoveryRemaining: 0
     }));
+    revealShownAt = 0;
+    lastBlockCompletedAt = 0;
+    resetAmbientTracking();
+    recordLearningEvent("session_resume", {
+      resumedFromSaved: true,
+      blockIndex: state.session.blockIndex,
+      remainingSeconds: state.session.blockRemaining,
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlaying: ambientIsPlaying(),
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : ""
+    });
     syncAmbientPlayback();
     saveState();
     startTicker();
@@ -1451,8 +1778,28 @@
     return result;
   }
 
+  function recordBlockDecision(decision, data, feedback) {
+    var session = state.session;
+    if (!session) return;
+    var now = Date.now();
+    recordLearningEvent("block_decision", {
+      decision: decision,
+      blockIndex: session.blockIndex,
+      blocksPlanned: session.blocks.length,
+      isFinalBlock: Boolean(data && data.isFinalBlock),
+      secondsInReveal: revealShownAt ? Math.max(0, Math.round((now - revealShownAt) / 1000)) : 0,
+      secondsSinceBlockComplete: lastBlockCompletedAt ? Math.max(0, Math.round((now - lastBlockCompletedAt) / 1000)) : 0,
+      noiseEnabled: Boolean(brownNoiseEnabled),
+      noisePlaying: ambientIsPlaying(),
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
+      feedbackGiven: Boolean(feedback),
+      taskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : ""
+    });
+  }
+
   function showSystemReveal(data) {
     if (!data || !revealOverlay) return;
+    revealShownAt = Date.now();
     var rankUp = data.rankedUpId ? RANKS.find(function (rank) { return rank.id === data.rankedUpId; }) : null;
     var level = currentLevel(data.newXp);
     var rank = currentRank(data.newXp);
@@ -1509,18 +1856,23 @@
       };
     });
     if (finish) finish.onclick = function () {
-      captureBlockFeedback();
-      finalizeSession(true, data);
+      var feedback = captureBlockFeedback();
+      recordBlockDecision("finish", data, feedback);
+      finalizeSession(true, data, "finish_button");
     };
     if (cont) cont.onclick = function () {
-      captureBlockFeedback();
+      var feedback = captureBlockFeedback();
+      recordBlockDecision("continue", data, feedback);
       continueSession();
     };
     if (stop) stop.onclick = function () {
-      captureBlockFeedback();
-      finalizeSession(false);
+      var feedback = captureBlockFeedback();
+      recordBlockDecision("stop", data, feedback);
+      finalizeSession(false, null, "stop_after_block");
     };
     if (close) close.onclick = function () {
+      recordBlockDecision("close_manual", data, null);
+      revealShownAt = 0;
       revealOverlay.classList.remove("open");
       queueMilestones(data);
     };
@@ -1551,7 +1903,7 @@
     var noteInput = document.getElementById("blockFeedbackNote");
     var feeling = activeFeeling ? activeFeeling.getAttribute("data-block-feeling") : "";
     var note = String((noteInput || {}).value || "").trim().replace(/\s+/g, " ");
-    if (!feeling && !note) return;
+    if (!feeling && !note) return null;
     var entry = {
       blockIndex: session.blockIndex,
       blockNumber: session.blockIndex + 1,
@@ -1565,9 +1917,11 @@
     session.blockFeedback.push(entry);
     if (session.lastReveal) session.lastReveal.feedback = entry;
     saveState();
+    return entry;
   }
 
   function closeReveal() {
+    revealShownAt = 0;
     if (revealOverlay) revealOverlay.classList.remove("open");
   }
 
@@ -2698,7 +3052,7 @@
     var reopen = document.getElementById("reopenReveal");
     if (pause) pause.onclick = pauseSession;
     if (resume) resume.onclick = resumeSession;
-    if (stop) stop.onclick = function () { finalizeSession(false); };
+    if (stop) stop.onclick = function () { finalizeSession(false, null, "stop_from_focus"); };
     if (reopen) reopen.onclick = function () { showSystemReveal(session.lastReveal); };
     renderSessionIndicators();
   }
@@ -4441,13 +4795,25 @@
   function recordLearningEvent(type, data) {
     try {
       if (!state.learning || !Array.isArray(state.learning.events)) state.learning = { events: [] };
-      state.learning.events.push({
+      var eventType = String(type || "event");
+      var payload = data && typeof data === "object" ? Object.assign({}, data) : {};
+      if (state.session && state.session.id && /^(session_|block_|brown_noise)/.test(eventType) && !payload.sessionId) {
+        payload.sessionId = state.session.id;
+      }
+      var event = {
+        id: makeId("le"),
         t: Date.now(),
-        type: String(type || "event"),
-        d: data && typeof data === "object" ? data : {}
-      });
+        type: eventType,
+        d: payload
+      };
+      state.learning.events.push(event);
       if (state.learning.events.length > LEARNING_EVENT_CAP) {
         state.learning.events = state.learning.events.slice(-LEARNING_EVENT_CAP);
+      }
+      if (typeof window.CustomEvent === "function") {
+        window.dispatchEvent(new CustomEvent("deecadence:learning-event", {
+          detail: { id: event.id, type: event.type }
+        }));
       }
     } catch (error) {
       // Learning must never break the app.
@@ -5297,6 +5663,17 @@
   }
 
   function wireEvents() {
+    var accountSetupForm = document.getElementById("accountSetupForm");
+    if (accountSetupForm) accountSetupForm.onsubmit = saveAccountSetup;
+    var accountSetupSignOut = document.getElementById("accountSetupSignOutBtn");
+    if (accountSetupSignOut) accountSetupSignOut.onclick = function () {
+      try {
+        window.dispatchEvent(new CustomEvent("deecadence:account-profile-signout"));
+      } catch (_) {}
+    };
+    window.addEventListener("deecadence:account-profile-required", function (event) {
+      openAccountSetup(event.detail || {});
+    });
     document.getElementById("welcomeSaveBtn").onclick = nextWelcomeStep;
     document.getElementById("welcomeBackBtn").onclick = previousWelcomeStep;
     document.getElementById("welcomeCalibrateBtn").onclick = function () {
@@ -5831,6 +6208,9 @@
     saveWelcomeSetup: saveWelcomeSetup,
     selectWelcomeOption: selectWelcomeOption,
     completeWelcome: completeWelcome,
+    openAccountSetup: openAccountSetup,
+    applyAccountProfile: applyAccountProfile,
+    getAccountProfile: function () { return state.accountProfile; },
     startTour: startTour,
     endTour: endTour,
     persistStateForExit: persistStateForExit,
@@ -5854,6 +6234,13 @@
       showToast("Cloud copy applied.");
       return true;
     }
+  };
+
+  window.__DEECADENCE_ACCOUNT__ = {
+    openSetup: openAccountSetup,
+    closeSetup: closeAccountSetup,
+    applyProfile: applyAccountProfile,
+    getName: accountProfileName
   };
 
   try {
