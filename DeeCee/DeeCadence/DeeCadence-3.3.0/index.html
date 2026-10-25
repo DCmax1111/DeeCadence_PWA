@@ -24,6 +24,7 @@
 <meta name="deecadence-feedback-table" content="feedbacks">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/deecadence.svg" type="image/svg+xml">
+<link rel="preload" as="image" href="icons/deecadence.svg" fetchpriority="high">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -61,7 +62,19 @@
 <a class="skip-link" href="#view-today">Skip to app content</a>
 
 <div id="bootLoader" role="status" aria-live="polite">
-  <div class="boot-mark" aria-hidden="true"></div>
+  <div class="boot-mark" aria-hidden="true">
+    <svg viewBox="0 0 512 512" focusable="false">
+      <defs>
+        <linearGradient id="bootMarkGradient" x1="72" y1="56" x2="432" y2="456" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#79f2d0"/>
+          <stop offset="1" stop-color="#4a7bff"/>
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="132" fill="#020706"/>
+      <circle cx="256" cy="256" r="180" fill="none" stroke="url(#bootMarkGradient)" stroke-width="26" stroke-dasharray="820 310" stroke-linecap="round"/>
+      <path d="M177 144h82c89 0 142 42 142 112s-53 112-142 112h-82V144Zm78 166c50 0 78-18 78-54s-28-54-78-54h-12v108h12Z" fill="#f7fffb"/>
+    </svg>
+  </div>
   <div class="boot-copy">
     <strong>DeeCadence</strong>
     <span>Loading your cadence</span>
@@ -98,7 +111,7 @@
 <div id="app">
 
   <nav class="sidenav" aria-label="Primary">
-    <div class="brand"><div class="brand-mark" aria-hidden="true"></div><div class="brand-name">DeeCadence</div></div>
+    <div class="brand"><div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 512 512" focusable="false"><defs><linearGradient id="brandMarkGradient" x1="72" y1="56" x2="432" y2="456" gradientUnits="userSpaceOnUse"><stop stop-color="#79f2d0"/><stop offset="1" stop-color="#4a7bff"/></linearGradient></defs><rect width="512" height="512" rx="132" fill="#020706"/><circle cx="256" cy="256" r="180" fill="none" stroke="url(#brandMarkGradient)" stroke-width="26" stroke-dasharray="820 310" stroke-linecap="round"/><path d="M177 144h82c89 0 142 42 142 112s-53 112-142 112h-82V144Zm78 166c50 0 78-18 78-54s-28-54-78-54h-12v108h12Z" fill="#f7fffb"/></svg></div><div class="brand-name">DeeCadence</div></div>
     <button class="navbtn" data-view="today"><span class="dot"></span>Today</button>
     <button class="navbtn" data-view="focus" id="navFocusBtn"><span class="dot"></span>Focus<span class="session-dot" id="navFocusDot" style="display:none;" aria-label="Session in progress"></span></button>
     <button class="navbtn" data-view="plan"><span class="dot"></span>Plan</button>
@@ -232,6 +245,7 @@
         <button class="noise-toggle" id="focusNoiseToggle" type="button" aria-pressed="false" aria-label="Turn ambient sound on" title="Turn ambient sound on">
           <svg class="noise-icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 9v6h4l5 4V5L9 9H5Z"/><path d="M17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11"/></svg>
           <svg class="noise-icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 9v6h4l5 4V5L9 9H5Z"/><path d="m17 9 5 5M22 9l-5 5"/></svg>
+          <span class="noise-toggle-label" id="focusNoiseState">Off</span>
         </button>
         <button class="icon-btn theme-toggle" aria-label="Toggle theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
       </div>
@@ -410,16 +424,27 @@
       </div>
       <div class="card sync-card" id="syncCard">
         <div class="setting-label">Back up and sync your progress</div>
-        <div class="setting-desc">DeeCadence saves your work on this device automatically. Enter your email to get a secure sign-in link and open it here. After the first sign-in, you'll add your name and a couple of preferences before the first backup. One device stays active per account for now; if you change devices, use “Use this device instead” here. A running timer and pending feedback stay on the device where they started.</div>
+        <div class="setting-desc">DeeCadence saves your work on this device automatically. Enter your email to get a secure sign-in link. Open the link on this device — a link opened on your phone signs in your phone, not this browser. After the first sign-in, you'll add your name and a couple of preferences before the first backup. One device stays active per account for now; if you change devices, use “Use this device instead” here. A running timer and pending feedback stay on the device where they started.</div>
         <p class="sync-status" id="syncStatus" role="status" aria-live="polite">Your progress is saved on this device. Sign in to back it up and sync across devices.</p>
         <form class="sync-signin" id="syncSignInForm">
           <label class="sr-only" for="syncEmail">Email address</label>
           <input id="syncEmail" type="email" autocomplete="email" required maxlength="254" placeholder="Email address">
           <button class="btn btn-primary" id="syncSignInBtn" type="submit">Email me a sign-in link</button>
         </form>
+        <p class="sync-cooldown" id="syncCooldown" hidden></p>
+        <details class="sync-code-panel" id="syncCodePanel">
+          <summary>Use a 6-digit code instead</summary>
+          <form class="sync-signin sync-code-form" id="syncCodeForm">
+            <label class="sr-only" for="syncCode">6-digit code</label>
+            <input id="syncCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="6-digit code">
+            <button class="btn btn-secondary" id="syncCodeBtn" type="submit">Verify code</button>
+          </form>
+          <p class="sync-code-help">Use the code from the same email. It works on any device. If your email only has a link, open the link on the device you want to sign in.</p>
+        </details>
         <div class="sync-account-controls" id="syncAccountControls" hidden>
           <span class="sync-account-email" id="syncAccountEmail"></span>
           <button class="btn btn-secondary" id="syncNowBtn" type="button">Sync now</button>
+          <button class="btn btn-secondary" id="syncProfileBtn" type="button">Profile</button>
           <button class="btn btn-secondary" id="syncSignOutBtn" type="button">Sign out</button>
         </div>
         <div class="sync-conflict" id="syncConflict" hidden>
@@ -536,16 +561,16 @@
           <span class="done"></span>
           <span class="active"></span>
         </div>
-        <h2 id="welcomeStepTwoTitle">Your first calibration block</h2>
-        <p>One five-minute block. Nothing more. This sets your baseline — and it's already a win.</p>
+        <h2 id="welcomeStepTwoTitle">Your first 5-minute block</h2>
+        <p>One five-minute block. Nothing more. It gives you a starting point — and it's already a win.</p>
         <div class="onboarding-choice-stack">
           <button class="onboarding-choice primary-choice" type="button" id="welcomeCalibrateBtn">
-            <strong>Start 5-minute calibration</strong>
-            <span>A short, frictionless block to establish your baseline.</span>
+            <strong>Start 5-minute block</strong>
+            <span>A short, easy first block to set your starting point.</span>
           </button>
           <button class="onboarding-choice" type="button" id="welcomeSkipCalibrateBtn">
-            <strong>Skip calibration</strong>
-            <span>Start with default settings instead.</span>
+            <strong>Skip for now</strong>
+            <span>Start with the default settings instead.</span>
           </button>
         </div>
       </article>
@@ -933,7 +958,7 @@
 
 <div class="rank-upgrade-overlay" id="rankUpgradeOverlay" role="dialog" aria-modal="true" aria-labelledby="rankUpgradeTitle" aria-hidden="true">
   <div class="rank-upgrade-mark" id="rankUpgradeMark">D</div>
-  <div class="attention-kicker">Rank interface recalibration</div>
+  <div class="attention-kicker">Rank interface upgrade</div>
   <h2 id="rankUpgradeTitle">Upgrading your interface</h2>
   <p id="rankUpgradeMessage" aria-live="polite">Strengthening focus sessions...</p>
   <div class="rank-upgrade-track"><span id="rankUpgradeFill"></span></div>

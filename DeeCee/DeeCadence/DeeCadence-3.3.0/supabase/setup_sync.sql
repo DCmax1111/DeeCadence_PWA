@@ -241,6 +241,28 @@ begin
 end;
 $do$;
 
+-- Readable profile view. The app stores the account profile inside the sync
+-- snapshot, so there is only one source of truth. This view makes the saved
+-- name, focus area, and daily goal easy to inspect in the dashboard.
+create or replace view public.deecadence_profiles as
+select
+  s.user_id,
+  u.email,
+  s.payload->'accountProfile'->>'name' as name,
+  s.payload->'accountProfile'->>'focus' as focus,
+  case
+    when coalesce(s.payload->'accountProfile'->>'dailyGoalMinutes', '') ~ '^[0-9]+$'
+      then (s.payload->'accountProfile'->>'dailyGoalMinutes')::integer
+    else null
+  end as daily_goal_minutes,
+  s.payload->'accountProfile'->>'completedAt' as completed_at,
+  s.revision,
+  s.updated_at
+from public.deecadence_sync_state s
+left join auth.users u on u.id = s.user_id;
+
+revoke all on table public.deecadence_profiles from anon, authenticated, public;
+
 -- ============================================================
 -- Passive learning events and focus-session outcomes
 -- ============================================================

@@ -10,6 +10,7 @@
   var deviceKey = "deecadence_device_id_v1";
   var pendingKey = "deecadence_sync_pending_v1";
   var learningMetaPrefix = "deecadence_learning_upload_v1_";
+  var signInCooldownKey = "deecadence_signin_cooldown_v1";
   var SAVE_DEBOUNCE_MS = 2500;
   var REMOTE_REFRESH_MS = 5 * 60 * 1000;
   var FOCUS_SYNC_MS = 60 * 1000;
@@ -20,13 +21,20 @@
   var deviceLocked = false, deviceClaimed = false, awaitingProfile = false, activationPromise = null, lastActivationUserId = "";
   var lastActivationAttemptAt = 0, lastMetadataSignature = "", startPromise = null, authNotice = "", memoryDeviceId = "";
   var learningUploadTimer = null, learningUploadPromise = null, lastLearningUploadAttemptAt = 0;
+  var signInCooldownTimer = null, signInCooldownUntil = 0, signInCooldownEmail = "", signInCooldownOwnsStatus = false;
   var status = document.getElementById("syncStatus");
   var form = document.getElementById("syncSignInForm");
   var email = document.getElementById("syncEmail");
   var signInButton = document.getElementById("syncSignInBtn");
+  var cooldownNote = document.getElementById("syncCooldown");
+  var codePanel = document.getElementById("syncCodePanel");
+  var codeForm = document.getElementById("syncCodeForm");
+  var codeInput = document.getElementById("syncCode");
+  var codeButton = document.getElementById("syncCodeBtn");
   var controls = document.getElementById("syncAccountControls");
   var accountEmail = document.getElementById("syncAccountEmail");
   var syncButton = document.getElementById("syncNowBtn");
+  var profileButton = document.getElementById("syncProfileBtn");
   var outButton = document.getElementById("syncSignOutBtn");
   var conflictBox = document.getElementById("syncConflict");
   var cloudButton = document.getElementById("syncUseCloudBtn");
@@ -45,17 +53,145 @@
     return "Your progress is saved on this device. Sign in to back it up and sync across devices.";
   }
 
+  function readStoredCooldown() {
+    try {
+      var stored = JSON.parse(localStorage.getItem(signInCooldownKey) || "null");
+      if (!stored || !Number.isFinite(Number(stored.until))) return null;
+      return { until: Number(stored.until), email: String(stored.email || "") };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function storeCooldown(until, address) {
+    try {
+      localStorage.setItem(signInCooldownKey, JSON.stringify({
+        until: Number(until),
+        email: String(address || "")
+      }));
+    } catch (_) {}
+  }
+
+  function clearStoredCooldown() {
+    try { localStorage.removeItem(signInCooldownKey); } catch (_) {}
+  }
+
+  function cooldownSecondsLeft() {
+    return Math.max(0, Math.ceil((signInCooldownUntil - Date.now()) / 1000));
+  }
+
+  function signInCooldownActive() {
+    return cooldownSecondsLeft() > 0;
+  }
+
+  // Only this one line changes each second. The whole sync card must not
+  // re-render, because that is what made the page look like it was reloading.
+  function syncCooldownUI() {
+    var seconds = cooldownSecondsLeft();
+    if (cooldownNote) {
+      if (seconds > 0) {
+        cooldownNote.hidden = false;
+        cooldownNote.textContent = "You can request another link in " + seconds + "s.";
+      } else {
+        cooldownNote.hidden = true;
+        cooldownNote.textContent = "";
+      }
+    }
+    if (signInButton) {
+      if (seconds > 0) {
+        signInButton.disabled = true;
+        signInButton.setAttribute("aria-disabled", "true");
+      } else {
+        signInButton.removeAttribute("aria-disabled");
+        signInButton.disabled = busy || activating;
+      }
+    }
+    if (seconds <= 0) {
+      if (signInCooldownTimer) {
+        window.clearInterval(signInCooldownTimer);
+        signInCooldownTimer = null;
+      }
+      if (signInCooldownUntil) {
+        signInCooldownUntil = 0;
+        signInCooldownEmail = "";
+        clearStoredCooldown();
+        if (signInCooldownOwnsStatus && !user) {
+          signInCooldownOwnsStatus = false;
+          message("You can request a new sign-in link now.", "info");
+        }
+      }
+    }
+    return seconds;
+  }
+
+  function beginSignInCooldown(seconds, address) {
+    var wait = Math.max(1, Math.min(3600, parseInt(seconds, 10) || 60));
+    signInCooldownUntil = Date.now() + wait * 1000;
+    signInCooldownEmail = String(address || "").trim();
+    signInCooldownOwnsStatus = true;
+    storeCooldown(signInCooldownUntil, signInCooldownEmail);
+    if (signInCooldownTimer) {
+      window.clearInterval(signInCooldownTimer);
+      signInCooldownTimer = null;
+    }
+    syncCooldownUI();
+    signInCooldownTimer = window.setInterval(syncCooldownUI, 1000);
+  }
+
+  function clearSignInCooldown() {
+    if (signInCooldownTimer) {
+      window.clearInterval(signInCooldownTimer);
+      signInCooldownTimer = null;
+    }
+    signInCooldownUntil = 0;
+    signInCooldownEmail = "";
+    signInCooldownOwnsStatus = false;
+    clearStoredCooldown();
+    syncCooldownUI();
+  }
+
+  function restoreSignInCooldown() {
+    var stored = readStoredCooldown();
+    if (!stored) return;
+    var remaining = Math.ceil((stored.until - Date.now()) / 1000);
+    if (remaining <= 0) {
+      clearStoredCooldown();
+      return;
+    }
+    signInCooldownUntil = stored.until;
+    signInCooldownEmail = stored.email;
+    signInCooldownOwnsStatus = false;
+    syncCooldownUI();
+    signInCooldownTimer = window.setInterval(syncCooldownUI, 1000);
+  }
+
+  function signInRateLimitSeconds(error) {
+    var text = String(error && (error.message || error.error_description || error.msg) || "");
+    var match = text.match(/(\d+)\s*seconds?/i);
+    if (match && /(security|only request|rate|after)/i.test(text)) {
+      return parseInt(match[1], 10) || 0;
+    }
+    if (error && (Number(error.status) === 429 ||
+      error.code === "over_email_send_rate_limit" ||
+      error.code === "over_request_rate_limit")) {
+      return 60;
+    }
+    return 0;
+  }
+
   function render() {
     var signed = Boolean(user);
     if (form) form.hidden = signed;
+    if (codePanel) codePanel.hidden = signed;
     if (controls) controls.hidden = !signed;
     if (accountEmail) accountEmail.textContent = signed ? user.email : "";
     if (deviceLock) deviceLock.hidden = !(signed && deviceLocked);
     var disabled = busy || activating;
-    [signInButton, syncButton, outButton, cloudButton, deviceButton, useDeviceButton].forEach(function (button) {
+    [signInButton, codeButton, syncButton, profileButton, outButton, cloudButton, deviceButton, useDeviceButton].forEach(function (button) {
       if (button) button.disabled = disabled;
     });
     if (syncButton) syncButton.disabled = disabled || deviceLocked;
+    syncCooldownUI();
   }
 
   function readLocalState() {
@@ -416,6 +552,15 @@
       /could not find|schema cache|does not exist|not found/i.test(text);
   }
 
+  // Keep setup details in the console for whoever maintains the project.
+  // People using DeeCadence only need to know that local work is safe.
+  function reportCloudSetupIssue(error) {
+    try {
+      console.warn("DeeCadence cloud setup is incomplete:", error && (error.message || error));
+    } catch (_) {}
+    message("Cloud sync is temporarily unavailable. Your work is saved on this device and will retry automatically.", "info");
+  }
+
   function deviceName(claim) {
     var label = claim && claim.active_device_label ? String(claim.active_device_label).trim() : "";
     return label || "another device";
@@ -426,13 +571,20 @@
     return profile && typeof profile === "object" ? String(profile.name || "").trim() : "";
   }
 
+  function profileComplete(state) {
+    var profile = state && state.accountProfile;
+    return Boolean(profile && typeof profile === "object" &&
+      String(profile.name || "").trim() &&
+      String(profile.completedAt || "").trim());
+  }
+
   function profileFromRow(row) {
     var profile = row && row.payload && row.payload.accountProfile;
     return profile && typeof profile === "object" && String(profile.name || "").trim() ? profile : null;
   }
 
   function copyProfileFromRow(row) {
-    if (profileName(readLocalState())) return Promise.resolve(false);
+    if (profileComplete(readLocalState())) return Promise.resolve(false);
     var profile = profileFromRow(row);
     if (!profile) return Promise.resolve(false);
     var bridge = window.__DEECADENCE_ACCOUNT__;
@@ -448,7 +600,9 @@
   function requestProfile(force) {
     if (awaitingProfile && !force) return;
     awaitingProfile = true;
-    message("Almost there. Add your name and a couple of account details to finish the first cloud save.", "info");
+    message(profileComplete(readLocalState())
+      ? "Update your name and account details. They are saved with your synced progress."
+      : "Almost there. Add your name and a couple of account details to finish the first cloud save.", "info");
     var detail = { email: user ? user.email : "", device: deviceLabel() };
     var bridge = window.__DEECADENCE_ACCOUNT__;
     if (bridge && typeof bridge.openSetup === "function") {
@@ -506,6 +660,7 @@
       user = nextUser;
       if (user) {
         clearPendingSignIn();
+        clearSignInCooldown();
         if (changed) {
           conflict = null;
           if (conflictBox) conflictBox.hidden = true;
@@ -591,7 +746,7 @@
           return;
         }
         if (isMissingCloudSetup(error)) {
-          message("Cloud sync needs the updated Supabase setup. Your work is saved on this device.", "error");
+          reportCloudSetupIssue(error);
           return;
         }
         message("Signed in. Cloud sync is unavailable right now; your work stays saved here and will retry automatically.", "info");
@@ -646,7 +801,7 @@
     });
     // A completed local profile is newer than an older cloud snapshot that
     // predates the profile step. Keep it and let the next save upload it.
-    if (!profileName(next) && profileName(local)) next.accountProfile = local.accountProfile;
+    if (!profileComplete(next) && profileComplete(local)) next.accountProfile = local.accountProfile;
     var debug = window.__DEECADENCE_DEBUG__;
     if (!debug || !debug.applySyncedState || !debug.applySyncedState(next)) {
       throw new Error("Could not apply the cloud copy.");
@@ -700,7 +855,7 @@
       lastHash = localHash;
 
       if (!remote) {
-        if (!profileName(local)) {
+        if (!profileComplete(local)) {
           requestProfile();
           return;
         }
@@ -713,7 +868,7 @@
       var remoteHash = await hash(snapshot(remote.payload || {}));
       if (remoteHash === localHash) {
         saveMeta(remote, localHash);
-        if (!profileName(local)) {
+        if (!profileComplete(local)) {
           requestProfile();
           return;
         }
@@ -724,23 +879,23 @@
       if (!meta) {
         if (!hasData(local)) {
           await applyCloud(remote);
-          if (!profileName(readLocalState())) requestProfile();
+          if (!profileComplete(readLocalState())) requestProfile();
           return;
         }
         if (hasData(remote.payload)) {
-          if (!profileName(local) && !profileFromRow(remote)) {
+          if (!profileComplete(local) && !profileFromRow(remote)) {
             requestProfile();
             return;
           }
           showConflict(remote);
           return;
         }
-        if (!profileName(local)) {
+        if (!profileComplete(local)) {
           if (await copyProfileFromRow(remote)) {
             local = snapshot(readLocalState());
             localHash = await hash(local);
           }
-          if (!profileName(local)) {
+          if (!profileComplete(local)) {
             requestProfile();
             return;
           }
@@ -755,7 +910,7 @@
       var localChanged = localHash !== meta.hash;
       var remoteChanged = Number(remote.revision) !== Number(meta.revision) || remoteHash !== meta.hash;
       if (localChanged && remoteChanged) {
-        if (!profileName(local) && !profileFromRow(remote)) {
+        if (!profileComplete(local) && !profileFromRow(remote)) {
           requestProfile();
           return;
         }
@@ -764,16 +919,16 @@
       }
       if (remoteChanged && !localChanged) {
         await applyCloud(remote);
-        if (!profileName(readLocalState())) requestProfile();
+        if (!profileComplete(readLocalState())) requestProfile();
         return;
       }
       if (localChanged) {
-        if (!profileName(local)) {
+        if (!profileComplete(local)) {
           if (await copyProfileFromRow(remote)) {
             local = snapshot(readLocalState());
             localHash = await hash(local);
           }
-          if (!profileName(local)) {
+          if (!profileComplete(local)) {
             requestProfile();
             return;
           }
@@ -785,7 +940,7 @@
         return;
       }
       saveMeta(remote, localHash);
-      if (!profileName(local)) {
+      if (!profileComplete(local)) {
         requestProfile();
         return;
       }
@@ -796,7 +951,7 @@
         return;
       }
       if (isMissingCloudSetup(error)) {
-        message("Cloud sync needs the updated Supabase setup. Your work is saved on this device.", "error");
+        reportCloudSetupIssue(error);
         return;
       }
       message(error && error.message ? error.message : "Sync failed. Your local copy is still available.", "error");
@@ -813,12 +968,12 @@
     try {
       var local = snapshot(readLocalState());
       var localHash = await hash(local);
-      if (!profileName(local)) {
+      if (!profileComplete(local)) {
         if (await copyProfileFromRow(conflict)) {
           local = snapshot(readLocalState());
           localHash = await hash(local);
         }
-        if (!profileName(local)) {
+        if (!profileComplete(local)) {
           requestProfile();
           return;
         }
@@ -838,7 +993,7 @@
         return;
       }
       if (isMissingCloudSetup(error)) {
-        message("Cloud sync needs the updated Supabase setup. Your work is saved on this device.", "error");
+        reportCloudSetupIssue(error);
         return;
       }
       message(error.message || "Could not save this device.", "error");
@@ -869,7 +1024,7 @@
         return;
       }
       if (isMissingCloudSetup(error)) {
-        message("Cloud sync needs the updated Supabase setup. Your work is saved on this device.", "error");
+        reportCloudSetupIssue(error);
         return;
       }
       message(error.message || "Could not use this device.", "error");
@@ -895,7 +1050,7 @@
         return;
       }
       if (isMissingCloudSetup(error)) {
-        message("Cloud sync needs the updated Supabase setup. Your work is saved on this device.", "error");
+        reportCloudSetupIssue(error);
         return;
       }
       if (force) message(error.message || "Could not check the account device. Local work is safe.", "error");
@@ -910,6 +1065,7 @@
     conflict = null;
     if (conflictBox) conflictBox.hidden = true;
     closeSetupModal();
+    clearSignInCooldown();
     lastHash = "";
     lastActivationUserId = "";
     lastMetadataSignature = "";
@@ -951,6 +1107,7 @@
       lastActivationUserId = "";
       lastMetadataSignature = "";
       resetLearningUploadState();
+      clearSignInCooldown();
       authNotice = "";
       message("Signed out. Your work is still saved on this device.", "success");
     } catch (error) {
@@ -966,6 +1123,11 @@
     if (busy || activating) return;
     if (location.protocol === "file:") {
       message("Cloud backup needs the website or localhost. Your progress remains saved on this device.", "info");
+      return;
+    }
+    if (signInCooldownActive()) {
+      syncCooldownUI();
+      message("A sign-in link was already sent. Check your inbox.", "info");
       return;
     }
     var address = email ? String(email.value || "").trim() : "";
@@ -989,9 +1151,57 @@
       });
       if (result.error) throw result.error;
       rememberPendingSignIn(address);
-      message("Check your email for a sign-in link. Open it on the device where you want to use DeeCadence; your saved work remains safe.", "success");
+      beginSignInCooldown(60, address);
+      message("Check your email. Open the link on this device to finish signing in.", "success");
     } catch (error) {
-      message(error.message || "Could not send a sign-in link.", "error");
+      try { console.warn("DeeCadence sign-in request failed:", error && (error.message || error)); } catch (_) {}
+      var wait = signInRateLimitSeconds(error);
+      if (wait) {
+        beginSignInCooldown(wait, address);
+        message("A sign-in link was already sent. Check your inbox.", "info");
+      } else {
+        message("Could not send a sign-in link. Try again in a moment.", "error");
+      }
+    } finally {
+      busy = false;
+      render();
+    }
+  }
+
+  async function verifySignInCode(event) {
+    if (event) event.preventDefault();
+    if (busy || activating) return;
+    if (location.protocol === "file:") {
+      message("Cloud backup needs the website or localhost. Your progress remains saved on this device.", "info");
+      return;
+    }
+    var address = email ? String(email.value || "").trim() : "";
+    var code = codeInput ? String(codeInput.value || "").replace(/\D/g, "").slice(0, 6) : "";
+    if (!address) {
+      if (email) email.focus();
+      message("Enter the email address for your account.", "error");
+      return;
+    }
+    if (code.length !== 6) {
+      if (codeInput) codeInput.focus();
+      message("Enter the 6-digit code from your email.", "error");
+      return;
+    }
+    busy = true;
+    render();
+    message("Checking your code...", "info");
+    try {
+      await loadSdk();
+      initClient();
+      bindAuthListener();
+      var result = await client.auth.verifyOtp({ email: address, token: code, type: "email" });
+      if (result.error) throw result.error;
+      clearPendingSignIn();
+      if (codeInput) codeInput.value = "";
+      message("Signed in. Checking your cloud backup...", "success");
+    } catch (error) {
+      try { console.warn("DeeCadence code verification failed:", error && (error.message || error)); } catch (_) {}
+      message("That code is incorrect or expired. Request a new link and try again.", "error");
     } finally {
       busy = false;
       render();
@@ -1044,12 +1254,19 @@
   }
 
   if (form) form.addEventListener("submit", signIn);
+  if (codeForm) codeForm.addEventListener("submit", verifySignInCode);
+  if (codeInput) codeInput.addEventListener("input", function () {
+    codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 6);
+  });
   if (syncButton) syncButton.addEventListener("click", function () {
     if (deviceLocked) {
       message("This account is active on another device. Use this device instead to move it here.", "conflict");
       return;
     }
     verifyDeviceThenSync(true);
+  });
+  if (profileButton) profileButton.addEventListener("click", function () {
+    requestProfile(true);
   });
   if (outButton) outButton.addEventListener("click", signOutCurrentDevice);
   if (cloudButton) cloudButton.addEventListener("click", async function () {
@@ -1058,7 +1275,7 @@
     render();
     try {
       await applyCloud(conflict);
-      if (!profileName(readLocalState())) requestProfile();
+      if (!profileComplete(readLocalState())) requestProfile();
     } catch (error) {
       message(error.message || "Could not apply the cloud copy.", "error");
     } finally {
@@ -1142,6 +1359,7 @@
     uploadLearningEvents(false);
   }, 60000);
 
+  restoreSignInCooldown();
   render();
   start();
 }());

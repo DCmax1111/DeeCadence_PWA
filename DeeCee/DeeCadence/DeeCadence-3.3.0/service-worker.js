@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "deecadence-v3-3-37";
+﻿const CACHE_NAME = "deecadence-v3-3-39";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -32,7 +32,12 @@ const CORE_FILES = new Set([
 ]);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  // One missing asset must not block the whole updated shell from installing.
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(APP_SHELL.map((url) => cache.add(url)))
+    )
+  );
   self.skipWaiting();
 });
 
@@ -70,7 +75,11 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() =>
-          caches.match(event.request).then((cached) => cached || caches.match("./index.html"))
+          caches.match(event.request).then((cached) =>
+            cached || (event.request.mode === "navigate"
+              ? caches.match("./index.html")
+              : new Response("", { status: 404, statusText: "Not found" }))
+          )
         )
     );
     return;
@@ -91,7 +100,11 @@ self.addEventListener("fetch", (event) => {
 
       if (cached) return cached;
 
-      return networkUpdate.then((result) => result || caches.match("./index.html"));
+      return networkUpdate.then((result) =>
+        result || (event.request.mode === "navigate"
+          ? caches.match("./index.html")
+          : new Response("", { status: 404, statusText: "Not found" }))
+      );
     })
   );
 });

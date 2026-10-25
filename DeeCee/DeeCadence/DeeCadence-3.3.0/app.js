@@ -30,7 +30,7 @@
   var SUPABASE_URL = (document.querySelector('meta[name="deecadence-supabase-url"]') || {}).content || "";
   var SUPABASE_ANON_KEY = (document.querySelector('meta[name="deecadence-supabase-anon-key"]') || {}).content || "";
   var FEEDBACK_TABLE = (document.querySelector('meta[name="deecadence-feedback-table"]') || {}).content || "feedbacks";
-  var REFERENCE_BENCHMARK = { score: 70, label: "DeeCadence calibration marker", version: "calibration-2026" };
+  var REFERENCE_BENCHMARK = { score: 70, label: "DeeCadence reference marker", version: "reference-2026" };
   var XP_PER_FOCUS_MINUTE = 1;
   var XP_MANUAL_DONE_RATE = 0.25;
   var XP_SESSION_BONUS_RATE = 0.1;
@@ -494,7 +494,7 @@
     if (attempt && typeof attempt.then === "function") {
       attempt.then(markAmbientStarted).catch(function (error) {
         console.warn("Ambient audio did not start:", error && error.name, error && error.message);
-        showToast("Ambient sound paused. Tap anywhere to restart it.");
+        showToast("Ambient sound could not start. Tap the sound button to retry.");
       });
     } else {
       markAmbientStarted();
@@ -528,8 +528,12 @@
     }
     saveState();
     syncAmbientPlayback();
-    if (brownNoiseEnabled && !isFocusRunning() && !(options && options.quiet)) {
-      showToast("Ambient sound is on. It will start with your next focus block.");
+    if (!(options && (options.quiet || options.silent)) && !(options && options.change)) {
+      if (brownNoiseEnabled) {
+        showToast(isFocusRunning() ? "Ambient sound on" : "Ambient sound on. It will start with your next focus block.");
+      } else {
+        showToast("Ambient sound off");
+      }
     }
     syncAmbientUI();
   }
@@ -641,9 +645,13 @@
     var toggle = document.getElementById("focusNoiseToggle");
     if (toggle) {
       toggle.classList.toggle("active", brownNoiseEnabled);
+      toggle.classList.toggle("is-waiting", brownNoiseEnabled && !running);
+      toggle.setAttribute("data-state", brownNoiseEnabled ? "on" : "off");
       toggle.setAttribute("aria-pressed", String(brownNoiseEnabled));
       toggle.setAttribute("aria-label", brownNoiseEnabled ? "Turn ambient sound off" : "Turn ambient sound on");
       toggle.setAttribute("title", brownNoiseEnabled ? (running ? "Ambient sound playing - turn off" : "Ambient sound on - starts with a running block") : "Turn ambient sound on");
+      var stateLabel = document.getElementById("focusNoiseState");
+      if (stateLabel) stateLabel.textContent = brownNoiseEnabled ? "On" : "Off";
     }
     Array.prototype.forEach.call(document.querySelectorAll("#focusNoiseMenu [data-noise-sound]"), function (button) {
       var active = button.getAttribute("data-noise-sound") === current;
@@ -4075,10 +4083,10 @@
           '<div><span>Starting score</span><strong>' + (state.baselineScore == null ? "-" : state.baselineScore) + '</strong></div>' +
           '<div><span>Latest score</span><strong>' + (latest ? latest.score : "-") + '</strong></div>' +
           '<div><span>From baseline</span><strong>' + (baselineDelta == null ? "-" : (baselineDelta >= 0 ? "+" : "") + baselineDelta) + '</strong></div>' +
-          '<div><span>Calibration guide</span><strong>' + REFERENCE_BENCHMARK.score + '</strong></div>' +
+          '<div><span>Reference score</span><strong>' + REFERENCE_BENCHMARK.score + '</strong></div>' +
           '<div><span>Personal best</span><strong>' + (best == null ? "-" : best) + '</strong></div>' +
         '</div>' +
-        '<p class="benchmark-disclaimer">This calibration guide is not a population norm or diagnosis. Compare your own checks under similar conditions.</p>' +
+        '<p class="benchmark-disclaimer">This reference score is not a population norm or diagnosis. Compare your own checks under similar conditions.</p>' +
       '</section>';
     renderPersonalSetup();
     wireProgressChart(days);
@@ -4603,7 +4611,7 @@
       var minutes = cap >= 75 ? 5 : cap >= 60 ? 7 : 10;
       openStartModal(null, minutes);
       prefillStartModalFromWelcome();
-      showToast("Calibration block: " + minutes + " minutes. Go at your own pace.");
+      showToast("First focus block: " + minutes + " minutes. Go at your own pace.");
       return;
     }
     switchView("today");
@@ -6294,7 +6302,7 @@
   }
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator && typeof location !== "undefined" && location.protocol !== "file:") {
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("./service-worker.js").catch(function () {});
+      navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" }).catch(function () {});
     });
   }
   try {
