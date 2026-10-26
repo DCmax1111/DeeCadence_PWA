@@ -71,7 +71,7 @@ select * from public.deecadence_accounts order by last_sign_in_at desc nulls las
 
 The authoritative sign-in list is still **Authentication → Users** in the Supabase dashboard (or `auth.users` in SQL). `deecadence_sync_devices` only shows the account UUID, device label, and claim timestamps; `deecadence_profiles` only has a row after the first successful sync snapshot.
 
-Only one device can be active for an account. A second device signs in, sees which device currently holds the account, and can choose **Use this device instead**. The previous device signs out locally on its next check but keeps its local work, so it can take the account back later. Normal sign-out releases the device claim. If a claim or save is interrupted, the app continues locally and retries; it does not discard local data.
+Only one device can be active for an account. A second device signs in, sees which device currently holds the account, and can choose **Use this device instead**. The previous device signs out locally on its next check but keeps its local work, so it can take the account back later. Normal sign-out releases the device claim. If the release or Supabase call stalls, this device still signs out locally and clears its stored session; the device claim can be recovered later with **Use this device instead**. If a claim or save is interrupted, the app continues locally and retries; it does not discard local data.
 
 Feedback delivery currently uses WhatsApp and email. The `deecadence-supabase-*` feedback tags remain empty until the Supabase feedback table exists and includes `sender_name`, so feedback is not silently routed to a missing table.
 

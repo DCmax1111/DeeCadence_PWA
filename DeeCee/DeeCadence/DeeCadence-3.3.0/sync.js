@@ -26,7 +26,7 @@
   var switchingUser = false, authRefreshPromise = null, lastAuthRefreshAt = 0;
   var learningUploadTimer = null, learningUploadPromise = null, lastLearningUploadAttemptAt = 0;
   var signInCooldownTimer = null, signInCooldownUntil = 0, signInCooldownEmail = "", signInCooldownOwnsStatus = false;
-  var autoRetryTimer = null, autoRetryAttempt = 0;
+  var autoRetryTimer = null, autoRetryAttempt = 0, signingOut = false;
   var status = document.getElementById("syncStatus");
   var form = document.getElementById("syncSignInForm");
   var signedOutCopy = document.getElementById("syncSignedOutCopy");
@@ -222,7 +222,7 @@
   // A signed-in user should not have to press "Sync now" after a transient
   // failure. Retry with a short backoff, capped at the normal refresh window.
   function scheduleAutoRetry() {
-    if (autoRetryTimer || conflict || !user || !client || !navigator.onLine || deviceLocked || awaitingProfile) return;
+    if (autoRetryTimer || conflict || signingOut || !user || !client || !navigator.onLine || deviceLocked || awaitingProfile) return;
     var delay = Math.min(AUTO_RETRY_MAX_MS, AUTO_RETRY_BASE_MS * Math.pow(2, autoRetryAttempt));
     autoRetryAttempt = Math.min(autoRetryAttempt + 1, 6);
     autoRetryTimer = window.setTimeout(function () {
@@ -249,11 +249,16 @@
     if (signedInCopy) signedInCopy.hidden = !signed;
     if (accountEmail) accountEmail.textContent = signed ? user.email : "";
     if (deviceLock) deviceLock.hidden = !(signed && deviceLocked);
-    var disabled = busy || activating;
-    [signInButton, codeButton, syncButton, profileButton, outButton, cloudButton, deviceButton, useDeviceButton].forEach(function (button) {
+    var disabled = busy || activating || signingOut;
+    [signInButton, codeButton, syncButton, profileButton, cloudButton, deviceButton, useDeviceButton].forEach(function (button) {
       if (button) button.disabled = disabled;
     });
     if (syncButton) syncButton.disabled = disabled || deviceLocked;
+    // Signing out must remain available even while a background sync is running.
+    if (outButton) {
+      outButton.disabled = signingOut;
+      outButton.textContent = signingOut ? "Signing out…" : "Sign out";
+    }
     syncCooldownUI();
   }
 
@@ -396,6 +401,7 @@
   }
 
   function adoptAuthUser(nextUser, event) {
+    if (signingOut && nextUser) return;
     var nextId = nextUser ? nextUser.id : "";
     var previousId = user ? user.id : "";
     var changed = nextId !== previousId;
@@ -429,6 +435,7 @@
   }
 
   async function refreshAuthFromSession() {
+    if (signingOut) return false;
     if (authRefreshPromise) return authRefreshPromise;
     authRefreshPromise = (async function () {
       try {
@@ -629,7 +636,7 @@
   }
 
   function uploadLearningEvents(force) {
-    if (!user || !client || !deviceClaimed || deviceLocked || !navigator.onLine) {
+    if (!user || !client || !deviceClaimed || deviceLocked || !navigator.onLine || signingOut) {
       return Promise.resolve(false);
     }
     if (learningUploadPromise) return learningUploadPromise;
@@ -646,7 +653,7 @@
         for (var i = 0; i < pending.length; i += LEARNING_BATCH_SIZE) {
           // Do not let a sign-out, account switch, or device takeover send
           // events recorded under one account into another session.
-          if (!user || user.id !== targetUserId || getDeviceId() !== targetDeviceId) return false;
+          if (!user || user.id !== targetUserId || getDeviceId() !== targetDeviceId || signingOut) return false;
           var batch = pending.slice(i, i + LEARNING_BATCH_SIZE);
           var result = await client.rpc("deecadence_ingest_learning_events", {
             p_device_id: targetDeviceId,
@@ -674,7 +681,7 @@
   }
 
   function scheduleLearningUpload() {
-    if (!user || !client || !deviceClaimed || deviceLocked || !navigator.onLine) return;
+    if (!user || !client || !deviceClaimed || deviceLocked || !navigator.onLine || signingOut) return;
     if (learningUploadTimer) window.clearTimeout(learningUploadTimer);
     learningUploadTimer = window.setTimeout(function () {
       learningUploadTimer = null;
@@ -788,6 +795,7 @@
   }
 
   function requestProfile(force) {
+    if (signingOut) return;
     if (awaitingProfile && !force) return;
     resetAutoRetry();
     awaitingProfile = true;
@@ -817,7 +825,8 @@
   // Keep the Supabase user record readable in the dashboard. The synced state
   // remains the source of truth; this is a small, non-blocking metadata copy.
   function syncProfileMetadata() {
-    if (!client || !user) return Promise.resolve(false);
+    if (!client || !user || signingOut) return Promise.resolve(false);
+    var targetId = user.id;
     var local = readLocalState();
     var profile = local.accountProfile && typeof local.accountProfile === "object" ? local.accountProfile : {};
     var name = String(profile.name || "").trim().slice(0, 60);
@@ -836,6 +845,7 @@
       }
     }).then(function (result) {
       if (result.error) throw result.error;
+      if (signingOut || !user || user.id !== targetId) return false;
       lastMetadataSignature = signature;
       return true;
     }).catch(function () {
@@ -852,12 +862,12 @@
   }
 
   function queueActivation() {
-    if (!user || !client) return;
+    if (!user || !client || signingOut) return;
     window.setTimeout(function () { activateAccount(); }, 0);
   }
 
   function activateAccount() {
-    if (!user || !client) return Promise.resolve();
+    if (!user || !client || signingOut) return Promise.resolve();
     if (activationPromise) {
       if (lastActivationUserId === user.id) return activationPromise;
       // The account changed while a check was running. Let the old check
@@ -877,7 +887,12 @@
       render();
       try {
         var claim = await claimDevice(false);
-        if (!user || user.id !== targetId || activationPromise !== run) return;
+        if (!user || user.id !== targetId || activationPromise !== run || signingOut) {
+          if (signingOut) {
+            try { await withTimeout(releaseDevice(), 2000); } catch (_) {}
+          }
+          return;
+        }
         lastDeviceCheckAt = Date.now();
         if (!claim || !claim.claimed) {
           deviceClaimed = false;
@@ -896,7 +911,7 @@
         await synchronize(true);
         uploadLearningEvents(true);
       } catch (error) {
-        if (!user || user.id !== targetId || activationPromise !== run) return;
+        if (!user || user.id !== targetId || activationPromise !== run || signingOut) return;
         deviceClaimed = false;
         if (isDeviceError(error)) {
           resetAutoRetry();
@@ -950,6 +965,7 @@
   }
 
   async function applyCloud(row) {
+    if (signingOut) return;
     var local = readLocalState();
     try {
       localStorage.setItem(storageKey + "_before_cloud", JSON.stringify({
@@ -959,6 +975,7 @@
       }));
     } catch (_) {}
     var remoteHash = await hash(snapshot(row.payload || {}));
+    if (signingOut) return;
     var next = Object.assign({}, row.payload || {}, {
       session: local.session || null,
       feedbackOutbox: local.feedbackOutbox || []
@@ -970,6 +987,7 @@
     if (!debug || !debug.applySyncedState || !debug.applySyncedState(next)) {
       throw new Error("Could not apply the cloud copy.");
     }
+    if (signingOut) return;
     if (profileName(readLocalState())) syncProfileMetadata();
     saveMeta(row, remoteHash);
     lastHash = remoteHash;
@@ -980,7 +998,7 @@
   }
 
   function saveSucceeded(row, valueHash) {
-    if (!row) return false;
+    if (!row || signingOut) return false;
     saveMeta(row, valueHash);
     lastHash = valueHash;
     resetAutoRetry();
@@ -988,8 +1006,13 @@
     return true;
   }
 
+  function syncStillCurrent(id) {
+    return Boolean(user && user.id === id && !signingOut);
+  }
+
   async function synchronize(force) {
-    if (!user || !client || busy) return;
+    if (!user || !client || busy || signingOut) return;
+    var targetId = user.id;
     if (deviceLocked) {
       if (force) message("This account is active on another device. Use this device instead to move it here.", "conflict");
       return;
@@ -1011,9 +1034,11 @@
     try {
       var local = snapshot(readLocalState());
       var localHash = await hash(local);
+      if (!syncStillCurrent(targetId)) return;
       if (!force && localHash === lastHash) return;
       var meta = readMeta();
       var remote = await readRemote();
+      if (!syncStillCurrent(targetId)) return;
       lastRemoteCheckAt = Date.now();
 
       if (!remote) {
@@ -1022,12 +1047,15 @@
           return;
         }
         var firstSave = await push(local, 0);
+        if (!syncStillCurrent(targetId)) return;
         if (saveSucceeded(firstSave, localHash)) return;
         remote = await readRemote();
+        if (!syncStillCurrent(targetId)) return;
         if (!remote) throw new Error("The first cloud save did not complete. DeeCadence will retry automatically.");
       }
 
       var remoteHash = await hash(snapshot(remote.payload || {}));
+      if (!syncStillCurrent(targetId)) return;
       if (remoteHash === localHash) {
         saveMeta(remote, localHash);
         lastHash = localHash;
@@ -1043,6 +1071,7 @@
       if (!meta) {
         if (!hasData(local)) {
           await applyCloud(remote);
+          if (!syncStillCurrent(targetId)) return;
           if (!profileComplete(readLocalState())) requestProfile();
           return;
         }
@@ -1055,7 +1084,9 @@
           return;
         }
         if (!profileComplete(local)) {
-          if (await copyProfileFromRow(remote)) {
+          var copied = await copyProfileFromRow(remote);
+          if (!syncStillCurrent(targetId)) return;
+          if (copied) {
             local = snapshot(readLocalState());
             localHash = await hash(local);
           }
@@ -1065,8 +1096,10 @@
           }
         }
         var firstMerge = await push(local, Number(remote.revision));
+        if (!syncStillCurrent(targetId)) return;
         if (saveSucceeded(firstMerge, localHash)) return;
         remote = await readRemote();
+        if (!syncStillCurrent(targetId)) return;
         if (remote) showConflict(remote);
         return;
       }
@@ -1083,12 +1116,15 @@
       }
       if (remoteChanged && !localChanged) {
         await applyCloud(remote);
+        if (!syncStillCurrent(targetId)) return;
         if (!profileComplete(readLocalState())) requestProfile();
         return;
       }
       if (localChanged) {
         if (!profileComplete(local)) {
-          if (await copyProfileFromRow(remote)) {
+          var copiedLocal = await copyProfileFromRow(remote);
+          if (!syncStillCurrent(targetId)) return;
+          if (copiedLocal) {
             local = snapshot(readLocalState());
             localHash = await hash(local);
           }
@@ -1098,11 +1134,14 @@
           }
         }
         var saved = await push(local, Number(remote.revision));
+        if (!syncStillCurrent(targetId)) return;
         if (saveSucceeded(saved, localHash)) return;
         remote = await readRemote();
+        if (!syncStillCurrent(targetId)) return;
         if (remote) showConflict(remote);
         return;
       }
+      if (!syncStillCurrent(targetId)) return;
       saveMeta(remote, localHash);
       lastHash = localHash;
       resetAutoRetry();
@@ -1112,6 +1151,7 @@
       }
       message("Up to date. This device and the cloud copy match.", "success");
     } catch (error) {
+      if (signingOut) return;
       if (isDeviceError(error)) {
         resetAutoRetry();
         await revokeLocalSession();
@@ -1132,25 +1172,33 @@
   }
 
   async function keepDevice() {
-    if (!conflict || busy || deviceLocked) return;
+    if (!conflict || busy || deviceLocked || signingOut || !user) return;
+    var targetId = user.id;
     busy = true;
     render();
     try {
       var local = snapshot(readLocalState());
       var localHash = await hash(local);
+      if (!syncStillCurrent(targetId)) return;
       if (!profileComplete(local)) {
-        if (await copyProfileFromRow(conflict)) {
+        var copied = await copyProfileFromRow(conflict);
+        if (!syncStillCurrent(targetId)) return;
+        if (copied) {
           local = snapshot(readLocalState());
           localHash = await hash(local);
+          if (!syncStillCurrent(targetId)) return;
         }
         if (!profileComplete(local)) {
           requestProfile();
           return;
         }
       }
+      if (!syncStillCurrent(targetId)) return;
       var saved = await push(local, Number(conflict.revision));
+      if (!syncStillCurrent(targetId)) return;
       if (!saved) {
         var latest = await readRemote();
+        if (!syncStillCurrent(targetId)) return;
         if (latest) showConflict(latest);
         return;
       }
@@ -1158,6 +1206,7 @@
       if (conflictBox) conflictBox.hidden = true;
       saveSucceeded(saved, localHash);
     } catch (error) {
+      if (signingOut) return;
       if (isDeviceError(error)) {
         resetAutoRetry();
         await revokeLocalSession();
@@ -1178,11 +1227,18 @@
   }
 
   async function useThisDevice() {
-    if (!user || !client || busy || activating) return;
+    if (!user || !client || busy || activating || signingOut) return;
+    var targetId = user.id;
     activating = true;
     render();
     try {
       var claim = await claimDevice(true);
+      if (!syncStillCurrent(targetId)) {
+        if (signingOut) {
+          try { await withTimeout(releaseDevice(), 2000); } catch (_) {}
+        }
+        return;
+      }
       if (!claim || !claim.claimed) throw new Error("Could not move the account to this device.");
       deviceClaimed = true;
       deviceLocked = false;
@@ -1191,8 +1247,10 @@
       message("This device is now active. Checking your cloud backup...", "info");
       render();
       await synchronize(true);
+      if (!syncStillCurrent(targetId)) return;
       uploadLearningEvents(true);
     } catch (error) {
+      if (signingOut) return;
       if (isDeviceError(error)) {
         resetAutoRetry();
         await revokeLocalSession();
@@ -1213,16 +1271,19 @@
   }
 
   async function verifyDeviceThenSync(force) {
-    if (!user || !client || deviceLocked || busy || activating) return;
+    if (!user || !client || deviceLocked || busy || activating || signingOut) return;
+    var targetId = user.id;
     if (!deviceClaimed) {
       await activateAccount();
       return;
     }
     try {
       var active = await verifyActiveDevice();
+      if (!syncStillCurrent(targetId)) return;
       if (!active) return;
       await synchronize(force);
     } catch (error) {
+      if (signingOut) return;
       if (isDeviceError(error)) {
         resetAutoRetry();
         await revokeLocalSession();
@@ -1262,50 +1323,113 @@
     authNotice = "";
   }
 
+  function clearLocalAuthSession() {
+    try {
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i += 1) {
+        var key = localStorage.key(i) || "";
+        if (key === "supabase.auth.token" || (key.indexOf("sb-") === 0 && key.indexOf("auth-token") > -1)) {
+          keys.push(key);
+        }
+      }
+      keys.forEach(function (key) { localStorage.removeItem(key); });
+    } catch (_) {}
+  }
+
+  function completeLocalSignOut() {
+    user = null;
+    resetAccountRuntime();
+    closeSetupModal();
+    clearSignInCooldown();
+    clearPendingSignIn();
+    authNotice = "";
+  }
+
+  function withTimeout(promise, ms) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = window.setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        resolve({ timedOut: true });
+      }, ms);
+      promise.then(function (value) {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        resolve(value);
+      }, function (error) {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        reject(error);
+      });
+    });
+  }
+
+  function waitForIdle(maxMs) {
+    var started = Date.now();
+    return new Promise(function (resolve) {
+      function check() {
+        if (!busy && !activating) {
+          resolve();
+          return;
+        }
+        if (Date.now() - started >= maxMs) {
+          resolve();
+          return;
+        }
+        window.setTimeout(check, 100);
+      }
+      check();
+    });
+  }
+
   async function signOutCurrentDevice() {
-    if (!client) {
+    if (signingOut) return;
+    if (!client && !user) {
       message("Cloud sign-in is not ready yet. Try again in a moment.", "info");
       return;
     }
-    if (busy || activating) {
-      message("Finishing the current account check. Try again in a moment.", "info");
-      return;
-    }
-    busy = true;
+    signingOut = true;
+    message("Signing out...", "info");
     render();
     try {
+      // Let an in-flight sync settle, but never let it block sign-out forever.
+      await waitForIdle(1500);
       if (user) {
-        try { await releaseDevice(); } catch (_) {}
+        try { await withTimeout(releaseDevice(), 2500); } catch (_) {}
       }
-      var result = await client.auth.signOut({ scope: "local" });
-      if (result.error) throw result.error;
-      user = null;
-      deviceLocked = false;
-      deviceClaimed = false;
-      awaitingProfile = false;
-      conflict = null;
-      if (conflictBox) conflictBox.hidden = true;
-      closeSetupModal();
-      lastHash = "";
-      lastActivationUserId = "";
-      lastMetadataSignature = "";
-      resetAutoRetry();
-      resetLearningUploadState();
-      clearSignInCooldown();
-      authNotice = "";
+      if (client) {
+        var result = await withTimeout(client.auth.signOut({ scope: "local" }), 4000);
+        if (result && result.timedOut) throw new Error("Sign-out timed out");
+        if (result && result.error) throw result.error;
+      } else {
+        clearLocalAuthSession();
+      }
+      completeLocalSignOut();
       message("Signed out. Your work is still saved on this device.", "success");
     } catch (error) {
       try { console.warn("DeeCadence sign-out failed:", error); } catch (_) {}
-      message("Could not sign out. Try again in a moment.", "error");
+      // Local-only sign-out is the important part. If the SDK or network
+      // stalls, remove the stored session so this device is actually signed out.
+      try {
+        if (client && client.auth && typeof client.auth.stopAutoRefresh === "function") {
+          client.auth.stopAutoRefresh();
+        }
+      } catch (_) {}
+      clearLocalAuthSession();
+      completeLocalSignOut();
+      message("Signed out on this device. Your local work is still saved.", "success");
     } finally {
-      busy = false;
+      signingOut = false;
       render();
     }
   }
 
   async function signIn(event) {
     event.preventDefault();
-    if (busy || activating) return;
+    if (busy || activating || signingOut) return;
     if (location.protocol === "file:") {
       message("Cloud backup needs the website or localhost. Your progress remains saved on this device.", "info");
       return;
@@ -1355,7 +1479,7 @@
 
   async function verifySignInCode(event) {
     if (event) event.preventDefault();
-    if (busy || activating) return;
+    if (busy || activating || signingOut) return;
     if (location.protocol === "file:") {
       message("Cloud backup needs the website or localhost. Your progress remains saved on this device.", "info");
       return;
@@ -1400,6 +1524,7 @@
   }
 
   function start() {
+    if (signingOut) return Promise.resolve();
     if (startPromise) return startPromise;
     startPromise = (async function () {
       if (!projectUrl || !publishableKey) {
@@ -1463,7 +1588,7 @@
   });
   if (outButton) outButton.addEventListener("click", signOutCurrentDevice);
   if (cloudButton) cloudButton.addEventListener("click", async function () {
-    if (!conflict || busy) return;
+    if (!conflict || busy || signingOut) return;
     busy = true;
     render();
     try {
@@ -1480,7 +1605,7 @@
   if (useDeviceButton) useDeviceButton.addEventListener("click", useThisDevice);
 
   window.addEventListener("deecadence:local-save", function () {
-    if (!user || switchingUser || timer || deviceLocked || awaitingProfile) return;
+    if (!user || switchingUser || timer || deviceLocked || awaitingProfile || signingOut) return;
     timer = window.setTimeout(function () {
       timer = null;
       synchronize(false);
@@ -1490,6 +1615,7 @@
   window.addEventListener("deecadence:learning-event", scheduleLearningUpload);
 
   window.addEventListener("deecadence:account-profile-saved", function () {
+    if (signingOut) return;
     awaitingProfile = false;
     resetAutoRetry();
     if (timer) {
@@ -1506,6 +1632,7 @@
   });
 
   window.addEventListener("online", function () {
+    if (signingOut) return;
     resetAutoRetry();
     if (!client) {
       start();
@@ -1529,7 +1656,7 @@
     if (shouldRefresh) lastAuthRefreshAt = now;
     var refresh = shouldRefresh ? refreshAuthFromSession() : Promise.resolve(false);
     refresh.then(function (changed) {
-      if (changed || !user || !client || deviceLocked) return;
+      if (changed || signingOut || !user || !client || deviceLocked) return;
       if (now - lastFocusSyncAt < FOCUS_SYNC_MS) return;
       lastFocusSyncAt = now;
       if (!deviceClaimed || !lastDeviceCheckAt) {
@@ -1545,11 +1672,11 @@
   });
 
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible" || signingOut) return;
     lastAuthRefreshAt = Date.now();
     resetAutoRetry();
     refreshAuthFromSession().then(function (changed) {
-      if (changed || !user || !client || deviceLocked || awaitingProfile || !navigator.onLine) return;
+      if (changed || signingOut || !user || !client || deviceLocked || awaitingProfile || !navigator.onLine) return;
       if (!deviceClaimed || !lastDeviceCheckAt) {
         activateAccount();
         return;
@@ -1559,10 +1686,10 @@
   });
 
   window.addEventListener("pageshow", function (event) {
-    if (!event.persisted) return;
+    if (!event.persisted || signingOut) return;
     resetAutoRetry();
     refreshAuthFromSession().then(function (changed) {
-      if (changed || !user || !client || deviceLocked || awaitingProfile || !navigator.onLine) return;
+      if (changed || signingOut || !user || !client || deviceLocked || awaitingProfile || !navigator.onLine) return;
       if (!deviceClaimed || !lastDeviceCheckAt) {
         activateAccount();
         return;
@@ -1580,7 +1707,7 @@
 
   window.setInterval(async function () {
     var changed = await refreshAuthFromSession();
-    if (changed || !user || !client || !navigator.onLine || deviceLocked || awaitingProfile) return;
+    if (changed || signingOut || !user || !client || !navigator.onLine || deviceLocked || awaitingProfile) return;
     var now = Date.now();
     if (!deviceClaimed || !lastDeviceCheckAt) {
       if (!lastActivationAttemptAt || now - lastActivationAttemptAt >= REMOTE_REFRESH_MS) activateAccount();
