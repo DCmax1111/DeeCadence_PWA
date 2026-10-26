@@ -7,6 +7,7 @@ DeeCadence is a local-first attention and focus app. It helps people start at a 
 ## Included
 
 - Structured focus sessions with pause, resume, saved-session recovery, and block feedback
+- Neutral pause tracking with pause counts in the block reveal and History, plus a shorter-block suggestion after repeated pauses
 - Task planning, repeat tasks, custom repeat days, and a Sunday-first weekly view
 - Sunday-first Progress week, rolling 3/14/30-day views, and an optional Personal setup card for focus area, rhythm, and natural block length
 - Progress history, attention baseline, streaks, XP, ranks, and daily goals
@@ -16,6 +17,7 @@ DeeCadence is a local-first attention and focus app. It helps people start at a 
 - Task reminders where browser notifications are permitted
 - On-device storage with automatic save, manual save, and backup export/import
 - Optional email sign-in and cross-device sync through Supabase
+- A full-screen How-To guide in Settings for focus, planning, ranks, progress, sync, conflicts, and troubleshooting
 - Installable PWA with an offline app shell
 - Vercel-ready static deployment configuration
 
@@ -149,12 +151,17 @@ This validates `app.js`, `sync.js`, and `service-worker.js`. There is no automat
 ## Coming Soon
 
 - **Pet Dee** — not available in this build. The learning engine is already running and records compact behavioural events locally so Pet Dee can be enabled later. Status: **Coming Soon.**
+- **Strict Focus Mode** - an optional stricter mode is planned. It will be off by default and will never subtract XP without explicit consent. Status: **Coming Soon.**
 - **Pricing and paywalls** — intentionally out of scope for 3.3.0.
 
 ## Release notes
 
 - Service-worker cache revisions are asset revisions, not semantic versions. The app version is `3.3.0`.
 - Cloud sync is included in this release. It uses Supabase email sign-in, a revision-checked cloud snapshot, conflict handling, and a local recovery copy before a cloud copy is applied.
+- When both copies change, the conflict review opens a full-screen comparison of profile, tasks, sessions, focus time, XP, attention checks, streak, and last activity. Closing it changes nothing; the unresolved choice stays available from the sync card and a global **Review copies** reminder.
+- Settings includes a full-screen How-To layer with seven short topics: focus blocks, planning, ranks and XP, progress, backup and sync, conflict choices, and troubleshooting. Each topic has numbered steps, a direct shortcut to the relevant screen, and replay/feedback actions at the bottom.
+- On entry, Today shows a short How-To reminder with **Open guide** and **Don't show again**. It appears on each entry until **Don't show again** is chosen; opening the guide hides it for the current session only.
+- Pauses are recorded neutrally. The block reveal and History show pause counts; five or more pauses suggests a shorter block next time. No XP penalty is applied.
 - The first cloud save waits for a short account profile (name, main focus, and daily goal). The profile is included in the synced snapshot and mirrored to Supabase auth metadata.
 - One device is active per account. A second device can move the account with **Use this device instead**; the previous device keeps its local work and signs out locally on its next check.
 - Magic-link return, profile setup, and device checks degrade to local-only use when the network or Supabase is unavailable, then retry automatically.
@@ -162,5 +169,5 @@ This validates `app.js`, `sync.js`, and `service-worker.js`. There is no automat
 - Offline learning events stay in the local event log and upload idempotently when the user is signed in and the connection returns.
 - The 7-day Progress view runs Sunday to Saturday; 3, 14, and 30-day views are rolling windows ending today. Arrow buttons step backward through earlier periods for every range, and future days only appear as blank placeholders inside the current week. The 30-day view uses a calendar heatmap instead of thirty narrow columns.
 - The optional Personal setup answers live in the Progress tab and can be changed anytime.
-- Pet Dee and pricing are intentionally out of scope for 3.3.0.
+- Pet Dee, Strict Focus Mode, and pricing are intentionally out of scope for 3.3.0.
 - The temporary rank-preview and splash-preview QA controls have been removed.

@@ -211,6 +211,19 @@
   var tourOverlay = document.getElementById("tourOverlay");
   var revealOverlay = document.getElementById("revealOverlay");
   var timePickerOverlay = document.getElementById("timePickerOverlay");
+  var howToOverlay = document.getElementById("howToOverlay");
+  var howToNav = document.getElementById("howToNav");
+  var howToContent = document.getElementById("howToContent");
+  var howToCloseBtn = document.getElementById("howToCloseBtn");
+  var howToOpenBtn = document.getElementById("openHowToBtn");
+  var howToReplayBtn = document.getElementById("howToReplayBtn");
+  var howToFeedbackBtn = document.getElementById("howToFeedbackBtn");
+  var howToEntryNotice = document.getElementById("howToEntryNotice");
+  var howToEntryOpenBtn = document.getElementById("howToEntryOpenBtn");
+  var howToEntryDismissBtn = document.getElementById("howToEntryDismissBtn");
+  var howToActiveTopic = "focus";
+  var howToLastFocus = null;
+  var howToEntrySnoozed = false;
 
   var ONBOARDING_PURPOSE_COPY = {
     studying: {
@@ -362,7 +375,113 @@
       target: '[data-tour="rank-console"]',
       coach: "Discipline",
       title: "The climb gets harder",
-      body: "Pausing is allowed, but after 5 pauses in one session, DeeCadence starts subtracting small XP. The goal is gentle pressure, not punishment."
+      body: "Pausing is allowed. A pause is recorded with the session so you can see your rhythm; it does not erase the focus time you already protected."
+    }
+  ];
+
+  var HOWTO_TOPICS = [
+    {
+      id: "focus",
+      nav: "Start a focus block",
+      eyebrow: "Focus",
+      title: "One block at a time",
+      intro: "A block is a short, protected stretch of attention. Start smaller than you think you need, then let DeeCadence learn from what you finish.",
+      steps: [
+        { title: "Open Focus and pick the work", body: "Use the bottom bar to open Focus. Link a scheduled task, or type a task title so the session stays attached to the work." },
+        { title: "Choose a length and block count", body: "Pick a preset from 15 to 90 minutes, or use Custom for 4 to 240 minutes. Split the total into 1 to 4 blocks." },
+        { title: "Protect the block in front of you", body: "The timer shows only the current block. Pause when you need to; a paused block is saved so you can continue it later. If pauses keep adding up, a shorter block may fit better next time." },
+        { title: "Close the loop", body: "When the block ends, add a quick feeling check. That feedback shapes the next suggestion." }
+      ],
+      note: "A running timer stays on this device. Sync does not move it.",
+      action: { label: "Go to Focus", view: "focus" }
+    },
+    {
+      id: "plan",
+      nav: "Plan your day",
+      eyebrow: "Planning",
+      title: "Plan without overfilling the day",
+      intro: "DeeCadence works best when the plan is small enough to start. Add the work once, then choose how it should sit in your day.",
+      steps: [
+        { title: "Choose Schedule or Tasks", body: "Open Plan. Schedule shows your day by time. Tasks shows the same work as a checklist you can edit and start from." },
+        { title: "Add one real task", body: "Give it a title, date, optional time, and estimate. Keep the estimate honest rather than ambitious." },
+        { title: "Pick fixed or flexible time", body: "Fixed keeps the exact time you choose. Flexible lets Auto-arrange place the task into the next open part of your day." },
+        { title: "Start focus from the task", body: "Use the Focus action on a task so the session, XP, and history stay linked to that work." }
+      ],
+      action: { label: "Go to Plan", view: "plan" }
+    },
+    {
+      id: "rank",
+      nav: "Ranks and XP",
+      eyebrow: "Rank",
+      title: "Ranks follow protected minutes",
+      intro: "XP is a record of attention you actually protected. It is not a score for being busy.",
+      steps: [
+        { title: "Earn XP from focus time", body: "A finished block earns about 1 XP per focused minute. Finishing every selected block adds a small completion bonus." },
+        { title: "Pauses are recorded, not punished", body: "Pausing is allowed. A pause is recorded with the session so you can see your rhythm, and it does not erase the focus time you already protected." },
+        { title: "Climb one rank at a time", body: "Ranks run E, D, C, B, A, S, SS, SSS, and L. Higher ranks need much more total XP, so long focus time matters." },
+        { title: "Do not chase the number", body: "A short block you finish is worth more than a long block you abandon. Use the rank as feedback, not pressure." }
+      ],
+      action: { label: "See Rank", view: "rank" }
+    },
+    {
+      id: "progress",
+      nav: "Read your progress",
+      eyebrow: "Progress",
+      title: "Look for the pattern, not just the number",
+      intro: "Progress shows when focus happens, how it is changing, and where attention slips. Use the range that matches the question you are asking.",
+      steps: [
+        { title: "Use the 7-day view for this week", body: "The 7-day view runs Sunday through Saturday, so it matches a normal week." },
+        { title: "Use 3, 14, or 30 days for trends", body: "These ranges are rolling windows. They are useful when you want to see change without waiting for a new week." },
+        { title: "Check the 30-day heatmap", body: "The heatmap shows the last 30 days at a glance. Empty days are information, not failure." },
+        { title: "Read the whole picture", body: "Focus time, XP, streak, and attention checks each tell a different part of the story. Your daily goal marks the line you set for the day; the streak follows days with a completed block." }
+      ],
+      action: { label: "Go to Progress", view: "progress" }
+    },
+    {
+      id: "sync",
+      nav: "Back up and sync",
+      eyebrow: "Cloud sync",
+      title: "Back up once, then let it run",
+      intro: "DeeCadence saves locally first. Signing in adds a cloud copy so your profile and progress can follow you to another device.",
+      steps: [
+        { title: "Enter your email in Settings", body: "Open Settings and enter the email you want to use. DeeCadence sends a secure sign-in link." },
+        { title: "Open the link on this device", body: "A link opened on your phone signs in your phone, not this browser. Open it on the device you want to use now." },
+        { title: "Finish the first profile", body: "After the first sign-in, add your name, main focus, and daily goal before the first cloud backup. Later devices load that saved profile." },
+        { title: "Let automatic sync work", body: "DeeCadence backs up as you work and retries after connection or visibility changes. Use Sync now only when you want to check immediately." },
+        { title: "Move between devices safely", body: "One device stays active per account for now. On a new device, use Use this device instead to take over safely." }
+      ],
+      note: "A running timer and pending feedback stay on the device where they started.",
+      action: { label: "Open sync settings", view: "settings", target: "syncCard" }
+    },
+    {
+      id: "conflict",
+      nav: "Conflict choices",
+      eyebrow: "Cloud sync",
+      title: "When this device and the cloud both changed",
+      intro: "A conflict means both copies changed since the last successful sync. Both copies are safe. Nothing is replaced until you choose.",
+      steps: [
+        { title: "Open Review copies", body: "The notice appears in the sync card and as a floating reminder. Open it to compare the two copies side by side." },
+        { title: "Read the differences", body: "The screen compares profile, tasks, sessions, focus time, XP, attention checks, streak, and last activity. Highlighted values are the differences." },
+        { title: "Use cloud copy when the cloud is newer", body: "This replaces this device's synced data. A recovery copy is saved in this browser first, so the local copy is not lost immediately." },
+        { title: "Keep this device when this copy is right", body: "This uploads this device's copy and replaces the cloud copy. Your running timer stays where it is." },
+        { title: "Close now and decide later", body: "Use the X or Escape to leave without choosing. Nothing is resolved, and the Review copies reminder stays available." }
+      ],
+      action: { label: "Open sync settings", view: "settings", target: "syncCard", review: true }
+    },
+    {
+      id: "trouble",
+      nav: "If something feels stuck",
+      eyebrow: "Troubleshooting",
+      title: "Your local work comes first",
+      intro: "DeeCadence is built to keep working when the network, cloud, or a background request does not. These are the safe things to try.",
+      steps: [
+        { title: "Keep working offline", body: "If the connection drops, DeeCadence keeps saving on this device and retries when you are back online." },
+        { title: "Let automatic retry run", body: "Sync retries from 5 seconds up to 5 minutes. You can also open Settings and use Sync now for an immediate check." },
+        { title: "Sign out locally", body: "Sign out clears this device's session immediately. Your cloud copy stays in your account and can be loaded on another device." },
+        { title: "Reopen a stuck screen", body: "Close the screen and open it again. Your saved work is not affected by closing a guide, conflict review, or modal." },
+        { title: "Tell us what happened", body: "If something still feels wrong, send feedback with what you expected and what happened instead. The optional context includes app state and counts, not your task titles." }
+      ],
+      action: { label: "Send feedback", action: "feedback" }
     }
   ];
 
@@ -956,6 +1075,7 @@
         chartType: "bars",
         welcomeComplete: false,
         tutorialComplete: false,
+        howToEntryDismissed: false,
         reducedMotion: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
       },
       onboarding: defaultOnboarding(),
@@ -1538,6 +1658,7 @@
       linkedTaskId: linkedTask ? linkedTask.id : "",
       isFinalBlock: isFinalBlock,
       focusedMinutes: Math.round(blockSeconds / 60),
+      pauseCount: session.pauseCount || 0,
       penaltyXp: session.penaltyXp || 0
     };
     lastBlockCompletedAt = Date.now();
@@ -1912,6 +2033,20 @@
     document.getElementById("revealTaskLine").innerHTML = linkedTask
       ? "<b>" + escapeHtml(linkedTask.title) + "</b> - " + linkedTask.units.completed + " of " + linkedTask.units.total + " units complete"
       : "Free focus block logged";
+
+    var pauseNote = document.getElementById("revealPauseNote");
+    if (pauseNote) {
+      var pauseCount = Math.max(0, Number(data.pauseCount) || 0);
+      if (pauseCount > 0) {
+        pauseNote.hidden = false;
+        pauseNote.textContent = (pauseCount === 1 ? "1 pause recorded." : pauseCount + " pauses recorded.") +
+          " Pauses are part of the rhythm; your focus time still counts." +
+          (pauseCount >= 5 ? " A shorter block may fit better next time." : "");
+      } else {
+        pauseNote.hidden = true;
+        pauseNote.textContent = "";
+      }
+    }
 
     var feedbackPanel = document.getElementById("blockFeedbackPanel");
     if (feedbackPanel) feedbackPanel.style.display = data.isManualDone ? "none" : "";
@@ -4208,7 +4343,9 @@
         : complete
           ? item.blocksCompleted + " blocks fully completed"
           : item.blocksCompleted + " of " + item.blocksPlanned + " blocks completed";
-      return '<div class="history-item ' + (complete ? "is-complete" : "is-partial") + '"><div class="history-icon">' + icon + '</div><div class="history-main"><div class="history-title">' + (item.linkedTaskTitle ? escapeHtml(item.linkedTaskTitle) : "Free focus") + '</div><div class="history-sub">' + date.toLocaleDateString() + " - " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + subtitle + '</div>' + renderFeedbackSummary(item) + '</div><div class="history-xp">+' + item.xpEarned + " XP</div></div>";
+      var pauseCount = Math.max(0, Number(item.pauseCount) || 0);
+      var pauseText = pauseCount > 0 ? " - " + pauseCount + (pauseCount === 1 ? " pause" : " pauses") : "";
+      return '<div class="history-item ' + (complete ? "is-complete" : "is-partial") + '"><div class="history-icon">' + icon + '</div><div class="history-main"><div class="history-title">' + (item.linkedTaskTitle ? escapeHtml(item.linkedTaskTitle) : "Free focus") + '</div><div class="history-sub">' + date.toLocaleDateString() + " - " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + subtitle + pauseText + '</div>' + renderFeedbackSummary(item) + '</div><div class="history-xp">+' + item.xpEarned + " XP</div></div>";
     }).join("");
   }
 
@@ -4268,6 +4405,7 @@
     var view = document.getElementById("view-" + viewName);
     var tip = CONTEXT_TIPS[viewName];
     if (!view || !tip) return;
+    if (viewName === "today" && howToEntryNotice && !howToEntryNotice.hidden) return;
     var existing = view.querySelector(".context-tip");
     if (state.dismissedContextTips && state.dismissedContextTips[viewName]) {
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
@@ -4329,6 +4467,7 @@
     try { renderSettings(); } catch (e) { console.error("renderSettings error:", e); }
     applyTheme();
     renderSessionIndicators();
+    try { renderHowToEntryNotice(); } catch (e) { console.error("renderHowToEntryNotice error:", e); }
     try { renderContextTip(activeView); } catch (e) { console.error("renderContextTip error:", e); }
   }
 
@@ -4722,6 +4861,195 @@
       saveState();
     }
     if (tourPreviousView && activeView !== tourPreviousView) switchView(tourPreviousView);
+  }
+
+  function howToTopicById(id) {
+    for (var i = 0; i < HOWTO_TOPICS.length; i += 1) {
+      if (HOWTO_TOPICS[i].id === id) return HOWTO_TOPICS[i];
+    }
+    return null;
+  }
+
+  function renderHowToNav() {
+    if (!howToNav) return;
+    howToNav.innerHTML = HOWTO_TOPICS.map(function (topic) {
+      var active = topic.id === howToActiveTopic;
+      return '<button type="button" class="howto-nav-btn' + (active ? " active" : "") + '" data-howto-topic="' + escapeHtml(topic.id) + '"' +
+        (active ? ' aria-current="page"' : "") + '>' +
+        '<span class="howto-nav-dot" aria-hidden="true"></span>' +
+        '<span>' + escapeHtml(topic.nav) + '</span>' +
+      '</button>';
+    }).join("");
+  }
+
+  function renderHowToTopic(id) {
+    var topic = howToTopicById(id) || HOWTO_TOPICS[0];
+    if (!topic) return;
+    howToActiveTopic = topic.id;
+    renderHowToNav();
+    if (!howToContent) return;
+    var steps = (topic.steps || []).map(function (step, index) {
+      return '<li class="howto-step">' +
+        '<span class="howto-step-num" aria-hidden="true">' + (index + 1) + '</span>' +
+        '<div class="howto-step-copy"><strong>' + escapeHtml(step.title) + '</strong><p>' + escapeHtml(step.body) + '</p></div>' +
+      '</li>';
+    }).join("");
+    var action = topic.action
+      ? '<div class="howto-action"><button class="btn btn-primary" type="button" data-howto-action="' + escapeHtml(topic.action.action || "view") + '" data-howto-view="' + escapeHtml(topic.action.view || "") + '" data-howto-target="' + escapeHtml(topic.action.target || "") + '" data-howto-review="' + (topic.action.review ? "true" : "false") + '">' + escapeHtml(topic.action.label) + '</button></div>'
+      : "";
+    howToContent.innerHTML = '<article class="howto-topic" data-howto-panel="' + escapeHtml(topic.id) + '">' +
+      '<div class="eyebrow">' + escapeHtml(topic.eyebrow) + '</div>' +
+      '<h3>' + escapeHtml(topic.title) + '</h3>' +
+      '<p class="howto-intro">' + escapeHtml(topic.intro) + '</p>' +
+      '<ol class="howto-steps">' + steps + '</ol>' +
+      (topic.note ? '<p class="howto-note">' + escapeHtml(topic.note) + '</p>' : "") +
+      action +
+    '</article>';
+    howToContent.scrollTop = 0;
+  }
+
+  function openHowTo(topicId) {
+    if (!howToOverlay) return;
+    howToEntrySnoozed = true;
+    renderHowToEntryNotice();
+    howToLastFocus = document.activeElement;
+    howToActiveTopic = howToTopicById(topicId) ? topicId : (howToTopicById(howToActiveTopic) ? howToActiveTopic : "focus");
+    renderHowToTopic(howToActiveTopic);
+    howToOverlay.hidden = false;
+    howToOverlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("howto-open");
+    window.setTimeout(function () {
+      if (howToCloseBtn) howToCloseBtn.focus();
+    }, 0);
+  }
+
+  function closeHowTo() {
+    if (!howToOverlay || howToOverlay.hidden) return;
+    howToOverlay.hidden = true;
+    howToOverlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("howto-open");
+    var target = howToLastFocus;
+    howToLastFocus = null;
+    if (target && typeof target.focus === "function" && document.contains(target)) {
+      window.setTimeout(function () { target.focus(); }, 0);
+    }
+  }
+
+  function trapHowToFocus(event) {
+    if (!howToOverlay || howToOverlay.hidden) return;
+    var nodes = howToOverlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    var focusable = Array.prototype.filter.call(nodes, function (node) {
+      return !node.disabled && node.offsetParent !== null;
+    });
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (!howToOverlay.contains(document.activeElement)) {
+      event.preventDefault();
+      first.focus();
+      return;
+    }
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function handleHowToAction(button) {
+    if (!button) return;
+    var action = button.getAttribute("data-howto-action") || "view";
+    var view = button.getAttribute("data-howto-view") || "";
+    var target = button.getAttribute("data-howto-target") || "";
+    var review = button.getAttribute("data-howto-review") === "true";
+    closeHowTo();
+    if (action === "feedback") {
+      window.setTimeout(openFeedback, 80);
+      return;
+    }
+    if (view) switchView(view);
+    if (target === "syncCard") {
+      window.setTimeout(function () {
+        var card = document.getElementById("syncCard");
+        if (!card) return;
+        card.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (review) {
+          var reviewBtn = document.getElementById("syncReviewConflictBtn");
+          if (reviewBtn && !reviewBtn.hidden && reviewBtn.offsetParent !== null) {
+            reviewBtn.click();
+          } else {
+            showToast("When two copies need review, the button appears in this sync card.");
+          }
+        }
+      }, 120);
+    }
+  }
+
+  function renderHowToEntryNotice() {
+    if (!howToEntryNotice) return;
+    var dismissed = Boolean(state.settings && state.settings.howToEntryDismissed);
+    howToEntryNotice.hidden = dismissed || howToEntrySnoozed;
+  }
+
+  function dismissHowToEntryNotice(permanent) {
+    if (permanent) {
+      state.settings.howToEntryDismissed = true;
+      saveState();
+      showToast("How-To tip hidden. You can still open the guide from Settings.");
+    } else {
+      howToEntrySnoozed = true;
+    }
+    renderHowToEntryNotice();
+  }
+
+  function wireHowTo() {
+    if (howToOpenBtn) howToOpenBtn.onclick = function () { openHowTo(); };
+    if (howToEntryOpenBtn) howToEntryOpenBtn.onclick = function () {
+      dismissHowToEntryNotice(false);
+      openHowTo();
+    };
+    if (howToEntryDismissBtn) howToEntryDismissBtn.onclick = function () {
+      dismissHowToEntryNotice(true);
+    };
+    if (howToCloseBtn) howToCloseBtn.onclick = closeHowTo;
+    if (howToOverlay) {
+      howToOverlay.addEventListener("click", function (event) {
+        if (event.target === howToOverlay) closeHowTo();
+      });
+    }
+    if (howToNav) {
+      howToNav.addEventListener("click", function (event) {
+        var button = event.target && event.target.closest ? event.target.closest("[data-howto-topic]") : null;
+        if (!button) return;
+        renderHowToTopic(button.getAttribute("data-howto-topic"));
+        if (howToContent) howToContent.focus({ preventScroll: true });
+      });
+    }
+    if (howToContent) {
+      howToContent.addEventListener("click", function (event) {
+        var button = event.target && event.target.closest ? event.target.closest("[data-howto-action]") : null;
+        if (button) handleHowToAction(button);
+      });
+    }
+    if (howToReplayBtn) {
+      howToReplayBtn.onclick = function () {
+        closeHowTo();
+        window.setTimeout(function () { openWelcome(true); }, 80);
+      };
+    }
+    if (howToFeedbackBtn) {
+      howToFeedbackBtn.onclick = function () {
+        closeHowTo();
+        window.setTimeout(openFeedback, 80);
+      };
+    }
+    if (howToContent) renderHowToTopic(howToActiveTopic);
+    renderHowToEntryNotice();
   }
 
   function renderTourStep() {
@@ -5973,6 +6301,7 @@
     document.getElementById("tourBackBtn").onclick = previousTourStep;
     document.getElementById("tourSkipBtn").onclick = function () { endTour(true); };
     document.getElementById("replayTourBtn").onclick = function () { openWelcome(true); };
+    wireHowTo();
     [welcomeOverlay, startModal, taskModal, taskDetailModal, feedbackModal, personalizeModal, attentionTestModal].forEach(function (overlay) {
       if (!overlay) return;
       overlay.addEventListener("click", function (event) {
@@ -6224,6 +6553,17 @@
   }
 
   function handleKeydown(event) {
+    if (howToOverlay && !howToOverlay.hidden) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeHowTo();
+        return;
+      }
+      if (event.key === "Tab") {
+        trapHowToFocus(event);
+        return;
+      }
+    }
     if (event.key === "Escape") {
       if (timePickerOverlay && timePickerOverlay.classList.contains("open")) closeTimePicker();
       if (feedbackModal && feedbackModal.classList.contains("open")) closeFeedback();
@@ -6305,10 +6645,22 @@
     openAccountSetup: openAccountSetup,
     applyAccountProfile: applyAccountProfile,
     getAccountProfile: function () { return state.accountProfile; },
+    openHowTo: openHowTo,
+    closeHowTo: closeHowTo,
+    getHowToState: function () {
+      return {
+        open: Boolean(howToOverlay && !howToOverlay.hidden),
+        topic: howToActiveTopic,
+        hasOpenButton: Boolean(howToOpenBtn),
+        openButtonWired: Boolean(howToOpenBtn && typeof howToOpenBtn.onclick === "function")
+      };
+    },
     startTour: startTour,
     endTour: endTour,
     persistStateForExit: persistStateForExit,
     getTourState: function () { return { active: tourActive, index: tourIndex }; },
+    showSystemReveal: showSystemReveal,
+    renderHistory: renderHistory,
     getState: function () { return state; },
     applySyncedState: function (incoming) {
       if (!incoming || typeof incoming !== "object") return false;

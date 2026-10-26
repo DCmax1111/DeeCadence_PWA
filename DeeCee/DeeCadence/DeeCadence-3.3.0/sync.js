@@ -19,7 +19,15 @@
   var AUTO_RETRY_MAX_MS = 5 * 60 * 1000;
   var LEARNING_UPLOAD_DEBOUNCE_MS = 15000;
   var LEARNING_BATCH_SIZE = 100;
-  var client = null, user = null, busy = false, activating = false, timer = null, conflict = null, lastHash = "", sdkLoading = null;
+  var focusLabels = {
+    studying: "Studying",
+    work: "Work",
+    business: "Business",
+    coding: "Coding",
+    skill: "Learning a skill",
+    discipline: "Personal discipline"
+  };
+  var client = null, user = null, busy = false, activating = false, timer = null, conflict = null, conflictDismissed = false, lastHash = "", sdkLoading = null;
   var authListenerBound = false, lastRemoteCheckAt = 0, lastFocusSyncAt = 0, lastDeviceCheckAt = 0;
   var deviceLocked = false, deviceClaimed = false, awaitingProfile = false, activationPromise = null, lastActivationUserId = "";
   var lastActivationAttemptAt = 0, lastMetadataSignature = "", startPromise = null, authNotice = "", memoryDeviceId = "";
@@ -44,6 +52,12 @@
   var profileButton = document.getElementById("syncProfileBtn");
   var outButton = document.getElementById("syncSignOutBtn");
   var conflictBox = document.getElementById("syncConflict");
+  var conflictNotice = document.getElementById("syncConflictNotice");
+  var reviewConflictButton = document.getElementById("syncReviewConflictBtn");
+  var conflictFab = document.getElementById("syncConflictFab");
+  var conflictCloseButton = document.getElementById("syncConflictCloseBtn");
+  var conflictCompare = document.getElementById("syncConflictCompare");
+  var conflictDiff = document.getElementById("syncConflictDiff");
   var cloudButton = document.getElementById("syncUseCloudBtn");
   var deviceButton = document.getElementById("syncKeepDeviceBtn");
   var deviceLock = document.getElementById("syncDeviceLock");
@@ -385,8 +399,7 @@
   }
 
   function resetAccountRuntime() {
-    conflict = null;
-    if (conflictBox) conflictBox.hidden = true;
+    clearConflictUI();
     deviceLocked = false;
     deviceClaimed = false;
     awaitingProfile = false;
@@ -780,6 +793,241 @@
     return profile && typeof profile === "object" && String(profile.name || "").trim() ? profile : null;
   }
 
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function finiteNumber(value) {
+    var number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  function formatCount(value) {
+    return Math.max(0, Math.round(finiteNumber(value))).toLocaleString();
+  }
+
+  function formatFocusMinutes(value) {
+    var minutes = Math.max(0, Math.round(finiteNumber(value)));
+    if (minutes < 60) return minutes + " min";
+    var hours = Math.floor(minutes / 60);
+    var rest = minutes % 60;
+    return hours + "h" + (rest ? " " + rest + "m" : "");
+  }
+
+  function profileFocusLabel(profile) {
+    var focus = String(profile && profile.focus || "").trim();
+    if (focus === "custom") return String(profile.focusCustom || "").trim() || "Custom";
+    return focusLabels[focus] || focus;
+  }
+
+  function conflictTimeValue(value) {
+    if (!value) return 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    var text = String(value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) text += "T00:00:00";
+    var time = new Date(text).getTime();
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  function formatConflictTime(value, dateOnly) {
+    var time = conflictTimeValue(value);
+    if (!time) return "";
+    var date = new Date(time);
+    var now = new Date();
+    if (dateOnly) {
+      var dateOptions = { month: "short", day: "numeric" };
+      if (date.getFullYear() !== now.getFullYear()) dateOptions.year = "numeric";
+      return date.toLocaleDateString(undefined, dateOptions);
+    }
+    var options = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" };
+    if (date.getFullYear() !== now.getFullYear()) options.year = "numeric";
+    return date.toLocaleString(undefined, options);
+  }
+
+  function latestActivityAt(state) {
+    state = state && typeof state === "object" ? state : {};
+    var latest = 0;
+    function consider(value) {
+      var time = conflictTimeValue(value);
+      if (time > latest) latest = time;
+    }
+    (Array.isArray(state.history) ? state.history : []).forEach(function (item) {
+      consider(item && item.completedAt);
+    });
+    (Array.isArray(state.savedSessions) ? state.savedSessions : []).forEach(function (item) {
+      consider(item && item.savedAt);
+    });
+    (Array.isArray(state.attentionTests) ? state.attentionTests : []).forEach(function (item) {
+      consider(item && item.takenAt);
+    });
+    if (latest) return { time: latest, dateOnly: false };
+    var profile = state.profile && typeof state.profile === "object" ? state.profile : {};
+    var lastActive = String(profile.lastActiveDate || "").trim();
+    if (lastActive) {
+      return {
+        time: conflictTimeValue(lastActive),
+        dateOnly: /^\d{4}-\d{2}-\d{2}$/.test(lastActive)
+      };
+    }
+    return null;
+  }
+
+  function conflictStateSummary(state) {
+    state = state && typeof state === "object" ? state : {};
+    var profile = state.accountProfile && typeof state.accountProfile === "object" ? state.accountProfile : {};
+    var progress = state.profile && typeof state.profile === "object" ? state.profile : {};
+    var tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    var history = Array.isArray(state.history) ? state.history : [];
+    var saved = Array.isArray(state.savedSessions) ? state.savedSessions : [];
+    var tests = Array.isArray(state.attentionTests) ? state.attentionTests : [];
+    var taskDone = 0;
+    tasks.forEach(function (task) {
+      var units = task && task.units && typeof task.units === "object" ? task.units : {};
+      var total = Math.max(1, parseInt(units.total, 10) || 1);
+      var done = Math.max(0, Math.min(total, parseInt(units.completed, 10) || 0));
+      if (done >= total || (task && task.status === "completed")) taskDone += 1;
+    });
+    var focusMinutes = 0;
+    var dailyFocus = state.dailyFocusMinutes && typeof state.dailyFocusMinutes === "object" ? state.dailyFocusMinutes : {};
+    Object.keys(dailyFocus).forEach(function (key) {
+      focusMinutes += Math.max(0, finiteNumber(dailyFocus[key]));
+    });
+    if (!focusMinutes) {
+      focusMinutes = history.reduce(function (sum, item) {
+        var planned = Math.max(0, finiteNumber(item && item.blocksPlanned));
+        var completed = Math.max(0, finiteNumber(item && item.blocksCompleted));
+        var minutes = Math.max(0, finiteNumber(item && item.totalMinutes));
+        if (!minutes) return sum;
+        if (planned > 0 && completed > 0) return sum + Math.round(minutes * Math.min(1, completed / planned));
+        return sum + minutes;
+      }, 0);
+    }
+    var name = String(profile.name || "").trim();
+    var focus = profileFocusLabel(profile);
+    var goal = Math.max(0, parseInt(profile.dailyGoalMinutes, 10) || 0);
+    var profileText = name
+      ? name + (focus ? " · " + focus : "") + (goal ? " · " + goal + " min/day" : "")
+      : "Not set up";
+    var latestTest = tests.length ? tests[tests.length - 1] : null;
+    var latestScore = latestTest && Number.isFinite(Number(latestTest.score))
+      ? Math.round(Number(latestTest.score))
+      : null;
+    var activity = latestActivityAt(state);
+    var streak = Math.max(0, Math.round(finiteNumber(progress.streak)));
+    return {
+      profile: profileText,
+      tasks: tasks.length ? (tasks.length - taskDone) + " open · " + tasks.length + " total" : "No tasks",
+      sessions: history.length || saved.length
+        ? [history.length ? history.length + " logged" : "", saved.length ? saved.length + " saved" : ""].filter(Boolean).join(" · ")
+        : "None yet",
+      focus: formatFocusMinutes(focusMinutes),
+      xp: formatCount(progress.totalXp) + " XP",
+      attention: tests.length
+        ? tests.length + " check" + (tests.length === 1 ? "" : "s") + (latestScore === null ? "" : " · latest " + latestScore + "/100")
+        : "None yet",
+      streak: streak ? streak + " day" + (streak === 1 ? "" : "s") : "No streak yet",
+      activity: activity ? formatConflictTime(activity.time, activity.dateOnly) : "No activity yet"
+    };
+  }
+
+  function renderConflictComparison(row) {
+    if (!conflictCompare) return;
+    var device = conflictStateSummary(readLocalState());
+    var cloud = conflictStateSummary(row && row.payload || {});
+    var rows = [
+      ["profile", "Profile"],
+      ["tasks", "Tasks"],
+      ["sessions", "Sessions"],
+      ["focus", "Focus time"],
+      ["xp", "Total XP"],
+      ["attention", "Attention checks"],
+      ["streak", "Current streak"],
+      ["activity", "Last activity"]
+    ];
+    var differenceCount = 0;
+    var deviceRows = "";
+    var cloudRows = "";
+    rows.forEach(function (entry) {
+      var key = entry[0];
+      var label = entry[1];
+      var different = device[key] !== cloud[key];
+      if (different) differenceCount += 1;
+      var rowClass = "sync-copy-row" + (different ? " is-different" : "");
+      deviceRows += '<div class="' + rowClass + '"><dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(device[key]) + '</dd></div>';
+      cloudRows += '<div class="' + rowClass + '"><dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(cloud[key]) + '</dd></div>';
+    });
+    var backup = formatConflictTime(row && row.updated_at, false);
+    if (conflictDiff) {
+      conflictDiff.textContent = differenceCount
+        ? differenceCount + " detail" + (differenceCount === 1 ? " differs" : "s differ") + " between the copies. Highlighted values are the differences."
+        : "The main saved details match. Other settings may still differ.";
+    }
+    conflictCompare.innerHTML =
+      '<section class="sync-copy-card sync-copy-card--device" aria-label="This device copy">' +
+        '<div class="sync-copy-head"><span class="sync-copy-tag">This device</span><span class="sync-copy-time">Current local copy</span></div>' +
+        '<dl class="sync-copy-facts">' + deviceRows + '</dl>' +
+        '<p class="sync-copy-effect"><strong>Keep this device</strong> uploads this copy and replaces the cloud copy. Your running timer stays here.</p>' +
+      '</section>' +
+      '<section class="sync-copy-card sync-copy-card--cloud" aria-label="Cloud copy">' +
+        '<div class="sync-copy-head"><span class="sync-copy-tag">Cloud copy</span><span class="sync-copy-time">' + (backup ? "Backed up " + escapeHtml(backup) : "Backup time unavailable") + '</span></div>' +
+        '<dl class="sync-copy-facts">' + cloudRows + '</dl>' +
+        '<p class="sync-copy-effect"><strong>Use cloud copy</strong> replaces this device\'s synced data. A recovery copy is saved in this browser first. Your running timer stays here.</p>' +
+      '</section>';
+  }
+
+  function openConflictReview() {
+    if (!conflict) return;
+    conflictDismissed = false;
+    var wasHidden = !conflictBox || conflictBox.hidden;
+    renderConflictComparison(conflict);
+    if (conflictNotice) conflictNotice.hidden = false;
+    if (conflictFab) conflictFab.hidden = true;
+    if (conflictBox) {
+      conflictBox.hidden = false;
+      conflictBox.setAttribute("aria-hidden", "false");
+    }
+    document.body.classList.add("sync-conflict-open");
+    if (wasHidden && conflictCloseButton) {
+      window.setTimeout(function () { conflictCloseButton.focus(); }, 0);
+    }
+  }
+
+  function closeConflictReview() {
+    if (!conflictBox || conflictBox.hidden) return;
+    conflictDismissed = true;
+    conflictBox.hidden = true;
+    conflictBox.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("sync-conflict-open");
+    if (conflict) {
+      if (conflictNotice) conflictNotice.hidden = false;
+      if (conflictFab) conflictFab.hidden = false;
+      message("No changes made. Review the two copies when you're ready.", "conflict");
+    }
+    window.setTimeout(function () {
+      if (conflictFab) conflictFab.focus();
+      else if (reviewConflictButton) reviewConflictButton.focus();
+    }, 0);
+  }
+
+  function clearConflictUI() {
+    conflict = null;
+    conflictDismissed = false;
+    if (conflictBox) {
+      conflictBox.hidden = true;
+      conflictBox.setAttribute("aria-hidden", "true");
+    }
+    if (conflictNotice) conflictNotice.hidden = true;
+    if (conflictFab) conflictFab.hidden = true;
+    if (conflictCompare) conflictCompare.innerHTML = "";
+    if (conflictDiff) conflictDiff.textContent = "";
+    document.body.classList.remove("sync-conflict-open");
+  }
+
   function copyProfileFromRow(row) {
     if (profileComplete(readLocalState())) return Promise.resolve(false);
     var profile = profileFromRow(row);
@@ -897,9 +1145,8 @@
         if (!claim || !claim.claimed) {
           deviceClaimed = false;
           deviceLocked = true;
-          conflict = null;
+          clearConflictUI();
           resetAutoRetry();
-          if (conflictBox) conflictBox.hidden = true;
           if (deviceLockLabel) deviceLockLabel.textContent = deviceName(claim);
           message("This account is already active on " + deviceName(claim) + ". DeeCadence allows one active device per account for now. Sign out there first, or use this device instead.", "conflict");
           return;
@@ -960,8 +1207,15 @@
   function showConflict(row) {
     clearAutoRetry();
     conflict = row;
-    if (conflictBox) conflictBox.hidden = false;
-    message("Cloud and this device both changed. Choose which copy to keep.", "conflict");
+    if (conflictNotice) conflictNotice.hidden = false;
+    if (conflictDismissed) {
+      renderConflictComparison(conflict);
+      if (conflictFab) conflictFab.hidden = false;
+      message("Two copies still need your review. Nothing has been replaced.", "conflict");
+      return;
+    }
+    openConflictReview();
+    message("Cloud and this device both changed. Compare the two copies, then choose which one to keep.", "conflict");
   }
 
   async function applyCloud(row) {
@@ -991,8 +1245,7 @@
     if (profileName(readLocalState())) syncProfileMetadata();
     saveMeta(row, remoteHash);
     lastHash = remoteHash;
-    conflict = null;
-    if (conflictBox) conflictBox.hidden = true;
+    clearConflictUI();
     resetAutoRetry();
     message("Cloud copy applied. Your active timer stays on this device.", "success");
   }
@@ -1202,8 +1455,7 @@
         if (latest) showConflict(latest);
         return;
       }
-      conflict = null;
-      if (conflictBox) conflictBox.hidden = true;
+      clearConflictUI();
       saveSucceeded(saved, localHash);
     } catch (error) {
       if (signingOut) return;
@@ -1305,8 +1557,7 @@
     deviceLocked = false;
     deviceClaimed = false;
     awaitingProfile = false;
-    conflict = null;
-    if (conflictBox) conflictBox.hidden = true;
+    clearConflictUI();
     closeSetupModal();
     clearSignInCooldown();
     lastHash = "";
@@ -1603,8 +1854,36 @@
   });
   if (deviceButton) deviceButton.addEventListener("click", keepDevice);
   if (useDeviceButton) useDeviceButton.addEventListener("click", useThisDevice);
+  if (reviewConflictButton) reviewConflictButton.addEventListener("click", openConflictReview);
+  if (conflictFab) conflictFab.addEventListener("click", openConflictReview);
+  if (conflictCloseButton) conflictCloseButton.addEventListener("click", closeConflictReview);
+
+  document.addEventListener("keydown", function (event) {
+    if (!conflictBox || conflictBox.hidden) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeConflictReview();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    var focusable = conflictBox.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (!conflictBox.contains(document.activeElement)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 
   window.addEventListener("deecadence:local-save", function () {
+    if (conflict) renderConflictComparison(conflict);
     if (!user || switchingUser || timer || deviceLocked || awaitingProfile || signingOut) return;
     timer = window.setTimeout(function () {
       timer = null;
