@@ -215,7 +215,7 @@ begin
   on conflict (user_id) do update
     set revision = stored.revision + 1, payload = excluded.payload, updated_at = now()
     where stored.revision = p_expected_revision
-  returning revision, updated_at into v_revision, v_updated_at;
+  returning stored.revision, stored.updated_at into v_revision, v_updated_at;
 
   if not found then return; end if;
 
@@ -257,11 +257,47 @@ select
   end as daily_goal_minutes,
   s.payload->'accountProfile'->>'completedAt' as completed_at,
   s.revision,
-  s.updated_at
+  s.updated_at,
+  s.payload->'accountProfile'->>'focusCustom' as focus_custom
 from public.deecadence_sync_state s
 left join auth.users u on u.id = s.user_id;
 
 revoke all on table public.deecadence_profiles from anon, authenticated, public;
+
+-- One-row-per-account dashboard view: email and last sign-in from Supabase Auth,
+-- plus the active device and the saved profile from the sync snapshot.
+create or replace view public.deecadence_accounts as
+select
+  u.id as user_id,
+  u.email,
+  u.created_at as signed_up_at,
+  u.last_sign_in_at,
+  u.email_confirmed_at,
+  u.raw_app_meta_data->>'provider' as provider,
+  u.raw_user_meta_data->>'display_name' as display_name,
+  u.raw_user_meta_data->>'full_name' as full_name,
+  u.raw_user_meta_data->>'focus_area' as focus_area,
+  u.raw_user_meta_data->>'daily_goal_minutes' as daily_goal_minutes,
+  d.device_id,
+  d.device_label,
+  d.claimed_at,
+  d.last_seen_at,
+  s.revision,
+  s.updated_at as snapshot_updated_at,
+  s.payload->'accountProfile'->>'name' as profile_name,
+  s.payload->'accountProfile'->>'focus' as profile_focus,
+  case
+    when coalesce(s.payload->'accountProfile'->>'dailyGoalMinutes', '') ~ '^[0-9]+$'
+      then (s.payload->'accountProfile'->>'dailyGoalMinutes')::integer
+    else null
+  end as profile_daily_goal_minutes,
+  s.payload->'accountProfile'->>'completedAt' as profile_completed_at,
+  s.payload->'accountProfile'->>'focusCustom' as profile_focus_custom
+from auth.users u
+left join public.deecadence_sync_devices d on d.user_id = u.id
+left join public.deecadence_sync_state s on s.user_id = u.id;
+
+revoke all on table public.deecadence_accounts from anon, authenticated, public;
 
 -- ============================================================
 -- Passive learning events and focus-session outcomes

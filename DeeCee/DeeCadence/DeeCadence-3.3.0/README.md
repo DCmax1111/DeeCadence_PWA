@@ -27,11 +27,11 @@ If this device and the cloud copy both change since the last sync, DeeCadence as
 
 The browser uses only the Supabase publishable key. User data is protected by row-level security, and the save function checks both the snapshot revision and the active device before writing. Never put a service-role key in this app.
 
-To keep traffic light, the Supabase SDK loads only when a stored sign-in exists or an email sign-in is being started. Local saves are debounced, and background cloud checks run at most once every five minutes; **Sync now** is immediate. A short network or device-check failure does not sign the user out: local work stays available and the app retries later.
+To keep traffic light, the Supabase SDK loads only when a stored sign-in exists or an email sign-in is being started. Local saves are debounced, and background cloud checks run at most once every five minutes; **Sync now** is immediate. A signed-in user never has to press **Sync now** to recover from a transient failure: the app retries automatically with a short backoff, and again when the tab becomes visible, the connection returns, or the profile is saved. A short network or device-check failure does not sign the user out: local work stays available.
 
 ## Supabase setup
 
-The `supabase/setup_sync.sql` file creates the `public.deecadence_sync_state` table, the one-device `public.deecadence_sync_devices` table, row-level security policies, and the device-checked revision save function. It also creates the `public.deecadence_profiles` view, which exposes the saved name, focus area, daily goal, and completion time without duplicating the profile data. The same file creates the passive-learning tables, the batch ingestion function, and the observed-pattern views described below. Run the whole file in the Supabase SQL editor for a new project. Re-run it after upgrading an earlier 3.3.0 build; the file is safe to run again and revokes the old two-argument save function so an old client cannot bypass the device check.
+The `supabase/setup_sync.sql` file creates the `public.deecadence_sync_state` table, the one-device `public.deecadence_sync_devices` table, row-level security policies, and the device-checked revision save function. It also creates the `public.deecadence_profiles` and `public.deecadence_accounts` views, which expose the saved name, focus area, daily goal, email, last sign-in, and active device without duplicating the profile data. The same file creates the passive-learning tables, the batch ingestion function, and the observed-pattern views described below. Run the whole file in the Supabase SQL editor for a new project. Re-run it after upgrading an earlier 3.3.0 build; the file is safe to run again and revokes the old two-argument save function so an old client cannot bypass the device check.
 
 The current project is `https://rmzaxfsaezegahwfignu.supabase.co`. Its URL and publishable key are stored in the two `deecadence-sync-*` meta tags in `index.html`. These are public browser values; never put a secret or service-role key there.
 
@@ -41,7 +41,7 @@ In **Supabase → Authentication → URL Configuration**:
 2. Add redirect URLs for production and local testing: `https://your-app.vercel.app/**`, `http://localhost:8321/**`, and `http://localhost:8324/**`. Supabase will not return to a URL that is not on this list.
 3. Keep email authentication enabled. The app does not use anonymous sign-ins.
 4. Configure a custom SMTP sender before public launch so sign-in links are reliable and branded.
-5. To support the app's **Use a 6-digit code instead** option, edit **Authentication → Email Templates → Magic Link** and include `{{ .Token }}` in the message. For example:
+5. To support the app's **Have a 6-digit code?** option, edit **Authentication → Email Templates → Magic Link** and include `{{ .Token }}` in the message. If template editing is not available on the current Supabase plan, the link flow still works and the code panel remains optional. For example:
 
    ```html
    <h2>Your DeeCadence sign-in code</h2>
@@ -49,19 +49,27 @@ In **Supabase → Authentication → URL Configuration**:
    <p>Or open this link on the same device: <a href="{{ .ConfirmationURL }}">Sign in to DeeCadence</a></p>
    ```
 
-   The link signs in the device that opens it. If the link is opened on a phone while the laptop is waiting, the phone is signed in, not the laptop; use the code on the laptop instead.
+   The link signs in the device that opens it. If the link is opened on a phone while the laptop is waiting, the phone is signed in, not the laptop; use the code on the laptop instead. If the email contains only a link and no code, the template is missing `{{ .Token }}`; the default Magic Link template does not include it. The app treats the code as optional, so a link-only email does not block sign-in.
 
 The app asks Supabase to return to the current page by default. To force a stable production return even when sign-in starts from a preview deployment, set `deecadence-sync-redirect-url` in `index.html` to the production URL and allowlist that exact URL in Supabase. Leave it empty to keep same-page behavior.
 
 ### First sign-in and one active device
 
-After the magic link returns, DeeCadence asks for a name, main focus, and daily goal before it writes the first cloud snapshot. The profile is stored in the synced state so it follows the account to another device, and it is also copied to Supabase auth metadata (`display_name`, `full_name`, `focus_area`, `daily_goal_minutes`) so the Users table is readable. A blank display name in Supabase is not a sign-in failure; it just means this profile step has not run yet. Once signed in, **Profile** in the sync card reopens the same form so the name, focus, or daily goal can be changed later.
+After the magic link returns, DeeCadence asks for a name, main focus, and daily goal before it writes the first cloud snapshot. The main focus list includes a **Custom** option with a 40-character limit; custom text is stored as `focus: "custom"` plus `focusCustom` in the synced snapshot, and as `focus_custom` in auth metadata. The profile is stored in the synced state so it follows the account to another device, and it is also copied to Supabase auth metadata (`display_name`, `full_name`, `focus_area`, `focus_custom`, `daily_goal_minutes`) so the Users table is readable. A blank display name in Supabase is not a sign-in failure; it just means this profile step has not run yet. Once signed in, **Profile** in the sync card reopens the same form so the name, focus, or daily goal can be changed later.
 
 To inspect saved profiles in the SQL editor, run:
 
 ```sql
 select * from public.deecadence_profiles order by updated_at desc;
 ```
+
+To see sign-in, device, and profile details together, run:
+
+```sql
+select * from public.deecadence_accounts order by last_sign_in_at desc nulls last;
+```
+
+The authoritative sign-in list is still **Authentication → Users** in the Supabase dashboard (or `auth.users` in SQL). `deecadence_sync_devices` only shows the account UUID, device label, and claim timestamps; `deecadence_profiles` only has a row after the first successful sync snapshot.
 
 Only one device can be active for an account. A second device signs in, sees which device currently holds the account, and can choose **Use this device instead**. The previous device signs out locally on its next check but keeps its local work, so it can take the account back later. Normal sign-out releases the device claim. If a claim or save is interrupted, the app continues locally and retries; it does not discard local data.
 

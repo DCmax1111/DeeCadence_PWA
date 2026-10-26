@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "deecadence-v3-3-39";
+﻿const CACHE_NAME = "deecadence-v3-3-42";
 const APP_SHELL = [
   "./",
   "./index.html",

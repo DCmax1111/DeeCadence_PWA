@@ -424,7 +424,8 @@
       </div>
       <div class="card sync-card" id="syncCard">
         <div class="setting-label">Back up and sync your progress</div>
-        <div class="setting-desc">DeeCadence saves your work on this device automatically. Enter your email to get a secure sign-in link. Open the link on this device — a link opened on your phone signs in your phone, not this browser. After the first sign-in, you'll add your name and a couple of preferences before the first backup. One device stays active per account for now; if you change devices, use “Use this device instead” here. A running timer and pending feedback stay on the device where they started.</div>
+        <div class="setting-desc sync-copy" id="syncSignedOutCopy">DeeCadence saves your work on this device automatically. Enter your email to get a secure sign-in link. Open the link on this device — a link opened on your phone signs in your phone, not this browser. After the first sign-in, you'll add your name and a couple of preferences before the first backup. One device stays active per account for now; if you change devices, use “Use this device instead” here. A running timer and pending feedback stay on the device where they started.</div>
+        <div class="setting-desc sync-copy" id="syncSignedInCopy" hidden>Your account is connected. DeeCadence backs up automatically as you work, and your name, focus, and daily goal follow you to another device. One device stays active per account for now. A running timer and pending feedback stay on this device. Use Sync now only if you want to check immediately.</div>
         <p class="sync-status" id="syncStatus" role="status" aria-live="polite">Your progress is saved on this device. Sign in to back it up and sync across devices.</p>
         <form class="sync-signin" id="syncSignInForm">
           <label class="sr-only" for="syncEmail">Email address</label>
@@ -433,13 +434,13 @@
         </form>
         <p class="sync-cooldown" id="syncCooldown" hidden></p>
         <details class="sync-code-panel" id="syncCodePanel">
-          <summary>Use a 6-digit code instead</summary>
+          <summary>Have a 6-digit code?</summary>
           <form class="sync-signin sync-code-form" id="syncCodeForm">
             <label class="sr-only" for="syncCode">6-digit code</label>
             <input id="syncCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="6-digit code">
             <button class="btn btn-secondary" id="syncCodeBtn" type="submit">Verify code</button>
           </form>
-          <p class="sync-code-help">Use the code from the same email. It works on any device. If your email only has a link, open the link on the device you want to sign in.</p>
+          <p class="sync-code-help">If your email includes a 6-digit code, enter it here. Otherwise open the link on the device you want to sign in.</p>
         </details>
         <div class="sync-account-controls" id="syncAccountControls" hidden>
           <span class="sync-account-email" id="syncAccountEmail"></span>
@@ -889,6 +890,7 @@
             <option value="coding">Coding</option>
             <option value="skill">Learning a skill</option>
             <option value="discipline">Personal discipline</option>
+            <option value="custom">Custom</option>
           </select>
         </div>
         <div class="field">
@@ -901,6 +903,11 @@
             <option value="120">120 minutes</option>
           </select>
         </div>
+      </div>
+      <div class="field account-setup-custom" id="accountSetupCustomField" hidden>
+        <label for="accountSetupCustomFocus">Custom focus</label>
+        <input id="accountSetupCustomFocus" type="text" maxlength="40" autocomplete="off" placeholder="e.g. Music production" aria-describedby="accountSetupCustomHint">
+        <p class="account-setup-hint" id="accountSetupCustomHint">Up to 40 characters. <span id="accountSetupCustomCount">0/40</span></p>
       </div>
       <div class="account-setup-account">
         <span class="account-setup-account-label">Syncing with</span>

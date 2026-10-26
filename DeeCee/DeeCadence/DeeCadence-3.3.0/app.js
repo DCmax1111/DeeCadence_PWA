@@ -286,6 +286,8 @@
   };
 
   var ACCOUNT_FOCUS_IDS = ["studying", "work", "business", "coding", "skill", "discipline"];
+  var ACCOUNT_FOCUS_CUSTOM_ID = "custom";
+  var ACCOUNT_FOCUS_CUSTOM_MAX = 40;
   var ACCOUNT_GOAL_MINUTES = [15, 30, 60, 90, 120];
 
   var PERSONAL_DISTRACTION_LABELS = {
@@ -762,16 +764,32 @@
   }
 
   function defaultAccountProfile() {
-    return { name: "", focus: "", dailyGoalMinutes: 0, completedAt: "" };
+    return { name: "", focus: "", focusCustom: "", dailyGoalMinutes: 0, completedAt: "" };
+  }
+
+  function normalizeFocusCustom(value) {
+    return String(value || "")
+      .replace(/[\u0000-\u001F\u007F]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, ACCOUNT_FOCUS_CUSTOM_MAX);
   }
 
   function normalizeAccountProfile(input) {
     var source = input && typeof input === "object" ? input : {};
     var goal = parseInt(source.dailyGoalMinutes, 10) || 0;
     if (ACCOUNT_GOAL_MINUTES.indexOf(goal) === -1) goal = 0;
+    var rawFocus = String(source.focus || "").trim();
+    var customFocus = normalizeFocusCustom(source.focusCustom ||
+      (rawFocus && ACCOUNT_FOCUS_IDS.indexOf(rawFocus) === -1 && rawFocus !== ACCOUNT_FOCUS_CUSTOM_ID ? rawFocus : ""));
+    var focus = ACCOUNT_FOCUS_IDS.indexOf(rawFocus) > -1
+      ? rawFocus
+      : (rawFocus === ACCOUNT_FOCUS_CUSTOM_ID || customFocus ? ACCOUNT_FOCUS_CUSTOM_ID : "");
+    if (focus === ACCOUNT_FOCUS_CUSTOM_ID && !customFocus) focus = "";
     return {
       name: String(source.name || "").trim().slice(0, 60),
-      focus: ACCOUNT_FOCUS_IDS.indexOf(source.focus) > -1 ? source.focus : "",
+      focus: focus,
+      focusCustom: focus === ACCOUNT_FOCUS_CUSTOM_ID ? customFocus : "",
       dailyGoalMinutes: goal,
       completedAt: String(source.completedAt || "")
     };
@@ -790,10 +808,36 @@
     state.accountProfile = next;
     state.profile.dailyGoalMinutes = goal;
     state.profile.dailyGoalBlocks = Math.max(1, Math.round(goal / 15));
-    if (!state.onboarding.purpose) state.onboarding.purpose = next.focus;
+    if (!state.onboarding.purpose && ACCOUNT_FOCUS_IDS.indexOf(next.focus) > -1) {
+      state.onboarding.purpose = next.focus;
+    }
     saveState();
     renderAll();
     return true;
+  }
+
+  function updateAccountSetupCustomCount() {
+    var input = document.getElementById("accountSetupCustomFocus");
+    var count = document.getElementById("accountSetupCustomCount");
+    if (count) count.textContent = String(input ? input.value.length : 0) + "/" + ACCOUNT_FOCUS_CUSTOM_MAX;
+  }
+
+  function syncAccountFocusCustomField(shouldFocus) {
+    var focusSelect = document.getElementById("accountSetupFocus");
+    var customField = document.getElementById("accountSetupCustomField");
+    var customInput = document.getElementById("accountSetupCustomFocus");
+    var isCustom = Boolean(focusSelect && focusSelect.value === ACCOUNT_FOCUS_CUSTOM_ID);
+    if (customField) customField.hidden = !isCustom;
+    if (customInput) {
+      customInput.required = isCustom;
+      if (!isCustom) {
+        customInput.value = "";
+        customInput.removeAttribute("aria-invalid");
+      } else if (shouldFocus) {
+        customInput.focus();
+      }
+    }
+    updateAccountSetupCustomCount();
   }
 
   function openAccountSetup(detail) {
@@ -802,6 +846,7 @@
     var current = normalizeAccountProfile(state.accountProfile);
     var nameInput = document.getElementById("accountSetupName");
     var focusSelect = document.getElementById("accountSetupFocus");
+    var customInput = document.getElementById("accountSetupCustomFocus");
     var goalSelect = document.getElementById("accountSetupGoal");
     var emailLabel = document.getElementById("accountSetupEmail");
     var note = document.getElementById("accountSetupNote");
@@ -812,7 +857,13 @@
       nameInput.value = current.name || "";
       nameInput.removeAttribute("aria-invalid");
     }
-    if (focusSelect) focusSelect.value = focus;
+    if (focusSelect) {
+      focusSelect.value = focus === ACCOUNT_FOCUS_CUSTOM_ID
+        ? ACCOUNT_FOCUS_CUSTOM_ID
+        : (ACCOUNT_FOCUS_IDS.indexOf(focus) > -1 ? focus : "work");
+    }
+    if (customInput) customInput.value = current.focus === ACCOUNT_FOCUS_CUSTOM_ID ? current.focusCustom || "" : "";
+    syncAccountFocusCustomField(false);
     if (goalSelect) goalSelect.value = String(goal);
     if (emailLabel) emailLabel.textContent = detail && detail.email ? String(detail.email) : "Your DeeCadence account";
     if (note) {
@@ -834,6 +885,7 @@
     if (event) event.preventDefault();
     var nameInput = document.getElementById("accountSetupName");
     var focusSelect = document.getElementById("accountSetupFocus");
+    var customInput = document.getElementById("accountSetupCustomFocus");
     var goalSelect = document.getElementById("accountSetupGoal");
     var note = document.getElementById("accountSetupNote");
     var name = nameInput ? nameInput.value.trim().slice(0, 60) : "";
@@ -848,18 +900,40 @@
       }
       return;
     }
-    var focus = focusSelect && ACCOUNT_FOCUS_IDS.indexOf(focusSelect.value) > -1 ? focusSelect.value : "work";
+    if (customInput) customInput.removeAttribute("aria-invalid");
+    var selectedFocus = focusSelect ? focusSelect.value : "work";
+    var focusCustom = "";
+    if (selectedFocus === ACCOUNT_FOCUS_CUSTOM_ID) {
+      focusCustom = normalizeFocusCustom(customInput ? customInput.value : "");
+      if (!focusCustom) {
+        if (customInput) {
+          customInput.setAttribute("aria-invalid", "true");
+          customInput.focus();
+        }
+        if (note) {
+          note.setAttribute("data-status", "error");
+          note.textContent = "Add a short name for your focus area.";
+        }
+        return;
+      }
+    } else if (ACCOUNT_FOCUS_IDS.indexOf(selectedFocus) === -1) {
+      selectedFocus = "work";
+    }
+    var focus = selectedFocus;
     var goal = parseInt(goalSelect ? goalSelect.value : "", 10) || Number(state.profile.dailyGoalMinutes) || 60;
     if (ACCOUNT_GOAL_MINUTES.indexOf(goal) === -1) goal = 60;
     state.accountProfile = normalizeAccountProfile({
       name: name,
       focus: focus,
+      focusCustom: focusCustom,
       dailyGoalMinutes: goal,
       completedAt: state.accountProfile.completedAt || new Date().toISOString()
     });
     state.profile.dailyGoalMinutes = goal;
     state.profile.dailyGoalBlocks = Math.max(1, Math.round(goal / 15));
-    if (!state.onboarding.purpose) state.onboarding.purpose = focus;
+    if (!state.onboarding.purpose && ACCOUNT_FOCUS_IDS.indexOf(focus) > -1) {
+      state.onboarding.purpose = focus;
+    }
     saveState();
     closeAccountSetup();
     renderAll();
@@ -5673,6 +5747,18 @@
   function wireEvents() {
     var accountSetupForm = document.getElementById("accountSetupForm");
     if (accountSetupForm) accountSetupForm.onsubmit = saveAccountSetup;
+    var accountSetupFocus = document.getElementById("accountSetupFocus");
+    if (accountSetupFocus) accountSetupFocus.onchange = function () {
+      syncAccountFocusCustomField(true);
+    };
+    var accountSetupCustomFocus = document.getElementById("accountSetupCustomFocus");
+    if (accountSetupCustomFocus) accountSetupCustomFocus.oninput = function () {
+      if (accountSetupCustomFocus.value.length > ACCOUNT_FOCUS_CUSTOM_MAX) {
+        accountSetupCustomFocus.value = accountSetupCustomFocus.value.slice(0, ACCOUNT_FOCUS_CUSTOM_MAX);
+      }
+      accountSetupCustomFocus.removeAttribute("aria-invalid");
+      updateAccountSetupCustomCount();
+    };
     var accountSetupSignOut = document.getElementById("accountSetupSignOutBtn");
     if (accountSetupSignOut) accountSetupSignOut.onclick = function () {
       try {
@@ -6248,6 +6334,15 @@
     openSetup: openAccountSetup,
     closeSetup: closeAccountSetup,
     applyProfile: applyAccountProfile,
+    clearProfile: function () {
+      state.accountProfile = defaultAccountProfile();
+      state.profile.dailyGoalMinutes = 60;
+      state.profile.dailyGoalBlocks = 4;
+      if (state.onboarding) state.onboarding.purpose = "";
+      saveState();
+      renderAll();
+      return true;
+    },
     getName: accountProfileName
   };
 
