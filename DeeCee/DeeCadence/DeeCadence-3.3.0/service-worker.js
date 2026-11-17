@@ -1,10 +1,11 @@
-﻿const CACHE_NAME = "deecadence-v3-3-51";
+﻿const CACHE_NAME = "deecadence-v3-3-69";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./app.js",
   "./sync.js",
   "./style.css",
+  "./updates.json",
   "./manifest.json",
   "./icons/deecadence.svg",
   "./icons/icon-192.png",
@@ -28,6 +29,7 @@ const CORE_FILES = new Set([
   "./app.js",
   "./sync.js",
   "./style.css",
+  "./updates.json",
   "./manifest.json"
 ]);
 
@@ -57,7 +59,9 @@ self.addEventListener("fetch", (event) => {
     const url = new URL(event.request.url);
     if (url.origin === self.location.origin) {
       const path = "./" + (url.pathname.replace(/^\/+/, "") || "");
-      isCore = event.request.mode === "navigate" || CORE_FILES.has(path);
+      isCore = event.request.mode === "navigate" ||
+        CORE_FILES.has(path) ||
+        url.pathname.endsWith("/updates.json");
     }
   } catch (error) {
     isCore = false;

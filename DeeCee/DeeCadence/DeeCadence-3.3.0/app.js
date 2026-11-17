@@ -1,26 +1,11 @@
 (function () {
   "use strict";
 
-  // The splash is owned by the inline boot gate in index.html: it shows on a
-  // first open or after a long gap, and clears itself. app.js must never
-  // dismiss it early or the first-run moment is lost.
-  function dismissBootLoader() {
-    try {
-      document.body.classList.add("booted");
-      var bootLoader = document.getElementById("bootLoader");
-      if (!bootLoader) return;
-      bootLoader.style.opacity = "0";
-      bootLoader.style.visibility = "hidden";
-      setTimeout(function () {
-        if (bootLoader.parentNode) bootLoader.parentNode.removeChild(bootLoader);
-      }, 400);
-    } catch (e) {}
-  }
-
-  // Global error handler: never leave the user staring at a stuck splash.
-  window.addEventListener("error", dismissBootLoader);
+  // The inline boot gate in index.html owns the splash and the load-failure
+  // screen. app.js only reports whether initialization finished cleanly.
 
   var APP_VERSION = "3.3.0";
+  var RELEASE_ID = "2026-11-17-agenda-focus";
   var STORAGE_KEY = "deecadence_state_v3";
   var EXIT_BACKUP_KEY = STORAGE_KEY + "_exit_backup";
   var STORAGE_QUOTA_WARN_SHOWN_KEY = STORAGE_KEY + "_quota_warn";
@@ -30,6 +15,42 @@
   var SUPABASE_URL = (document.querySelector('meta[name="deecadence-supabase-url"]') || {}).content || "";
   var SUPABASE_ANON_KEY = (document.querySelector('meta[name="deecadence-supabase-anon-key"]') || {}).content || "";
   var FEEDBACK_TABLE = (document.querySelector('meta[name="deecadence-feedback-table"]') || {}).content || "feedbacks";
+  var COMMUNITY_WHATSAPP_URL = (document.querySelector('meta[name="deecadence-community-whatsapp"]') || {}).content || "";
+  var UPDATES_FEED_URL = (document.querySelector('meta[name="deecadence-updates-feed"]') || {}).content || "./updates.json";
+  var UPDATES_CACHE_KEY = "deecadence_updates_cache_v1";
+  var UPDATES_FETCH_INTERVAL_MS = 30000;
+  var UPDATES_FETCH_TIMEOUT_MS = 6000;
+  var updatesFetchPromise = null;
+  var lastUpdatesFetchAt = 0;
+  // Cold-start fallback. The live feed is updates.json; this seed keeps the
+  // bell useful on a first offline load or if the feed cannot be reached.
+  // Keep it roughly in sync with the deployed feed.
+  var UPDATES = [
+    {
+      id: "welcome-3-3-0",
+      publishedAt: Date.UTC(2026, 10, 10),
+      title: "Welcome to DeeCadence",
+      body: "Start with one small focus block, let the timer carry you, and watch your Rank grow as you show up. The ? on Today and the help library in Settings are always there if you need a hand."
+    },
+    {
+      id: "plan-safety-3-3-66",
+      publishedAt: Date.UTC(2026, 10, 12),
+      title: "A calmer, safer Plan",
+      body: "Missed, Ready, and Done now collapse out of the way, and deleting a task clears matching copies plus their recurrence branches."
+    },
+    {
+      id: "progress-at-a-glance",
+      publishedAt: Date.UTC(2026, 10, 13),
+      title: "Progress at a glance",
+      body: "Cadence and Momentum now sit together, the chart stays close to your focus history, and your strongest day is marked in the selected range."
+    },
+    {
+      id: "community-whatsapp-2026-11",
+      publishedAt: Date.UTC(2026, 10, 16),
+      title: "Join the DeeCadence WhatsApp group",
+      body: "Release notes, focus challenges, and early invitations land there first. It is optional, quiet, and you can leave whenever you like."
+    }
+  ];
   var REFERENCE_BENCHMARK = { score: 70, label: "DeeCadence reference marker", version: "reference-2026" };
   var XP_PER_FOCUS_MINUTE = 1;
   var XP_MANUAL_DONE_RATE = 0.25;
@@ -42,6 +63,8 @@
   var RECOVERY_SECONDS = 60;
   var MAX_CUSTOM_MINUTES = 240;
   var MIN_CUSTOM_MINUTES = 4;
+  var MAX_TASK_MINUTES = 480;
+  var MIN_TASK_MINUTES = 10;
   var SCHEDULE_START_MINUTES = 0;
   var SCHEDULE_END_MINUTES = 24 * 60;
   var DAY_START_MINUTES = 8 * 60;
@@ -165,6 +188,7 @@
   var activeView = "today";
   var currentPlanTab = "day";
   var currentPlanMode = "schedule";
+  var planGroupOpen = { missed: false, ready: false, done: false };
   var pendingStartTask = null;
   var startDurationLocked = false;
   var editingTaskId = null;
@@ -196,6 +220,8 @@
   var lastBlockCompletedAt = 0;
   var milestoneQueue = [];
   var milestoneActive = false;
+  var milestoneAfterDismiss = null;
+  var milestoneAudioContext = null;
   var backupDirty = false;
   var timePickerState = { hour: 9, minute: 0, period: "AM", stage: "hour" };
   var selectedRepeatDays = [];
@@ -203,27 +229,44 @@
   var startModal = document.getElementById("startModal");
   var taskModal = document.getElementById("taskModal");
   var taskDetailModal = document.getElementById("taskDetailModal");
-  var feedbackModal = document.getElementById("feedbackModal");
+  var helpLibraryModal = document.getElementById("helpLibraryModal");
+  var updatesModal = document.getElementById("updatesModal");
+  var communityInviteOverlay = document.getElementById("communityInviteOverlay");
   var personalizeModal = document.getElementById("personalizeModal");
   var accountSetupModal = document.getElementById("accountSetupModal");
   var attentionTestModal = document.getElementById("attentionTestModal");
   var welcomeOverlay = document.getElementById("welcomeOverlay");
+  var releaseOverlay = document.getElementById("releaseOverlay");
   var tourOverlay = document.getElementById("tourOverlay");
   var revealOverlay = document.getElementById("revealOverlay");
   var timePickerOverlay = document.getElementById("timePickerOverlay");
-  var howToOverlay = document.getElementById("howToOverlay");
-  var howToNav = document.getElementById("howToNav");
-  var howToContent = document.getElementById("howToContent");
-  var howToCloseBtn = document.getElementById("howToCloseBtn");
-  var howToOpenBtn = document.getElementById("openHowToBtn");
-  var howToReplayBtn = document.getElementById("howToReplayBtn");
-  var howToFeedbackBtn = document.getElementById("howToFeedbackBtn");
-  var howToEntryNotice = document.getElementById("howToEntryNotice");
-  var howToEntryOpenBtn = document.getElementById("howToEntryOpenBtn");
-  var howToEntryDismissBtn = document.getElementById("howToEntryDismissBtn");
-  var howToActiveTopic = "focus";
-  var howToLastFocus = null;
-  var howToEntrySnoozed = false;
+  var tourView = "today";
+  var helpTourReturnFocus = null;
+  var helpTourSuppressAuto = false;
+  var autoHelpTourTimer = 0;
+  var helpLibraryReturnFocus = null;
+  var updatesList = document.getElementById("updatesList");
+  var updatesEyebrow = document.getElementById("updatesEyebrow");
+  var updatesTitle = document.getElementById("updatesTitle");
+  var updatesIntro = document.getElementById("updatesIntro");
+  var updatesListView = document.getElementById("updatesListView");
+  var updatesDetailView = document.getElementById("updatesDetailView");
+  var updatesDetailBody = document.getElementById("updatesDetailBody");
+  var updatesBackBtn = document.getElementById("updatesBackBtn");
+  var updatesDetailBackBtn = document.getElementById("updatesDetailBackBtn");
+  var updatesContextMenu = document.getElementById("updatesContextMenu");
+  var updatesContextAction = document.getElementById("updatesContextAction");
+  var updatesReturnFocus = null;
+  var currentUpdateId = null;
+  var updatesContextRowId = "";
+  var updatesContextReturnFocus = null;
+  var updatesLongPressTimer = 0;
+  var updatesLongPressStart = null;
+  var updatesSuppressClickUntil = 0;
+  var updatesEyebrowDefault = updatesEyebrow ? updatesEyebrow.textContent : "";
+  var updatesTitleDefault = updatesTitle ? updatesTitle.textContent : "";
+  var updatesIntroDefault = updatesIntro ? updatesIntro.textContent : "";
+  var communityInviteReturnFocus = null;
 
   var ONBOARDING_PURPOSE_COPY = {
     studying: {
@@ -283,10 +326,9 @@
   };
 
   var ONBOARDING_NOTES = [
+    "Start with what feels possible. You can adjust it later.",
     "Choose the closest fit. You can change it later.",
-    "Only the focus area is required. The other details can wait.",
-    "This is a starting suggestion, not a fixed schedule.",
-    "Your rank grows with completed focus minutes. Start at a pace that feels manageable."
+    "This is a starting suggestion, not a fixed schedule."
   ];
 
   var PERSONAL_PURPOSE_LABELS = {
@@ -318,174 +360,270 @@
     "45": "45+ minutes"
   };
 
-  var TOUR_STEPS = [
-    {
-      view: "today",
-      target: '[data-tour="today-rank"]',
-      coach: "Start here",
-      title: "DeeCadence rebuilds attention",
-      body: "You plan one task, focus on one block, earn XP from the minutes you actually protect, then continue from where you stopped."
+  var HELP_TOURS = {
+    today: {
+      label: "Today",
+      intro: "Your focus range, rank, next block, and today's plan.",
+      steps: [
+        {
+          target: ['#sustainableFocusRange', '#startSuggestedFocusBtn'],
+          coach: "Today",
+          title: "Your sustainable focus range",
+          body: "This number is your current starting range. It grows as you finish blocks, so start smaller than you think you can handle."
+        },
+        {
+          target: '[data-tour="today-rank"]',
+          coach: "Today",
+          title: "Rank and level",
+          body: "The orb shows your rank, level, and XP. Protected focus minutes move it; nothing else does."
+        },
+        {
+          target: '#startNextBlockBtn',
+          coach: "Today",
+          title: "Your next block",
+          body: "Start the next planned block here. Auto-arrange can place open tasks into free time first."
+        },
+        {
+          target: ['#todayPlanList .task-line', '#todayPlanList .today-plan-task-main', '#todayPlanList .today-plan-group summary', '[data-help="today-plan"]', '#todayPlanList .empty-state', '#todayPlanList'],
+          coach: "Today",
+          title: "Today's plan",
+          body: "This is the work you planned for today. Start a task from here, or open Plan to edit the details.",
+          prepare: function () {
+            var groups = document.querySelectorAll("#todayPlanList details.today-plan-group");
+            for (var i = 0; i < groups.length; i += 1) {
+              if (groups[i].querySelector(".task-line")) {
+                groups[i].open = true;
+                return;
+              }
+            }
+          }
+        }
+      ]
     },
-    {
-      view: "rank",
-      target: '[data-tour="rank-ladder"]',
-      coach: "Ranks",
-      title: "What the letters mean",
-      body: "E, D, C, B, A, S, SS, SSS, and L are attention ranks. E is the starting point. Higher letters need much more total XP, so long focus time matters."
+    focus: {
+      label: "Focus",
+      intro: "Set up a block, choose ambient sound, and protect one block at a time.",
+      steps: [
+        {
+          target: ['#focusStartFromEmpty', '#focusRoot .focus-controls', '#focusRoot .focus-stage'],
+          coach: "Focus",
+          title: "Your focus area",
+          body: "With no session, set up a block here. During a session, the timer, pause, and stop controls appear in this same space."
+        },
+        {
+          target: "#focusNoiseBtn",
+          coach: "Focus",
+          title: "Choose a sound",
+          body: "Brown noise, rain and thunder, classical, or wind. Pick the one that helps you stay with the block."
+        },
+        {
+          target: "#focusNoiseToggle",
+          coach: "Focus",
+          title: "Sound follows the timer",
+          body: "Turn ambient sound on or off here. It only plays while a focus block is running, then stops with the timer."
+        }
+      ]
     },
-    {
-      view: "plan",
-      target: '[data-tour="plan-controls"]',
-      coach: "Practice 1",
-      title: "Pick Schedule or Tasks",
-      body: "Schedule shows your day by time. Tasks shows the same work as a checklist so you can edit, mark done, or start focus quickly."
+    plan: {
+      label: "Plan",
+      intro: "Choose a layout and range, add one real task, and start focus from the list.",
+      steps: [
+        {
+          target: "#planModeSeg",
+          coach: "Plan",
+          title: "Choose the layout",
+          body: "Schedule is the calendar. Tasks is the checklist. Both show the same work."
+        },
+        {
+          target: ".plan-controls .tabs",
+          coach: "Plan",
+          title: "Choose the range",
+          body: "Day, Week, and Pending change the range without changing the work."
+        },
+        {
+          target: ['#planList .schedule-head', '#planList .task-row', '#planList .empty-state', '#planList'],
+          coach: "Plan",
+          title: "Add one real task",
+          body: "Use Add task in the top right to capture one task. It lands here, ready to place, start, or auto-arrange."
+        }
+      ]
     },
-    {
-      view: "plan",
-      target: '[data-tour="add-task"]',
-      coach: "Practice 2",
-      title: "Add one task",
-      body: "Give the task a title, date, optional time, and estimate. If the time is flexible, Auto-arrange can place it neatly."
+    release: {
+      label: "What’s new",
+      intro: "Walk through the changes in the places where they live.",
+      steps: [
+        {
+          view: "plan",
+          target: ["#planList .schedule-agenda-day.is-today", "#planList .schedule-agenda-day", "#planList .schedule-week-shell"],
+          coach: "What’s new",
+          title: "Week is now a real agenda",
+          body: "This view groups the week by date and stacks time-stamped blocks. Add more work and the agenda grows downward instead of creating tall empty day panels.",
+          prepare: function () { currentPlanMode = "schedule"; currentPlanTab = "week"; renderPlan(); }
+        },
+        {
+          view: "plan",
+          target: ["#view-plan .plan-controls .tabs", "#planList .task-week-stack", "#planList .empty-state"],
+          coach: "What’s new",
+          title: "Tasks now have distinct scopes",
+          body: "Tasks → Week groups the next seven days into dated sections. Day stays focused on today, while Pending gathers every unfinished task across your plan.",
+          prepare: function () { currentPlanMode = "tasks"; currentPlanTab = "week"; renderPlan(); }
+        },
+        {
+          view: "today",
+          target: ["#sustainableFocusRange", "#startSuggestedFocusBtn"],
+          coach: "What’s new",
+          title: "Your focus evidence is visible here",
+          body: "The Today card now turns your progress into quick evidence: best window, recent completion, and next stretch — all in one compact place.",
+          prepare: function () { renderToday(); }
+        },
+        {
+          view: "history",
+          target: ["[data-history-filter=partial]", "#historyList"],
+          coach: "What’s new",
+          title: "Partial sessions have a home",
+          body: "Open Partial to see focus blocks that were started but not fully completed. Continuing a saved session updates its existing history record.",
+          prepare: function () { currentHistoryFilter = "partial"; renderHistory(); }
+        },
+        {
+          view: "settings",
+          target: ["#updatesList .updates-item:first-child", "#updatesList", "#openUpdatesBtn"],
+          coach: "What’s new",
+          title: "Updates stay available afterward",
+          body: "The update center keeps the full notes, with unread changes first. You can revisit this area any time from Settings → Community & updates.",
+          prepare: function () { openUpdates(document.getElementById("openUpdatesBtn")); }
+        }
+      ]
     },
-    {
-      view: "plan",
-      target: "#taskFlexInput",
-      setup: "taskModal",
-      coach: "Timing",
-      title: "Fixed or flexible time",
-      body: "Fixed keeps the exact time you choose. Flexible places the task into the next available part of your day automatically."
+    rank: {
+      label: "Rank",
+      intro: "See how focus time becomes rank, level, and XP.",
+      steps: [
+        {
+          target: '[data-tour="rank-console"]',
+          coach: "Rank",
+          title: "Rank, level, and XP",
+          body: "Your rank is the letter. The level keeps climbing through the same curve. XP is the record of focus minutes you protected."
+        },
+        {
+          target: "#rankLadder",
+          coach: "Rank",
+          title: "The rank ladder",
+          body: "The ladder shows every gate in order. Use the arrows to look ahead at what the next ranks need."
+        },
+        {
+          target: '[data-help="rank-curve"]',
+          coach: "Rank",
+          title: "The climb gets harder",
+          body: "Every level costs a little more. Rank gates follow total XP, so the ladder and your level stay in sync."
+        }
+      ]
     },
-    {
-      view: "focus",
-      target: '[data-tour="focus-root"]',
-      setup: "closeModals",
-      coach: "Practice 3",
-      title: "Start one block at a time",
-      body: "Choose a session length and 1 to 4 blocks based on your plan. The timer only shows the current block so it feels manageable."
+    progress: {
+      label: "Progress",
+      intro: "Read the trend, the chart, your setup, and recent focus history.",
+      steps: [
+        {
+          target: ".stat-grid",
+          coach: "Progress",
+          title: "The quick read",
+          body: "Day streak, focus time for the selected range, and completion. These are different signals, not one score."
+        },
+        {
+          target: [".chart-type-toggle", ".progress-section-head", ".progress-chart-section"],
+          coach: "Progress",
+          title: "Attention trend",
+          body: "Switch between columns and a line, then change the timeline to match the question you are asking."
+        },
+        {
+          target: ["#personalSetupCard .personal-setup-copy", "#personalSetupCard"],
+          coach: "Progress",
+          title: "Your setup",
+          body: "This card shows the focus rhythm, area, and natural block length DeeCadence has learned from you."
+        },
+        {
+          target: "#progressTaskSummary .progress-summary-line",
+          coach: "Progress",
+          title: "Focus history",
+          body: "These summary lines turn saved logs and tasks into trends. Open History for the row-by-row detail."
+        }
+      ]
     },
-    {
-      view: "progress",
-      target: "#progressChart",
-      coach: "Scoring",
-      title: "XP follows focused time",
-      body: "A finished block earns about 1 XP per focused minute. Completing every selected block adds a small bonus. Marking work done outside the timer earns much less."
+    history: {
+      label: "History",
+      intro: "Filter saved sessions, read the details, or export a copy.",
+      steps: [
+        {
+          target: ".history-controls",
+          coach: "History",
+          title: "Filter the list",
+          body: "Show all activity, only fully completed sessions, or partial sessions. The filter changes the list, not your data."
+        },
+        {
+          target: ['#historyList .history-item', '#historyList .history-empty p', '#historyList .empty-state', '#historyList'],
+          coach: "History",
+          title: "Saved sessions",
+          body: "Each row shows the task, date, blocks completed, pauses, and XP. Use Export in the top right for a CSV copy."
+        }
+      ]
     },
-    {
-      view: "rank",
-      target: '[data-tour="rank-console"]',
-      coach: "Discipline",
-      title: "The climb gets harder",
-      body: "Pausing is allowed. A pause is recorded with the session so you can see your rhythm; it does not erase the focus time you already protected."
+    feedback: {
+      label: "Feedback",
+      intro: "Send a bug, a confusing moment, or an idea without leaving the app.",
+      steps: [
+        {
+          target: "#feedbackTypeGrid",
+          coach: "Feedback",
+          title: "Pick the kind of report",
+          body: "Bug, confusing, idea, or other. The type is added to the message so the developer can triage it quickly."
+        },
+        {
+          target: "#feedbackMessageInput",
+          coach: "Feedback",
+          title: "Tell the story",
+          body: "Say what you expected and what happened instead. Your task names stay private unless you type them yourself."
+        }
+      ]
+    },
+    settings: {
+      label: "Settings",
+      intro: "Preferences, backup and sync, data tools, community updates, the full help library, and what is coming next.",
+      steps: [
+        {
+          target: '[data-tour="settings-sound-row"]',
+          coach: "Settings",
+          title: "Preferences",
+          body: "Theme, sound, ambient sound, reduced motion, and your daily goal all live in this card."
+        },
+        {
+          target: ["#syncCard .setting-label", "#syncStatus"],
+          coach: "Settings",
+          title: "Back up and sync",
+          body: "Sign in with email, take over on a new device, review conflicts, or sync now. Local work stays on this device until you choose."
+        },
+        {
+          target: "#saveLocalBtn",
+          coach: "Settings",
+          title: "Data tools",
+          body: "Save, export, import, or reset local data. Export a recovery copy before switching browsers."
+        },
+        {
+          target: "#openHelpLibraryBtn",
+          coach: "Settings",
+          title: "Help lives here",
+          body: "The full guide library stays out of the way until you need it. Replay any tab tour from here, including this one."
+        },
+        {
+          target: '[data-help="settings-focus-mode"]',
+          coach: "Settings",
+          title: "Strict Focus Mode",
+          body: "This stricter mode is coming soon. It will be off by default and will never subtract XP unless you want it to."
+        }
+      ]
     }
-  ];
-
-  var HOWTO_TOPICS = [
-    {
-      id: "focus",
-      nav: "Start a focus block",
-      eyebrow: "Focus",
-      title: "One block at a time",
-      intro: "A block is a short, protected stretch of attention. Start smaller than you think you need, then let DeeCadence learn from what you finish.",
-      steps: [
-        { title: "Open Focus and pick the work", body: "Use the bottom bar to open Focus. Link a scheduled task, or type a task title so the session stays attached to the work." },
-        { title: "Choose a length and block count", body: "Pick a preset from 15 to 90 minutes, or use Custom for 4 to 240 minutes. Split the total into 1 to 4 blocks." },
-        { title: "Protect the block in front of you", body: "The timer shows only the current block. Pause when you need to; a paused block is saved so you can continue it later. If pauses keep adding up, a shorter block may fit better next time." },
-        { title: "Close the loop", body: "When the block ends, add a quick feeling check. That feedback shapes the next suggestion." }
-      ],
-      note: "A running timer stays on this device. Sync does not move it.",
-      action: { label: "Go to Focus", view: "focus" }
-    },
-    {
-      id: "plan",
-      nav: "Plan your day",
-      eyebrow: "Planning",
-      title: "Plan without overfilling the day",
-      intro: "DeeCadence works best when the plan is small enough to start. Add the work once, then choose how it should sit in your day.",
-      steps: [
-        { title: "Choose Schedule or Tasks", body: "Open Plan. Schedule shows your day by time. Tasks shows the same work as a checklist you can edit and start from." },
-        { title: "Add one real task", body: "Give it a title, date, optional time, and estimate. Keep the estimate honest rather than ambitious." },
-        { title: "Pick fixed or flexible time", body: "Fixed keeps the exact time you choose. Flexible lets Auto-arrange place the task into the next open part of your day." },
-        { title: "Start focus from the task", body: "Use the Focus action on a task so the session, XP, and history stay linked to that work." }
-      ],
-      action: { label: "Go to Plan", view: "plan" }
-    },
-    {
-      id: "rank",
-      nav: "Ranks and XP",
-      eyebrow: "Rank",
-      title: "Ranks follow protected minutes",
-      intro: "XP is a record of attention you actually protected. It is not a score for being busy.",
-      steps: [
-        { title: "Earn XP from focus time", body: "A finished block earns about 1 XP per focused minute. Finishing every selected block adds a small completion bonus." },
-        { title: "Pauses are recorded, not punished", body: "Pausing is allowed. A pause is recorded with the session so you can see your rhythm, and it does not erase the focus time you already protected." },
-        { title: "Climb one rank at a time", body: "Ranks run E, D, C, B, A, S, SS, SSS, and L. Higher ranks need much more total XP, so long focus time matters." },
-        { title: "Do not chase the number", body: "A short block you finish is worth more than a long block you abandon. Use the rank as feedback, not pressure." }
-      ],
-      action: { label: "See Rank", view: "rank" }
-    },
-    {
-      id: "progress",
-      nav: "Read your progress",
-      eyebrow: "Progress",
-      title: "Look for the pattern, not just the number",
-      intro: "Progress shows when focus happens, how it is changing, and where attention slips. Use the range that matches the question you are asking.",
-      steps: [
-        { title: "Use the 7-day view for this week", body: "The 7-day view runs Sunday through Saturday, so it matches a normal week." },
-        { title: "Use 3, 14, or 30 days for trends", body: "These ranges are rolling windows. They are useful when you want to see change without waiting for a new week." },
-        { title: "Check the 30-day heatmap", body: "The heatmap shows the last 30 days at a glance. Empty days are information, not failure." },
-        { title: "Read the whole picture", body: "Focus time, XP, streak, and attention checks each tell a different part of the story. Your daily goal marks the line you set for the day; the streak follows days with a completed block." }
-      ],
-      action: { label: "Go to Progress", view: "progress" }
-    },
-    {
-      id: "sync",
-      nav: "Back up and sync",
-      eyebrow: "Cloud sync",
-      title: "Back up once, then let it run",
-      intro: "DeeCadence saves locally first. Signing in adds a cloud copy so your profile and progress can follow you to another device.",
-      steps: [
-        { title: "Enter your email in Settings", body: "Open Settings and enter the email you want to use. DeeCadence sends a secure sign-in link." },
-        { title: "Open the link on this device", body: "A link opened on your phone signs in your phone, not this browser. Open it on the device you want to use now." },
-        { title: "Finish the first profile", body: "After the first sign-in, add your name, main focus, and daily goal before the first cloud backup. Later devices load that saved profile." },
-        { title: "Let automatic sync work", body: "DeeCadence backs up as you work and retries after connection or visibility changes. Use Sync now only when you want to check immediately." },
-        { title: "Move between devices safely", body: "One device stays active per account for now. On a new device, use Use this device instead to take over safely." }
-      ],
-      note: "A running timer and pending feedback stay on the device where they started.",
-      action: { label: "Open sync settings", view: "settings", target: "syncCard" }
-    },
-    {
-      id: "conflict",
-      nav: "Conflict choices",
-      eyebrow: "Cloud sync",
-      title: "When this device and the cloud both changed",
-      intro: "A conflict means both copies changed since the last successful sync. Both copies are safe. Nothing is replaced until you choose.",
-      steps: [
-        { title: "Open Review copies", body: "The notice appears in the sync card and as a floating reminder. Open it to compare the two copies side by side." },
-        { title: "Read the differences", body: "The screen compares profile, tasks, sessions, focus time, XP, attention checks, streak, and last activity. Highlighted values are the differences." },
-        { title: "Use cloud copy when the cloud is newer", body: "This replaces this device's synced data. A recovery copy is saved in this browser first, so the local copy is not lost immediately." },
-        { title: "Keep this device when this copy is right", body: "This uploads this device's copy and replaces the cloud copy. Your running timer stays where it is." },
-        { title: "Close now and decide later", body: "Use the X or Escape to leave without choosing. Nothing is resolved, and the Review copies reminder stays available." }
-      ],
-      action: { label: "Open sync settings", view: "settings", target: "syncCard", review: true }
-    },
-    {
-      id: "trouble",
-      nav: "If something feels stuck",
-      eyebrow: "Troubleshooting",
-      title: "Your local work comes first",
-      intro: "DeeCadence is built to keep working when the network, cloud, or a background request does not. These are the safe things to try.",
-      steps: [
-        { title: "Keep working offline", body: "If the connection drops, DeeCadence keeps saving on this device and retries when you are back online." },
-        { title: "Let automatic retry run", body: "Sync retries from 5 seconds up to 5 minutes. You can also open Settings and use Sync now for an immediate check." },
-        { title: "Sign out locally", body: "Sign out clears this device's session immediately. Your cloud copy stays in your account and can be loaded on another device." },
-        { title: "Reopen a stuck screen", body: "Close the screen and open it again. Your saved work is not affected by closing a guide, conflict review, or modal." },
-        { title: "Tell us what happened", body: "If something still feels wrong, send feedback with what you expected and what happened instead. The optional context includes app state and counts, not your task titles." }
-      ],
-      action: { label: "Send feedback", action: "feedback" }
-    }
-  ];
+  };
 
   var state = loadState();
+  if (syncSavedSessionsToHistory(state)) saveState();
 
   function getSound(name) {
     if (!SOUND_FILES[name] || typeof Audio === "undefined") return null;
@@ -515,6 +653,46 @@
       }
     } catch (error) {
       // Browser autoplay rules can still block audio after long idle periods.
+    }
+  }
+
+  function playMilestoneChime(kind) {
+    if (!state.settings.sound) return;
+    var AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return;
+    try {
+      if (!milestoneAudioContext) milestoneAudioContext = new AudioCtor();
+      var context = milestoneAudioContext;
+      var notes = kind === "rank" ? [392, 523.25, 659.25, 783.99, 1046.5] : [523.25, 659.25, 783.99];
+      function schedule() {
+        var startAt = context.currentTime + 0.02;
+        notes.forEach(function (frequency, index) {
+          var oscillator = context.createOscillator();
+          var gain = context.createGain();
+          var noteStart = startAt + index * 0.1;
+          oscillator.type = index % 2 ? "sine" : "triangle";
+          oscillator.frequency.setValueAtTime(frequency, noteStart);
+          gain.gain.setValueAtTime(0.0001, noteStart);
+          gain.gain.exponentialRampToValueAtTime(kind === "rank" ? 0.12 : 0.08, noteStart + 0.025);
+          gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.55);
+          oscillator.connect(gain);
+          gain.connect(context.destination);
+          oscillator.start(noteStart);
+          oscillator.stop(noteStart + 0.6);
+        });
+      }
+      if (context.state === "suspended") {
+        var resumed = context.resume();
+        if (resumed && typeof resumed.then === "function") {
+          resumed.then(schedule).catch(function () {});
+        } else {
+          schedule();
+        }
+      } else {
+        schedule();
+      }
+    } catch (error) {
+      // Audio is a bonus; a blocked context must never block the reward flow.
     }
   }
 
@@ -783,12 +961,14 @@
     if (menu) {
       menu.hidden = !ambientMenuOpen;
       if (ambientMenuOpen && !window.matchMedia("(min-width: 401px)").matches && chip) {
-        // On narrow screens the chip sits near the right edge, so anchor the
-        // menu to the screen's left edge instead of under the chip.
+        // On narrow screens the chip sits near the right edge. Align the
+        // menu's right edge with the chip, then clamp it inside the viewport.
         var picker = chip.parentNode;
         var pickerRect = picker.getBoundingClientRect();
         var chipRect = chip.getBoundingClientRect();
-        menu.style.left = Math.round(10 - pickerRect.left) + "px";
+        var menuWidth = menu.offsetWidth || 232;
+        var menuLeft = Math.max(10, Math.min(chipRect.right - menuWidth, window.innerWidth - menuWidth - 10));
+        menu.style.left = Math.round(menuLeft - pickerRect.left) + "px";
         menu.style.top = Math.round(chipRect.bottom + 8 - pickerRect.top) + "px";
       } else {
         menu.style.left = "";
@@ -797,10 +977,16 @@
     }
   }
 
-  function clampMinutes(value, fallback) {
+  function clampMinutes(value, fallback, min, max) {
     var parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) parsed = fallback || 25;
-    return Math.max(MIN_CUSTOM_MINUTES, Math.min(MAX_CUSTOM_MINUTES, parsed));
+    var lower = Number.isFinite(Number(min)) ? Number(min) : MIN_CUSTOM_MINUTES;
+    var upper = Number.isFinite(Number(max)) ? Number(max) : MAX_CUSTOM_MINUTES;
+    return Math.max(lower, Math.min(upper, parsed));
+  }
+
+  function clampTaskMinutes(value, fallback) {
+    return clampMinutes(value, fallback, MIN_TASK_MINUTES, MAX_TASK_MINUTES);
   }
 
   function localDateKey(date) {
@@ -1075,7 +1261,12 @@
         chartType: "bars",
         welcomeComplete: false,
         tutorialComplete: false,
-        howToEntryDismissed: false,
+        helpToursSeen: {},
+        communityInviteSeen: false,
+        releaseSeenId: "",
+        updatesSeenAt: 0,
+        updatesReadIds: {},
+        updatesUnreadIds: {},
         reducedMotion: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
       },
       onboarding: defaultOnboarding(),
@@ -1097,6 +1288,23 @@
       contextTipRevision: 2,
       learning: { events: [] }
     };
+  }
+
+  function normalizeUpdatesReadIds(value) {
+    var normalized = {};
+    if (Array.isArray(value)) {
+      value.slice(-500).forEach(function (id) {
+        var key = String(id || "").trim();
+        if (key) normalized[key] = true;
+      });
+      return normalized;
+    }
+    if (value && typeof value === "object") {
+      Object.keys(value).slice(-500).forEach(function (id) {
+        if (value[id]) normalized[id] = true;
+      });
+    }
+    return normalized;
   }
 
   function loadState() {
@@ -1159,6 +1367,12 @@
       }
       if (!loaded.profile.dailyGoalMinutes) loaded.profile.dailyGoalMinutes = loaded.profile.dailyGoalBlocks ? loaded.profile.dailyGoalBlocks * 15 : 60;
       if (!loaded.profile.goalBonus || typeof loaded.profile.goalBonus !== "object") loaded.profile.goalBonus = {};
+      if (!loaded.settings.helpToursSeen || typeof loaded.settings.helpToursSeen !== "object") loaded.settings.helpToursSeen = {};
+      loaded.settings.communityInviteSeen = Boolean(loaded.settings.communityInviteSeen);
+      loaded.settings.releaseSeenId = String(loaded.settings.releaseSeenId || "");
+      if (!Number.isFinite(Number(loaded.settings.updatesSeenAt)) || Number(loaded.settings.updatesSeenAt) < 0) loaded.settings.updatesSeenAt = 0;
+      loaded.settings.updatesReadIds = normalizeUpdatesReadIds(loaded.settings.updatesReadIds);
+      loaded.settings.updatesUnreadIds = normalizeUpdatesReadIds(loaded.settings.updatesUnreadIds);
       if (AMBIENT_SOUND_IDS.indexOf(loaded.settings.ambientSound) === -1) loaded.settings.ambientSound = "brown";
       if (["bars", "line"].indexOf(loaded.settings.chartType) === -1) loaded.settings.chartType = "bars";
       if (!Object.prototype.hasOwnProperty.call(parsed.settings || {}, "soundPreferenceTouched")) loaded.settings.sound = true;
@@ -1198,7 +1412,7 @@
       date: /^\d{4}-\d{2}-\d{2}$/.test(String(source.date || "")) ? source.date : todayStr(),
       time: /^\d{2}:\d{2}$/.test(String(source.time || "")) ? source.time : null,
       flex: source.flex === "fixed" ? "fixed" : "flexible",
-      estMinutes: clampMinutes(source.estMinutes, 25),
+      estMinutes: clampTaskMinutes(source.estMinutes, 25),
       priority: ["high", "medium", "low"].indexOf(source.priority) > -1 ? source.priority : "medium",
       notes: String(source.notes || ""),
       repeat: ["daily", "weekdays", "weekly", "custom"].indexOf(source.repeat) > -1 ? source.repeat : "none",
@@ -1298,9 +1512,12 @@
   function nextTask() {
     var today = todayStr();
     var tasks = state.tasks.filter(function (task) {
-      return task.date === today && task.status !== "completed";
+      return task.date <= today && task.status !== "completed";
     });
     tasks.sort(function (a, b) {
+      // Today's work comes first. If today is clear, surface the most recent
+      // missed task so it can still be started from Today.
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
       var at = a.time ? timeToMin(a.time) : 9999;
       var bt = b.time ? timeToMin(b.time) : 9999;
       if (at !== bt) return at - bt;
@@ -1331,7 +1548,7 @@
       return priorityDelta || a.estMinutes - b.estMinutes;
     });
 
-    var arrangedCount = 0;
+    var arranged = [];
     flexible.forEach(function (task) {
       var moved = true;
       while (moved) {
@@ -1349,11 +1566,11 @@
       task.time = minToTime(cursor);
       placed.push({ task: task, start: cursor, end: cursor + duration });
       cursor = Math.max(DAY_START_MINUTES, Math.min(DAY_END_MINUTES, cursor + duration + gap));
-      arrangedCount += 1;
+      arranged.push(task);
     });
 
     saveState();
-    return placed.sort(function (a, b) { return a.start - b.start; }).map(function (item) { return item.task; });
+    return arranged;
   }
 
   function placeFlexibleTask(task) {
@@ -1558,34 +1775,114 @@
     return task;
   }
 
-  function createNextRecurringTask(task) {
-    if (!task || task.repeat === "none") return null;
-    var nextDate;
-    if (task.repeat === "custom" && task.repeatDays && task.repeatDays.length) {
-      var nextDay = null;
-      for (var offset = 1; offset <= 7; offset += 1) {
-        var candidate = addDaysKey(task.date, offset);
-        var day = parseDateKey(candidate).getDay();
-        if (task.repeatDays.indexOf(day) > -1) {
-          nextDay = candidate;
-          break;
-        }
-      }
-      nextDate = nextDay;
-    } else {
-      nextDate = task.repeat === "weekly" ? addDaysKey(task.date, 7) : addDaysKey(task.date, 1);
-      if (task.repeat === "weekdays") {
-        while ([0, 6].indexOf(parseDateKey(nextDate).getDay()) > -1) nextDate = addDaysKey(nextDate, 1);
-      }
+  function recurringSeriesRoot(task) {
+    var current = task;
+    var seen = {};
+    while (current && current.repeatSourceId && !seen[current.id]) {
+      seen[current.id] = true;
+      var parent = getTask(current.repeatSourceId);
+      if (!parent) return current.repeatSourceId;
+      current = parent;
     }
-    if (!nextDate) return null;
-    var duplicate = state.tasks.some(function (item) {
-      return item.repeatSourceId === task.id && item.date === nextDate;
+    return current ? current.id : task.id;
+  }
+
+  function isRecurringSeriesTask(task) {
+    return Boolean(task && (task.repeatSourceId || task.repeat !== "none"));
+  }
+
+  function tasksInRecurringSeries(task) {
+    if (!task) return [];
+    var root = recurringSeriesRoot(task);
+    return state.tasks.filter(function (item) {
+      if (item.id === root) return true;
+      return isRecurringSeriesTask(item) && recurringSeriesRoot(item) === root;
     });
-    if (duplicate) return null;
+  }
+
+  function taskCopyKey(task) {
+    if (!task) return "";
+    var title = String(task.title || "").trim().replace(/\s+/g, " ").toLowerCase();
+    return title + "|" + task.date + "|" + (task.time || "");
+  }
+
+  function taskCopiesOnDate(task) {
+    if (!task) return [];
+    var key = taskCopyKey(task);
+    return state.tasks.filter(function (item) {
+      return taskCopyKey(item) === key;
+    });
+  }
+
+  // A task can be duplicated as separate records that are not linked by the
+  // recurrence chain. Deleting any one copy must clear the whole visible set,
+  // including every recurrence branch that hangs off each duplicate.
+  function tasksInDeleteGroup(task) {
+    var seeds = taskCopiesOnDate(task);
+    if (!seeds.length) seeds = task ? [task] : [];
+    var ids = {};
+    seeds.forEach(function (seed) {
+      tasksInRecurringSeries(seed).forEach(function (item) {
+        ids[item.id] = true;
+      });
+    });
+    return state.tasks.filter(function (item) { return ids[item.id]; });
+  }
+
+  function daysBetweenKeys(startKey, endKey) {
+    return Math.round((parseDateKey(endKey) - parseDateKey(startKey)) / 86400000);
+  }
+
+  function recurrenceMatchesDate(task, dateKey) {
+    if (!task || task.repeat === "none" || !dateKey || dateKey <= task.date) return false;
+    if (task.repeat === "daily") return true;
+    if (task.repeat === "weekdays") {
+      var weekday = parseDateKey(dateKey).getDay();
+      return weekday !== 0 && weekday !== 6;
+    }
+    if (task.repeat === "weekly") return daysBetweenKeys(task.date, dateKey) % 7 === 0;
+    if (task.repeat === "custom") {
+      var repeatDays = Array.isArray(task.repeatDays) ? task.repeatDays : [];
+      return repeatDays.indexOf(parseDateKey(dateKey).getDay()) > -1;
+    }
+    return false;
+  }
+
+  function nextRecurringOccurrence(task, fromDate) {
+    if (!task || task.repeat === "none") return null;
+    var baseDate = fromDate || task.date;
+    if (task.repeat === "custom") {
+      var repeatDays = Array.isArray(task.repeatDays) ? task.repeatDays : [];
+      if (!repeatDays.length) return null;
+      for (var offset = 1; offset <= 7; offset += 1) {
+        var candidate = addDaysKey(baseDate, offset);
+        if (repeatDays.indexOf(parseDateKey(candidate).getDay()) > -1) return candidate;
+      }
+      return null;
+    }
+    var nextDate = task.repeat === "weekly" ? addDaysKey(baseDate, 7) : addDaysKey(baseDate, 1);
+    if (task.repeat === "weekdays") {
+      while ([0, 6].indexOf(parseDateKey(nextDate).getDay()) > -1) nextDate = addDaysKey(nextDate, 1);
+    }
+    return nextDate;
+  }
+
+  function nextRecurringDate(task) {
+    if (!task || task.repeat === "none") return null;
+    var nextDate = nextRecurringOccurrence(task, task.date);
+    var today = todayStr();
+    // Completing an overdue task should schedule the next future occurrence,
+    // not backfill dates that have already passed.
+    while (nextDate && nextDate <= today) {
+      nextDate = nextRecurringOccurrence(task, nextDate);
+    }
+    return nextDate;
+  }
+
+  function createRecurringOccurrence(task, date) {
     var next = normalizeTask({
       title: task.title,
-      date: nextDate,
+      date: date,
       time: task.time,
       flex: task.flex,
       estMinutes: task.estMinutes,
@@ -1600,25 +1897,177 @@
     return next;
   }
 
+  function createNextRecurringTask(task) {
+    if (!task || task.repeat === "none") return null;
+    var nextDate = nextRecurringDate(task);
+    if (!nextDate) return null;
+    var series = tasksInRecurringSeries(task);
+    // Completing an older missed occurrence must not branch the series.
+    // The latest occurrence owns the next step, and one date can only hold
+    // one real occurrence.
+    if (series.some(function (item) { return item.id !== task.id && item.date > task.date; })) return null;
+    if (series.some(function (item) { return item.date === nextDate; })) return null;
+    return createRecurringOccurrence(task, nextDate);
+  }
+
+  function cleanupRecurringOccurrences() {
+    var groups = {};
+    var originalRoots = {};
+    state.tasks.forEach(function (task) {
+      if (!isRecurringSeriesTask(task)) return;
+      var root = recurringSeriesRoot(task);
+      originalRoots[task.id] = root;
+      var key = root + "|" + task.date;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(task);
+    });
+
+    var replace = {};
+    var removed = 0;
+    Object.keys(groups).forEach(function (key) {
+      var group = groups[key];
+      if (group.length < 2) return;
+      var keeper = group.slice().sort(function (a, b) {
+        var aDone = a.status === "completed" ? 1 : 0;
+        var bDone = b.status === "completed" ? 1 : 0;
+        if (aDone !== bDone) return bDone - aDone;
+        var aProgress = a.units ? a.units.completed : 0;
+        var bProgress = b.units ? b.units.completed : 0;
+        if (aProgress !== bProgress) return bProgress - aProgress;
+        return state.tasks.indexOf(a) - state.tasks.indexOf(b);
+      })[0];
+
+      group.forEach(function (item) {
+        if (item === keeper) return;
+        replace[item.id] = keeper.id;
+        removed += 1;
+        if (keeper.units) {
+          var keeperProgress = Number(keeper.units.completed) || 0;
+          var itemProgress = item.units ? Number(item.units.completed) || 0 : 0;
+          keeper.units.completed = Math.max(keeperProgress, Math.min(keeper.units.total, itemProgress));
+        }
+        if (item.status === "completed") {
+          if (keeper.units) keeper.units.completed = keeper.units.total;
+          keeper.status = "completed";
+          keeper.manualDoneXpAwarded = Boolean(keeper.manualDoneXpAwarded || item.manualDoneXpAwarded);
+        } else if (keeper.status !== "completed" && keeper.units && keeper.units.completed > 0) {
+          keeper.status = "in_progress";
+        }
+      });
+    });
+
+    if (!removed) return 0;
+    state.tasks = state.tasks.filter(function (task) { return !replace[task.id]; });
+    state.tasks.forEach(function (task) {
+      if (!isRecurringSeriesTask(task)) return;
+      var parent = task.repeatSourceId;
+      var guard = 0;
+      while (parent && replace[parent] && guard < 20) {
+        parent = replace[parent];
+        guard += 1;
+      }
+      var parentTask = parent ? state.tasks.find(function (item) { return item.id === parent; }) : null;
+      // When the duplicate we removed was this task's parent, reconnect the
+      // chain to the nearest earlier occurrence in the same original series.
+      if (!parentTask || parentTask.id === task.id || parentTask.date >= task.date) {
+        var earlier = state.tasks.filter(function (item) {
+          return item.id !== task.id && item.date < task.date && originalRoots[item.id] === originalRoots[task.id];
+        }).sort(function (a, b) {
+          return a.date < b.date ? 1 : -1;
+        })[0];
+        parent = earlier ? earlier.id : "";
+      }
+      task.repeatSourceId = parent || "";
+    });
+    if (state.session && replace[state.session.linkedTaskId]) {
+      state.session.linkedTaskId = replace[state.session.linkedTaskId];
+    }
+    (state.savedSessions || []).forEach(function (session) {
+      if (session.linkedTaskId && replace[session.linkedTaskId]) session.linkedTaskId = replace[session.linkedTaskId];
+    });
+    (state.history || []).forEach(function (entry) {
+      if (entry.linkedTaskId && replace[entry.linkedTaskId]) entry.linkedTaskId = replace[entry.linkedTaskId];
+    });
+    return removed;
+  }
+
+  function ensureRecurringTasksForToday(dateKey) {
+    var target = dateKey || todayStr();
+    var groups = {};
+    state.tasks.forEach(function (task) {
+      if (!isRecurringSeriesTask(task)) return;
+      var root = recurringSeriesRoot(task);
+      if (!groups[root]) groups[root] = [];
+      groups[root].push(task);
+    });
+
+    var created = 0;
+    Object.keys(groups).forEach(function (root) {
+      var series = groups[root];
+      var latest = series.reduce(function (best, item) {
+        return !best || item.date > best.date ? item : best;
+      }, null);
+      if (!latest || latest.repeat === "none" || latest.date >= target) return;
+      if (series.some(function (item) { return item.date === target; })) return;
+      if (!recurrenceMatchesDate(latest, target)) return;
+      createRecurringOccurrence(latest, target);
+      created += 1;
+    });
+    return created;
+  }
+
+  var lastRecurringRefreshDate = "";
+
+  function refreshRecurringTasksForToday(force) {
+    var today = todayStr();
+    if (!force && lastRecurringRefreshDate === today) {
+      return { created: 0, removed: 0, dateChanged: false };
+    }
+    var previousDate = lastRecurringRefreshDate;
+    var removed = cleanupRecurringOccurrences();
+    var created = ensureRecurringTasksForToday(today);
+    lastRecurringRefreshDate = today;
+    if (removed || created) saveState();
+    return {
+      created: created,
+      removed: removed,
+      dateChanged: Boolean(previousDate && previousDate !== today)
+    };
+  }
+
   function deleteTask(taskId) {
     var task = getTask(taskId);
     if (!task) return;
-    if (state.session && state.session.linkedTaskId === taskId) {
+    var copies = taskCopiesOnDate(task);
+    var deleteGroup = tasksInDeleteGroup(task);
+    var deleteIds = deleteGroup.map(function (item) { return item.id; });
+    var series = tasksInRecurringSeries(task);
+    var isSeries = series.length > 1 || task.repeat !== "none" || Boolean(task.repeatSourceId);
+    if (state.session && deleteIds.indexOf(state.session.linkedTaskId) > -1) {
       showToast("This task is attached to the current block.");
       switchView("focus");
       return;
     }
-    if (state.savedSessions.some(function (session) { return session.linkedTaskId === taskId; })) {
+    if (state.savedSessions.some(function (session) { return deleteIds.indexOf(session.linkedTaskId) > -1; })) {
       showToast("Continue or remove the saved focus session first.");
       switchView("focus");
       return;
     }
-    if (!confirm('Delete "' + task.title + '" from your plan?')) return;
-    state.tasks = state.tasks.filter(function (item) { return item.id !== taskId; });
+    var prompt;
+    if (copies.length > 1) {
+      prompt = 'Delete "' + task.title + '" and all ' + deleteGroup.length + ' matching copies in your plan?';
+    } else if (isSeries) {
+      prompt = deleteGroup.length > 1
+        ? 'Delete "' + task.title + '" and all ' + deleteGroup.length + ' occurrences in this repeating task?'
+        : 'Delete "' + task.title + '" and stop this repeating task?';
+    } else {
+      prompt = 'Delete "' + task.title + '" from your plan?';
+    }
+    if (!confirm(prompt)) return;
+    state.tasks = state.tasks.filter(function (item) { return deleteIds.indexOf(item.id) === -1; });
     saveState();
-    renderPlan();
-    renderToday();
-    showToast("Task deleted");
+    renderAll();
+    showToast(copies.length > 1 ? "Matching task copies deleted" : (isSeries ? "Repeating task deleted" : "Task deleted"));
   }
 
   function completeCurrentBlock() {
@@ -1691,7 +2140,7 @@
     var session = state.session;
     if (!session) return;
     if (session.blockIndex >= session.blocks.length - 1) {
-      finalizeSession(true, null, "final_block_auto");
+      finalizeSession(true, session.lastReveal, "final_block_auto");
       return;
     }
     var fromBlockIndex = session.blockIndex;
@@ -1711,18 +2160,32 @@
       taskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : "",
       feedbackGiven: feedbackGiven
     });
-    session.blockIndex += 1;
-    session.blockRemaining = session.blocks[session.blockIndex];
-    session.blockEndsAt = Date.now() + (session.blockRemaining * 1000);
-    session.status = "running";
-    session.recoveryRemaining = 0;
-    session.recoveryEndsAt = null;
-    closeReveal();
-    saveState();
-    startTicker();
-    syncAmbientPlayback();
-    renderAll();
-    switchView("focus");
+    function advance() {
+      if (state.session !== session) return;
+      session.blockIndex = Math.min(session.blockIndex + 1, session.blocks.length - 1);
+      session.blockRemaining = session.blocks[session.blockIndex];
+      session.blockEndsAt = Date.now() + (session.blockRemaining * 1000);
+      session.status = "running";
+      session.recoveryRemaining = 0;
+      session.recoveryEndsAt = null;
+      revealOverlay.classList.remove("is-milestone", "is-celebrating");
+      delete revealOverlay.dataset.milestoneType;
+      closeReveal();
+      saveState();
+      startTicker();
+      syncAmbientPlayback();
+      renderAll();
+      switchView("focus");
+    }
+    // A level or rank reward is a real event, not a line item. Let the user
+    // see it before the next block starts instead of dropping it behind a
+    // running timer.
+    if (session.lastReveal && (session.lastReveal.leveledUp || session.lastReveal.rankedUpId)) {
+      closeReveal();
+      queueMilestones(session.lastReveal, advance);
+      return;
+    }
+    advance();
   }
 
   function recordSessionEnd(session, completedAll, reason, extra) {
@@ -1760,6 +2223,64 @@
     });
   }
 
+  function hasCompletedFocusSession() {
+    return (state.history || []).some(function (item) {
+      return item && Number(item.blocksCompleted) > 0;
+    });
+  }
+
+  function historyEntryForSession(session, ownerState, completedAll, endedAt, reason, details) {
+    var source = details || {};
+    var linkedTask = session.linkedTaskId && ownerState && Array.isArray(ownerState.tasks)
+      ? ownerState.tasks.find(function (task) { return task.id === session.linkedTaskId; })
+      : null;
+    return {
+      id: session.id,
+      date: localDateKey(endedAt),
+      completedAt: endedAt,
+      startedAt: session.startedAt,
+      totalMinutes: session.totalMinutes,
+      blocksCompleted: session.blocksCompleted,
+      blocksPlanned: session.blocks.length,
+      xpEarned: session.xpEarned,
+      penaltyXp: session.penaltyXp || 0,
+      pauseCount: session.pauseCount || 0,
+      linkedTaskId: session.linkedTaskId,
+      linkedTaskTitle: linkedTask ? linkedTask.title : null,
+      completedAll: Boolean(completedAll),
+      partialBlock: Boolean(source.partialBlock),
+      endedBy: reason || "unknown",
+      audioPlayedSeconds: Number.isFinite(Number(source.audioPlayedSeconds)) ? Number(source.audioPlayedSeconds) : 0,
+      noiseEnabled: Boolean(source.noiseEnabled),
+      noisePlayingAtEnd: Boolean(source.noisePlayingAtEnd),
+      noiseType: source.noiseType || "",
+      quickRestart: Boolean(session.quickRestart),
+      blockFeedback: session.blockFeedback || []
+    };
+  }
+
+  function upsertHistoryEntry(session, ownerState, completedAll, endedAt, reason, details) {
+    var entry = historyEntryForSession(session, ownerState, completedAll, endedAt, reason, details);
+    var existingIndex = ownerState.history.findIndex(function (item) { return item && item.id === entry.id; });
+    if (existingIndex > -1) ownerState.history[existingIndex] = Object.assign({}, ownerState.history[existingIndex], entry);
+    else ownerState.history.unshift(entry);
+    return entry;
+  }
+
+  function syncSavedSessionsToHistory(ownerState) {
+    if (!ownerState || !Array.isArray(ownerState.savedSessions) || !Array.isArray(ownerState.history)) return false;
+    var changed = false;
+    ownerState.savedSessions.forEach(function (saved) {
+      if (!saved || ownerState.history.some(function (item) { return item && item.id === saved.id; })) return;
+      upsertHistoryEntry(saved, ownerState, false, saved.savedAt || saved.startedAt || Date.now(), "saved_partial", {
+        partialBlock: Boolean(saved.blockRemaining && saved.blocks[saved.blockIndex] && saved.blockRemaining < saved.blocks[saved.blockIndex]),
+        saved: true
+      });
+      changed = true;
+    });
+    return changed;
+  }
+
   function finalizeSession(completedAll, milestoneData, reason) {
     var session = state.session;
     if (!session) return;
@@ -1781,6 +2302,7 @@
     };
     if (!completedAll && session.blocksCompleted < session.blocks.length && (session.blocksCompleted > 0 || hasPartialProgress)) {
       recordSessionEnd(session, false, reason || "saved_partial", Object.assign({}, endDetails, { saved: true }));
+      upsertHistoryEntry(session, state, false, endedAt, reason || "saved_partial", endDetails);
       saveIncompleteSession(session);
       state.session = null;
       revealShownAt = 0;
@@ -1790,6 +2312,7 @@
       renderAll();
       switchView("focus");
       showToast("Saved. Continue it from Focus.");
+      queueMilestones(milestoneData);
       return;
     }
     if (!completedAll && !session.blocksCompleted && !hasPartialProgress) {
@@ -1804,27 +2327,13 @@
       showToast("Session cleared.");
       return;
     }
-    state.history.unshift({
-      id: session.id,
-      date: todayStr(),
-      completedAt: endedAt,
-      startedAt: session.startedAt,
-      totalMinutes: session.totalMinutes,
-      blocksCompleted: session.blocksCompleted,
-      blocksPlanned: session.blocks.length,
-      xpEarned: session.xpEarned,
-      penaltyXp: session.penaltyXp || 0,
-      pauseCount: session.pauseCount || 0,
-      linkedTaskId: session.linkedTaskId,
-      linkedTaskTitle: session.linkedTaskId && getTask(session.linkedTaskId) ? getTask(session.linkedTaskId).title : null,
-      completedAll: Boolean(completedAll),
-      endedBy: reason || "unknown",
+    var shouldShowCommunityInvite = !state.settings.communityInviteSeen && !hasCompletedFocusSession();
+    upsertHistoryEntry(session, state, completedAll, endedAt, reason || "unknown", {
+      partialBlock: endDetails.partialBlock,
       audioPlayedSeconds: audioPlayedSeconds,
       noiseEnabled: Boolean(brownNoiseEnabled),
       noisePlayingAtEnd: noisePlayingAtEnd,
-      noiseType: brownNoiseEnabled ? currentAmbientSound() : "",
-      quickRestart: Boolean(session.quickRestart),
-      blockFeedback: session.blockFeedback || []
+      noiseType: brownNoiseEnabled ? currentAmbientSound() : ""
     });
     recordSessionEnd(session, completedAll, reason || "unknown", endDetails);
     state.session = null;
@@ -1835,7 +2344,7 @@
     renderAll();
     switchView("today");
     showToast(completedAll ? "Session complete. Progress saved." : "Progress saved.");
-    queueMilestones(milestoneData);
+    queueMilestones(milestoneData, shouldShowCommunityInvite ? showCommunityInvite : null);
   }
 
   function saveIncompleteSession(session) {
@@ -2006,6 +2515,8 @@
     var rankUp = data.rankedUpId ? RANKS.find(function (rank) { return rank.id === data.rankedUpId; }) : null;
     var level = currentLevel(data.newXp);
     var rank = currentRank(data.newXp);
+    revealOverlay.style.setProperty("--rank-accent", rank.color);
+    revealOverlay.style.setProperty("--rank-glow-color", rank.color);
     var progress = levelProgress(data.newXp);
     var circumference = 2 * Math.PI * 52;
     var linkedTask = data.linkedTaskId ? getTask(data.linkedTaskId) : null;
@@ -2013,6 +2524,8 @@
     var flags = document.getElementById("revealFlags");
     var actions = document.getElementById("revealActions");
 
+    revealOverlay.setAttribute("aria-label", "Block complete");
+    document.getElementById("revealEyebrow").textContent = "Block complete";
     document.getElementById("revealLevel").textContent = "Lv " + level;
     document.getElementById("revealRankName").textContent = rank.name;
     document.getElementById("revealRankName").style.color = rank.color;
@@ -2028,7 +2541,15 @@
     }
     flags.innerHTML = (data.goalMessages || []).map(function (message) {
       return '<div class="reveal-flag goal-bonus">' + escapeHtml(message) + "</div>";
-    }).join("");
+    }).join("") + (data.leveledUp
+      ? '<div class="reveal-flag level-up"><span>Level up</span><strong>Level ' + level + "</strong></div>"
+      : "") + (rankUp
+      ? '<div class="reveal-flag rank-up"><span>Rank up</span><strong>' + escapeHtml(rankUp.name) + "</strong></div>"
+      : "");
+    revealOverlay.classList.toggle("is-celebrating", Boolean(data.leveledUp || rankUp));
+    revealOverlay.classList.toggle("is-rank-celebration", Boolean(rankUp));
+    revealOverlay.classList.remove("is-milestone");
+    delete revealOverlay.dataset.milestoneType;
 
     document.getElementById("revealTaskLine").innerHTML = linkedTask
       ? "<b>" + escapeHtml(linkedTask.title) + "</b> - " + linkedTask.units.completed + " of " + linkedTask.units.total + " units complete"
@@ -2062,6 +2583,7 @@
     revealOverlay.classList.toggle("is-single", Boolean(data.isManualDone));
 
     revealOverlay.classList.add("open");
+    var revealCard = revealOverlay.querySelector(".reveal-card");
     var finish = document.getElementById("revealFinishBtn");
     var cont = document.getElementById("revealContinueBtn");
     var stop = document.getElementById("revealStopBtn");
@@ -2085,7 +2607,7 @@
     if (stop) stop.onclick = function () {
       var feedback = captureBlockFeedback();
       recordBlockDecision("stop", data, feedback);
-      finalizeSession(false, null, "stop_after_block");
+      finalizeSession(false, data, "stop_after_block");
     };
     if (close) close.onclick = function () {
       recordBlockDecision("close_manual", data, null);
@@ -2093,7 +2615,18 @@
       revealOverlay.classList.remove("open");
       queueMilestones(data);
     };
-    (finish || cont || stop || close || revealOverlay).focus();
+    var focusTarget = revealCard || finish || cont || stop || close || revealOverlay;
+    try {
+      focusTarget.focus({ preventScroll: true });
+    } catch (_) {
+      focusTarget.focus();
+    }
+    if (revealCard) {
+      revealCard.scrollTop = 0;
+      requestAnimationFrame(function () {
+        revealCard.scrollTop = 0;
+      });
+    }
   }
 
   function resetBlockFeedbackControls(data) {
@@ -2139,23 +2672,43 @@
 
   function closeReveal() {
     revealShownAt = 0;
-    if (revealOverlay) revealOverlay.classList.remove("open");
+    if (revealOverlay) {
+      revealOverlay.classList.remove("open", "is-celebrating", "is-rank-celebration", "is-milestone");
+      delete revealOverlay.dataset.milestoneType;
+      revealOverlay.style.removeProperty("--rank-accent");
+      revealOverlay.style.removeProperty("--rank-glow-color");
+    }
   }
 
-  function queueMilestones(data) {
-    if (!data) return;
-    if (data.leveledUp) milestoneQueue.push({ type: "level", data: data });
-    if (data.rankedUpId) milestoneQueue.push({ type: "rank", data: data });
+  function queueMilestones(data, onDismiss) {
+    if (typeof onDismiss === "function") milestoneAfterDismiss = onDismiss;
+    if (data && data.leveledUp) milestoneQueue.push({ type: "level", data: data });
+    if (data && data.rankedUpId) milestoneQueue.push({ type: "rank", data: data });
     showNextMilestone();
   }
 
+  function finishMilestoneFlow() {
+    var callback = milestoneAfterDismiss;
+    milestoneAfterDismiss = null;
+    if (typeof callback === "function") callback();
+  }
+
   function showNextMilestone() {
-    if (milestoneActive || !milestoneQueue.length) return;
+    if (milestoneActive) return;
+    if (!milestoneQueue.length) {
+      finishMilestoneFlow();
+      return;
+    }
     milestoneActive = true;
     var item = milestoneQueue.shift();
     var data = item.data;
     var rank = currentRank(data.newXp);
+    var previousRank = data.prevXp != null ? currentRank(data.prevXp) : null;
+    revealOverlay.style.setProperty("--rank-accent", rank.color);
+    revealOverlay.style.setProperty("--rank-glow-color", rank.color);
     var flags = document.getElementById("revealFlags");
+    revealOverlay.setAttribute("aria-label", item.type === "rank" ? "Rank up" : "Level up");
+    document.getElementById("revealEyebrow").textContent = item.type === "rank" ? "Rank up" : "Level up";
     document.getElementById("revealXpGained").textContent = item.type === "rank" ? rank.name : "Level " + currentLevel(data.newXp);
     document.getElementById("revealRemaining").textContent = item.type === "rank"
       ? rank.desc
@@ -2166,48 +2719,134 @@
     document.getElementById("revealRankName").textContent = rank.name;
     document.getElementById("revealRankName").style.color = rank.color;
     document.getElementById("revealLevel").textContent = "Lv " + currentLevel(data.newXp);
-    flags.innerHTML = '<div class="reveal-flag">' + (item.type === "rank" ? "Rank up" : "Level up") + "</div>";
+    flags.innerHTML = '<div class="reveal-flag ' + (item.type === "rank" ? "rank-up" : "level-up") + '">' + (item.type === "rank" ? "Rank up" : "Level up") + "</div>";
     document.getElementById("blockFeedbackPanel").style.display = "none";
-    document.getElementById("revealActions").innerHTML = '<button class="btn btn-primary btn-block" id="milestoneContinueBtn">' + (item.type === "rank" ? "Enter " + escapeHtml(rank.name) : "View progress") + "</button>";
+    document.getElementById("revealActions").innerHTML = '<button class="btn btn-primary btn-block" id="milestoneContinueBtn">' + (item.type === "rank"
+      ? "Enter " + escapeHtml(rank.name)
+      : "View progress") + "</button>";
+    revealOverlay.classList.remove("is-celebrating", "is-rank-celebration");
+    revealOverlay.classList.add("is-milestone");
+    revealOverlay.dataset.milestoneType = item.type;
     revealOverlay.classList.add("is-single");
     revealOverlay.classList.add("open");
     switchView("rank");
+    playMilestoneChime(item.type);
     document.getElementById("milestoneContinueBtn").onclick = function () {
-      revealOverlay.classList.remove("open");
+      revealOverlay.classList.remove("open", "is-milestone");
+      delete revealOverlay.dataset.milestoneType;
       milestoneActive = false;
-      if (item.type === "rank") startRankUpgrade(rank);
+      if (item.type === "rank") startRankUpgrade(rank, previousRank);
       else showNextMilestone();
     };
   }
 
-  function startRankUpgrade(rank) {
+  var RANK_UPGRADE_FADE_MS = 5000;
+
+  function rankColorHex(rank) {
+    if (!rank || !rank.id) return "#75d8c3";
+    var value = getComputedStyle(document.documentElement).getPropertyValue("--rank-" + rank.id).trim();
+    return value || "#75d8c3";
+  }
+
+  function startRankUpgrade(rank, previousRank) {
     var overlay = document.getElementById("rankUpgradeOverlay");
-    var messages = ["Upgrading your interface...", "Increasing difficulty...", "Strengthening focus sessions...", "Recalibrating attention goals...", "Applying " + rank.name + " identity..."];
-    var index = 0;
+    var mark = document.getElementById("rankUpgradeMark");
+    var title = document.getElementById("rankUpgradeTitle");
+    var message = document.getElementById("rankUpgradeMessage");
     var fill = document.getElementById("rankUpgradeFill");
-    document.getElementById("rankUpgradeMark").textContent = rank.id;
-    document.getElementById("rankUpgradeMark").style.color = rank.color;
+    var button = document.getElementById("rankUpgradeSkipBtn");
+    var messages = ["Upgrading your interface...", "Increasing difficulty...", "Strengthening focus sessions...", "Recalibrating attention goals...", "Applying " + rank.name + " identity..."];
+    var rankIndex = RANKS.indexOf(rank);
+    var fromRank = previousRank || (rankIndex > 0 ? RANKS[rankIndex - 1] : RANKS[0]);
+    var fromColor = rankColorHex(fromRank);
+    var toColor = rankColorHex(rank);
+    var reducedMotion = Boolean(state.settings.reducedMotion) ||
+      Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    var index = 0;
+
+    clearInterval(startRankUpgrade.messageTimer);
+    clearTimeout(startRankUpgrade.readyTimer);
+    if (startRankUpgrade.markAnimation) {
+      startRankUpgrade.markAnimation.cancel();
+      startRankUpgrade.markAnimation = null;
+    }
+
+    overlay.style.setProperty("--rank-upgrade-from", fromColor);
+    overlay.style.setProperty("--rank-upgrade-to", toColor);
+    overlay.classList.remove("is-fading", "is-ready");
+    overlay.classList.toggle("is-instant", reducedMotion);
+    mark.textContent = rank.id;
+    mark.style.color = fromColor;
+    title.textContent = "Upgrading your interface";
+    message.textContent = messages[0];
+    button.disabled = true;
+    button.setAttribute("aria-hidden", "true");
+    fill.style.transitionDuration = "0s";
+    fill.style.width = "0";
+    fill.style.backgroundColor = fromColor;
     overlay.classList.add("open");
     overlay.setAttribute("aria-hidden", "false");
-    fill.style.transitionDuration = "30s";
-    requestAnimationFrame(function () { fill.style.width = "100%"; });
-    var interval = setInterval(function () {
-      index = (index + 1) % messages.length;
-      document.getElementById("rankUpgradeMessage").textContent = messages[index];
-    }, 4200);
+    playMilestoneChime("rank");
+
+    if (reducedMotion || !mark.animate) {
+      mark.style.color = toColor;
+    } else {
+      startRankUpgrade.markAnimation = mark.animate(
+        [{ color: fromColor }, { color: toColor }],
+        { duration: RANK_UPGRADE_FADE_MS, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards" }
+      );
+    }
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        overlay.classList.add("is-fading");
+        fill.style.transitionDuration = (reducedMotion ? 0 : RANK_UPGRADE_FADE_MS) + "ms";
+        fill.style.width = "100%";
+        fill.style.backgroundColor = toColor;
+      });
+    });
+
+    startRankUpgrade.messageTimer = setInterval(function () {
+      index = Math.min(index + 1, messages.length - 1);
+      message.textContent = messages[index];
+    }, Math.round(RANK_UPGRADE_FADE_MS / messages.length));
+
+    startRankUpgrade.readyTimer = setTimeout(function () {
+      clearInterval(startRankUpgrade.messageTimer);
+      if (!overlay.classList.contains("open")) return;
+      if (startRankUpgrade.markAnimation) {
+        startRankUpgrade.markAnimation.cancel();
+        startRankUpgrade.markAnimation = null;
+      }
+      mark.style.color = toColor;
+      overlay.classList.add("is-ready");
+      title.textContent = "Upgrade complete";
+      message.textContent = rank.name + " identity applied.";
+      button.disabled = false;
+      button.removeAttribute("aria-hidden");
+      button.focus({ preventScroll: true });
+    }, RANK_UPGRADE_FADE_MS);
+
     function finish() {
-      clearInterval(interval);
-      clearTimeout(startRankUpgrade.timer);
-      overlay.classList.remove("open");
+      clearInterval(startRankUpgrade.messageTimer);
+      clearTimeout(startRankUpgrade.readyTimer);
+      if (startRankUpgrade.markAnimation) {
+        startRankUpgrade.markAnimation.cancel();
+        startRankUpgrade.markAnimation = null;
+      }
+      overlay.classList.remove("open", "is-fading", "is-ready", "is-instant");
       overlay.setAttribute("aria-hidden", "true");
+      button.disabled = true;
+      button.setAttribute("aria-hidden", "true");
       fill.style.transitionDuration = "0s";
       fill.style.width = "0";
+      fill.style.backgroundColor = "";
+      mark.style.color = "";
       milestoneActive = false;
       renderAll();
       showNextMilestone();
     }
-    document.getElementById("rankUpgradeSkipBtn").onclick = finish;
-    startRankUpgrade.timer = setTimeout(finish, 30000);
+    button.onclick = finish;
   }
 
   function fmtClock(totalSeconds) {
@@ -2291,6 +2930,18 @@
   function importBackup(event) {
     var file = event && event.target && event.target.files ? event.target.files[0] : null;
     if (!file || typeof FileReader === "undefined") return;
+    var activeSession = Boolean(state.session);
+    var savedSessions = Array.isArray(state.savedSessions) ? state.savedSessions.length : 0;
+    if (activeSession || savedSessions) {
+      var prompt = activeSession
+        ? "A focus session is in progress. Importing a backup will replace it, including its current progress. Continue?"
+        : "This import will replace your saved focus sessions. Continue?";
+      if (!confirm(prompt)) {
+        if (event && event.target) event.target.value = "";
+        showToast(activeSession ? "Import cancelled. Your focus session is still here." : "Import cancelled. Saved sessions were kept.");
+        return;
+      }
+    }
     var reader = new FileReader();
     reader.onload = function () {
       try {
@@ -2300,6 +2951,7 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(incoming));
         state = loadState();
         saveState();
+        refreshRecurringTasksForToday(true);
         renderAll();
         switchView("today");
         showToast("Backup imported");
@@ -2338,9 +2990,9 @@
         : mode === "supabase"
           ? "Connected to Supabase feedback table" + (pending ? " - " + pending + " queued" : "") + "."
         : mode === "whatsapp"
-          ? "Opens WhatsApp with a ready-to-send message for the developer."
+          ? "WhatsApp opens with your report ready."
         : mode === "email"
-          ? "Uses your email app to address the developer."
+          ? "Your email app opens with the developer address."
           : "Receiver not configured yet" + (pending ? " - " + pending + " saved locally" : "") + ".";
     }
     if (note) {
@@ -2348,10 +3000,8 @@
         ? "This report will be sent to the configured DeeCadence developer receiver."
         : mode === "supabase"
           ? "This report will be saved to the configured Supabase table. Email delivery should be handled by an Edge Function or database trigger."
-        : mode === "whatsapp"
-          ? "Tap Send to WhatsApp. DeeCadence will open the chat with your message ready."
-        : mode === "email"
-          ? "Submitting opens a pre-addressed email draft. You remain in control of sending it."
+        : mode === "whatsapp" || mode === "email"
+          ? "Nothing sends until you tap Send."
           : "No receiver is configured yet. Submitting safely stores this report on this device.";
     }
   }
@@ -2376,12 +3026,12 @@
     add("Rank", context.rank);
     add("Level", context.level);
     add("Streak", context.streak === undefined || context.streak === null ? "" : context.streak + " days");
-    add("Daily goal", context.dailyGoalMinutes === undefined ? "" : formatMinutes(context.dailyGoalMinutes || 0));
+    add("Daily goal", context.dailyGoalMinutes === undefined ? "" : formatMinutesCompact(context.dailyGoalMinutes || 0));
     add("Current focus", context.focusState);
     add("Saved focus sessions", context.sessionCount);
     add("Saved tasks", context.taskCount);
     add("Total XP", context.totalXp);
-    add("Focus in last 7 days", formatMinutes(context.focusMinutes7 || 0));
+    add("Focus in last 7 days", formatMinutesCompact(context.focusMinutes7 || 0));
     add("Attention tests", context.attentionTests);
     return lines;
   }
@@ -2421,13 +3071,13 @@
     if (!mark || !label || !value) return;
     if (mode === "email") {
       mark.textContent = "@";
-      label.textContent = "To: DeeCadence by email";
+      label.textContent = "To: DeeCadence";
       value.textContent = visibleFeedbackEmail();
       return;
     }
     if (mode === "whatsapp") {
       mark.textContent = "WA";
-      label.textContent = "To: DeeCadence on WhatsApp";
+      label.textContent = "To: DeeCadence";
       value.textContent = visibleFeedbackPhone();
       return;
     }
@@ -2476,22 +3126,9 @@
     badge.textContent = String(Math.min(99, count));
   }
 
-  function openFeedback() {
-    feedbackType = "Idea";
-    feedbackChannel = "whatsapp";
-    var name = document.getElementById("feedbackNameInput");
-    var message = document.getElementById("feedbackMessageInput");
-    var email = document.getElementById("feedbackEmailInput");
+  function syncFeedbackView() {
     var submit = document.getElementById("feedbackSubmitBtn");
-    if (name) {
-      name.value = "";
-      name.removeAttribute("aria-invalid");
-    }
-    if (message) message.value = "";
-    if (email) email.value = "";
     resetFeedbackButton(submit);
-    var count = document.getElementById("feedbackCharCount");
-    if (count) count.textContent = "0";
     Array.prototype.forEach.call(document.querySelectorAll("[data-feedback-type]"), function (button) {
       button.classList.toggle("active", button.getAttribute("data-feedback-type") === feedbackType);
     });
@@ -2500,12 +3137,25 @@
     });
     updateFeedbackDeliveryCopy();
     updateFeedbackDestination();
-    feedbackModal.classList.add("open");
-    setTimeout(function () { if (message) message.focus(); }, 80);
+    updateFeedbackBadge();
+  }
+
+  function openFeedback() {
+    switchView("feedback");
+    syncFeedbackView();
   }
 
   function closeFeedback() {
-    if (feedbackModal) feedbackModal.classList.remove("open");
+    var message = document.getElementById("feedbackMessageInput");
+    if (message) message.value = "";
+    var count = document.getElementById("feedbackCharCount");
+    if (count) count.textContent = "0";
+    updateFeedbackDeliveryCopy();
+    updateFeedbackBadge();
+  }
+
+  function renderFeedback() {
+    syncFeedbackView();
   }
 
   function feedbackContextSnapshot() {
@@ -3034,15 +3684,48 @@
     var label = lower === upper ? lower + " min" : lower + "-" + upper + " min";
     var confidence = completed >= 10 ? "Established range" : completed >= 6 ? "Emerging pattern" : "Early pattern";
 
+    var completionLine = recentSessions.length ? completionRate + "% completion" : "no recent sessions";
     return {
       sampleCount: completed,
       rangeLabel: label,
       recommendedMinutes: recommended,
-      evidenceText: "Calculated from all " + completed + " completed focus blocks saved on this device" + (recentSessions.length ? ". Recent session completion: " + completionRate + "%" : "") + ". Best window so far: " + focusWindow.label + ". Next stretch: " + recommended + " minutes.",
+      evidenceText: completed + " blocks \u00b7 " + completionLine + "\nBest window: " + focusWindow.label + "\nNext stretch: " + recommended + " min",
+      evidenceFacts: {
+        blocks: completed,
+        completion: recentSessions.length ? completionRate + "%" : "\u2014",
+        window: focusWindow.label,
+        minutes: recommended
+      },
       confidence: confidence,
       evidenceProgress: evidenceProgress,
       bestFocusWindow: focusWindow
     };
+  }
+
+  function capacityFactIcon(kind) {
+    if (kind === "window") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
+    }
+    if (kind === "next") {
+      return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.2 2 4.8 13.1h5.9L10.8 22l8.4-11.1h-5.9L13.2 2Z"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.8 14.2 9l6.2 2.2-6.2 2.2L12 19.6l-2.2-6.2L3.6 11.2 9.8 9 12 2.8Z"/></svg>';
+  }
+
+  function renderCapacityEvidenceFacts(facts) {
+    if (!facts) return "";
+    return '<span class="capacity-fact capacity-fact-streak">' +
+      '<span class="capacity-fact-icon" aria-hidden="true">' + capacityFactIcon("streak") + '</span>' +
+      '<span class="capacity-fact-text"><b>' + escapeHtml(String(facts.blocks)) + '</b> blocks <span class="capacity-fact-sep" aria-hidden="true">\u00b7</span> <b>' + escapeHtml(String(facts.completion)) + '</b> completion</span>' +
+    '</span>' +
+    '<span class="capacity-fact capacity-fact-window">' +
+      '<span class="capacity-fact-icon" aria-hidden="true">' + capacityFactIcon("window") + '</span>' +
+      '<span class="capacity-fact-text"><span class="capacity-fact-kicker">Best window</span><b>' + escapeHtml(String(facts.window)) + '</b></span>' +
+    '</span>' +
+    '<span class="capacity-fact capacity-fact-next">' +
+      '<span class="capacity-fact-icon" aria-hidden="true">' + capacityFactIcon("next") + '</span>' +
+      '<span class="capacity-fact-text"><span class="capacity-fact-kicker">Next stretch</span><b>' + escapeHtml(String(facts.minutes)) + ' min</b></span>' +
+    '</span>';
   }
 
   function todayHeroText() {
@@ -3135,7 +3818,16 @@
     var capacityFill = document.getElementById("capacityEvidenceFill");
     var capacityButton = document.getElementById("startSuggestedFocusBtn");
     if (capacityRange) capacityRange.textContent = capacity.rangeLabel;
-    if (capacityEvidence) capacityEvidence.textContent = capacity.evidenceText;
+    if (capacityEvidence) {
+      capacityEvidence.classList.toggle("capacity-evidence-facts", Boolean(capacity.evidenceFacts));
+      if (capacity.evidenceFacts) {
+        capacityEvidence.innerHTML = renderCapacityEvidenceFacts(capacity.evidenceFacts);
+        capacityEvidence.setAttribute("aria-label", capacity.evidenceText.replace(/\n/g, ". "));
+      } else {
+        capacityEvidence.textContent = capacity.evidenceText;
+        capacityEvidence.removeAttribute("aria-label");
+      }
+    }
     if (capacityConfidence) capacityConfidence.textContent = capacity.confidence;
     if (capacityFill) capacityFill.style.width = capacity.evidenceProgress + "%";
     if (capacityButton) {
@@ -3155,27 +3847,37 @@
         renderSessionBlockRail(saved) + "</div></div>";
       button.textContent = "Continue from Focus";
     } else if (task) {
+      var nextTaskPrefix = task.date < todayStr() ? shortDayLabel(task.date) + " missed - " : "";
       wrap.innerHTML = '<div class="task-line"><div style="flex:1; min-width:0;">' +
         '<div class="task-title">' + escapeHtml(task.title) + "</div>" +
-        '<div class="task-meta">' + (task.time || "Unscheduled") + " - " + task.estMinutes + " min - " + task.priority + " priority</div>" +
+        '<div class="task-meta">' + nextTaskPrefix + (task.time || "Unscheduled") + " - " + task.estMinutes + " min - " + task.priority + " priority</div>" +
         renderTaskUnitRail(task) + "</div></div>";
       button.textContent = "Start next block";
     } else {
-      wrap.innerHTML = '<div style="font-size:13.5px; color:var(--text-dim);">No tasks queued for today. Add one from Plan, or start a free focus block.</div>';
+      wrap.innerHTML = '<div style="font-size:13.5px; color:var(--text-dim);">No tasks queued. Add one from Plan, or start a free focus block.</div>';
       button.textContent = "Start free focus block";
     }
 
-    var todays = state.tasks.filter(function (item) { return item.date === todayStr(); }).sort(function (a, b) {
+    var today = todayStr();
+    var todays = state.tasks.filter(function (item) { return item.date === today; }).sort(function (a, b) {
       return (a.time ? timeToMin(a.time) : 9999) - (b.time ? timeToMin(b.time) : 9999);
     });
-    document.getElementById("todayPlanList").innerHTML = renderTodayPlanGroups(todays);
+    var todayPlanList = document.getElementById("todayPlanList");
+    todayPlanList.innerHTML = renderTodayPlanGroups(todays);
+    wirePlanTaskActions(todayPlanList);
   }
 
   function renderTodayPlanGroups(tasks) {
-    if (!tasks.length) return '<div class="empty-state" style="padding:20px 0;">Nothing on the plan yet.</div>';
+    var today = todayStr();
+    var missed = state.tasks.filter(function (item) {
+      return item.status !== "completed" && item.date < today;
+    }).sort(sortTasksForPlan);
+    if (!tasks.length && !missed.length) return '<div class="empty-state" style="padding:20px 0;"><span class="empty-state-copy">Nothing on the plan yet.</span></div>';
     var pending = tasks.filter(function (item) { return item.status !== "completed"; });
     var done = tasks.filter(function (item) { return item.status === "completed"; });
-    return renderTodayPlanGroup("Ready to focus", pending, true) + renderTodayPlanGroup("Done", done, false);
+    return (missed.length ? renderTodayPlanGroup("Missed", missed, false) : "") +
+      renderTodayPlanGroup("Ready to focus", pending, false) +
+      renderTodayPlanGroup("Done", done, false);
   }
 
   function renderTodayPlanGroup(label, tasks, open) {
@@ -3183,10 +3885,16 @@
   }
 
   function renderTodayPlanTask(item) {
-    return '<div class="task-line ' + (taskTimingState(item) ? "has-time-alert" : "") + '"><div style="flex:1; min-width:0;">' +
-      '<div class="task-title">' + escapeHtml(item.title) + (item.status === "completed" ? " done" : "") + "</div>" +
-      '<div class="task-meta">' + (item.time || "Unscheduled") + " - " + item.estMinutes + " min " + renderTimingBadge(item) + "</div>" +
-      renderTaskUnitRail(item) + "</div></div>";
+    var missed = item.status !== "completed" && item.date < todayStr();
+    var metaDate = missed ? shortDayLabel(item.date) + " - " : "";
+    return '<div class="task-line ' + (taskTimingState(item) ? "has-time-alert" : "") + '">' +
+      '<div class="today-plan-task-main" role="button" tabindex="0" data-open-task="' + item.id + '">' +
+        '<div class="task-title">' + escapeHtml(item.title) + (item.status === "completed" ? " done" : "") + '</div>' +
+        '<div class="task-meta">' + metaDate + (item.time || "Unscheduled") + " - " + item.estMinutes + " min " + renderTimingBadge(item) + '</div>' +
+        renderTaskUnitRail(item) +
+      '</div>' +
+      (item.status !== "completed" ? '<button class="btn btn-primary today-plan-task-focus" type="button" data-focus-task="' + item.id + '">Focus</button>' : "") +
+    '</div>';
   }
 
   function focusStageSignature(session) {
@@ -3314,6 +4022,13 @@
     }).sort(sortTasksForPlan);
   }
 
+  function planMissedTasks() {
+    var today = todayStr();
+    return state.tasks.filter(function (task) {
+      return task.status !== "completed" && task.date < today;
+    }).sort(sortTasksForPlan);
+  }
+
   function sortTasksForPlan(a, b) {
     if (a.date !== b.date) return a.date < b.date ? -1 : 1;
     return (a.time ? timeToMin(a.time) : 9999) - (b.time ? timeToMin(b.time) : 9999);
@@ -3324,10 +4039,10 @@
   }
 
   function taskTimingState(task) {
-    if (!task || task.status === "completed" || !task.time) return null;
+    if (!task || task.status === "completed") return null;
     var today = todayStr();
-    if (task.date < today) return { id: "missed", label: "Missed time" };
-    if (task.date > today) return null;
+    if (task.date < today) return { id: "missed", label: task.time ? "Missed time" : "Missed" };
+    if (task.date > today || !task.time) return null;
     var now = new Date();
     var nowMin = (now.getHours() * 60) + now.getMinutes();
     var start = timeToMin(task.time);
@@ -3343,11 +4058,15 @@
   }
 
   function renderTaskCard(task) {
-    return '<div class="task-card task-row ' + (taskTimingState(task) ? "has-time-alert" : "") + '">' +
+    var missed = task.status !== "completed" && task.date < todayStr();
+    var showDate = currentPlanTab !== "day" || missed;
+    var timingBadge = renderTimingBadge(task);
+    return '<div class="task-card task-row ' + (taskTimingState(task) ? "has-time-alert" : "") + (missed ? " is-missed" : "") + '">' +
       '<button class="task-check" data-toggle-task="' + task.id + '" aria-label="' + (task.status === "completed" ? "Mark incomplete" : "Mark complete") + '">' + (task.status === "completed" ? "&#10003;" : "") + '</button>' +
       '<button class="task-row-main" data-open-task="' + task.id + '">' +
         '<span class="task-card-title">' + escapeHtml(task.title) + '</span>' +
-        '<span class="task-card-meta">' + (currentPlanTab === "day" ? "" : task.date + " - ") + (task.time || "Unscheduled") + " - " + task.estMinutes + " min" + '</span>' +
+        '<span class="task-card-meta">' + (showDate ? task.date + " - " : "") + (task.time || "Unscheduled") + " - " + task.estMinutes + " min" + '</span>' +
+        (timingBadge ? '<span class="task-card-flags">' + timingBadge + '</span>' : "") +
       '</button>' +
       '<div class="task-card-actions">' +
         '<span class="priority-pill ' + planPriorityClass(task) + '">' + task.priority + '</span>' +
@@ -3376,7 +4095,6 @@
   function renderPlan() {
     var root = document.getElementById("planList");
     var planView = document.getElementById("view-plan");
-    if (currentPlanMode === "schedule" && currentPlanTab === "pending") currentPlanTab = "day";
     if (planView) planView.setAttribute("data-plan-mode-current", currentPlanMode);
     var list = planFilteredTasks();
     syncPlanModeButtons();
@@ -3389,18 +4107,75 @@
   }
 
   function renderTaskListView(root, list) {
-    if (!list.length) {
+    if (currentPlanTab === "week") {
+      renderWeekTaskListView(root, list);
+      return;
+    }
+    var today = todayStr();
+    var missed = planMissedTasks();
+    var visible = list.filter(function (task) {
+      return task.status === "completed" || task.date >= today;
+    });
+    var pending = visible.filter(function (task) { return task.status !== "completed"; });
+    var done = currentPlanTab === "pending" ? [] : visible.filter(function (task) { return task.status === "completed"; });
+    if (!missed.length && !pending.length && !done.length) {
       root.innerHTML = '<div class="empty-state"><h3>Nothing here yet</h3><p>Add a task and DeeCadence can place it into your day.</p></div>';
       return;
     }
-    var pending = list.filter(function (task) { return task.status !== "completed"; });
-    var done = list.filter(function (task) { return task.status === "completed"; });
+    var missedHtml = missed.length
+      ? '<details class="task-list-group" data-plan-group="missed"' + (planGroupOpen.missed ? " open" : "") + '>' +
+          '<summary class="task-list-heading task-missed-heading"><span>Missed</span><small>' + missed.length + '</small></summary>' +
+          '<div class="task-list-group-body">' +
+            '<p class="task-missed-note">These stayed open past their day. Complete, reschedule, or delete them.</p>' +
+            missed.map(renderTaskCard).join("") +
+          '</div>' +
+        '</details>'
+      : "";
+    var doneHtml = currentPlanTab === "pending" ? "" :
+      '<details class="task-list-group is-done" data-plan-group="done"' + (planGroupOpen.done ? " open" : "") + '>' +
+        '<summary class="task-list-heading"><span>Done</span><small>' + done.length + '</small></summary>' +
+        '<div class="task-list-group-body">' +
+          (done.length ? done.map(renderTaskCard).join("") : '<div class="task-list-empty">Nothing completed here yet.</div>') +
+        '</div>' +
+      '</details>';
+    var scopeHeading = currentPlanTab === "pending"
+      ? '<div class="task-scope-heading"><span class="eyebrow">All open</span><strong>Pending across your plan</strong><small>' + (pending.length + missed.length) + ' open</small></div>'
+      : '<div class="task-scope-heading"><span class="eyebrow">Today</span><strong>' + formatReadableDate(today) + '</strong><small>' + (missed.length ? missed.length + ' missed · ' : '') + pending.length + ' open · ' + done.length + ' done</small></div>';
     root.innerHTML = '<div class="task-list-stack">' +
-      '<div class="task-list-heading"><span>Ready</span><small>' + pending.length + '</small></div>' +
-      (pending.length ? pending.map(renderTaskCard).join("") : '<div class="task-list-empty">No pending tasks in this view.</div>') +
-      '<details class="task-done-group"><summary><span>Done</span><small>' + done.length + '</small></summary>' +
-      '<div class="task-done-list">' + (done.length ? done.map(renderTaskCard).join("") : '<div class="task-list-empty">Nothing completed here yet.</div>') + '</div></details>' +
+      scopeHeading +
+      missedHtml +
+      '<details class="task-list-group" data-plan-group="ready"' + (planGroupOpen.ready ? " open" : "") + '>' +
+        '<summary class="task-list-heading"><span>Ready</span><small>' + pending.length + '</small></summary>' +
+        '<div class="task-list-group-body">' +
+          (pending.length ? pending.map(renderTaskCard).join("") : '<div class="task-list-empty">No pending tasks in this view.</div>') +
+        '</div>' +
+      '</details>' +
+      doneHtml +
       "</div>";
+    Array.prototype.forEach.call(root.querySelectorAll("[data-plan-group]"), function (group) {
+      group.addEventListener("toggle", function () {
+        planGroupOpen[group.getAttribute("data-plan-group")] = group.open;
+      });
+    });
+  }
+
+  function renderWeekTaskListView(root, list) {
+    var groups = {};
+    list.forEach(function (task) {
+      if (!groups[task.date]) groups[task.date] = [];
+      groups[task.date].push(task);
+    });
+    var dates = Object.keys(groups).sort();
+    if (!dates.length) {
+      root.innerHTML = '<div class="empty-state"><h3>No tasks this week</h3><p>Add a task and it will appear in this seven-day view.</p></div>';
+      return;
+    }
+    root.innerHTML = '<div class="task-list-stack task-week-stack"><div class="task-scope-heading"><span class="eyebrow">Seven-day view</span><strong>Tasks by date</strong><small>' + dates.length + ' active day' + (dates.length === 1 ? '' : 's') + '</small></div>' + dates.map(function (date) {
+      var day = new Date(date + "T00:00:00");
+      var label = day.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+      var tasks = groups[date].sort(sortTasksForPlan);
+      return '<section class="task-date-section' + (date === todayStr() ? " is-today" : "") + '"><header class="task-date-heading"><div><span>' + escapeHtml(label) + '</span><strong>' + (date === todayStr() ? "Today" : "") + '</strong></div><small>' + tasks.length + ' task' + (tasks.length === 1 ? '' : 's') + '</small></header><div class="task-date-items">' + tasks.map(renderTaskCard).join("") + '</div></section>';
+    }).join("") + '</div>';
   }
 
   function renderScheduleView(root, list) {
@@ -3433,10 +4208,12 @@
       var style = "top:" + top + "px;height:" + height + "px;left:" + left + "%;right:auto;width:calc(" + width + "% - " + gap + "px)";
       var task = item.task;
       var timing = taskTimingState(task);
-      return '<article class="schedule-block ' + planPriorityClass(task) + (timing ? " " + timing.id : "") + (height < 24 ? " compact" : "") + '" style="' + style + '" data-open-task="' + task.id + '" role="button" tabindex="0" aria-label="Open ' + escapeHtml(task.title) + '"><strong>' + escapeHtml(task.title) + '</strong></article>';
+      var timeLabel = height >= 34 ? '<span class="schedule-block-time">' + escapeHtml(scheduleTaskTimeRange(task)) + '</span>' : '';
+      var priorityLabel = height >= 58 ? '<small>' + escapeHtml(task.priority || "medium") + ' priority</small>' : '';
+      return '<article class="schedule-block ' + planPriorityClass(task) + (timing ? " " + timing.id : "") + (height < 24 ? " compact" : "") + '" style="' + style + '" data-open-task="' + task.id + '" role="button" tabindex="0" aria-label="Open ' + escapeHtml(task.title) + '">' + timeLabel + '<strong>' + escapeHtml(task.title) + '</strong>' + priorityLabel + '</article>';
     }).join("");
 
-    root.innerHTML = '<section class="schedule-shell schedule-main"><div class="schedule-head"><div><div class="eyebrow">Today schedule</div><h3>' + formatReadableDate(todayStr()) + '</h3></div><div class="schedule-head-actions"><span>00:00 - 23:59 - ' + timed.length + " block" + (timed.length === 1 ? "" : "s") + '</span><div><button type="button" data-schedule-jump="start">Start</button><button type="button" data-schedule-jump="now">Now</button></div></div></div><div class="schedule-scroll"><div class="schedule-timeline" style="height:' + timelineHeight + 'px"><div class="schedule-hours">' + hours.join("") + '</div><div class="schedule-block-layer">' + renderNowLine(todayStr(), pxPerMinute, SCHEDULE_START_MINUTES, SCHEDULE_END_MINUTES) + (blocks || '<div class="schedule-empty-timeline">No scheduled blocks yet. Add a time or use Auto-arrange.</div>') + '</div></div></div></section>';
+    root.innerHTML = '<section class="schedule-shell schedule-main"><div class="schedule-head"><div><div class="eyebrow">Today schedule</div><h3>' + formatReadableDate(todayStr()) + '</h3></div><div class="schedule-head-actions"><span>00:00 - 23:59 - ' + timed.length + " block" + (timed.length === 1 ? "" : "s") + '</span><div><button type="button" data-schedule-jump="start" aria-label="Scroll schedule to the top">Top</button><button type="button" data-schedule-jump="now">Now</button></div></div></div><div class="schedule-scroll"><div class="schedule-timeline" style="height:' + timelineHeight + 'px"><div class="schedule-hours">' + hours.join("") + '</div><div class="schedule-block-layer">' + renderNowLine(todayStr(), pxPerMinute, SCHEDULE_START_MINUTES, SCHEDULE_END_MINUTES) + (blocks || '<div class="schedule-empty-timeline">No scheduled blocks yet. Add a time or use Auto-arrange.</div>') + '</div></div></div></section>';
     var scheduleScroll = root.querySelector(".schedule-scroll");
     var jumpStart = root.querySelector('[data-schedule-jump="start"]');
     var jumpNow = root.querySelector('[data-schedule-jump="now"]');
@@ -3517,6 +4294,41 @@
     root.innerHTML = '<section class="schedule-shell"><div class="schedule-head"><div><div class="eyebrow">Pending queue</div><h3>Choose what enters the day</h3></div><span>' + list.length + " open task" + (list.length === 1 ? "" : "s") + '</span></div>' + renderScheduleQueue(unscheduled, "Needs a time", "No unscheduled open tasks.") + renderScheduleQueue(scheduled, "Already placed", "No scheduled open tasks.") + '</section>';
   }
 
+  function projectedRecurringTasksForWeek(startDate, endDate) {
+    var series = {};
+    state.tasks.forEach(function (task) {
+      if (!task || task.repeat === "none") return;
+      var key = recurringSeriesRoot(task);
+      var latest = series[key];
+      if (!latest || task.date > latest.date) series[key] = task;
+    });
+    var projections = [];
+    Object.keys(series).forEach(function (key) {
+      var latest = series[key];
+      // A completed occurrence already advanced the series, so start from the
+      // next future date the recurrence helper would create. A pending overdue
+      // occurrence can still show its remaining pattern for this week.
+      var date = latest.status === "completed"
+        ? nextRecurringDate(latest)
+        : nextRecurringOccurrence(latest, latest.date);
+      // Keep projections virtual so completing the current occurrence still
+      // creates the real task in the recurrence chain.
+      while (date && date <= endDate) {
+        if (date >= startDate) {
+          projections.push(Object.assign({}, latest, {
+            date: date,
+            status: "pending",
+            projected: true,
+            projectedDate: date,
+            projectedFromDate: latest.date
+          }));
+        }
+        date = nextRecurringOccurrence(latest, date);
+      }
+    });
+    return projections;
+  }
+
   function renderWeekSchedule(root) {
     var today = todayStr();
     // Weeks start on Sunday. Show the current Sunday-to-Saturday week so the
@@ -3524,20 +4336,38 @@
     var start = addDaysKey(today, -parseDateKey(today).getDay());
     var days = [];
     for (var i = 0; i < 7; i += 1) days.push(addDaysKey(start, i));
-    root.innerHTML = '<section class="schedule-shell"><div class="schedule-head"><div><div class="eyebrow">Week schedule</div><h3>This week</h3></div><span>Sunday to Saturday</span></div><div class="schedule-week-grid">' + days.map(function (date) {
-      var dayTasks = state.tasks.filter(function (task) { return task.date === date && task.status !== "completed"; }).sort(sortTasksForPlan);
-      return '<article class="schedule-day-card' + (date === today ? " is-today" : "") + '"><div class="schedule-day-head"><strong>' + shortDayLabel(date) + '</strong><span>' + dayTasks.length + " task" + (dayTasks.length === 1 ? "" : "s") + '</span></div>' + (dayTasks.length ? dayTasks.map(renderMiniScheduleBlock).join("") : '<p>No blocks</p>') + '</article>';
+    var projectedTasks = projectedRecurringTasksForWeek(days[0], days[6]);
+    var agendaDays = days.map(function (date) {
+      var dayTasks = state.tasks.concat(projectedTasks).filter(function (task) { return task.date === date && task.status !== "completed"; }).sort(sortTasksForPlan);
+      var dayDate = new Date(date + "T00:00:00");
+      var weekday = dayDate.toLocaleDateString(undefined, { weekday: "short" });
+      var month = dayDate.toLocaleDateString(undefined, { month: "short" });
+      var dayNumber = dayDate.getDate();
+      return { date: date, tasks: dayTasks, weekday: weekday, month: month, dayNumber: dayNumber };
+    }).filter(function (day) { return day.tasks.length || day.date === today; });
+    root.innerHTML = '<section class="schedule-shell schedule-week-shell"><div class="schedule-head"><div><div class="eyebrow">Week schedule</div><h3>This week</h3></div><span>Sunday to Saturday</span></div><div class="schedule-week-agenda">' + agendaDays.map(function (day) {
+      return '<article class="schedule-agenda-day' + (day.date === today ? " is-today" : "") + '"><div class="schedule-agenda-date"><span>' + escapeHtml(day.weekday) + '</span><strong>' + day.dayNumber + '</strong><small>' + escapeHtml(day.month) + '</small></div><div class="schedule-agenda-events"><div class="schedule-agenda-events-head"><span>' + (day.tasks.length ? day.tasks.length + " task" + (day.tasks.length === 1 ? "" : "s") : "No tasks") + '</span></div>' + (day.tasks.length ? day.tasks.map(renderMiniScheduleBlock).join("") : '<p>No blocks planned for this day.</p>') + '</div></article>';
     }).join("") + '</div></section>';
   }
 
   function renderMiniScheduleBlock(task) {
     var timing = taskTimingState(task);
-    return '<button class="schedule-mini-block ' + planPriorityClass(task) + (timing ? " " + timing.id : "") + '" data-open-task="' + task.id + '"><strong>' + escapeHtml(task.title) + '</strong></button>';
+    var projected = Boolean(task.projected);
+    var timeLabel = task.time ? scheduleTaskTimeRange(task) : "Flexible time";
+    return '<button class="schedule-mini-block ' + planPriorityClass(task) + (timing ? " " + timing.id : "") + (projected ? " is-projected" : "") + '" data-open-task="' + task.id + '"' + (projected ? ' data-projected-date="' + task.date + '" aria-label="' + escapeHtml(task.title) + ', projected repeat for ' + escapeHtml(formatReadableDate(task.date)) + '"' : '') + '><span class="schedule-mini-time">' + escapeHtml(timeLabel) + '</span><strong>' + escapeHtml(task.title) + '</strong>' + (projected ? '<span>Projected repeat</span>' : '') + '</button>';
+  }
+
+  function scheduleTaskTimeRange(task) {
+    var start = timeToMin(task && task.time);
+    var duration = Math.max(1, Number(task && task.estMinutes) || 1);
+    return minToTime(start) + " - " + minToTime(Math.min(SCHEDULE_END_MINUTES, start + duration));
   }
 
   function renderScheduleQueue(tasks, label, emptyText) {
+    var today = todayStr();
     return '<div class="schedule-queue"><div class="schedule-queue-title">' + label + '</div>' + (tasks.length ? tasks.map(function (task) {
-      return '<article class="schedule-queue-card ' + (taskTimingState(task) ? "has-time-alert" : "") + '"><button class="schedule-queue-main" data-open-task="' + task.id + '"><strong>' + escapeHtml(task.title) + '</strong><span>' + (task.time || "No time set") + " - " + task.estMinutes + " min - " + task.priority + '</span></button><div class="schedule-queue-actions"><button class="btn btn-ghost" data-edit-task="' + task.id + '">Edit</button>' + (task.status !== "completed" ? '<button class="btn btn-primary" data-focus-task="' + task.id + '">Focus</button>' : "") + '<button class="btn btn-ghost" data-delete-task="' + task.id + '">Delete</button></div></article>';
+      var datePrefix = task.date && task.date !== today ? shortDayLabel(task.date) + " - " : "";
+      return '<article class="schedule-queue-card ' + (taskTimingState(task) ? "has-time-alert" : "") + '"><button class="schedule-queue-main" data-open-task="' + task.id + '"><strong>' + escapeHtml(task.title) + '</strong><span>' + datePrefix + (task.time || "No time set") + " - " + task.estMinutes + " min - " + task.priority + '</span></button><div class="schedule-queue-actions"><button class="btn btn-ghost" data-edit-task="' + task.id + '">Edit</button>' + (task.status !== "completed" ? '<button class="btn btn-primary" data-focus-task="' + task.id + '">Focus</button>' : "") + '<button class="btn btn-ghost" data-delete-task="' + task.id + '">Delete</button></div></article>';
     }).join("") : '<div class="schedule-empty-queue">' + emptyText + '</div>') + '</div>';
   }
 
@@ -3551,11 +4381,16 @@
 
   function wirePlanTaskActions(root) {
     Array.prototype.forEach.call(root.querySelectorAll("[data-open-task]"), function (button) {
-      button.onclick = function () { openTaskDetail(button.getAttribute("data-open-task")); };
+      function openFromButton() {
+        var projectedDate = button.getAttribute("data-projected-date");
+        if (projectedDate) showToast("Projected repeat for " + formatReadableDate(projectedDate));
+        openTaskDetail(button.getAttribute("data-open-task"));
+      }
+      button.onclick = openFromButton;
       button.onkeydown = function (event) {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          openTaskDetail(button.getAttribute("data-open-task"));
+          openFromButton();
         }
       };
     });
@@ -3692,6 +4527,50 @@
     setTimeout(updateRankLadderArrows, state.settings.reducedMotion ? 0 : 260);
   }
 
+  function bindRankLadderDrag() {
+    var ladder = document.getElementById("rankLadder");
+    if (!ladder || ladder.dataset.dragReady === "true") return;
+    ladder.dataset.dragReady = "true";
+    var activePointer = null;
+    var startX = 0;
+    var startScroll = 0;
+    var moved = false;
+
+    function finishDrag(event) {
+      if (activePointer === null || (event && event.pointerId !== activePointer)) return;
+      try {
+        ladder.releasePointerCapture(activePointer);
+      } catch (error) {}
+      activePointer = null;
+      ladder.classList.remove("dragging");
+    }
+
+    ladder.addEventListener("pointerdown", function (event) {
+      if (event.pointerType === "touch" || event.button > 0) return;
+      activePointer = event.pointerId;
+      startX = event.clientX;
+      startScroll = Number(ladder.scrollLeft) || 0;
+      moved = false;
+      ladder.classList.add("dragging");
+      try {
+        ladder.setPointerCapture(activePointer);
+      } catch (error) {}
+    });
+
+    ladder.addEventListener("pointermove", function (event) {
+      if (activePointer === null || event.pointerId !== activePointer) return;
+      var delta = event.clientX - startX;
+      if (!moved && Math.abs(delta) < 4) return;
+      moved = true;
+      event.preventDefault();
+      ladder.scrollLeft = startScroll - delta;
+    });
+
+    ladder.addEventListener("pointerup", finishDrag);
+    ladder.addEventListener("pointercancel", finishDrag);
+    ladder.addEventListener("lostpointercapture", finishDrag);
+  }
+
   function focusMinutesByDate() {
     var byDate = Object.assign({}, state.dailyFocusMinutes || {});
     state.history.forEach(function (item) {
@@ -3740,10 +4619,20 @@
     '</span>';
   }
 
+  function strongestProgressDay(days) {
+    var elapsed = days.filter(function (day) { return !day.future; });
+    if (!elapsed.length) elapsed = days;
+    var strongest = elapsed.reduce(function (best, day) {
+      return !best || day.minutes > best.minutes ? day : best;
+    }, null);
+    return strongest && strongest.minutes > 0 ? strongest : null;
+  }
+
   function renderCadenceChart(days, maxMinutes) {
     if (!days.length) return "";
     var goal = Math.max(15, Number(state.profile.dailyGoalMinutes) || 60);
     var max = Math.max(1, Number(maxMinutes) || goal);
+    var strongest = strongestProgressDay(days);
     var selectedDate = selectedProgressDate || (days[days.length - 1] || {}).date;
     var selected = days.find(function (day) { return day.date === selectedDate; }) || days[days.length - 1];
     var selectedFullDate = new Date(selected.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
@@ -3757,14 +4646,16 @@
       var isZero = !day.minutes;
       var isFuture = Boolean(day.future);
       var isSelected = day.date === selectedDate;
+      var isStrongest = Boolean(strongest && strongest.date === day.date);
       var showLabel = index === 0 || index === days.length - 1 || index % labelStep === 0;
       var dateValue = new Date(day.date + "T00:00:00");
       var dayLabel = dateValue.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
       var fullDate = dateValue.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
       var meta = progressDayMeta(day, goal);
-      return '<button type="button" class="cadence-col' + (isZero ? " is-zero" : "") + (isFuture ? " is-future" : "") + (isSelected ? " active" : "") + '" data-progress-day="' + day.date + '"' + (isFuture ? ' aria-disabled="true"' : "") + ' style="--h:' + height + '%" aria-pressed="' + (isSelected ? "true" : "false") + '" aria-label="' + escapeHtml(fullDate) + ": " + (isFuture ? "coming up" : formatMinutesCompact(day.minutes) + " focused. " + meta) + '">' +
+      return '<button type="button" class="cadence-col' + (isZero ? " is-zero" : "") + (isFuture ? " is-future" : "") + (isSelected ? " active" : "") + (isStrongest ? " is-strongest" : "") + '" data-progress-day="' + day.date + '"' + (isFuture ? ' aria-disabled="true"' : "") + ' style="--h:' + height + '%" aria-pressed="' + (isSelected ? "true" : "false") + '" aria-label="' + escapeHtml(fullDate) + ": " + (isFuture ? "coming up" : formatMinutesCompact(day.minutes) + " focused. " + meta) + (isStrongest ? " Strongest day in this range." : "") + '">' +
         progressDayTip(day, goal) +
         '<span class="cadence-bar" aria-hidden="true"></span>' +
+        (isStrongest ? '<span class="cadence-star" aria-hidden="true">&#9733;</span>' : "") +
         (showLabel ? '<span class="cadence-day" aria-hidden="true">' + dayLabel + '</span>' : "") +
       '</button>';
     }).join("");
@@ -3795,6 +4686,7 @@
     var goalRatio = Math.max(2, Math.min(98, (goal / scaleMax) * 100));
     var labelStep = days.length <= 7 ? 1 : days.length <= 14 ? 2 : 5;
     var chartClass = days.length <= 3 ? 3 : days.length <= 7 ? 7 : days.length <= 21 ? 14 : 30;
+    var strongest = strongestProgressDay(days);
     var axis = days.map(function (day, index) {
       var x = days.length === 1 ? 50 : (index / (days.length - 1)) * 100;
       var y = Math.max(0, Math.min(100, (day.minutes / scaleMax) * 100));
@@ -3805,11 +4697,14 @@
       var day = entry.day;
       var isZero = !day.minutes;
       var isSelected = day.date === selectedDate;
+      var isStrongest = Boolean(strongest && strongest.date === day.date);
       var dateValue = new Date(day.date + "T00:00:00");
       var fullDate = dateValue.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
       var meta = progressDayMeta(day, goal);
       var edgeClass = entry.index === 0 ? " is-first" : entry.index === days.length - 1 ? " is-last" : "";
-      return '<button type="button" class="line-point' + (isZero ? " is-zero" : "") + (isSelected ? " active" : "") + edgeClass + '" data-progress-day="' + day.date + '" style="left:' + entry.x.toFixed(3) + '%;bottom:' + entry.y.toFixed(3) + '%" aria-pressed="' + (isSelected ? "true" : "false") + '" aria-label="' + escapeHtml(fullDate) + ": " + formatMinutesCompact(day.minutes) + ' focused. ' + meta + '">' +
+      var starHtml = isStrongest ? '<span class="line-star" aria-hidden="true">&#9733;</span>' : '';
+      return '<button type="button" class="line-point' + (isZero ? " is-zero" : "") + (isSelected ? " active" : "") + (isStrongest ? " is-strongest" : "") + edgeClass + '" data-progress-day="' + day.date + '" style="left:' + entry.x.toFixed(3) + '%;bottom:' + entry.y.toFixed(3) + '%" aria-pressed="' + (isSelected ? "true" : "false") + '" aria-label="' + escapeHtml(fullDate) + ": " + formatMinutesCompact(day.minutes) + ' focused. ' + meta + (isStrongest ? " Strongest day in this range." : "") + '">' +
+        starHtml +
         '<span class="line-dot" aria-hidden="true"></span>' +
         progressDayTip(day, goal) +
       '</button>';
@@ -3852,6 +4747,7 @@
     var selectedFullDate = new Date(selected.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
     var selectedMeta = progressDayMeta(selected, goal);
     var total = days.reduce(function (sum, day) { return sum + day.minutes; }, 0);
+    var strongest = strongestProgressDay(days);
     var startWeekday = new Date(days[0].date + "T00:00:00").getDay();
     var cells = [];
     var weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -3874,6 +4770,7 @@
       var weekday = dateValue.getDay();
       var rowIndex = Math.floor((startWeekday + index) / 7);
       var isSelected = day.date === selectedDate;
+      var isStrongest = Boolean(strongest && strongest.date === day.date);
       var intensity = !day.minutes ? 0 : Math.min(4, Math.ceil((day.minutes / goal) * 4));
       var fullDate = dateValue.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
       var meta = progressDayMeta(day, goal);
@@ -3884,14 +4781,16 @@
         weekday === 6 ? "is-sat" : "",
         rowIndex === 0 ? "is-top-row" : "",
         isSelected ? "active" : "",
+        isStrongest ? "is-strongest" : "",
         day.future ? "is-future" : ""
       ].filter(Boolean).join(" ");
       cells.push(
         '<button type="button" class="' + classes + '" data-progress-day="' + day.date + '"' +
           (day.future ? ' aria-disabled="true"' : "") +
           ' aria-pressed="' + (isSelected ? "true" : "false") + '"' +
-          ' aria-label="' + escapeHtml(fullDate) + ": " + (day.future ? "coming up" : formatMinutesCompact(day.minutes) + " focused. " + meta) + '">' +
+          ' aria-label="' + escapeHtml(fullDate) + ": " + (day.future ? "coming up" : formatMinutesCompact(day.minutes) + " focused. " + meta) + (isStrongest ? " Strongest day in this range." : "") + '">' +
           '<span class="heatmap-date">' + dateValue.getDate() + '</span>' +
+          (isStrongest ? '<span class="heatmap-star" aria-hidden="true">&#9733;</span>' : "") +
           (day.minutes ? '<span class="heatmap-value">' + heatmapMinutes(day.minutes) + '</span>' : "") +
           progressDayTip(day, goal) +
         '</button>'
@@ -3915,7 +4814,7 @@
     '</div>';
   }
 
-  function progressInsights(days) {
+  function progressInsightData(days) {
     // Future days in the Sunday-first week view are placeholders, not missed days.
     var elapsed = days.filter(function (day) { return !day.future; });
     if (!elapsed.length) elapsed = days;
@@ -3923,9 +4822,7 @@
     var active = elapsed.filter(function (day) { return day.minutes > 0; });
     var goal = Math.max(15, Number(state.profile.dailyGoalMinutes) || 60);
     var goalDays = elapsed.filter(function (day) { return day.minutes >= goal; }).length;
-    var strongest = elapsed.reduce(function (best, day) {
-      return !best || day.minutes > best.minutes ? day : best;
-    }, null);
+    var strongest = strongestProgressDay(days);
     var midpoint = Math.max(1, Math.floor(elapsed.length / 2));
     var first = elapsed.slice(0, midpoint);
     var second = elapsed.slice(midpoint);
@@ -3933,51 +4830,52 @@
     var secondAverage = second.reduce(function (sum, day) { return sum + day.minutes; }, 0) / Math.max(1, second.length);
     var activeRatio = active.length / Math.max(1, elapsed.length);
     var cadenceText = !active.length
-      ? "No protected focus is recorded in this window yet."
+      ? "No focus recorded in this window yet."
       : activeRatio >= 0.7
-        ? "Your focus is repeating across most days in this window."
+        ? "Focus is repeating across most days."
         : activeRatio >= 0.4
-          ? "Your cadence is forming. A few more active days would make it steadier."
-          : "Your focus is concentrated on a small number of days. Short repeatable blocks can smooth the pattern.";
+          ? "Cadence is forming. A few more active days would steady it."
+          : "Focus is concentrated on a few days. Short repeats can smooth it.";
     var trendText;
     var trendValue;
     if (!total) {
       trendValue = "No trend yet";
-      trendText = "Complete a focus block to create the first comparison.";
+      trendText = "Finish a block to start a trend.";
     } else if (!firstAverage && secondAverage) {
       trendValue = "Activity started";
-      trendText = "All recorded focus in this window happened in its more recent half.";
+      trendText = "All focus happened in the recent half of this window.";
     } else {
       var change = firstAverage ? Math.round(((secondAverage - firstAverage) / firstAverage) * 100) : 0;
       trendValue = change > 0 ? "+" + change + "%" : change + "%";
       trendText = Math.abs(change) < 8
-        ? "Your daily average is holding steady across this window."
+        ? "Daily average is holding steady."
         : change > 0
-          ? "Your recent daily average is higher than the earlier half."
-          : "Your recent daily average is lower than the earlier half. Reduce the next block if recovery would help.";
+          ? "Recent daily average is higher than the earlier half."
+          : "Recent daily average is lower. Shorten the next block if recovery would help.";
     }
-    var strongestLabel = strongest && strongest.minutes
+    var strongestLabel = strongest
       ? new Date(strongest.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })
-      : "No active day";
-    return [
-      {
-        label: "Cadence",
-        value: active.length + "/" + elapsed.length + " active days",
-        text: cadenceText
-      },
-      {
-        label: "Momentum",
-        value: trendValue,
-        text: trendText
-      },
-      {
-        label: "Strongest day",
-        value: strongestLabel,
-        text: strongest && strongest.minutes
-          ? formatMinutesCompact(strongest.minutes) + " focused. " + goalDays + " day" + (goalDays === 1 ? "" : "s") + " reached your " + goal + " minute goal."
-          : "No day has protected focus in this window yet."
-      }
-    ];
+      : "";
+    return {
+      items: [
+        {
+          label: "Cadence",
+          value: active.length + "/" + elapsed.length + " active days",
+          text: cadenceText
+        },
+        {
+          label: "Momentum",
+          value: trendValue,
+          text: trendText
+        }
+      ],
+      footer: '<div class="progress-insight-foot">' +
+        '<span>' + (strongest
+          ? '<b aria-hidden="true">&#9733;</b> ' + escapeHtml(strongestLabel) + ' &middot; ' + formatMinutesCompact(strongest.minutes)
+          : 'No active day yet') + '</span>' +
+        '<span>' + goalDays + '/' + elapsed.length + ' goal days</span>' +
+      '</div>'
+    };
   }
 
   function wireProgressChart(days) {
@@ -4002,7 +4900,10 @@
     var purpose = PERSONAL_PURPOSE_LABELS[setup.purpose] || "";
     var windowLabel = setup.focusWindow && setup.focusWindow !== "not-sure" ? focusWindowLabel(setup.focusWindow) : "";
     var lengthLabel = PERSONAL_LENGTH_LABELS[String(setup.focusLength)] || "";
-    var title = setup.target ? "Built around " + setup.target + "." : "Tell DeeCadence what matters now.";
+    var distractionLabel = PERSONAL_DISTRACTION_LABELS[setup.distraction] || "";
+    // Show "Consistency" as default for first-time users who haven't configured anything
+    var isDefaultState = setup.target === "" && setup.purpose === "" && setup.challenge === "" && setup.goal === "" && setup.focusLength === 0 && setup.distraction === "";
+    var title = isDefaultState ? "Consistency" : (setup.target ? "Built around " + setup.target + "." : "Tell DeeCadence what matters now.");
     var details = [];
     if (purpose) details.push("Protecting attention for " + purpose.toLowerCase());
     if (windowLabel) details.push("best focus window: " + windowLabel.toLowerCase());
@@ -4011,23 +4912,29 @@
     if (setup.goal) details.push("next goal: " + setup.goal);
     var summary = details.length
       ? details.join(". ") + "."
-      : "A few optional answers shape task suggestions, first-block length, and focus-window guidance.";
-    var tags = [];
-    if (purpose) tags.push(purpose);
-    if (windowLabel) tags.push(windowLabel);
-    if (lengthLabel) tags.push(lengthLabel);
-    if (PERSONAL_DISTRACTION_LABELS[setup.distraction]) tags.push(PERSONAL_DISTRACTION_LABELS[setup.distraction]);
+      : isDefaultState ? "Consistency helps you build a regular practice." : "A few optional answers shape task suggestions, first-block length, and focus-window guidance.";
+    var facts = [];
+    if (purpose) facts.push({ label: "Focus", value: purpose });
+    if (windowLabel) facts.push({ label: "Best window", value: windowLabel });
+    if (lengthLabel) facts.push({ label: "Natural block", value: lengthLabel });
+    if (distractionLabel) facts.push({ label: "Distraction", value: distractionLabel });
+    var tags = facts.map(function (fact) { return fact.value; });
+    root.classList.toggle("has-facts", facts.length > 0);
     root.innerHTML =
       '<div class="personal-setup-copy">' +
         '<div class="eyebrow">Personal setup</div>' +
         '<h3>' + escapeHtml(title) + '</h3>' +
         '<p>' + escapeHtml(summary) + '</p>' +
+        (facts.length ? '<dl class="personal-setup-facts" aria-label="Your setup details">' +
+          facts.map(function (fact) {
+            return '<div><dt>' + escapeHtml(fact.label) + '</dt><dd>' + escapeHtml(fact.value) + '</dd></div>';
+          }).join("") + '</dl>' : "") +
         (tags.length ? '<div class="personal-setup-tags">' + tags.map(function (tag) {
           return '<span>' + escapeHtml(tag) + '</span>';
         }).join("") + '</div>' : "") +
       '</div>' +
       '<button class="btn btn-secondary" type="button" id="openPersonalizeBtn">' +
-        (purpose || setup.target || setup.focusLength ? "Refine setup" : "Set up") +
+        (facts.length || setup.target || setup.challenge || setup.goal ? "Refine setup" : "Set up") +
       '</button>';
     var open = document.getElementById("openPersonalizeBtn");
     if (open) open.onclick = openPersonalize;
@@ -4255,9 +5162,10 @@
       : chartType === "line"
         ? renderLineChart(days, max)
         : renderCadenceChart(days, max);
-    document.getElementById("progressInsights").innerHTML = progressInsights(days).map(function (insight) {
+    var insightData = progressInsightData(days);
+    document.getElementById("progressInsights").innerHTML = insightData.items.map(function (insight) {
       return '<article class="progress-insight"><span>' + escapeHtml(insight.label) + '</span><strong>' + escapeHtml(insight.value) + '</strong><p>' + escapeHtml(insight.text) + '</p></article>';
-    }).join("");
+    }).join("") + insightData.footer;
     var historyXp = state.history.reduce(function (sum, item) { return sum + (item.xpEarned || 0); }, 0);
     var latest = state.attentionTests[state.attentionTests.length - 1] || null;
     var baselineDelta = latest && state.baselineScore !== null ? latest.score - state.baselineScore : null;
@@ -4282,20 +5190,31 @@
         '<p>' + escapeHtml(focusWindowTitle) + " " + escapeHtml(focusWindowMeta) + '</p>' +
         '<small>' + escapeHtml(focusWindow.confidence) + '</small>' +
       '</section>' +
-      '<section class="baseline-card">' +
-        '<div class="baseline-card-head">' +
-          '<div><div class="attention-kicker">Attention baseline</div><h3>' + (latest ? latest.score + '/100 latest score' : 'Measure your starting point') + '</h3>' +
-          '<p>A short selective-attention check gives DeeCadence another signal besides XP: whether your focus control is improving over time.</p></div>' +
-          '<button class="btn btn-primary" type="button" id="runAttentionTestBtn">' + (latest ? "Run again" : "Start baseline") + '</button>' +
-        '</div>' +
-        '<div class="baseline-metrics">' +
-          '<div><span>Starting score</span><strong>' + (state.baselineScore == null ? "-" : state.baselineScore) + '</strong></div>' +
-          '<div><span>Latest score</span><strong>' + (latest ? latest.score : "-") + '</strong></div>' +
-          '<div><span>From baseline</span><strong>' + (baselineDelta == null ? "-" : (baselineDelta >= 0 ? "+" : "") + baselineDelta) + '</strong></div>' +
-          '<div><span>Reference score</span><strong>' + REFERENCE_BENCHMARK.score + '</strong></div>' +
-          '<div><span>Personal best</span><strong>' + (best == null ? "-" : best) + '</strong></div>' +
-        '</div>' +
-        '<p class="benchmark-disclaimer">This reference score is not a population norm or diagnosis. Compare your own checks under similar conditions.</p>' +
+      '<section class="baseline-card baseline-disclosure-card">' +
+        '<details class="baseline-disclosure">' +
+          '<summary>' +
+            '<span class="baseline-summary-copy">' +
+              '<span class="attention-kicker">Attention baseline</span>' +
+              '<strong>' + (latest ? latest.score + '/100 latest score' : 'Measure your starting point') + '</strong>' +
+              '<small>' + (latest ? (baselineDelta == null ? 'First check saved' : (baselineDelta >= 0 ? '+' : '') + baselineDelta + ' from baseline') : 'A short selective-attention check') + '</small>' +
+            '</span>' +
+            '<span class="baseline-summary-action">Details</span>' +
+          '</summary>' +
+          '<div class="baseline-disclosure-body">' +
+            '<div class="baseline-card-head">' +
+              '<p>A short selective-attention check gives DeeCadence another signal besides XP: whether your focus control is improving over time.</p>' +
+              '<button class="btn btn-primary" type="button" id="runAttentionTestBtn">' + (latest ? "Run again" : "Start baseline") + '</button>' +
+            '</div>' +
+            '<div class="baseline-metrics">' +
+              '<div><span>Starting score</span><strong>' + (state.baselineScore == null ? "-" : state.baselineScore) + '</strong></div>' +
+              '<div><span>Latest score</span><strong>' + (latest ? latest.score : "-") + '</strong></div>' +
+              '<div><span>From baseline</span><strong>' + (baselineDelta == null ? "-" : (baselineDelta >= 0 ? "+" : "") + baselineDelta) + '</strong></div>' +
+              '<div><span>Reference score</span><strong>' + REFERENCE_BENCHMARK.score + '</strong></div>' +
+              '<div><span>Personal best</span><strong>' + (best == null ? "-" : best) + '</strong></div>' +
+            '</div>' +
+            '<p class="benchmark-disclaimer">This reference score is not a population norm or diagnosis. Compare your own checks under similar conditions.</p>' +
+          '</div>' +
+        '</details>' +
       '</section>';
     renderPersonalSetup();
     wireProgressChart(days);
@@ -4343,13 +5262,15 @@
         : complete
           ? item.blocksCompleted + " blocks fully completed"
           : item.blocksCompleted + " of " + item.blocksPlanned + " blocks completed";
+      var partialText = !complete && item.partialBlock ? " - partial block saved" : "";
       var pauseCount = Math.max(0, Number(item.pauseCount) || 0);
       var pauseText = pauseCount > 0 ? " - " + pauseCount + (pauseCount === 1 ? " pause" : " pauses") : "";
-      return '<div class="history-item ' + (complete ? "is-complete" : "is-partial") + '"><div class="history-icon">' + icon + '</div><div class="history-main"><div class="history-title">' + (item.linkedTaskTitle ? escapeHtml(item.linkedTaskTitle) : "Free focus") + '</div><div class="history-sub">' + date.toLocaleDateString() + " - " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + subtitle + pauseText + '</div>' + renderFeedbackSummary(item) + '</div><div class="history-xp">+' + item.xpEarned + " XP</div></div>";
+      return '<div class="history-item ' + (complete ? "is-complete" : "is-partial") + '"><div class="history-icon">' + icon + '</div><div class="history-main"><div class="history-title">' + (item.linkedTaskTitle ? escapeHtml(item.linkedTaskTitle) : "Free focus") + '</div><div class="history-sub">' + date.toLocaleDateString() + " - " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + subtitle + partialText + pauseText + '</div>' + renderFeedbackSummary(item) + '</div><div class="history-xp">+' + item.xpEarned + " XP</div></div>";
     }).join("");
   }
 
   function renderSettings() {
+    renderHelpIndex();
     Array.prototype.forEach.call(document.querySelectorAll("[data-theme-choice]"), function (button) {
       button.classList.toggle("active", button.getAttribute("data-theme-choice") === state.settings.theme);
     });
@@ -4362,81 +5283,6 @@
     document.getElementById("motionSwitch").classList.toggle("on", state.settings.reducedMotion);
     document.getElementById("motionSwitch").setAttribute("aria-pressed", String(state.settings.reducedMotion));
     document.getElementById("dailyGoalSelect").value = String(state.profile.dailyGoalMinutes || 60);
-    updateFeedbackDeliveryCopy();
-    updateFeedbackBadge();
-  }
-
-  var CONTEXT_TIPS = {
-    today: {
-      eyebrow: "Start here",
-      title: "Pick one thing for your attention.",
-      body: "Continue a saved block, start a short focus session, or plan the next task."
-    },
-    focus: {
-      eyebrow: "Focus blocks",
-      title: "The timer only asks for the next block.",
-      body: "Pause if you need to. Continue saved sessions here without losing the work already done."
-    },
-    plan: {
-      eyebrow: "Plan",
-      title: "Schedule is the calendar. Tasks is the list.",
-      body: "Use Schedule for time blocks. Use Tasks to edit, mark done, or start focus quickly."
-    },
-    rank: {
-      eyebrow: "Ranks",
-      title: "Rank shows long-term attention growth.",
-      body: "Everyone starts at E-Rank. Higher ranks need much more protected focus time."
-    },
-    progress: {
-      eyebrow: "Progress",
-      title: "Check if your focus is lasting longer.",
-      body: "Use the graph, history, and attention check to see what is actually improving."
-    },
-    settings: {
-      eyebrow: "Settings",
-      title: "Control sound, theme, goals, and backups.",
-      body: "Your data saves on this device. Export a backup before switching browsers or phones."
-    }
-  };
-
-  var contextTipsShownThisSession = {};
-
-  function renderContextTip(viewName) {
-    var view = document.getElementById("view-" + viewName);
-    var tip = CONTEXT_TIPS[viewName];
-    if (!view || !tip) return;
-    if (viewName === "today" && howToEntryNotice && !howToEntryNotice.hidden) return;
-    var existing = view.querySelector(".context-tip");
-    if (state.dismissedContextTips && state.dismissedContextTips[viewName]) {
-      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
-      return;
-    }
-    // One gentle notice per tab per app session. A notice that is already on
-    // screen is left alone so live re-renders never restart its animation.
-    if (existing || contextTipsShownThisSession[viewName]) return;
-    contextTipsShownThisSession[viewName] = true;
-
-    var el = document.createElement("div");
-    el.className = "context-tip context-tip-notify";
-    el.innerHTML = '<span class="context-tip-mark" aria-hidden="true"></span>' +
-      '<div class="context-tip-copy"><div class="attention-kicker">' + escapeHtml(tip.eyebrow) + '</div><strong>' + escapeHtml(tip.title) + '</strong><p>' + escapeHtml(tip.body) + '</p></div>' +
-      '<button type="button" class="context-tip-close" aria-label="Dismiss notice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
-    var topbar = view.querySelector(".topbar");
-    if (topbar && topbar.parentNode) topbar.parentNode.insertBefore(el, topbar.nextSibling);
-    else view.insertBefore(el, view.firstChild);
-
-    function hideTip() {
-      if (el.classList.contains("is-leaving")) return;
-      state.dismissedContextTips[viewName] = true;
-      saveState();
-      el.classList.add("is-leaving");
-      window.setTimeout(function () {
-        if (el.parentNode) el.parentNode.removeChild(el);
-      }, 340);
-    }
-    var close = el.querySelector(".context-tip-close");
-    if (close) close.onclick = hideTip;
-    // No fade timer: the notice waits until the reader presses ✕.
   }
 
   function applyTheme() {
@@ -4464,14 +5310,127 @@
     try { renderRankPage(); } catch (e) { console.error("renderRankPage error:", e); }
     try { renderProgress(); } catch (e) { console.error("renderProgress error:", e); }
     try { renderHistory(); } catch (e) { console.error("renderHistory error:", e); }
+    try { renderFeedback(); } catch (e) { console.error("renderFeedback error:", e); }
     try { renderSettings(); } catch (e) { console.error("renderSettings error:", e); }
+    try { updateUpdatesBell(); } catch (e) { console.error("updateUpdatesBell error:", e); }
     applyTheme();
     renderSessionIndicators();
-    try { renderHowToEntryNotice(); } catch (e) { console.error("renderHowToEntryNotice error:", e); }
-    try { renderContextTip(activeView); } catch (e) { console.error("renderContextTip error:", e); }
+  }
+
+  var navDrawerReturnFocus = null;
+
+  function navDrawerIsMobile() {
+    return window.matchMedia("(max-width: 860px)").matches;
+  }
+
+  function installNavigationDrawer() {
+    var drawer = document.getElementById("sidenav");
+    var scrim = document.getElementById("navScrim");
+    var closeBtn = document.getElementById("navCloseBtn");
+    if (!drawer || !scrim || !closeBtn || document.querySelector(".nav-menu-btn")) return;
+    var toggles = [];
+
+    Array.prototype.forEach.call(document.querySelectorAll(".topbar"), function (topbar) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "icon-btn nav-menu-btn";
+      button.setAttribute("aria-label", "Open menu");
+      button.setAttribute("aria-controls", "sidenav");
+      button.setAttribute("aria-expanded", "false");
+      button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+      topbar.insertBefore(button, topbar.firstChild);
+      toggles.push(button);
+      button.addEventListener("click", function () {
+        if (drawer.classList.contains("open")) closeNavigationDrawer(true);
+        else openNavigationDrawer(button);
+      });
+    });
+
+    function setDrawerExpanded(expanded) {
+      toggles.forEach(function (button) {
+        button.setAttribute("aria-expanded", String(expanded));
+      });
+    }
+
+    function openNavigationDrawer(trigger) {
+      if (!navDrawerIsMobile() || drawer.classList.contains("open")) return;
+      navDrawerReturnFocus = trigger || document.activeElement;
+      drawer.inert = false;
+      drawer.removeAttribute("aria-hidden");
+      drawer.classList.add("open");
+      scrim.classList.add("open");
+      document.body.classList.add("nav-open");
+      setDrawerExpanded(true);
+      closeBtn.focus({ preventScroll: true });
+    }
+
+    function closeNavigationDrawer(restoreFocus) {
+      if (!drawer.classList.contains("open")) return;
+      drawer.classList.remove("open");
+      scrim.classList.remove("open");
+      document.body.classList.remove("nav-open");
+      setDrawerExpanded(false);
+      drawer.setAttribute("aria-hidden", "true");
+      window.setTimeout(function () {
+        if (!drawer.classList.contains("open") && navDrawerIsMobile()) drawer.inert = true;
+      }, 240);
+      if (restoreFocus !== false) {
+        var activeToggle = document.querySelector("#view-" + activeView + " .nav-menu-btn");
+        var target = activeToggle || navDrawerReturnFocus;
+        if (target && typeof target.focus === "function") target.focus({ preventScroll: true });
+      }
+    }
+
+    function syncDrawerMode() {
+      if (!navDrawerIsMobile()) {
+        closeNavigationDrawer(false);
+        drawer.inert = false;
+        drawer.removeAttribute("aria-hidden");
+        return;
+      }
+      if (!drawer.classList.contains("open")) {
+        drawer.inert = true;
+        drawer.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    closeBtn.addEventListener("click", function () { closeNavigationDrawer(true); });
+    scrim.addEventListener("click", function () { closeNavigationDrawer(true); });
+    document.addEventListener("keydown", function (event) {
+      if (event.key !== "Escape" || !drawer.classList.contains("open")) return;
+      event.preventDefault();
+      closeNavigationDrawer(true);
+    });
+    drawer.addEventListener("keydown", function (event) {
+      if (event.key !== "Tab" || !drawer.classList.contains("open")) return;
+      var focusable = drawer.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!focusable.length) return;
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+    window.addEventListener("resize", syncDrawerMode);
+    syncDrawerMode();
+
+    window.DeeCadenceNavigation = {
+      open: openNavigationDrawer,
+      close: closeNavigationDrawer,
+      sync: syncDrawerMode
+    };
   }
 
   function switchView(name) {
+    var closedDrawer = false;
+    if (document.body.classList.contains("nav-open") && window.DeeCadenceNavigation) {
+      window.DeeCadenceNavigation.close(false);
+      closedDrawer = true;
+    }
     activeView = name;
     try { document.body.setAttribute("data-active-view", name); } catch (e) {}
     Array.prototype.forEach.call(document.querySelectorAll(".view"), function (view) {
@@ -4499,6 +5458,7 @@
       if (name === "rank") renderRankPage();
       if (name === "progress") renderProgress();
       if (name === "history") renderHistory();
+      if (name === "feedback") renderFeedback();
       if (name === "settings") renderSettings();
     } catch (e) {
       console.error("switchView render error:", e);
@@ -4508,14 +5468,19 @@
         viewRoot.innerHTML = '<div class="empty-state"><h3>Loading...</h3><p>Please refresh the page if this persists.</p></div>';
       }
     }
-    renderContextTip(name);
     var viewRoot = document.getElementById("view-" + name);
     if (viewRoot) viewRoot.scrollTop = 0;
     if (typeof window.scrollTo === "function") window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    if (closedDrawer) {
+      var activeMenuButton = document.querySelector("#view-" + name + " .nav-menu-btn");
+      if (activeMenuButton) activeMenuButton.focus({ preventScroll: true });
+    }
+    maybeAutoStartHelpTour(name);
   }
 
   function openWelcome(force) {
     if (!welcomeOverlay || (!force && state.settings.welcomeComplete)) return false;
+    if (tourActive) endTour(false);
     onboardingIndex = 0;
     renderWelcomeStep();
     welcomeOverlay.classList.add("open");
@@ -4534,6 +5499,33 @@
       state.settings.welcomeComplete = true;
       state.settings.tutorialComplete = true;
       saveState();
+    }
+  }
+
+  function releaseNotesPending() {
+    return Boolean(RELEASE_ID) && (!state.settings || state.settings.releaseSeenId !== RELEASE_ID);
+  }
+
+  function maybeShowReleaseNotes(force) {
+    if ((!force && !releaseNotesPending()) || !helpTourFor("release")) return false;
+    if (welcomeOverlay && welcomeOverlay.classList.contains("open")) return false;
+    if (tourOverlay && tourOverlay.classList.contains("open")) return false;
+    return startHelpTour("release", 0);
+  }
+
+  function closeReleaseNotes() {
+    if (!releaseOverlay) return;
+    if (releaseOverlay.contains(document.activeElement)) document.activeElement.blur();
+    releaseOverlay.classList.remove("open");
+    releaseOverlay.setAttribute("aria-hidden", "true");
+    state.settings.releaseSeenId = RELEASE_ID;
+    saveState();
+    var activeNavs = document.querySelectorAll('.navbtn[data-view="' + activeView + '"], .bottomnav button[data-view="' + activeView + '"]');
+    for (var i = 0; i < activeNavs.length; i += 1) {
+      if (activeNavs[i].offsetParent !== null) {
+        activeNavs[i].focus({ preventScroll: true });
+        break;
+      }
     }
   }
 
@@ -4732,11 +5724,15 @@
     if (note) note.textContent = ONBOARDING_NOTES[onboardingIndex] || ONBOARDING_NOTES[0];
     if (back) back.disabled = onboardingIndex === 0;
     if (next) {
+      var isFirst = onboardingIndex === 0;
       var isLast = onboardingIndex === lastIndex;
-      next.textContent = "Continue";
+      next.textContent = isFirst ? "Find my pace →" : "Continue";
       next.classList.toggle("is-hidden", isLast);
       next.setAttribute("aria-hidden", String(isLast));
-      if (next.parentNode) next.parentNode.classList.toggle("is-final-step", isLast);
+      if (next.parentNode) {
+        next.parentNode.classList.toggle("is-first-step", isFirst);
+        next.parentNode.classList.toggle("is-final-step", isLast);
+      }
       updateWelcomeNextState();
     }
     renderWelcomePurposeFields();
@@ -4757,9 +5753,14 @@
     if (lenBtn && lenBtn.dataset.q === "len-5") score -= 5;
     if (lenBtn && lenBtn.dataset.q === "len-45") score += 5;
     score = Math.max(40, Math.min(95, score));
-    preview.style.display = "block";
+    preview.style.display = "grid";
+    preview.style.setProperty("--capacity-score", score + "%");
     var scoreEl = document.getElementById("capacityPreviewScore");
     if (scoreEl) scoreEl.textContent = score + "%";
+    var fill = document.getElementById("capacityPreviewFill");
+    if (fill) fill.style.width = score + "%";
+    var meter = document.getElementById("capacityPreviewMeter");
+    if (meter) meter.setAttribute("aria-valuenow", String(score));
     state.onboarding = state.onboarding || {};
     state.onboarding.baseAttentionCapacity = score;
     saveState();
@@ -4796,6 +5797,7 @@
     saveWelcomeSetup(action);
     closeWelcome(true);
     renderAll();
+    maybeShowReleaseNotes();
     if (action === "task") {
       currentPlanMode = "tasks";
       switchView("plan");
@@ -4834,307 +5836,1249 @@
     Array.prototype.forEach.call(document.querySelectorAll(".tour-highlight"), function (element) {
       element.classList.remove("tour-highlight");
     });
+    var spotlight = document.getElementById("tourSpotlight");
+    if (spotlight) spotlight.style.display = "none";
   }
 
-  function startTour(force) {
-    if (!force && state.settings.tutorialComplete) return;
-    if (tourActive) return;
-    tourPreviousView = activeView || "today";
-    tourActive = true;
-    tourIndex = 0;
-    renderTourStep();
-  }
-
-  function endTour(completed) {
-    tourActive = false;
-    clearTourHighlight();
-    document.body.classList.remove("tour-targets-modal");
-    tourOverlay.classList.remove("open");
-    tourOverlay.setAttribute("aria-hidden", "true");
-    var tourCard = document.getElementById("tourCard");
-    if (tourCard) tourCard.classList.remove("tour-at-top", "tour-at-bottom", "tour-at-side");
-    if (taskModal.classList.contains("open")) closeTaskModal();
-    if (startModal.classList.contains("open")) startModal.classList.remove("open");
-    if (taskDetailModal.classList.contains("open")) closeTaskDetail();
-    if (completed) {
-      state.settings.tutorialComplete = true;
-      saveState();
+  function positionTourSpotlight(target) {
+    var spotlight = document.getElementById("tourSpotlight");
+    if (!spotlight) return;
+    if (!target) {
+      spotlight.style.display = "none";
+      return;
     }
-    if (tourPreviousView && activeView !== tourPreviousView) switchView(tourPreviousView);
+    var rect = target.getBoundingClientRect();
+    var vw = window.innerWidth || document.documentElement.clientWidth;
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    var pad = 10;
+    var left = Math.max(0, rect.left - pad);
+    var top = Math.max(0, rect.top - pad);
+    var right = Math.min(vw, rect.right + pad);
+    var bottom = Math.min(vh, rect.bottom + pad);
+    if (right <= left || bottom <= top) {
+      spotlight.style.display = "none";
+      return;
+    }
+    spotlight.style.display = "block";
+    spotlight.style.left = left + "px";
+    spotlight.style.top = top + "px";
+    spotlight.style.width = (right - left) + "px";
+    spotlight.style.height = (bottom - top) + "px";
   }
 
-  function howToTopicById(id) {
-    for (var i = 0; i < HOWTO_TOPICS.length; i += 1) {
-      if (HOWTO_TOPICS[i].id === id) return HOWTO_TOPICS[i];
+  function resetTourHorizontalScroll(target) {
+    var node = target ? target.parentElement : null;
+    while (node && node !== document.documentElement) {
+      var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
+      if (style && (style.overflowX === "hidden" || style.overflowX === "clip") && node.scrollLeft) {
+        node.scrollLeft = 0;
+      }
+      node = node.parentElement;
+    }
+    if (window.scrollX) window.scrollTo(0, window.scrollY);
+  }
+
+  function scrollTourWindowBy(delta) {
+    if (!delta) return;
+    var root = document.scrollingElement || document.documentElement;
+    var previous = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollBy(0, delta);
+    root.style.scrollBehavior = previous;
+  }
+
+  function helpTourFor(view) {
+    return HELP_TOURS[view] || null;
+  }
+
+  function currentHelpStep() {
+    var tour = helpTourFor(tourView);
+    return tour && tour.steps ? tour.steps[tourIndex] : null;
+  }
+
+  function helpTargetVisible(element) {
+    if (!element) return false;
+    if (element.offsetParent === null && element.getClientRects().length === 0) return false;
+    var style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+    if (style && (style.display === "none" || style.visibility === "hidden")) return false;
+    var rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  function resolveHelpTarget(step) {
+    if (!step) return null;
+    var selectors = Array.isArray(step.target) ? step.target : [step.target];
+    for (var i = 0; i < selectors.length; i += 1) {
+      var element = null;
+      try {
+        element = document.querySelector(selectors[i]);
+      } catch (error) {
+        element = null;
+      }
+      if (helpTargetVisible(element)) return element;
     }
     return null;
   }
 
-  function renderHowToNav() {
-    if (!howToNav) return;
-    howToNav.innerHTML = HOWTO_TOPICS.map(function (topic) {
-      var active = topic.id === howToActiveTopic;
-      return '<button type="button" class="howto-nav-btn' + (active ? " active" : "") + '" data-howto-topic="' + escapeHtml(topic.id) + '"' +
-        (active ? ' aria-current="page"' : "") + '>' +
-        '<span class="howto-nav-dot" aria-hidden="true"></span>' +
-        '<span>' + escapeHtml(topic.nav) + '</span>' +
+  function helpTargetInViewport(element) {
+    if (!helpTargetVisible(element)) return false;
+    var rect = element.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    return rect.bottom > 16 && rect.top < vh - 16;
+  }
+
+  function helpTargetFullyInView(element) {
+    if (!helpTargetVisible(element)) return false;
+    var rect = element.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    return rect.top >= 8 && rect.bottom <= vh - 8;
+  }
+
+  function firstVisibleHelpStep(tour) {
+    if (!tour || !tour.steps || !tour.steps.length) return 0;
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    var bestIndex = -1;
+    var bestDistance = Infinity;
+    for (var i = 0; i < tour.steps.length; i += 1) {
+      var target = resolveHelpTarget(tour.steps[i]);
+      if (!helpTargetInViewport(target)) continue;
+      var rect = target.getBoundingClientRect();
+      var visibleTop = Math.max(0, rect.top);
+      var visibleBottom = Math.min(vh, rect.bottom);
+      var distance = Math.abs(((visibleTop + visibleBottom) / 2) - (vh / 2));
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+    return bestIndex >= 0 ? bestIndex : 0;
+  }
+
+  function markHelpTourSeen(view) {
+    if (!view) return;
+    state.settings.helpToursSeen = state.settings.helpToursSeen || {};
+    state.settings.helpToursSeen[view] = true;
+    saveState();
+  }
+
+  function startHelpTour(view, startIndex) {
+    var tour = helpTourFor(view) || helpTourFor(activeView);
+    if (!tour || !tour.steps || !tour.steps.length) return false;
+    if (tourActive) endTour(false);
+    tourView = helpTourFor(view) ? view : activeView;
+    tourPreviousView = tourView === "release" ? "today" : (activeView || tourView);
+    tourActive = true;
+    tourIndex = Math.max(0, Math.min(Number(startIndex) || 0, tour.steps.length - 1));
+    helpTourReturnFocus = document.activeElement;
+    helpTourSuppressAuto = true;
+    if (tourView === "release") document.body.classList.add("release-tour-active");
+    var firstStep = tour.steps[tourIndex] || {};
+    var firstView = firstStep.view || tourView;
+    if (activeView !== firstView) switchView(firstView);
+    renderTourStep();
+    return true;
+  }
+
+  function startTour(force) {
+    if (tourActive) return;
+    startHelpTour(activeView, 0);
+  }
+
+  function maybeAutoStartHelpTour(view) {
+    if (autoHelpTourTimer) {
+      window.clearTimeout(autoHelpTourTimer);
+      autoHelpTourTimer = 0;
+    }
+    if (!state.settings.welcomeComplete || tourActive || helpTourSuppressAuto) return;
+    // Every tab introduces itself once. After that, replay a tour from the
+    // Settings library or use Today's contextual ? button.
+    if (view === "focus" && document.querySelector('#view-focus .focus-stage[data-focus-status="running"]')) return;
+    var tour = helpTourFor(view);
+    if (!tour || !tour.steps || !tour.steps.length) return;
+    if (state.settings.helpToursSeen && state.settings.helpToursSeen[view]) return;
+    if (welcomeOverlay && welcomeOverlay.classList.contains("open")) return;
+    if (document.querySelector(".modal-overlay.open, .reveal-overlay.open, .welcome-overlay.open, .sync-conflict-overlay.open, .community-invite-overlay.open")) return;
+    // Delay long enough for the view, fonts, and mobile browser chrome to
+    // settle, then only start when the first target is fully visible.
+    autoHelpTourTimer = window.setTimeout(function () {
+      autoHelpTourTimer = 0;
+      if (!state.settings.welcomeComplete || tourActive || helpTourSuppressAuto) return;
+      if (activeView !== view) return;
+      if (state.settings.helpToursSeen && state.settings.helpToursSeen[view]) return;
+      if (welcomeOverlay && welcomeOverlay.classList.contains("open")) return;
+      if (document.querySelector(".modal-overlay.open, .reveal-overlay.open, .welcome-overlay.open, .sync-conflict-overlay.open, .community-invite-overlay.open")) return;
+      // Do not start a tour that would have to pull an off-screen target
+      // into view. The ? button remains available when the user scrolls.
+      if (!helpTargetFullyInView(resolveHelpTarget(tour.steps[0]))) return;
+      startHelpTour(view, 0);
+    }, 750);
+  }
+
+  var autoHelpTourResizeTimer = 0;
+  window.addEventListener("resize", function () {
+    if (autoHelpTourResizeTimer) window.clearTimeout(autoHelpTourResizeTimer);
+    autoHelpTourResizeTimer = window.setTimeout(function () {
+      autoHelpTourResizeTimer = 0;
+      maybeAutoStartHelpTour(activeView);
+    }, 260);
+  });
+
+  function endTour(completed) {
+    if (!tourActive && (!tourOverlay || !tourOverlay.classList.contains("open"))) return;
+    var finishedView = tourView;
+    tourActive = false;
+    if (tourLayoutTimer) {
+      window.clearTimeout(tourLayoutTimer);
+      tourLayoutTimer = 0;
+    }
+    tourLayoutAllowScroll = false;
+    clearTourHighlight();
+    document.body.classList.remove("tour-open", "tour-targets-modal");
+    document.body.classList.remove("release-tour-active");
+    if (tourOverlay) {
+      tourOverlay.classList.remove("open");
+      tourOverlay.setAttribute("aria-hidden", "true");
+    }
+    var tourCard = document.getElementById("tourCard");
+    if (tourCard) {
+      tourCard.classList.remove("tour-at-top", "tour-at-bottom", "tour-at-side", "tour-arrow-top", "tour-arrow-bottom", "tour-arrow-left", "tour-arrow-right", "tour-scrollable");
+      tourCard.style.top = "";
+      tourCard.style.left = "";
+      tourCard.style.right = "";
+      tourCard.style.bottom = "";
+      tourCard.style.width = "";
+      tourCard.style.maxWidth = "";
+      tourCard.style.maxHeight = "";
+      tourCard.style.overflowY = "";
+      tourCard.style.removeProperty("--tour-arrow-left");
+      tourCard.style.removeProperty("--tour-arrow-top");
+    }
+    if (taskModal && taskModal.classList.contains("open")) closeTaskModal();
+    if (startModal && startModal.classList.contains("open")) startModal.classList.remove("open");
+    if (taskDetailModal && taskDetailModal.classList.contains("open")) closeTaskDetail();
+    if (finishedView === "release" && updatesModal && updatesModal.classList.contains("open")) closeUpdates();
+    if (finishedView) markHelpTourSeen(finishedView);
+    if (completed) state.settings.tutorialComplete = true;
+    saveState();
+    var returnView = tourPreviousView;
+    helpTourSuppressAuto = true;
+    if (returnView && activeView !== returnView) switchView(returnView);
+    helpTourSuppressAuto = false;
+    var target = helpTourReturnFocus;
+    helpTourReturnFocus = null;
+    if (target && typeof target.focus === "function" && document.contains(target) && target.offsetParent !== null) {
+      window.setTimeout(function () {
+        target.focus({ preventScroll: true });
+      }, 0);
+    }
+  }
+
+  function renderHelpIndex() {
+    var root = document.getElementById("helpIndexGrid");
+    if (!root) return;
+    var order = ["today", "focus", "plan", "rank", "progress", "history", "feedback", "settings"];
+    root.innerHTML = order.filter(function (view) {
+      return Boolean(helpTourFor(view));
+    }).map(function (view) {
+      var tour = helpTourFor(view);
+      return '<button type="button" class="help-index-btn" data-help-tour="' + escapeHtml(view) + '">' +
+        '<span class="help-index-mark" aria-hidden="true">?</span>' +
+        '<span class="help-index-copy"><strong>' + escapeHtml(tour.label) + '</strong><small>' + tour.steps.length + ' steps</small></span>' +
+        '<span class="help-index-arrow" aria-hidden="true">&rarr;</span>' +
+      '</button>';
+    }).join("");
+    root.onclick = function (event) {
+      var button = event.target && event.target.closest ? event.target.closest("[data-help-tour]") : null;
+      if (!button) return;
+      var openButton = document.getElementById("openHelpLibraryBtn");
+      closeHelpLibrary(false);
+      startHelpTour(button.getAttribute("data-help-tour"), 0);
+      if (openButton) helpTourReturnFocus = openButton;
+    };
+  }
+
+  function openHelpLibrary() {
+    if (!helpLibraryModal) return;
+    helpLibraryReturnFocus = document.activeElement;
+    renderHelpIndex();
+    helpLibraryModal.classList.add("open");
+    helpLibraryModal.setAttribute("aria-hidden", "false");
+    window.setTimeout(function () {
+      var first = document.querySelector("#helpIndexGrid .help-index-btn");
+      var closeButton = document.getElementById("helpLibraryCloseBtn");
+      if (first) first.focus({ preventScroll: true });
+      else if (closeButton) closeButton.focus({ preventScroll: true });
+    }, 0);
+  }
+
+  function closeHelpLibrary(restoreFocus) {
+    if (!helpLibraryModal) return;
+    var wasOpen = helpLibraryModal.classList.contains("open");
+    helpLibraryModal.classList.remove("open");
+    helpLibraryModal.setAttribute("aria-hidden", "true");
+    if (!wasOpen || restoreFocus === false) return;
+    var target = helpLibraryReturnFocus || document.getElementById("openHelpLibraryBtn");
+    helpLibraryReturnFocus = null;
+    if (target && typeof target.focus === "function" && document.contains(target) && target.offsetParent !== null) {
+      target.focus({ preventScroll: true });
+    }
+  }
+
+  function installHelpLibrary() {
+    if (!helpLibraryModal) return;
+    var openButton = document.getElementById("openHelpLibraryBtn");
+    if (openButton) openButton.onclick = openHelpLibrary;
+    var closeButton = document.getElementById("helpLibraryCloseBtn");
+    if (closeButton) closeButton.onclick = function () { closeHelpLibrary(); };
+    var doneButton = document.getElementById("helpLibraryDoneBtn");
+    if (doneButton) doneButton.onclick = function () { closeHelpLibrary(); };
+    helpLibraryModal.addEventListener("click", function (event) {
+      if (event.target === helpLibraryModal) closeHelpLibrary();
+    });
+    renderHelpIndex();
+  }
+
+  function installUpdatesCenter() {
+    var cachedUpdates = readCachedUpdatesFeed();
+    if (cachedUpdates !== null) {
+      UPDATES = cachedUpdates;
+      updateUpdatesBell();
+    }
+    applyCommunityLinks();
+    if (updatesList) {
+      updatesList.addEventListener("click", function (event) {
+        if (Date.now() < updatesSuppressClickUntil) {
+          event.preventDefault();
+          return;
+        }
+        var row = event.target && event.target.closest ? event.target.closest(".updates-item") : null;
+        if (!row || !updatesList.contains(row)) return;
+        var update = findUpdateById(row.getAttribute("data-update-id") || "");
+        if (update) showUpdateDetail(update);
+      });
+      updatesList.addEventListener("contextmenu", handleUpdatesContextMenu);
+      updatesList.addEventListener("pointerdown", handleUpdatesPointerDown);
+    }
+    var openButton = document.getElementById("openUpdatesBtn");
+    if (openButton) openButton.onclick = function () { openUpdates(openButton); };
+    if (updatesModal) {
+      var updatesClose = document.getElementById("updatesCloseBtn");
+      if (updatesClose) updatesClose.onclick = function () { closeUpdates(); };
+      if (updatesBackBtn) updatesBackBtn.onclick = function () { showUpdatesList(); };
+      if (updatesDetailBackBtn) updatesDetailBackBtn.onclick = function () { showUpdatesList(); };
+      updatesModal.addEventListener("click", function (event) {
+        if (event.target === updatesModal) closeUpdates();
+      });
+    }
+    if (communityInviteOverlay) {
+      var join = document.getElementById("communityInviteJoinBtn");
+      if (join) join.addEventListener("click", function () { closeCommunityInvite(false); });
+      var later = document.getElementById("communityInviteLaterBtn");
+      if (later) later.onclick = function () { closeCommunityInvite(); };
+      communityInviteOverlay.addEventListener("click", function (event) {
+        if (event.target === communityInviteOverlay) closeCommunityInvite(false);
+      });
+    }
+    if (updatesContextAction) updatesContextAction.onclick = handleUpdatesContextAction;
+    if (updatesContextMenu) {
+      updatesContextMenu.addEventListener("contextmenu", function (event) {
+        event.preventDefault();
+      });
+    }
+    var updatesPanel = updatesModal ? updatesModal.querySelector(".updates-modal") : null;
+    if (updatesPanel) {
+      updatesPanel.addEventListener("scroll", function () {
+        closeUpdatesContextMenu(false);
+      }, { passive: true });
+    }
+    document.addEventListener("pointerdown", handleUpdatesDocumentPointerDown, true);
+    window.addEventListener("pointermove", handleUpdatesPointerMove, { passive: true });
+    window.addEventListener("pointerup", handleUpdatesPointerEnd);
+    window.addEventListener("pointercancel", handleUpdatesPointerEnd);
+    window.addEventListener("resize", function () {
+      closeUpdatesContextMenu(false);
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && updatesContextMenu && !updatesContextMenu.hidden) {
+        event.preventDefault();
+        event.stopPropagation();
+        updatesSuppressClickUntil = 0;
+        closeUpdatesContextMenu(true);
+      }
+    }, true);
+  }
+
+  function installHelpControls() {
+    Array.prototype.forEach.call(document.querySelectorAll(".view"), function (view) {
+      var viewName = view.id.replace("view-", "");
+      // The contextual ? is intentionally Today-only. Other tours remain
+      // available from the Settings help library.
+      if (viewName !== "today") return;
+      var topbar = view.querySelector(".topbar");
+      if (!topbar || topbar.querySelector(".help-btn")) return;
+      var title = topbar.querySelector(".topbar-title");
+      var actions = topbar.querySelector(".topbar-actions");
+      if (!actions) {
+        actions = document.createElement("div");
+        actions.className = "topbar-actions";
+        var children = Array.prototype.slice.call(topbar.children);
+        children.forEach(function (child) {
+          if (child !== title) actions.appendChild(child);
+        });
+        topbar.appendChild(actions);
+      }
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "icon-btn help-btn";
+      button.setAttribute("data-help-open", viewName);
+      button.setAttribute("aria-label", "Help for this screen");
+      button.setAttribute("aria-haspopup", "dialog");
+      button.setAttribute("title", "Tips for this screen");
+      button.innerHTML = '<span class="help-btn-mark" aria-hidden="true">?</span><span class="help-btn-bubble" aria-hidden="true">Tips</span>';
+      button.onclick = function () {
+        startHelpTour(viewName, firstVisibleHelpStep(helpTourFor(viewName)));
+      };
+      actions.insertBefore(button, actions.firstChild);
+    });
+  }
+
+  function normalizeUpdateEntry(entry) {
+    if (!entry || typeof entry !== "object") return null;
+    var title = String(entry.title || "").trim();
+    var body = String(entry.body || "").trim();
+    var publishedAt = typeof entry.publishedAt === "number" ? entry.publishedAt : NaN;
+    if (!Number.isFinite(publishedAt) && typeof entry.publishedAt === "string") {
+      var numeric = Number(entry.publishedAt);
+      publishedAt = Number.isFinite(numeric) ? numeric : Date.parse(entry.publishedAt);
+    }
+    if (!title || !Number.isFinite(publishedAt) || publishedAt <= 0) return null;
+    var id = String(entry.id || "").trim();
+    if (!id) {
+      id = "update-" + publishedAt + "-" + title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+    }
+    return {
+      id: id.slice(0, 120),
+      publishedAt: publishedAt,
+      title: title.slice(0, 180),
+      body: body.slice(0, 1600)
+    };
+  }
+
+  function normalizeUpdatesFeed(rawItems) {
+    if (!Array.isArray(rawItems)) return null;
+    var seen = Object.create(null);
+    var normalized = [];
+    rawItems.slice(0, 50).forEach(function (entry) {
+      var item = normalizeUpdateEntry(entry);
+      if (!item || seen[item.id]) return;
+      seen[item.id] = true;
+      normalized.push(item);
+    });
+    return normalized;
+  }
+
+  function updatesFeedSignature(items) {
+    return JSON.stringify((items || []).map(function (item) {
+      return [item.id, item.publishedAt, item.title, item.body];
+    }));
+  }
+
+  function readCachedUpdatesFeed() {
+    try {
+      var raw = window.localStorage.getItem(UPDATES_CACHE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      return normalizeUpdatesFeed(Array.isArray(parsed) ? parsed : parsed && parsed.items);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function applyUpdatesFeed(rawItems) {
+    var normalized = normalizeUpdatesFeed(rawItems);
+    if (normalized === null) return false;
+    // A malformed entry should not erase the whole feed. An intentionally
+    // empty items array is still allowed and will clear the list.
+    if (rawItems.length && !normalized.length) return false;
+    var previousSignature = updatesFeedSignature(UPDATES);
+    UPDATES = normalized;
+    try {
+      window.localStorage.setItem(UPDATES_CACHE_KEY, JSON.stringify(UPDATES));
+    } catch (error) {
+      // Updates remain usable for this session even if storage is unavailable.
+    }
+    var changed = updatesFeedSignature(UPDATES) !== previousSignature;
+    if (changed) {
+      updateUpdatesBell();
+      if (updatesModal && updatesModal.classList.contains("open")) {
+        renderUpdates(Number(state.settings.updatesSeenAt) || 0);
+      }
+    }
+    return changed;
+  }
+
+  function loadUpdatesFeed(force) {
+    if (typeof fetch !== "function") return Promise.resolve(false);
+    if (updatesFetchPromise) return updatesFetchPromise;
+    var now = Date.now();
+    if (!force && now - lastUpdatesFetchAt < UPDATES_FETCH_INTERVAL_MS) {
+      return Promise.resolve(false);
+    }
+    lastUpdatesFetchAt = now;
+    var controller = typeof AbortController === "function" ? new AbortController() : null;
+    var timer = controller
+      ? window.setTimeout(function () { controller.abort(); }, UPDATES_FETCH_TIMEOUT_MS)
+      : 0;
+    updatesFetchPromise = fetch(UPDATES_FEED_URL, {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller ? controller.signal : undefined
+    }).then(function (response) {
+      if (!response || !response.ok) throw new Error("Updates feed unavailable");
+      return response.json();
+    }).then(function (payload) {
+      var rawItems = Array.isArray(payload)
+        ? payload
+        : payload && Array.isArray(payload.items) ? payload.items : null;
+      if (!rawItems) return false;
+      return applyUpdatesFeed(rawItems);
+    }).catch(function () {
+      return false;
+    }).then(function (result) {
+      if (timer) window.clearTimeout(timer);
+      updatesFetchPromise = null;
+      return result;
+    });
+    return updatesFetchPromise;
+  }
+
+  function latestUpdateTimestamp() {
+    return UPDATES.reduce(function (latest, item) {
+      var timestamp = Number(item && item.publishedAt) || 0;
+      return timestamp > latest ? timestamp : latest;
+    }, 0);
+  }
+
+  function isUpdateRead(item, seenAt) {
+    if (!item) return true;
+    var unreadIds = state.settings.updatesUnreadIds || {};
+    if (unreadIds[item.id]) return false;
+    var threshold = Number(seenAt) || 0;
+    if ((Number(item.publishedAt) || 0) <= threshold) return true;
+    var readIds = state.settings.updatesReadIds || {};
+    return Boolean(readIds[item.id]);
+  }
+
+  function unseenUpdateCount(seenAt) {
+    return UPDATES.filter(function (item) {
+      return !isUpdateRead(item, seenAt);
+    }).length;
+  }
+
+  function getUpdatesState() {
+    var seenAt = Number(state.settings.updatesSeenAt) || 0;
+    return {
+      seenAt: seenAt,
+      latest: latestUpdateTimestamp(),
+      unread: unseenUpdateCount(seenAt),
+      items: UPDATES.map(function (item) {
+        var read = isUpdateRead(item, seenAt);
+        return {
+          id: item.id,
+          publishedAt: item.publishedAt,
+          title: item.title,
+          read: read,
+          unread: !read
+        };
+      })
+    };
+  }
+
+  function updateUpdatesBell() {
+    var unread = unseenUpdateCount(state.settings.updatesSeenAt);
+    Array.prototype.forEach.call(document.querySelectorAll(".updates-bell"), function (button) {
+      var label = unread
+        ? "Updates and community, " + unread + " unread"
+        : "Updates and community";
+      button.classList.toggle("has-unread", unread > 0);
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+      var dot = button.querySelector("[data-updates-dot]");
+      if (dot) dot.hidden = unread === 0;
+    });
+  }
+
+  function installUpdatesBell() {
+    Array.prototype.forEach.call(document.querySelectorAll(".view .topbar"), function (topbar) {
+      if (!topbar || topbar.querySelector(".updates-bell")) return;
+      var title = topbar.querySelector(".topbar-title");
+      var actions = topbar.querySelector(".topbar-actions");
+      if (!actions) {
+        actions = document.createElement("div");
+        actions.className = "topbar-actions";
+        Array.prototype.slice.call(topbar.children).forEach(function (child) {
+          if (child !== title) actions.appendChild(child);
+        });
+        topbar.appendChild(actions);
+      }
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "icon-btn updates-bell";
+      button.setAttribute("aria-haspopup", "dialog");
+      button.setAttribute("aria-controls", "updatesModal");
+      button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="updates-dot" data-updates-dot hidden aria-hidden="true"></span>';
+      button.onclick = function () { openUpdates(button); };
+      var theme = actions.querySelector(".theme-toggle");
+      if (theme) actions.insertBefore(button, theme);
+      else actions.appendChild(button);
+    });
+    updateUpdatesBell();
+  }
+
+  function formatUpdateDate(timestamp) {
+    var date = new Date(Number(timestamp) || 0);
+    if (!Number.isFinite(date.getTime())) return "";
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  function renderUpdates(seenAt) {
+    var list = updatesList || document.getElementById("updatesList");
+    if (!list) return;
+    var threshold = Number(seenAt) || 0;
+    var items = UPDATES.slice().sort(function (a, b) {
+      // Unread notes stay at the top, like a messaging inbox. Once a note is
+      // read it settles into the date-ordered list beneath the unread ones.
+      var aUnread = !isUpdateRead(a, threshold);
+      var bUnread = !isUpdateRead(b, threshold);
+      if (aUnread !== bUnread) return aUnread ? -1 : 1;
+      return (Number(b.publishedAt) || 0) - (Number(a.publishedAt) || 0);
+    });
+    if (!items.length) {
+      list.innerHTML = '<p class="updates-empty">No notes yet. The WhatsApp group is the fastest place for updates.</p>';
+      return;
+    }
+    list.innerHTML = items.map(function (item) {
+      var isNew = !isUpdateRead(item, threshold);
+      var preview = item.body
+        ? '<span class="updates-item-preview">' + escapeHtml(item.body) + '</span>'
+        : "";
+      return '<button type="button" class="updates-item' + (isNew ? " is-new" : "") + '" data-update-id="' + escapeAttribute(item.id) + '">' +
+        '<span class="updates-item-top">' +
+          '<strong class="updates-item-title">' + escapeHtml(item.title) + '</strong>' +
+          '<span class="updates-item-date">' + escapeHtml(formatUpdateDate(item.publishedAt)) + '</span>' +
+          (isNew ? '<span class="updates-new-badge">New</span>' : "") +
+        '</span>' +
+        preview +
       '</button>';
     }).join("");
   }
 
-  function renderHowToTopic(id) {
-    var topic = howToTopicById(id) || HOWTO_TOPICS[0];
-    if (!topic) return;
-    howToActiveTopic = topic.id;
-    renderHowToNav();
-    if (!howToContent) return;
-    var steps = (topic.steps || []).map(function (step, index) {
-      return '<li class="howto-step">' +
-        '<span class="howto-step-num" aria-hidden="true">' + (index + 1) + '</span>' +
-        '<div class="howto-step-copy"><strong>' + escapeHtml(step.title) + '</strong><p>' + escapeHtml(step.body) + '</p></div>' +
-      '</li>';
-    }).join("");
-    var action = topic.action
-      ? '<div class="howto-action"><button class="btn btn-primary" type="button" data-howto-action="' + escapeHtml(topic.action.action || "view") + '" data-howto-view="' + escapeHtml(topic.action.view || "") + '" data-howto-target="' + escapeHtml(topic.action.target || "") + '" data-howto-review="' + (topic.action.review ? "true" : "false") + '">' + escapeHtml(topic.action.label) + '</button></div>'
-      : "";
-    howToContent.innerHTML = '<article class="howto-topic" data-howto-panel="' + escapeHtml(topic.id) + '">' +
-      '<div class="eyebrow">' + escapeHtml(topic.eyebrow) + '</div>' +
-      '<h3>' + escapeHtml(topic.title) + '</h3>' +
-      '<p class="howto-intro">' + escapeHtml(topic.intro) + '</p>' +
-      '<ol class="howto-steps">' + steps + '</ol>' +
-      (topic.note ? '<p class="howto-note">' + escapeHtml(topic.note) + '</p>' : "") +
-      action +
-    '</article>';
-    howToContent.scrollTop = 0;
+  function markUpdateRead(item) {
+    if (!item || !item.id) return false;
+    var readIds = state.settings.updatesReadIds;
+    if (!readIds || typeof readIds !== "object") readIds = {};
+    var unreadIds = state.settings.updatesUnreadIds;
+    if (!unreadIds || typeof unreadIds !== "object") unreadIds = {};
+    var changed = false;
+    if (unreadIds[item.id]) {
+      delete unreadIds[item.id];
+      state.settings.updatesUnreadIds = unreadIds;
+      changed = true;
+    }
+    var threshold = Number(state.settings.updatesSeenAt) || 0;
+    if ((Number(item.publishedAt) || 0) > threshold && !readIds[item.id]) {
+      readIds[item.id] = true;
+      state.settings.updatesReadIds = readIds;
+      changed = true;
+    }
+    if (changed) saveState();
+    updateUpdatesBell();
+    return changed;
   }
 
-  function openHowTo(topicId) {
-    if (!howToOverlay) return;
-    howToEntrySnoozed = true;
-    renderHowToEntryNotice();
-    howToLastFocus = document.activeElement;
-    howToActiveTopic = howToTopicById(topicId) ? topicId : (howToTopicById(howToActiveTopic) ? howToActiveTopic : "focus");
-    renderHowToTopic(howToActiveTopic);
-    howToOverlay.hidden = false;
-    howToOverlay.setAttribute("aria-hidden", "false");
-    document.body.classList.add("howto-open");
-    window.setTimeout(function () {
-      if (howToCloseBtn) howToCloseBtn.focus();
-    }, 0);
-  }
-
-  function closeHowTo() {
-    if (!howToOverlay || howToOverlay.hidden) return;
-    howToOverlay.hidden = true;
-    howToOverlay.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("howto-open");
-    var target = howToLastFocus;
-    howToLastFocus = null;
-    if (target && typeof target.focus === "function" && document.contains(target)) {
-      window.setTimeout(function () { target.focus(); }, 0);
+  function markUpdateUnread(item) {
+    if (!item || !item.id) return false;
+    var unreadIds = state.settings.updatesUnreadIds;
+    if (!unreadIds || typeof unreadIds !== "object") unreadIds = {};
+    var readIds = state.settings.updatesReadIds;
+    if (!readIds || typeof readIds !== "object") readIds = {};
+    var changed = false;
+    if (!unreadIds[item.id]) {
+      unreadIds[item.id] = true;
+      state.settings.updatesUnreadIds = unreadIds;
+      changed = true;
     }
-  }
-
-  function trapHowToFocus(event) {
-    if (!howToOverlay || howToOverlay.hidden) return;
-    var nodes = howToOverlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    var focusable = Array.prototype.filter.call(nodes, function (node) {
-      return !node.disabled && node.offsetParent !== null;
-    });
-    if (!focusable.length) {
-      event.preventDefault();
-      return;
+    if (readIds[item.id]) {
+      delete readIds[item.id];
+      state.settings.updatesReadIds = readIds;
+      changed = true;
     }
-    var first = focusable[0];
-    var last = focusable[focusable.length - 1];
-    if (!howToOverlay.contains(document.activeElement)) {
-      event.preventDefault();
-      first.focus();
-      return;
-    }
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
-
-  function handleHowToAction(button) {
-    if (!button) return;
-    var action = button.getAttribute("data-howto-action") || "view";
-    var view = button.getAttribute("data-howto-view") || "";
-    var target = button.getAttribute("data-howto-target") || "";
-    var review = button.getAttribute("data-howto-review") === "true";
-    closeHowTo();
-    if (action === "feedback") {
-      window.setTimeout(openFeedback, 80);
-      return;
-    }
-    if (view) switchView(view);
-    if (target === "syncCard") {
-      window.setTimeout(function () {
-        var card = document.getElementById("syncCard");
-        if (!card) return;
-        card.scrollIntoView({ behavior: "smooth", block: "start" });
-        if (review) {
-          var reviewBtn = document.getElementById("syncReviewConflictBtn");
-          if (reviewBtn && !reviewBtn.hidden && reviewBtn.offsetParent !== null) {
-            reviewBtn.click();
-          } else {
-            showToast("When two copies need review, the button appears in this sync card.");
-          }
-        }
-      }, 120);
-    }
-  }
-
-  function renderHowToEntryNotice() {
-    if (!howToEntryNotice) return;
-    var dismissed = Boolean(state.settings && state.settings.howToEntryDismissed);
-    howToEntryNotice.hidden = dismissed || howToEntrySnoozed;
-  }
-
-  function dismissHowToEntryNotice(permanent) {
-    if (permanent) {
-      state.settings.howToEntryDismissed = true;
+    if (changed) {
       saveState();
-      showToast("How-To tip hidden. You can still open the guide from Settings.");
-    } else {
-      howToEntrySnoozed = true;
+      updateUpdatesBell();
     }
-    renderHowToEntryNotice();
+    return changed;
   }
 
-  function wireHowTo() {
-    if (howToOpenBtn) howToOpenBtn.onclick = function () { openHowTo(); };
-    if (howToEntryOpenBtn) howToEntryOpenBtn.onclick = function () {
-      dismissHowToEntryNotice(false);
-      openHowTo();
-    };
-    if (howToEntryDismissBtn) howToEntryDismissBtn.onclick = function () {
-      dismissHowToEntryNotice(true);
-    };
-    if (howToCloseBtn) howToCloseBtn.onclick = closeHowTo;
-    if (howToOverlay) {
-      howToOverlay.addEventListener("click", function (event) {
-        if (event.target === howToOverlay) closeHowTo();
-      });
+  function closeUpdatesContextMenu(restoreFocus) {
+    if (!updatesContextMenu || updatesContextMenu.hidden) return;
+    updatesContextMenu.hidden = true;
+    var row = updatesContextReturnFocus;
+    updatesContextReturnFocus = null;
+    updatesContextRowId = "";
+    if (restoreFocus !== false && row && document.contains(row) && row.offsetParent !== null) {
+      row.focus({ preventScroll: true });
     }
-    if (howToNav) {
-      howToNav.addEventListener("click", function (event) {
-        var button = event.target && event.target.closest ? event.target.closest("[data-howto-topic]") : null;
-        if (!button) return;
-        renderHowToTopic(button.getAttribute("data-howto-topic"));
-        if (howToContent) howToContent.focus({ preventScroll: true });
-      });
+  }
+
+  function openUpdatesContextMenu(row, clientX, clientY) {
+    if (!updatesContextMenu || !updatesContextAction || !row) return;
+    var id = row.getAttribute("data-update-id") || "";
+    var update = findUpdateById(id);
+    if (!update) return;
+    var read = isUpdateRead(update, state.settings.updatesSeenAt);
+    updatesContextRowId = id;
+    updatesContextReturnFocus = row;
+    updatesContextAction.textContent = read ? "Mark as unread" : "Mark as read";
+    updatesContextAction.setAttribute("data-update-action", read ? "unread" : "read");
+    updatesContextMenu.hidden = false;
+    var menuRect = updatesContextMenu.getBoundingClientRect();
+    var rowRect = row.getBoundingClientRect();
+    var margin = 8;
+    var hasPoint = Number.isFinite(clientX) && Number.isFinite(clientY) && (clientX !== 0 || clientY !== 0);
+    var left = hasPoint ? clientX + 4 : rowRect.left + 14;
+    var top = hasPoint ? clientY + 4 : rowRect.top + rowRect.height / 2;
+    left = Math.max(margin, Math.min(left, window.innerWidth - menuRect.width - margin));
+    top = Math.max(margin, Math.min(top, window.innerHeight - menuRect.height - margin));
+    updatesContextMenu.style.left = left + "px";
+    updatesContextMenu.style.top = top + "px";
+    updatesSuppressClickUntil = Date.now() + 700;
+    updatesContextAction.focus({ preventScroll: true });
+  }
+
+  function handleUpdatesContextAction() {
+    if (!updatesContextAction || !updatesContextRowId) return;
+    var id = updatesContextRowId;
+    var action = updatesContextAction.getAttribute("data-update-action") || "unread";
+    var item = findUpdateById(id);
+    closeUpdatesContextMenu(false);
+    updatesSuppressClickUntil = 0;
+    if (!item) return;
+    if (action === "read") markUpdateRead(item);
+    else markUpdateUnread(item);
+    renderUpdates(Number(state.settings.updatesSeenAt) || 0);
+    if (updatesList) {
+      var rows = updatesList.querySelectorAll(".updates-item");
+      for (var i = 0; i < rows.length; i += 1) {
+        if (rows[i].getAttribute("data-update-id") === id) {
+          rows[i].focus({ preventScroll: true });
+          break;
+        }
+      }
     }
-    if (howToContent) {
-      howToContent.addEventListener("click", function (event) {
-        var button = event.target && event.target.closest ? event.target.closest("[data-howto-action]") : null;
-        if (button) handleHowToAction(button);
-      });
+  }
+
+  function clearUpdatesLongPress() {
+    if (updatesLongPressTimer) {
+      window.clearTimeout(updatesLongPressTimer);
+      updatesLongPressTimer = 0;
     }
-    if (howToReplayBtn) {
-      howToReplayBtn.onclick = function () {
-        closeHowTo();
-        window.setTimeout(function () { openWelcome(true); }, 80);
-      };
+    updatesLongPressStart = null;
+  }
+
+  function handleUpdatesContextMenu(event) {
+    var row = event.target && event.target.closest ? event.target.closest(".updates-item") : null;
+    if (!row || !updatesList || !updatesList.contains(row)) return;
+    event.preventDefault();
+    clearUpdatesLongPress();
+    var id = row.getAttribute("data-update-id") || "";
+    if (updatesContextMenu && !updatesContextMenu.hidden && updatesContextRowId === id) {
+      updatesSuppressClickUntil = Date.now() + 700;
+      return;
     }
-    if (howToFeedbackBtn) {
-      howToFeedbackBtn.onclick = function () {
-        closeHowTo();
-        window.setTimeout(openFeedback, 80);
-      };
+    openUpdatesContextMenu(row, event.clientX, event.clientY);
+  }
+
+  function handleUpdatesPointerDown(event) {
+    if (!event || event.pointerType === "mouse") return;
+    if (event.button !== undefined && event.button !== 0) return;
+    var row = event.target && event.target.closest ? event.target.closest(".updates-item") : null;
+    if (!row || !updatesList || !updatesList.contains(row)) return;
+    clearUpdatesLongPress();
+    updatesLongPressStart = { x: event.clientX, y: event.clientY, row: row };
+    updatesLongPressTimer = window.setTimeout(function () {
+      updatesLongPressTimer = 0;
+      var start = updatesLongPressStart;
+      updatesLongPressStart = null;
+      if (!start) return;
+      openUpdatesContextMenu(start.row, start.x, start.y);
+    }, 520);
+  }
+
+  function handleUpdatesPointerMove(event) {
+    if (!updatesLongPressStart) return;
+    if (Math.abs(event.clientX - updatesLongPressStart.x) > 10 || Math.abs(event.clientY - updatesLongPressStart.y) > 10) {
+      clearUpdatesLongPress();
     }
-    if (howToContent) renderHowToTopic(howToActiveTopic);
-    renderHowToEntryNotice();
+  }
+
+  function handleUpdatesPointerEnd() {
+    if (updatesLongPressStart) clearUpdatesLongPress();
+  }
+
+  function handleUpdatesDocumentPointerDown(event) {
+    if (!updatesContextMenu || updatesContextMenu.hidden) return;
+    if (updatesContextMenu.contains(event.target)) return;
+    var row = event.target && event.target.closest ? event.target.closest(".updates-item") : null;
+    if (row && updatesList && updatesList.contains(row)) {
+      updatesSuppressClickUntil = Date.now() + 300;
+    } else {
+      updatesSuppressClickUntil = 0;
+    }
+    closeUpdatesContextMenu(false);
+  }
+
+  function findUpdateById(id) {
+    for (var i = 0; i < UPDATES.length; i += 1) {
+      if (UPDATES[i].id === id) return UPDATES[i];
+    }
+    return null;
+  }
+
+  function resetUpdatesView() {
+    closeUpdatesContextMenu(false);
+    currentUpdateId = null;
+    if (updatesEyebrow) updatesEyebrow.textContent = updatesEyebrowDefault;
+    if (updatesTitle) updatesTitle.textContent = updatesTitleDefault;
+    if (updatesIntro) updatesIntro.textContent = updatesIntroDefault;
+    if (updatesListView) updatesListView.hidden = false;
+    if (updatesDetailView) updatesDetailView.hidden = true;
+    if (updatesBackBtn) updatesBackBtn.hidden = true;
+    if (updatesDetailBody) updatesDetailBody.textContent = "";
+  }
+
+  function showUpdateDetail(item) {
+    if (!item) return;
+    closeUpdatesContextMenu(false);
+    markUpdateRead(item);
+    currentUpdateId = item.id;
+    if (updatesEyebrow) updatesEyebrow.textContent = "Release note";
+    if (updatesTitle) updatesTitle.textContent = item.title;
+    if (updatesIntro) updatesIntro.textContent = "Published " + formatUpdateDate(item.publishedAt);
+    if (updatesDetailBody) updatesDetailBody.textContent = item.body || "";
+    if (updatesListView) updatesListView.hidden = true;
+    if (updatesDetailView) updatesDetailView.hidden = false;
+    if (updatesBackBtn) {
+      updatesBackBtn.hidden = false;
+      updatesBackBtn.focus({ preventScroll: true });
+    }
+    var panel = updatesModal ? updatesModal.querySelector(".updates-modal") : null;
+    if (panel) panel.scrollTop = 0;
+  }
+
+  function showUpdatesList() {
+    closeUpdatesContextMenu(false);
+    var focusId = currentUpdateId;
+    currentUpdateId = null;
+    if (updatesEyebrow) updatesEyebrow.textContent = updatesEyebrowDefault;
+    if (updatesTitle) updatesTitle.textContent = updatesTitleDefault;
+    if (updatesIntro) updatesIntro.textContent = updatesIntroDefault;
+    if (updatesListView) updatesListView.hidden = false;
+    if (updatesDetailView) updatesDetailView.hidden = true;
+    if (updatesBackBtn) updatesBackBtn.hidden = true;
+    renderUpdates(Number(state.settings.updatesSeenAt) || 0);
+    var panel = updatesModal ? updatesModal.querySelector(".updates-modal") : null;
+    if (panel) panel.scrollTop = 0;
+    if (focusId && updatesList) {
+      var rows = updatesList.querySelectorAll(".updates-item");
+      for (var i = 0; i < rows.length; i += 1) {
+        if (rows[i].getAttribute("data-update-id") === focusId) {
+          rows[i].focus();
+          break;
+        }
+      }
+    }
+  }
+
+  function openUpdates(trigger) {
+    if (!updatesModal) return;
+    resetUpdatesView();
+    var seenAt = Number(state.settings.updatesSeenAt) || 0;
+    renderUpdates(seenAt);
+    updatesReturnFocus = trigger || document.activeElement;
+    updatesModal.classList.add("open");
+    updatesModal.setAttribute("aria-hidden", "false");
+    loadUpdatesFeed(true);
+    var closeButton = document.getElementById("updatesCloseBtn");
+    if (closeButton) closeButton.focus({ preventScroll: true });
+  }
+
+  function closeUpdates(restoreFocus) {
+    if (!updatesModal) return;
+    resetUpdatesView();
+    updatesModal.classList.remove("open");
+    updatesModal.setAttribute("aria-hidden", "true");
+    var target = updatesReturnFocus;
+    updatesReturnFocus = null;
+    if (restoreFocus !== false && target && document.contains(target) && target.offsetParent !== null) {
+      target.focus({ preventScroll: true });
+    }
+  }
+
+  function applyCommunityLinks() {
+    if (!COMMUNITY_WHATSAPP_URL) return;
+    ["communityInviteJoinBtn", "updatesJoinBtn"].forEach(function (id) {
+      var link = document.getElementById(id);
+      if (link) link.href = COMMUNITY_WHATSAPP_URL;
+    });
+  }
+
+  function showCommunityInvite(force) {
+    if (!communityInviteOverlay) return;
+    if (!force && state.settings.communityInviteSeen) return;
+    if (document.querySelector(".modal-overlay.open, .reveal-overlay.open, .welcome-overlay.open, .sync-conflict-overlay.open, .rank-upgrade-overlay.open, .tour-overlay.open")) {
+      window.setTimeout(function () { showCommunityInvite(force); }, 600);
+      return;
+    }
+    state.settings.communityInviteSeen = true;
+    saveState();
+    communityInviteReturnFocus = document.activeElement;
+    communityInviteOverlay.classList.add("open");
+    communityInviteOverlay.setAttribute("aria-hidden", "false");
+    var join = document.getElementById("communityInviteJoinBtn");
+    if (join) join.focus({ preventScroll: true });
+  }
+
+  function closeCommunityInvite(restoreFocus) {
+    if (!communityInviteOverlay) return;
+    communityInviteOverlay.classList.remove("open");
+    communityInviteOverlay.setAttribute("aria-hidden", "true");
+    var target = communityInviteReturnFocus;
+    communityInviteReturnFocus = null;
+    if (restoreFocus !== false && target && document.contains(target) && target.offsetParent !== null) {
+      target.focus({ preventScroll: true });
+    }
   }
 
   function renderTourStep() {
     if (!tourActive) return;
-    var step = TOUR_STEPS[tourIndex];
-    if (!step) {
+    var tour = helpTourFor(tourView);
+    var step = currentHelpStep();
+    if (!tour || !step) {
       endTour(true);
       return;
     }
-    if (activeView !== step.view) switchView(step.view);
-    prepareTourStep(step);
-    clearTourHighlight();
-    tourOverlay.classList.add("open");
-    tourOverlay.setAttribute("aria-hidden", "false");
-    document.getElementById("tourCount").textContent = "Step " + (tourIndex + 1) + " of " + TOUR_STEPS.length;
-    document.getElementById("tourCoachStatus").textContent = step.coach || "Practice run";
-    document.getElementById("tourTitle").textContent = step.title;
-    document.getElementById("tourBody").textContent = step.body;
-    document.getElementById("tourBackBtn").disabled = tourIndex === 0;
-    document.getElementById("tourNextBtn").textContent = tourIndex === TOUR_STEPS.length - 1 ? "Finish" : "Next";
-    setTimeout(function () {
-      positionTourCard(step);
-    }, 80);
-  }
-
-  function prepareTourStep(step) {
-    document.body.classList.toggle("tour-targets-modal", step.setup === "taskModal");
-    if (step.setup === "taskModal") {
-      if (!taskModal.classList.contains("open")) openTaskModal();
-      return;
-    }
-    if (step.setup === "closeModals" || taskModal.classList.contains("open")) closeTaskModal();
-    if (startModal.classList.contains("open")) startModal.classList.remove("open");
-    if (taskDetailModal.classList.contains("open")) closeTaskDetail();
-  }
-
-  function positionTourCard(step) {
-    var target = document.querySelector(step.target);
+    var stepView = step.view || tourView;
+    if (activeView !== stepView) switchView(stepView);
     var card = document.getElementById("tourCard");
-    if (!target || !card) return;
-    card.classList.remove("tour-at-top", "tour-at-bottom", "tour-at-side");
+    if (card) card.scrollTop = 0;
+    clearTourHighlight();
+    if (typeof step.prepare === "function") step.prepare();
+    var target = resolveHelpTarget(step);
+    if (target) target.classList.add("tour-highlight");
+    if (tourOverlay) {
+      tourOverlay.classList.add("open");
+      tourOverlay.setAttribute("aria-hidden", "false");
+    }
+    document.body.classList.add("tour-open");
+    var count = document.getElementById("tourCount");
+    if (count) count.textContent = tour.label + " - Step " + (tourIndex + 1) + " of " + tour.steps.length;
+    var coach = document.getElementById("tourCoachStatus");
+    if (coach) coach.textContent = step.coach || tour.label;
+    var title = document.getElementById("tourTitle");
+    if (title) title.textContent = step.title;
+    var body = document.getElementById("tourBody");
+    if (body) body.textContent = step.body;
+    var back = document.getElementById("tourBackBtn");
+    if (back) back.disabled = tourIndex === 0;
+    var next = document.getElementById("tourNextBtn");
+    if (next) next.textContent = tourIndex === tour.steps.length - 1 ? "Got it" : "Next";
+    var fill = document.getElementById("tourProgressFill");
+    if (fill) fill.style.width = Math.round(((tourIndex + 1) / tour.steps.length) * 100) + "%";
+    if (target) resetTourHorizontalScroll(target);
+    positionTourCard(step, target, true);
+    positionTourSpotlight(target);
+    window.setTimeout(function () {
+      if (!tourActive) return;
+      var liveTarget = resolveHelpTarget(step);
+      // Re-check after the card settles and the active view finishes its
+      // transition. This second pass may correct a target that is still
+      // peeking under the sticky header or below the safe band.
+      positionTourCard(step, liveTarget, true);
+      positionTourSpotlight(liveTarget);
+      if (next) next.focus({ preventScroll: true });
+    }, state.settings.reducedMotion ? 0 : 120);
+  }
+
+  function tourSafeInset(style, side) {
+    var value = parseFloat(style.getPropertyValue("--tour-safe-" + side));
+    return isFinite(value) ? Math.max(0, value) : 0;
+  }
+
+  function positionTourCard(step, target, allowScroll) {
+    var card = document.getElementById("tourCard");
+    if (!card) return;
+    if (!target) target = resolveHelpTarget(step);
+    card.classList.remove("tour-at-top", "tour-at-bottom", "tour-at-side", "tour-arrow-top", "tour-arrow-bottom", "tour-arrow-left", "tour-arrow-right", "tour-scrollable");
     card.style.top = "";
     card.style.left = "";
-    target.classList.add("tour-highlight");
-    target.scrollIntoView({ behavior: state.settings.reducedMotion ? "auto" : "smooth", block: "center", inline: "center" });
-    setTimeout(function () {
-      var rect = target.getBoundingClientRect();
-      var cardRect = card.getBoundingClientRect();
-      var vw = window.innerWidth || document.documentElement.clientWidth;
-      var vh = window.innerHeight || document.documentElement.clientHeight;
-      if (vw <= 720) {
-        var landscape = vw > vh && vh <= 600;
-        if (landscape && vw >= 560) {
-          card.classList.add("tour-at-side");
-        } else {
-          var roomAbove = Math.max(0, rect.top);
-          var roomBelow = Math.max(0, vh - rect.bottom);
-          card.classList.add(roomAbove > roomBelow ? "tour-at-top" : "tour-at-bottom");
+    card.style.right = "";
+    card.style.bottom = "";
+    card.style.width = "";
+    card.style.maxWidth = "";
+    card.style.maxHeight = "";
+    card.style.overflowY = "";
+    card.style.removeProperty("--tour-arrow-left");
+    card.style.removeProperty("--tour-arrow-top");
+    var vw = document.documentElement.clientWidth || window.innerWidth || 0;
+    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    if (!vw || !vh) return;
+    var margin = 12;
+    var gap = 14;
+    var cardStyle = window.getComputedStyle(card);
+    var safeTop = tourSafeInset(cardStyle, "top");
+    var safeRight = tourSafeInset(cardStyle, "right");
+    var safeBottom = tourSafeInset(cardStyle, "bottom");
+    var safeLeft = tourSafeInset(cardStyle, "left");
+    var edgeTop = margin + safeTop;
+    var edgeRight = vw - margin - safeRight;
+    var edgeBottom = vh - margin - safeBottom;
+    var edgeLeft = margin + safeLeft;
+    var contentBottom = edgeBottom;
+    var bottomNav = document.querySelector(".bottomnav");
+    if (bottomNav) {
+      var bottomNavStyle = window.getComputedStyle(bottomNav);
+      var bottomNavRect = bottomNav.getBoundingClientRect();
+      if (bottomNavStyle.display !== "none" && bottomNavStyle.visibility !== "hidden" && bottomNavRect.height > 0) {
+        contentBottom = Math.min(edgeBottom, bottomNavRect.top - 8);
+      }
+    }
+    if (contentBottom - edgeTop < 160) contentBottom = edgeBottom;
+    var maxCardW = Math.max(160, vw - (margin * 2) - safeLeft - safeRight);
+    var cardW = Math.min(360, maxCardW);
+    card.style.width = Math.round(cardW) + "px";
+    card.style.maxWidth = Math.round(maxCardW) + "px";
+    card.style.maxHeight = Math.max(120, contentBottom - edgeTop) + "px";
+    card.style.overflowY = "visible";
+    var cardRect = card.getBoundingClientRect();
+    var cardH = Math.max(0, cardRect.height);
+    if (!target) {
+      card.style.left = Math.round(edgeLeft) + "px";
+      card.style.top = Math.max(edgeTop, Math.min(Math.round((vh - cardH) / 2), edgeBottom - cardH)) + "px";
+      card.style.right = "auto";
+      card.style.bottom = "auto";
+      return;
+    }
+    var rect = target.getBoundingClientRect();
+    var topbar = document.querySelector(".view.active .topbar");
+    var topInset = edgeTop;
+    var targetInTopbar = false;
+    if (topbar) {
+      targetInTopbar = topbar.contains(target);
+      if (!targetInTopbar) {
+        var topbarRect = topbar.getBoundingClientRect();
+        var topbarStyle = window.getComputedStyle(topbar);
+        var topbarPinned = topbarStyle.position === "sticky" || topbarStyle.position === "fixed" || topbarRect.top <= edgeTop;
+        if (topbarPinned && topbarRect.bottom > edgeTop && topbarRect.top < vh * 0.35) {
+          topInset = Math.max(edgeTop, Math.min(topbarRect.bottom + 8, vh * 0.3));
         }
-        var nextButton = document.getElementById("tourNextBtn");
-        if (nextButton) nextButton.focus({ preventScroll: true });
-        return;
       }
-      var sideGap = 18;
-      var top = Math.max(16, Math.min(rect.top, vh - cardRect.height - 16));
-      var left = rect.right + sideGap;
-      if (left + cardRect.width > vw - 16 && rect.left - cardRect.width - sideGap > 16) {
-        left = rect.left - cardRect.width - sideGap;
+    }
+    var contentHeight = Math.max(0, contentBottom - topInset);
+    var targetCenterY = rect.top + (rect.height / 2);
+    var preferBelow = targetCenterY < topInset + (contentHeight * 0.55);
+    // Give the target and card one shared band between the sticky top bar and
+    // bottom navigation. Scroll only enough to keep the highlighted element
+    // clear of both chrome rails and clear of the card's eventual position.
+    if (allowScroll && !targetInTopbar) {
+      var targetH = Math.max(0, rect.height);
+      var canStack = targetH + gap + cardH <= contentHeight + 0.5;
+      var scrollDelta = 0;
+      if (canStack) {
+        var belowFits = rect.top >= topInset - 0.5 && rect.bottom + gap + cardH <= contentBottom + 0.5;
+        var aboveFits = rect.bottom <= contentBottom + 0.5 && rect.top - gap - cardH >= topInset - 0.5;
+        if (preferBelow && !belowFits) {
+          scrollDelta = rect.top - (topInset + 2);
+        } else if (!preferBelow && !aboveFits) {
+          scrollDelta = rect.bottom - (contentBottom - 2);
+        }
+      } else if (rect.top < topInset) {
+        scrollDelta = rect.top - topInset;
+      } else if (rect.top > contentBottom - Math.min(targetH, contentHeight * 0.72)) {
+        scrollDelta = rect.top - (contentBottom - Math.min(targetH, contentHeight * 0.72));
       }
-      if (left + cardRect.width > vw - 16) {
-        left = Math.min(Math.max(16, rect.left), vw - cardRect.width - 16);
-        top = rect.bottom + sideGap;
-        if (top + cardRect.height > vh - 16) top = rect.top - cardRect.height - sideGap;
+      if (scrollDelta) {
+        scrollTourWindowBy(scrollDelta);
+        rect = target.getBoundingClientRect();
+        targetCenterY = rect.top + (rect.height / 2);
+        preferBelow = targetCenterY < topInset + (contentHeight * 0.55);
       }
-      if (top < 16) top = Math.max(16, vh - cardRect.height - 16);
-      if (left < 16) left = 16;
-      card.style.top = Math.round(top) + "px";
-      card.style.left = Math.round(left) + "px";
-      var desktopNext = document.getElementById("tourNextBtn");
-      if (desktopNext) desktopNext.focus({ preventScroll: true });
-    }, state.settings.reducedMotion ? 0 : 220);
+    }
+    var centerX = rect.left + (rect.width / 2);
+    var centerY = rect.top + (rect.height / 2);
+    var minCardH = Math.min(120, Math.max(80, contentHeight * 0.22));
+    var belowAvail = contentBottom - (rect.bottom + gap);
+    var aboveAvail = (rect.top - gap) - topInset;
+    var sideAvail = contentHeight;
+    var sideFirst = vw >= 900;
+    var candidates = [];
+    function addVertical(side) {
+      var avail = side === "bottom" ? belowAvail : aboveAvail;
+      if (avail < minCardH) return;
+      var useH = Math.min(cardH, avail);
+      var left = Math.max(edgeLeft, Math.min(centerX - (cardW / 2), edgeRight - cardW));
+      var top = side === "bottom" ? rect.bottom + gap : rect.top - gap - useH;
+      candidates.push({
+        side: side,
+        left: left,
+        top: top,
+        avail: avail,
+        full: cardH <= avail + 0.5
+      });
+    }
+    function addSide(side) {
+      var left = side === "right" ? rect.right + gap : rect.left - gap - cardW;
+      if (left < edgeLeft || left + cardW > edgeRight) return;
+      if (sideAvail < minCardH) return;
+      candidates.push({
+        side: side,
+        left: left,
+        top: Math.max(topInset, Math.min(centerY - (Math.min(cardH, sideAvail) / 2), contentBottom - Math.min(cardH, sideAvail))),
+        avail: sideAvail,
+        full: cardH <= sideAvail + 0.5
+      });
+    }
+    if (sideFirst) {
+      addSide("right");
+      addSide("left");
+    }
+    if (preferBelow) {
+      addVertical("bottom");
+      addVertical("top");
+    } else {
+      addVertical("top");
+      addVertical("bottom");
+    }
+    if (!sideFirst) {
+      addSide("right");
+      addSide("left");
+    }
+    var chosen = null;
+    for (var i = 0; i < candidates.length; i += 1) {
+      if (candidates[i].full) {
+        chosen = candidates[i];
+        break;
+      }
+    }
+    if (!chosen) {
+      for (i = 0; i < candidates.length; i += 1) {
+        if (!chosen || candidates[i].avail > chosen.avail) chosen = candidates[i];
+      }
+    }
+    if (!chosen) {
+      var fallbackH = Math.max(100, contentHeight);
+      chosen = {
+        side: preferBelow ? "bottom" : "top",
+        left: edgeLeft,
+        top: topInset,
+        avail: fallbackH,
+        full: false
+      };
+    }
+    if (cardH > chosen.avail + 0.5) {
+      card.style.maxHeight = Math.max(80, Math.floor(chosen.avail)) + "px";
+      card.style.overflowY = "auto";
+      card.classList.add("tour-scrollable");
+      cardRect = card.getBoundingClientRect();
+      cardH = Math.max(0, cardRect.height);
+    }
+    if (card.scrollHeight > card.clientHeight + 16) {
+      card.style.overflowY = "auto";
+      card.classList.add("tour-scrollable");
+    }
+    var left = Math.max(edgeLeft, Math.min(chosen.left, edgeRight - cardW));
+    var top;
+    if (chosen.side === "bottom") {
+      top = rect.bottom + gap;
+    } else if (chosen.side === "top") {
+      top = rect.top - gap - cardH;
+    } else {
+      top = centerY - (cardH / 2);
+    }
+    top = Math.max(topInset, Math.min(top, contentBottom - cardH));
+    card.style.left = Math.round(left) + "px";
+    card.style.top = Math.round(top) + "px";
+    card.style.right = "auto";
+    card.style.bottom = "auto";
+    card.style.width = Math.round(cardW) + "px";
+    if (chosen.side === "right" || chosen.side === "left") {
+      card.classList.add("tour-at-side");
+      card.classList.add("tour-arrow-" + (chosen.side === "right" ? "left" : "right"));
+      var arrowTop = Math.max(18, Math.min(centerY - top - 7, cardH - 32));
+      card.style.setProperty("--tour-arrow-top", Math.round(arrowTop) + "px");
+    } else {
+      card.classList.add(chosen.side === "top" ? "tour-at-top" : "tour-at-bottom");
+      card.classList.add("tour-arrow-" + (chosen.side === "top" ? "bottom" : "top"));
+      var arrowLeft = Math.max(18, Math.min(centerX - left - 7, cardW - 32));
+      card.style.setProperty("--tour-arrow-left", Math.round(arrowLeft) + "px");
+    }
+  }
+
+  var tourLayoutTimer = 0;
+  var tourLayoutAllowScroll = false;
+  var tourResizeTimer = 0;
+
+  function syncTourLayout() {
+    if (!tourActive) return;
+    var step = currentHelpStep();
+    if (!step) return;
+    var target = resolveHelpTarget(step);
+    positionTourCard(step, target, tourLayoutAllowScroll);
+    positionTourSpotlight(target);
+    tourLayoutAllowScroll = false;
+  }
+
+  function scheduleTourLayout(allowScroll) {
+    if (!tourActive) return;
+    if (allowScroll) tourLayoutAllowScroll = true;
+    if (tourLayoutTimer) return;
+    tourLayoutTimer = window.setTimeout(function () {
+      tourLayoutTimer = 0;
+      syncTourLayout();
+    }, 16);
+  }
+
+  function handleTourResize() {
+    if (!tourActive) return;
+    tourLayoutAllowScroll = true;
+    syncTourLayout();
+    if (tourResizeTimer) window.clearTimeout(tourResizeTimer);
+    tourResizeTimer = window.setTimeout(function () {
+      tourResizeTimer = 0;
+      if (!tourActive) return;
+      tourLayoutAllowScroll = true;
+      syncTourLayout();
+    }, 180);
+  }
+
+  window.addEventListener("resize", handleTourResize);
+  window.addEventListener("scroll", function () {
+    scheduleTourLayout(false);
+  }, { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", handleTourResize);
+    window.visualViewport.addEventListener("scroll", function () {
+      scheduleTourLayout(false);
+    });
+  }
+  if (window.ResizeObserver) {
+    var tourViewportObserver = new window.ResizeObserver(handleTourResize);
+    tourViewportObserver.observe(document.documentElement);
   }
 
   function nextTourStep() {
-    if (tourIndex >= TOUR_STEPS.length - 1) {
+    var tour = helpTourFor(tourView);
+    if (!tour || tourIndex >= tour.steps.length - 1) {
       endTour(true);
       return;
     }
@@ -5146,6 +7090,33 @@
     if (tourIndex <= 0) return;
     tourIndex -= 1;
     renderTourStep();
+  }
+
+  function trapTourFocus(event) {
+    var card = document.getElementById("tourCard");
+    if (!card) return;
+    var nodes = card.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    var focusable = Array.prototype.filter.call(nodes, function (node) {
+      return !node.disabled && node.offsetParent !== null;
+    });
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (!card.contains(document.activeElement)) {
+      event.preventDefault();
+      first.focus();
+      return;
+    }
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   function smartTaskRecommendations(limit) {
@@ -5923,6 +7894,45 @@
     updateTaskTimeHelp();
   }
 
+  function taskDurationValidationMessage(value) {
+    var raw = String(value == null ? "" : value).trim();
+    if (!raw) return "Enter a whole number from 10 to 480 minutes.";
+    var parsed = Number(raw);
+    if (!Number.isFinite(parsed) || Math.floor(parsed) !== parsed) {
+      return "Use whole minutes from 10 to 480.";
+    }
+    if (parsed < MIN_TASK_MINUTES) return "Minimum is 10 minutes.";
+    if (parsed > MAX_TASK_MINUTES) return "Maximum is 480 minutes.";
+    return "";
+  }
+
+  function renderTaskDurationHelp(message) {
+    var input = document.getElementById("taskDurationInput");
+    var help = document.getElementById("taskDurationHelp");
+    if (input) {
+      if (message) input.setAttribute("aria-invalid", "true");
+      else input.removeAttribute("aria-invalid");
+    }
+    if (!help) return;
+    help.textContent = message || "10 to 480 minutes. Longer work is split into focus blocks.";
+    help.classList.toggle("is-error", Boolean(message));
+  }
+
+  function readTaskDurationMinutes() {
+    var input = document.getElementById("taskDurationInput");
+    if (!input) return 50;
+    var raw = String(input.value || "").trim();
+    var message = taskDurationValidationMessage(raw);
+    var minutes = clampTaskMinutes(raw, 50);
+    if (message) {
+      input.value = String(minutes);
+      renderTaskDurationHelp("Adjusted to " + minutes + " minutes. Use 10 to 480.");
+    } else {
+      renderTaskDurationHelp("");
+    }
+    return minutes;
+  }
+
   function openTaskModal(taskOrId) {
     var task = typeof taskOrId === "string" ? getTask(taskOrId) : (taskOrId && taskOrId.id ? taskOrId : null);
     editingTaskId = task ? task.id : null;
@@ -5932,7 +7942,15 @@
     document.getElementById("taskTitleInput").value = task ? task.title : "";
     document.getElementById("taskDateInput").value = task ? task.date : todayStr();
     document.getElementById("taskTimeInput").value = task && task.time ? task.time : "";
-    document.getElementById("taskDurationInput").value = task ? task.estMinutes : "50";
+    var durationInput = document.getElementById("taskDurationInput");
+    durationInput.value = task ? task.estMinutes : "50";
+    renderTaskDurationHelp("");
+    durationInput.oninput = function () {
+      renderTaskDurationHelp(taskDurationValidationMessage(this.value));
+    };
+    durationInput.onblur = function () {
+      readTaskDurationMinutes();
+    };
     document.getElementById("taskPriorityInput").value = task ? task.priority : "medium";
     document.getElementById("taskUnitsInput").value = task ? task.units.total : "4";
     document.getElementById("taskFlexInput").value = task ? task.flex : "flexible";
@@ -5943,6 +7961,7 @@
     taskFlexField.onchange = updateTaskTimeHelp;
     syncTaskFlexFromTime();
     document.getElementById("taskRepeatInput").value = task ? task.repeat : "none";
+    selectedRepeatDays = task && Array.isArray(task.repeatDays) ? task.repeatDays.slice() : [];
     var repeatDaysWrap = document.getElementById("taskRepeatDaysWrap");
     var repeatSelect = document.getElementById("taskRepeatInput");
     function toggleRepeatDaysUI() {
@@ -5956,7 +7975,7 @@
     repeatSelect.onchange = toggleRepeatDaysUI;
     Array.prototype.forEach.call(document.querySelectorAll(".repeat-day-btn"), function (btn) {
       var day = parseInt(btn.getAttribute("data-repeat-day"), 10);
-      btn.classList.toggle("active", task && task.repeatDays && task.repeatDays.indexOf(day) > -1);
+      btn.classList.toggle("active", selectedRepeatDays.indexOf(day) > -1);
       btn.onclick = function () {
         btn.classList.toggle("active");
         var idx = selectedRepeatDays.indexOf(day);
@@ -6098,6 +8117,8 @@
     });
     document.getElementById("welcomeSaveBtn").onclick = nextWelcomeStep;
     document.getElementById("welcomeBackBtn").onclick = previousWelcomeStep;
+    var releaseContinueBtn = document.getElementById("releaseContinueBtn");
+    if (releaseContinueBtn) releaseContinueBtn.onclick = closeReleaseNotes;
     document.getElementById("welcomeCalibrateBtn").onclick = function () {
       completeWelcome("calibrate");
     };
@@ -6210,6 +8231,15 @@
         document.getElementById("taskTitleInput").focus();
         return;
       }
+      var repeatValue = document.getElementById("taskRepeatInput").value;
+      if (repeatValue === "custom" && !selectedRepeatDays.length) {
+        var repeatDaysWrap = document.getElementById("taskRepeatDaysWrap");
+        if (repeatDaysWrap) repeatDaysWrap.style.display = "block";
+        var firstRepeatDay = repeatDaysWrap ? repeatDaysWrap.querySelector(".repeat-day-btn") : null;
+        if (firstRepeatDay) firstRepeatDay.focus();
+        showToast("Choose at least one repeat day");
+        return;
+      }
       var existingTask = editingTaskId ? getTask(editingTaskId) : null;
       var task = normalizeTask({
         id: existingTask ? existingTask.id : null,
@@ -6217,14 +8247,14 @@
         date: document.getElementById("taskDateInput").value || todayStr(),
         time: document.getElementById("taskTimeInput").value || null,
         flex: document.getElementById("taskTimeInput").value ? document.getElementById("taskFlexInput").value : "flexible",
-        estMinutes: clampMinutes(document.getElementById("taskDurationInput").value, 50),
+        estMinutes: readTaskDurationMinutes(),
         priority: document.getElementById("taskPriorityInput").value,
         units: clampBlockCount(document.getElementById("taskUnitsInput").value, 4),
         completedUnits: existingTask ? existingTask.units.completed : 0,
         status: existingTask ? existingTask.status : "pending",
         manualDoneXpAwarded: existingTask ? existingTask.manualDoneXpAwarded : false,
         notes: document.getElementById("taskNotesInput").value,
-        repeat: document.getElementById("taskRepeatInput").value,
+        repeat: repeatValue,
         repeatDays: selectedRepeatDays.slice(),
         repeatSourceId: existingTask ? existingTask.repeatSourceId : ""
       });
@@ -6247,6 +8277,7 @@
         repeatDays: task.repeatDays || []
       });
       saveState();
+      refreshRecurringTasksForToday(true);
       closeTaskModal();
       renderAll();
       showToast(existingTask ? "Task updated" : "Task added");
@@ -6300,18 +8331,16 @@
     document.getElementById("tourNextBtn").onclick = nextTourStep;
     document.getElementById("tourBackBtn").onclick = previousTourStep;
     document.getElementById("tourSkipBtn").onclick = function () { endTour(true); };
-    document.getElementById("replayTourBtn").onclick = function () { openWelcome(true); };
-    wireHowTo();
-    [welcomeOverlay, startModal, taskModal, taskDetailModal, feedbackModal, personalizeModal, attentionTestModal].forEach(function (overlay) {
+    document.getElementById("replayTourBtn").onclick = function () {
+      if (tourActive) endTour(false);
+      openWelcome(true);
+    };
+    [welcomeOverlay, startModal, taskModal, taskDetailModal, personalizeModal, attentionTestModal].forEach(function (overlay) {
       if (!overlay) return;
       overlay.addEventListener("click", function (event) {
         if (event.target === overlay) {
           if (overlay === welcomeOverlay) {
             completeWelcome("today");
-            return;
-          }
-          if (overlay === feedbackModal) {
-            closeFeedback();
             return;
           }
           if (overlay === personalizeModal) {
@@ -6475,15 +8504,12 @@
     document.getElementById("rankLadderPrev").onclick = function () { scrollRankLadder(-1); };
     document.getElementById("rankLadderNext").onclick = function () { scrollRankLadder(1); };
     document.getElementById("rankLadder").addEventListener("scroll", updateRankLadderArrows);
+    bindRankLadderDrag();
     document.getElementById("saveLocalBtn").onclick = saveLocalSnapshot;
     document.getElementById("exportBackupBtn").onclick = exportBackup;
     document.getElementById("importBackupBtn").onclick = function () { document.getElementById("importBackupInput").click(); };
     document.getElementById("importBackupInput").onchange = importBackup;
     wirePersonalizeModal();
-    document.getElementById("feedbackFab").onclick = openFeedback;
-    document.getElementById("openFeedbackSettingsBtn").onclick = openFeedback;
-    document.getElementById("feedbackCloseBtn").onclick = closeFeedback;
-    document.getElementById("feedbackCancelBtn").onclick = closeFeedback;
     document.getElementById("feedbackSubmitBtn").onclick = submitFeedback;
     document.getElementById("feedbackNameInput").oninput = function () {
       this.removeAttribute("aria-invalid");
@@ -6535,6 +8561,15 @@
   }
 
   function handleVisibilityChange() {
+    if (document.visibilityState === "visible") {
+      loadUpdatesFeed(false);
+      checkServiceWorkerUpdate(false);
+    }
+    if (document.visibilityState === "visible" && !state.session) {
+      var refreshed = refreshRecurringTasksForToday(false);
+      if (refreshed.created || refreshed.removed || refreshed.dateChanged) renderAll();
+      return;
+    }
     if (!state.session) return;
     if (syncSessionClock()) return;
     saveState();
@@ -6547,26 +8582,47 @@
   }
 
   function handleStorageChange(event) {
-    if (event.key !== STORAGE_KEY || state.session) return;
+    if (event.key !== STORAGE_KEY) return;
+    var activeSession = state.session;
+    var activeTask = activeSession && activeSession.linkedTaskId ? getTask(activeSession.linkedTaskId) : null;
+    var localSavedSessions = state.savedSessions || [];
     state = loadState();
+    if (activeSession) {
+      // Keep this tab's live focus block, but adopt task changes made in
+      // another tab so a deleted task cannot be resurrected by a stale save.
+      if (activeTask && !state.tasks.some(function (task) { return task.id === activeTask.id; })) {
+        state.tasks.push(activeTask);
+      }
+      state.session = activeSession;
+      localSavedSessions.forEach(function (saved) {
+        if (!state.savedSessions.some(function (item) { return item.id === saved.id; })) {
+          state.savedSessions.push(saved);
+        }
+      });
+      state.savedSessions = state.savedSessions.slice(0, 4);
+    }
+    refreshRecurringTasksForToday(true);
+    if (state.session) startTicker(); else stopTicker();
     renderAll();
   }
 
   function handleKeydown(event) {
-    if (howToOverlay && !howToOverlay.hidden) {
+    if (tourActive) {
       if (event.key === "Escape") {
         event.preventDefault();
-        closeHowTo();
+        endTour(false);
         return;
       }
       if (event.key === "Tab") {
-        trapHowToFocus(event);
+        trapTourFocus(event);
         return;
       }
     }
     if (event.key === "Escape") {
       if (timePickerOverlay && timePickerOverlay.classList.contains("open")) closeTimePicker();
-      if (feedbackModal && feedbackModal.classList.contains("open")) closeFeedback();
+      if (helpLibraryModal && helpLibraryModal.classList.contains("open")) closeHelpLibrary();
+      if (updatesModal && updatesModal.classList.contains("open")) closeUpdates();
+      if (communityInviteOverlay && communityInviteOverlay.classList.contains("open")) closeCommunityInvite();
       if (personalizeModal && personalizeModal.classList.contains("open")) closePersonalize();
       if (attentionTestModal && attentionTestModal.classList.contains("open")) closeAttentionTest();
     }
@@ -6635,24 +8691,33 @@
     taskTimingState: taskTimingState,
     placeFlexibleTask: placeFlexibleTask,
     createNextRecurringTask: createNextRecurringTask,
+    refreshRecurringTasksForToday: refreshRecurringTasksForToday,
+    cleanupRecurringOccurrences: cleanupRecurringOccurrences,
+    ensureRecurringTasksForToday: ensureRecurringTasksForToday,
+    tasksInRecurringSeries: tasksInRecurringSeries,
+    recurrenceMatchesDate: recurrenceMatchesDate,
+    renderAll: renderAll,
     layoutScheduleBlocks: layoutScheduleBlocks,
     renderNowLine: renderNowLine,
     openWelcome: openWelcome,
     closeWelcome: closeWelcome,
+    openReleaseNotes: maybeShowReleaseNotes,
+    closeReleaseNotes: closeReleaseNotes,
+    getReleaseSeenId: function () { return state.settings.releaseSeenId; },
     saveWelcomeSetup: saveWelcomeSetup,
     selectWelcomeOption: selectWelcomeOption,
     completeWelcome: completeWelcome,
     openAccountSetup: openAccountSetup,
     applyAccountProfile: applyAccountProfile,
     getAccountProfile: function () { return state.accountProfile; },
-    openHowTo: openHowTo,
-    closeHowTo: closeHowTo,
-    getHowToState: function () {
+    startHelpTour: startHelpTour,
+    getHelpState: function () {
       return {
-        open: Boolean(howToOverlay && !howToOverlay.hidden),
-        topic: howToActiveTopic,
-        hasOpenButton: Boolean(howToOpenBtn),
-        openButtonWired: Boolean(howToOpenBtn && typeof howToOpenBtn.onclick === "function")
+        active: tourActive,
+        view: tourView,
+        index: tourIndex,
+        seen: Object.assign({}, state.settings.helpToursSeen || {}),
+        tours: Object.keys(HELP_TOURS)
       };
     },
     startTour: startTour,
@@ -6660,6 +8725,10 @@
     persistStateForExit: persistStateForExit,
     getTourState: function () { return { active: tourActive, index: tourIndex }; },
     showSystemReveal: showSystemReveal,
+    openUpdates: openUpdates,
+    openCommunityInvite: showCommunityInvite,
+    getUpdatesState: getUpdatesState,
+    refreshUpdatesFeed: loadUpdatesFeed,
     renderHistory: renderHistory,
     getState: function () { return state; },
     applySyncedState: function (incoming) {
@@ -6676,6 +8745,7 @@
       state = loadState();
       if (state.session) startTicker(); else stopTicker();
       saveState();
+      refreshRecurringTasksForToday(true);
       renderAll();
       showToast("Cloud copy applied.");
       return true;
@@ -6698,6 +8768,18 @@
     getName: accountProfileName
   };
 
+  try {
+    installHelpControls();
+    installHelpLibrary();
+  } catch (helpInstallError) {
+    console.error("installHelpControls error:", helpInstallError);
+  }
+  try {
+    installUpdatesBell();
+    installUpdatesCenter();
+  } catch (updatesInstallError) {
+    console.error("installUpdatesCenter error:", updatesInstallError);
+  }
   try {
     wireEvents();
   } catch (wireError) {
@@ -6732,29 +8814,41 @@
   document.addEventListener("pointerdown", function () {
     if (brownNoiseEnabled && isFocusRunning() && (!ambientAudio || ambientAudio.paused)) startAmbientSound();
   }, true);
+  var serviceWorkerRegistration = null;
+  var lastServiceWorkerCheckAt = 0;
+  function checkServiceWorkerUpdate(force) {
+    if (!serviceWorkerRegistration || (typeof navigator !== "undefined" && !navigator.onLine)) return;
+    var now = Date.now();
+    if (!force && now - lastServiceWorkerCheckAt < 60000) return;
+    lastServiceWorkerCheckAt = now;
+    serviceWorkerRegistration.update().catch(function () {});
+  }
   document.addEventListener("visibilitychange", handleVisibilityChange);
   document.addEventListener("keydown", handleKeydown);
   window.addEventListener("storage", handleStorageChange);
   window.addEventListener("online", retryFeedbackOutbox);
+  window.addEventListener("online", function () {
+    loadUpdatesFeed(true);
+    checkServiceWorkerUpdate(true);
+  });
   window.addEventListener("pagehide", persistStateForExit);
   window.addEventListener("beforeunload", function (event) {
     persistStateForExit();
   });
-  window.addEventListener("resize", function () {
-    if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]);
-  });
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", function () { if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]); });
-    window.visualViewport.addEventListener("scroll", function () { if (tourActive) positionTourCard(TOUR_STEPS[tourIndex]); });
-  }
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator && typeof location !== "undefined" && location.protocol !== "file:") {
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" }).catch(function () {});
+      navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" }).then(function (registration) {
+        serviceWorkerRegistration = registration;
+        checkServiceWorkerUpdate(true);
+      }).catch(function () {});
     });
   }
   try {
+    installNavigationDrawer();
+    refreshRecurringTasksForToday(true);
     renderAll();
     switchView("today");
+    loadUpdatesFeed(true);
     if (state.settings.sound) primeSounds();
     if (brownNoiseEnabled && isFocusRunning()) {
       document.addEventListener("pointerdown", function resumeBrownNoise() {
@@ -6762,15 +8856,24 @@
       }, { once: true });
     }
     setTimeout(function () {
-      openWelcome(false);
+      var welcomeShown = openWelcome(false);
+      if (!welcomeShown) maybeShowReleaseNotes();
     }, 450);
     setInterval(function () {
+      var refreshed = refreshRecurringTasksForToday(false);
+      if (refreshed.created || refreshed.removed || refreshed.dateChanged) renderAll();
       if (activeView === "today") renderToday();
       if (activeView === "plan" && currentPlanMode === "schedule" && currentPlanTab === "day") renderPlan();
     }, 60000);
     if (state.session && ["running", "recovery"].indexOf(state.session.status) > -1) startTicker();
   } catch (error) {
     console.error("DeeCadence init error:", error);
+    if (window.DeeCadenceBoot && typeof window.DeeCadenceBoot.fail === "function") {
+      window.DeeCadenceBoot.fail();
+    }
+    return;
   }
-  // The splash clears itself from the inline boot gate (or on error).
+  if (window.DeeCadenceBoot && typeof window.DeeCadenceBoot.ready === "function") {
+    window.DeeCadenceBoot.ready();
+  }
 })();

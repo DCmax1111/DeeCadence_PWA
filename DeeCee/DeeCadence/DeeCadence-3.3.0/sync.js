@@ -88,7 +88,7 @@
   }
 
   function signedOutMessage() {
-    return "Your progress is saved on this device. Sign in to back it up and sync across devices.";
+    return "Saved on this device. Sign in to back it up and sync.";
   }
 
   function pendingSignInMessage() {

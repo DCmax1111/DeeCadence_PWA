@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "release-2026-11-17",
+      "publishedAt": "2026-11-17T08:00:00.000Z",
+      "title": "A clearer week and calmer focus",
+      "body": "Week is now a date-led agenda with time-stamped blocks, and Day, Week, and Pending each have their own scope. Focus evidence reads as game-style chips, unread notes stay on top, Auto-arrange only counts real moves, and partial focus sessions now appear in History → Partial. You'll see this update once when you open the app."
+    },
+    {
+      "id": "welcome-3-3-0",
+      "publishedAt": "2026-11-10T00:00:00.000Z",
+      "title": "Welcome to DeeCadence",
+      "body": "Start with one small focus block, let the timer carry you, and watch your Rank grow as you show up. The ? on Today and the help library in Settings are always there if you need a hand."
+    },
+    {
+      "id": "plan-safety-3-3-66",
+      "publishedAt": "2026-11-12T00:00:00.000Z",
+      "title": "A calmer, safer Plan",
+      "body": "Missed, Ready, and Done now collapse out of the way, and deleting a task clears matching copies plus their recurrence branches."
+    },
+    {
+      "id": "progress-at-a-glance",
+      "publishedAt": "2026-11-13T00:00:00.000Z",
+      "title": "Progress at a glance",
+      "body": "Cadence and Momentum now sit together, the chart stays close to your focus history, and your strongest day is marked in the selected range."
+    },
+    {
+      "id": "community-whatsapp-2026-11",
+      "publishedAt": "2026-11-16T00:00:00.000Z",
+      "title": "Join the DeeCadence WhatsApp group",
+      "body": "Release notes, focus challenges, and early invitations land there first. It is optional, quiet, and you can leave whenever you like."
+    }
+  ]
+}
