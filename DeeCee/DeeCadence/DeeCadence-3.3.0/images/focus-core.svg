@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="DeeCadence Focus Core">
+  <defs>
+    <linearGradient id="fc-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#62E8D5"/>
+      <stop offset="52%" stop-color="#18C7D0"/>
+      <stop offset="100%" stop-color="#367DFF"/>
+    </linearGradient>
+    <radialGradient id="fc-core">
+      <stop offset="0%" stop-color="#E5FFFC"/>
+      <stop offset="24%" stop-color="#80F5E5"/>
+      <stop offset="58%" stop-color="#18C9CF" stop-opacity=".8"/>
+      <stop offset="100%" stop-color="#0878D0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="fc-glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="160" cy="160" r="116" fill="none" stroke="#17313A" stroke-width="8"/>
+  <circle cx="160" cy="160" r="116" fill="none" stroke="url(#fc-ring)" stroke-width="8" stroke-linecap="round" stroke-dasharray="640 729" transform="rotate(-90 160 160)"/>
+  <circle cx="160" cy="160" r="89" fill="none" stroke="#4DE4D8" stroke-width="1.5" stroke-dasharray="2 12" opacity=".4"/>
+  <circle cx="160" cy="160" r="68" fill="url(#fc-core)" filter="url(#fc-glow)"/>
+  <circle cx="144" cy="141" r="7" fill="#F0FFFD" opacity=".78"/>
+  <circle cx="160" cy="44" r="3" fill="#BFFFF7"/>
+  <circle cx="276" cy="160" r="2.5" fill="#8EDFFF"/>
+  <circle cx="160" cy="276" r="2" fill="#6DF6E7"/>
+</svg>

@@ -30,6 +30,30 @@
       "publishedAt": "2026-11-16T00:00:00.000Z",
       "title": "Join the DeeCadence WhatsApp group",
       "body": "Release notes, focus challenges, and early invitations land there first. It is optional, quiet, and you can leave whenever you like."
+    },
+    {
+      "id": "adaptive-rhythm-2026-11",
+      "publishedAt": "2026-11-19T00:00:00.000Z",
+      "title": "Try an adaptive focus rhythm",
+      "body": "After a few completed blocks, DeeCadence can shape an unequal rhythm around your history: an easier first start, then longer focus blocks with recovery between them. Try Adaptive in session setup, then tell us whether it feels better."
+    },
+    {
+      "id": "notifications-2026-11",
+      "publishedAt": "2026-11-19T10:00:00.000Z",
+      "title": "A nudge at the right moment",
+      "body": "DeeCadence now reminds you when a focus block ends so you can start the next one, and gives calendar-style reminders for tasks with a time in your plan. Permission is asked after your first block, never on launch. Set the lead time in Settings → Notifications."
+    },
+    {
+      "id": "install-app-2026-11",
+      "publishedAt": "2026-11-19T10:05:00.000Z",
+      "title": "Keep DeeCadence close",
+      "body": "You can add DeeCadence to your home screen for quicker access. On Android and desktop, look for the install banner; on iPhone, tap Share → Add to Home Screen. It is also in Settings."
+    },
+    {
+      "id": "calm-by-default-2026-11",
+      "publishedAt": "2026-11-19T10:10:00.000Z",
+      "title": "A calmer interface, by default",
+      "body": "Motion, glow and shimmer now start off for a quieter focus. If you miss the pulsing orbs, switch them back on in Settings. The first screen and the Today rank ring were also tidied up on small screens."
     }
   ]
 }

@@ -665,3 +665,103 @@ revoke all on table public.deecadence_audio_restart_patterns from anon, authenti
 --    where user_id = '<uuid>'
 --    order by occurred_at desc
 --    limit 200;
+
+-- ---------------------------------------------------------------------------
+-- Product-usage views. These read the same append-only event table as the
+-- learning views above. They are service-role / SQL-editor only, contain no
+-- task titles, and are keyed by the Supabase account UUID.
+-- ---------------------------------------------------------------------------
+
+-- When users open the app and when they come back, by local time.
+create or replace view public.deecadence_app_usage as
+select
+  occurred_at::date as day,
+  event_type,
+  count(*) as events,
+  count(distinct user_id) as users,
+  round(avg(nullif(data ->> 'localHour', '')::numeric), 1) as avg_local_hour,
+  round(avg(nullif(data ->> 'weekday', '')::numeric), 1) as avg_weekday,
+  count(*) filter (where data ->> 'dayPart' = 'morning') as morning,
+  count(*) filter (where data ->> 'dayPart' = 'afternoon') as afternoon,
+  count(*) filter (where data ->> 'dayPart' = 'evening') as evening,
+  count(*) filter (where data ->> 'dayPart' = 'night') as night
+from public.deecadence_learning_events
+where event_type in ('app_open', 'app_foreground', 'app_background', 'app_exit')
+group by 1, 2;
+
+-- Which tabs users open, including the tab they came from.
+create or replace view public.deecadence_navigation as
+select
+  coalesce(data ->> 'view', '') as view,
+  coalesce(data ->> 'fromView', '') as from_view,
+  coalesce(data ->> 'sessionStatus', '') as session_status,
+  count(*) as opens,
+  count(distinct user_id) as users
+from public.deecadence_learning_events
+where event_type = 'view_open'
+group by 1, 2, 3;
+
+-- Which tab users were on when they backgrounded or closed the app.
+create or replace view public.deecadence_exit_tabs as
+select
+  event_type,
+  coalesce(data ->> 'view', '') as view,
+  coalesce(data ->> 'sessionStatus', '') as session_status,
+  count(*) as exits,
+  round(avg(nullif(data ->> 'awaySeconds', '')::numeric), 1) as avg_away_seconds
+from public.deecadence_learning_events
+where event_type in ('app_background', 'app_exit')
+group by 1, 2, 3;
+
+-- The one-tap adaptive-rhythm signal.
+create or replace view public.deecadence_rhythm_feedback as
+select
+  coalesce(data ->> 'answer', '') as answer,
+  count(*) as responses,
+  count(distinct user_id) as users,
+  round(avg(nullif(data ->> 'adaptiveBlocks', '')::numeric), 1) as avg_adaptive_blocks,
+  round(avg(nullif(data ->> 'rhythmConfidence', '')::numeric), 2) as avg_confidence
+from public.deecadence_learning_events
+where event_type = 'adaptive_rhythm_feedback'
+group by 1;
+
+-- Day-1 / day-7 / day-30 retention from real app opens.
+create or replace view public.deecadence_retention as
+with first_open as (
+  select user_id, min(occurred_at)::date as first_day
+  from public.deecadence_learning_events
+  where event_type = 'app_open'
+  group by user_id
+), active_days as (
+  select distinct user_id, occurred_at::date as day
+  from public.deecadence_learning_events
+  where event_type in ('app_open', 'app_foreground')
+)
+select
+  f.user_id,
+  f.first_day,
+  count(a.day) as active_days,
+  max(a.day) as last_active_day,
+  bool_or(a.day = f.first_day + 1) as returned_day_1,
+  bool_or(a.day = f.first_day + 7) as returned_day_7,
+  bool_or(a.day = f.first_day + 30) as returned_day_30
+from first_open f
+left join active_days a on a.user_id = f.user_id
+group by f.user_id, f.first_day;
+
+revoke all on table public.deecadence_app_usage from anon, authenticated, public;
+revoke all on table public.deecadence_navigation from anon, authenticated, public;
+revoke all on table public.deecadence_exit_tabs from anon, authenticated, public;
+revoke all on table public.deecadence_rhythm_feedback from anon, authenticated, public;
+revoke all on table public.deecadence_retention from anon, authenticated, public;
+
+-- Example queries:
+--   select * from public.deecadence_app_usage order by day desc;
+--   select * from public.deecadence_exit_tabs order by exits desc;
+--   select * from public.deecadence_rhythm_feedback;
+--   select
+--     count(*) as users,
+--     count(*) filter (where returned_day_1) as day_1,
+--     count(*) filter (where returned_day_7) as day_7,
+--     count(*) filter (where returned_day_30) as day_30
+--   from public.deecadence_retention;

@@ -1111,6 +1111,19 @@ main {
   box-shadow: 0 0 18px color-mix(in srgb, var(--rank-accent) 28%, transparent);
 }
 
+.setup-block-card {
+  gap: 14px;
+  margin: 0 auto;
+}
+
+.setup-block-track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+}
+
+.setup-block-track span { flex: 0 0 28px; }
+
 .onboarding-rank-demo {
   gap: 14px;
 }
@@ -4678,6 +4691,17 @@ textarea,
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
+}
+
+/* Gamified strongest-day / goal-day chips mirror Today's evidence rail. */
+#view-progress .progress-insight-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px 0;
+  border-top: 1px solid var(--border);
 }
 
 .progress-insight {
@@ -12075,6 +12099,39 @@ body.boot-failed {
   overflow: hidden;
   border-radius: 28px;
 }
+.brand-mark > img,
+.welcome-orb > img,
+.coach-orb > img,
+.cadence-logo > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sync-conflict-overlay { z-index: 1000; }
+
+/* On-demand help entry point in every page header. */
+.topbar-help-btn {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  color: var(--cyan);
+  font: 800 1rem/1 "Sora", sans-serif;
+}
+
+#view-today .topbar-help-btn { font-size: 0.72rem; letter-spacing: 0.01em; }
+
+.release-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .release-actions { flex-direction: column-reverse; align-items: stretch; }
+  .release-actions .btn { width: 100%; }
+}
 
 #feedbackModal .feedback-scroll {
   display: grid;
@@ -14040,6 +14097,91 @@ body.tour-open .tour-highlight {
     line-height: 1.52;
   }
 }
+
+.onboarding-terms {
+  max-width: 42ch;
+  margin: 2px auto 0;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 20%, var(--border));
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-align: center;
+  background: color-mix(in srgb, var(--cyan) 5%, transparent);
+}
+
+.onboarding-terms strong { color: var(--cyan); }
+
+.onboarding-cadence-hero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(100%, 360px);
+  height: 154px;
+  margin: 0 auto;
+  border: 1px solid color-mix(in srgb, var(--cyan) 28%, var(--border));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--cyan) 13%, transparent), transparent 42%),
+    color-mix(in srgb, var(--surface-2) 62%, transparent);
+  overflow: hidden;
+}
+
+.onboarding-cadence-hero::before {
+  content: "";
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  border: 1px dashed color-mix(in srgb, var(--cyan) 48%, var(--violet));
+  border-radius: 50%;
+  animation: cadenceRing 8s linear infinite;
+}
+
+.cadence-logo {
+  position: relative;
+  z-index: 2;
+  width: 68px;
+  height: 68px;
+  border-radius: 18px;
+  box-shadow: 0 0 28px color-mix(in srgb, var(--cyan) 25%, transparent);
+}
+
+.cadence-points i {
+  position: absolute;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--cyan) 80%, transparent);
+  animation: cadencePoint 5.2s ease-in-out infinite;
+}
+.cadence-points i:nth-child(1) { top: 28px; left: calc(50% - 5px); animation-delay: 0s; }
+.cadence-points i:nth-child(2) { top: calc(50% - 5px); right: 62px; animation-delay: 1.3s; }
+.cadence-points i:nth-child(3) { bottom: 28px; left: calc(50% - 5px); animation-delay: 2.6s; }
+.cadence-points i:nth-child(4) { top: calc(50% - 5px); left: 62px; animation-delay: 3.9s; }
+
+.cadence-caption {
+  position: absolute;
+  right: 16px;
+  bottom: 13px;
+  left: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-dim);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cadence-caption strong { color: var(--text); }
+
+@keyframes cadenceRing { to { transform: rotate(360deg); } }
+@keyframes cadencePoint { 0%, 100% { opacity: .35; transform: scale(.8); } 35%, 55% { opacity: 1; transform: scale(1.35); } }
+
+:root[data-reduced-motion="true"] .onboarding-cadence-hero::before,
+:root[data-reduced-motion="true"] .cadence-points i { animation: none; }
 /* Rank ladder: a quieter, wider horizontal shelf that is easy to drag. */
 .rank-ladder-shell {
   padding-left: 48px;
@@ -14789,24 +14931,11 @@ body.tour-open .tour-highlight {
   #view-progress .progress-insight-foot {
     grid-column: 1 / -1;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
-    padding: 7px 3px 0;
+    padding: 9px 3px 0;
     border-top: 1px solid var(--border);
-    color: var(--text-faint);
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.58rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    line-height: 1.3;
-    text-transform: uppercase;
-  }
-
-  #view-progress .progress-insight-foot b {
-    color: #ffe08a;
-    font-size: 0.72rem;
-    text-shadow: 0 0 9px rgba(255, 224, 138, 0.5);
   }
 
   #view-progress .personal-setup-card {
@@ -15168,8 +15297,7 @@ body.tour-open .tour-highlight {
 
 :root[data-theme="light"] #view-progress .cadence-star,
 :root[data-theme="light"] #view-progress .line-star,
-:root[data-theme="light"] #view-progress .heatmap-star,
-:root[data-theme="light"] #view-progress .progress-insight-foot b {
+:root[data-theme="light"] #view-progress .heatmap-star {
   color: #8a5a00;
   text-shadow: none;
 }
@@ -17516,14 +17644,15 @@ body.tour-open .tour-highlight {
 
   #view-plan #autoArrangeBtnPlan {
     grid-column: 1 / -1;
-    width: auto;
-    min-width: 150px;
-    justify-self: end;
+    width: 100%;
+    max-width: 420px;
+    justify-self: center;
     min-height: 32px;
     height: 32px;
     margin: 0;
     padding: 0 12px;
     font-size: 12px;
+    justify-content: center;
   }
 }
 
@@ -17851,4 +17980,358 @@ body.tour-open .tour-highlight {
   .release-card {
     animation: none;
   }
+}
+
+/* Onboarding hero: a quiet four-beat cadence, not a second logo. */
+.onboarding-cadence-hero {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  width: min(100%, 360px);
+  height: 142px;
+  margin: 0 auto;
+  padding: 24px 28px 18px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 28%, var(--border));
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  overflow: hidden;
+}
+.onboarding-cadence-hero::before {
+  content: "";
+  position: absolute;
+  inset: 20px 26px 45px;
+  border-top: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--cyan) 10%, transparent);
+  border-radius: 50%;
+  opacity: .8;
+}
+.cadence-ribbon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.cadence-beat {
+  flex: 1 1 0;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-dim) 24%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+  animation: cadenceBeat 6s ease-in-out infinite;
+}
+.cadence-beat:nth-of-type(1) { animation-delay: 0s; }
+.cadence-beat:nth-of-type(2) { animation-delay: 1.5s; }
+.cadence-beat:nth-of-type(3) { animation-delay: 3s; }
+.cadence-beat:nth-of-type(4) { animation-delay: 4.5s; }
+.cadence-ribbon > i {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cyan) 44%, var(--text-dim));
+  opacity: .65;
+}
+.cadence-ribbon > i::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cyan);
+  transform: scale(0);
+  animation: cadenceRecovery 6s ease-in-out infinite;
+}
+.cadence-ribbon > i:nth-of-type(1)::after { animation-delay: 1.5s; }
+.cadence-ribbon > i:nth-of-type(2)::after { animation-delay: 3s; }
+.cadence-ribbon > i:nth-of-type(3)::after { animation-delay: 4.5s; }
+.cadence-caption {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-faint);
+  font: 700 .58rem/1.2 "IBM Plex Mono", monospace;
+  letter-spacing: .1em;
+}
+.cadence-caption strong { color: var(--cyan); }
+@keyframes cadenceBeat {
+  0%, 100% { background: color-mix(in srgb, var(--text-dim) 24%, transparent); transform: scaleY(.78); }
+  12%, 28% { background: linear-gradient(90deg, var(--cyan), var(--blue)); box-shadow: 0 0 20px color-mix(in srgb, var(--cyan) 30%, transparent); transform: scaleY(1); }
+  40% { transform: scaleY(.78); }
+}
+@keyframes cadenceRecovery { 0%, 100% { opacity: 0; transform: scale(0); } 20%, 45% { opacity: 1; transform: scale(1.8); } 65% { opacity: 0; transform: scale(.7); } }
+:root[data-reduced-motion="true"] .cadence-beat,
+:root[data-reduced-motion="true"] .cadence-ribbon > i::after { animation: none; }
+:root[data-reduced-motion="true"] .cadence-beat:first-child { background: linear-gradient(90deg, var(--cyan), var(--blue)); transform: none; }
+
+/* Focus Core onboarding treatment: the quiet point develops into a ring. */
+.onboarding-cadence-hero {
+  width: min(100%, 430px);
+  height: clamp(170px, 28vw, 220px);
+  padding: 0 28px 20px;
+  background: radial-gradient(circle at 50% 42%, rgba(0, 180, 255, .09), transparent 48%), #030b14;
+}
+.onboarding-cadence-hero::before { display: none; }
+.focus-core-visual {
+  position: relative;
+  width: min(58%, 190px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 24px rgba(0, 200, 255, .18));
+}
+.focus-core-visual::after {
+  content: "";
+  position: absolute;
+  inset: 37%;
+  border-radius: 50%;
+  background: #40eaff;
+  box-shadow: 0 0 22px 8px rgba(0, 210, 255, .3);
+  opacity: .24;
+  animation: focusCorePulse 5s ease-in-out infinite;
+}
+.focus-core-visual::after { display: none; }
+.focus-core-visual img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: screen;
+}
+.focus-core-start { animation: focusCoreStart 9s ease-in-out infinite; }
+.focus-core-ring { opacity: 0; animation: focusCoreRing 9s ease-in-out infinite; }
+.focus-core-art {
+  animation: focusCoreBreathe 4.8s ease-in-out infinite;
+  mix-blend-mode: normal;
+}
+.onboarding-cadence-hero .cadence-caption {
+  right: 28px;
+  bottom: 17px;
+  left: 28px;
+  font-size: .62rem;
+}
+@keyframes focusCoreStart { 0%, 28% { opacity: .95; transform: scale(.9); } 48%, 100% { opacity: 0; transform: scale(1.06); } }
+@keyframes focusCoreRing { 0%, 28% { opacity: 0; transform: scale(.9); } 48%, 82% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.04); } }
+@keyframes focusCorePulse { 0%, 100% { opacity: .18; transform: scale(.8); } 45%, 60% { opacity: .42; transform: scale(1.25); } }
+:root[data-reduced-motion="true"] .focus-core-start,
+:root[data-reduced-motion="true"] .focus-core-ring,
+:root[data-reduced-motion="true"] .focus-core-visual::after,
+:root[data-reduced-motion="true"] .focus-core-art { animation: none; }
+:root[data-reduced-motion="true"] .focus-core-start { opacity: 0; }
+:root[data-reduced-motion="true"] .focus-core-ring { opacity: .9; }
+@keyframes focusCoreBreathe {
+  0%, 100% { opacity: .78; transform: scale(.96); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+/* Calm visual direction: keep the identity, lower the visual noise. */
+:root:not([data-theme="light"]) {
+  --bg: #111715;
+  --bg-elev: #151c19;
+  --surface: #18211d;
+  --surface-2: #1d2924;
+  --border: rgba(207, 231, 217, .11);
+  --border-strong: rgba(207, 231, 217, .18);
+  --text: #edf3ee;
+  --text-dim: #a7b5ad;
+  --text-faint: #718078;
+  --cyan: #78d6c0;
+  --blue: #6f9fda;
+  --violet: #a39bc8;
+  --gold: #d7b66b;
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, .18);
+}
+:root:not([data-theme="light"]) .card,
+:root:not([data-theme="light"]) .modal,
+:root:not([data-theme="light"]) .stat-tile {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16), inset 0 1px 0 rgba(255,255,255,.025);
+}
+:root:not([data-theme="light"]) .topbar-help-btn,
+:root:not([data-theme="light"]) .help-btn { box-shadow: none; }
+
+/* Today is a workspace, not a promotional banner. Remove the landscape
+   treatment so the current task and focus action carry the hierarchy. */
+:root[data-theme="dark"] #view-today .capacity-hero,
+:root[data-theme="light"] #view-today .capacity-hero {
+  background: var(--surface) !important;
+  background-image: none !important;
+}
+:root[data-theme="dark"] #view-today .capacity-hero::after,
+:root[data-theme="light"] #view-today .capacity-hero::after { display: none; }
+
+/* Mobile onboarding: use the screen as the canvas instead of leaving a
+   large empty grid row between the hero and the actions. */
+@media (max-width: 600px) {
+  .welcome-overlay { padding: 0; }
+  .welcome-overlay .onboarding-card {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+  .onboarding-card .onboarding-slides {
+    display: flex;
+    align-items: flex-start;
+    min-height: 0;
+  }
+  .onboarding-card .onboarding-slide.active {
+    width: 100%;
+    align-content: start;
+  }
+  .onboarding-card .onboarding-cadence-hero {
+    width: min(100%, 340px);
+    height: 164px;
+    margin-top: 10px;
+  }
+  .onboarding-card .focus-core-visual { width: 158px; }
+  .onboarding-card .onboarding-intro-sub { margin-top: 8px; font-size: 1rem; }
+  .onboarding-card > .welcome-note { display: none; }
+  .onboarding-card > .onboarding-actions {
+    grid-template-columns: minmax(0, .82fr) minmax(0, 1.5fr);
+    gap: 8px;
+  }
+  .onboarding-card > .onboarding-actions #welcomeBackBtn { display: none; }
+  .onboarding-card > .onboarding-actions .btn { min-height: 46px; padding-inline: 10px; }
+}
+
+/* Reduce motion & glow (on by default): keep the structure and hierarchy,
+   remove the decorative light. Scoped to the setting so users who opt back
+   into motion and glow keep the full treatment. */
+[data-reduced-motion="true"] .orb-glow,
+[data-reduced-motion="true"] .orb-wrap::before,
+[data-reduced-motion="true"] .orb-energy-ring,
+[data-reduced-motion="true"] .orb-energy-ring circle,
+[data-reduced-motion="true"] .xp-bar-fill,
+[data-reduced-motion="true"] .capacity-preview-live i,
+[data-reduced-motion="true"] .capacity-fact::after,
+[data-reduced-motion="true"] .focus-core-visual,
+[data-reduced-motion="true"] .focus-core-art,
+[data-reduced-motion="true"] .rank-halo,
+[data-reduced-motion="true"] .milestone-halo,
+[data-reduced-motion="true"] .rank-upgrade-sheen,
+[data-reduced-motion="true"] .help-bubble,
+[data-reduced-motion="true"] .session-dot {
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+  animation: none !important;
+}
+[data-reduced-motion="true"] .orb-glow,
+[data-reduced-motion="true"] .capacity-fact::after,
+[data-reduced-motion="true"] .rank-upgrade-sheen { display: none !important; }
+[data-reduced-motion="true"] .orb-rankletter { text-shadow: none !important; }
+[data-reduced-motion="true"] .xp-bar-fill {
+  background: var(--rank-accent, var(--cyan)) !important;
+  background-image: none !important;
+}
+[data-reduced-motion="true"] .reveal-scanline { display: none !important; }
+
+/* One-tap adaptive-rhythm feedback at the reveal. */
+.rhythm-feedback { margin-top: 10px; }
+.rhythm-feedback[hidden] { display: none; }
+.rhythm-feedback-thanks {
+  color: var(--success, var(--cyan));
+  font: 700 12px/1.4 "Manrope", sans-serif;
+  padding-top: 2px;
+}
+
+/* Add to Home Screen banner: a quiet bottom nudge, never a blocker. */
+.a2hs-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 92;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(520px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: var(--bg-elev);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.34);
+}
+.a2hs-banner[hidden] { display: none; }
+.a2hs-icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.a2hs-icon img { width: 28px; height: 28px; display: block; }
+.a2hs-copy { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.a2hs-copy strong { font: 700 13px/1.25 "Manrope", sans-serif; color: var(--text); }
+.a2hs-copy span { font: 500 11.5px/1.35 "Manrope", sans-serif; color: var(--text-dim); }
+.a2hs-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.a2hs-actions .btn { min-height: 36px; padding: 8px 12px; font-size: 12px; }
+.a2hs-dismiss { color: var(--text-dim); }
+@media (max-width: 480px) {
+  .a2hs-banner { flex-wrap: wrap; }
+  .a2hs-actions { width: 100%; }
+  .a2hs-actions .btn { flex: 1 1 0; }
+}
+
+/* Onboarding hero: stack the core and caption in flow so neither clips, and
+   centre the FOCUS / PLAN / GROW group under the core on every screen size. */
+.onboarding-cadence-hero {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: clamp(184px, 26vw, 212px) !important;
+}
+.onboarding-cadence-hero .focus-core-visual { width: min(52%, 160px); }
+.onboarding-cadence-hero .cadence-caption {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: max-content;
+  justify-content: center;
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .onboarding-cadence-hero { height: 176px !important; }
+  .onboarding-cadence-hero .focus-core-visual { width: 130px; }
+}
+
+/* Step 1 polish: stop the intro from repeating the hero caption, tighten the
+   decorative box, and distribute the short intro through the tall mobile
+   canvas so it stops reading as a big empty screen. */
+.onboarding-cadence-hero { padding: 0 18px 16px; }
+.onboarding-intro-sub { color: var(--text-dim); font-weight: 600; }
+@media (max-width: 600px) {
+  .onboarding-card .onboarding-slide.onboarding-intro.active {
+    align-content: center;
+    gap: 18px;
+  }
+  .onboarding-card .onboarding-intro-sub { margin-top: 4px; font-size: 1.05rem; }
+  .welcome-overlay .onboarding-intro .onboarding-cadence-hero { margin-top: 0; }
+}
+
+/* Today rank orb on phones: pull the decorative dotted ring in from the card
+   edges and grow the solid XP gauge so the two rings stay in balance. */
+@media (max-width: 600px) {
+  #view-today > .rank-console .orb-energy-ring {
+    inset: -12px !important;
+    width: calc(100% + 24px) !important;
+    height: calc(100% + 24px) !important;
+  }
+  #view-today > .rank-console .orb-energy-ring circle { r: 40; }
+  #view-today > .rank-console .orb-wrap > svg:not(.orb-energy-ring) {
+    inset: 2px !important;
+    width: calc(100% - 4px) !important;
+    height: calc(100% - 4px) !important;
+  }
+  #view-today > .rank-console .orb-wrap > svg:not(.orb-energy-ring) circle { r: 46; }
 }

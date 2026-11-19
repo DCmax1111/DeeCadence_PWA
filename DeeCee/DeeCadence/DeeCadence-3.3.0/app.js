@@ -5,7 +5,7 @@
   // screen. app.js only reports whether initialization finished cleanly.
 
   var APP_VERSION = "3.3.0";
-  var RELEASE_ID = "2026-11-17-agenda-focus";
+  var RELEASE_ID = "2026-11-19-notifications-and-calm";
   var STORAGE_KEY = "deecadence_state_v3";
   var EXIT_BACKUP_KEY = STORAGE_KEY + "_exit_backup";
   var STORAGE_QUOTA_WARN_SHOWN_KEY = STORAGE_KEY + "_quota_warn";
@@ -49,6 +49,30 @@
       publishedAt: Date.UTC(2026, 10, 16),
       title: "Join the DeeCadence WhatsApp group",
       body: "Release notes, focus challenges, and early invitations land there first. It is optional, quiet, and you can leave whenever you like."
+    },
+    {
+      id: "adaptive-rhythm-2026-11",
+      publishedAt: Date.UTC(2026, 10, 19),
+      title: "Try an adaptive focus rhythm",
+      body: "After a few completed blocks, DeeCadence can shape an unequal rhythm around your history: an easier first start, then longer focus blocks with recovery between them. Try it from the session setup and tell us whether it feels better."
+    },
+    {
+      id: "notifications-2026-11",
+      publishedAt: Date.UTC(2026, 10, 19, 10),
+      title: "A nudge at the right moment",
+      body: "DeeCadence now reminds you when a focus block ends so you can start the next one, and gives calendar-style reminders for tasks with a time in your plan. Permission is asked after your first block, never on launch. Set the lead time in Settings → Notifications."
+    },
+    {
+      id: "install-app-2026-11",
+      publishedAt: Date.UTC(2026, 10, 19, 10, 5),
+      title: "Keep DeeCadence close",
+      body: "You can add DeeCadence to your home screen for quicker access. On Android and desktop, look for the install banner; on iPhone, tap Share → Add to Home Screen. It is also in Settings."
+    },
+    {
+      id: "calm-by-default-2026-11",
+      publishedAt: Date.UTC(2026, 10, 19, 10, 10),
+      title: "A calmer interface, by default",
+      body: "Motion, glow and shimmer now start off for a quieter focus. If you miss the pulsing orbs, switch them back on in Settings. The first screen and the Today rank ring were also tidied up on small screens."
     }
   ];
   var REFERENCE_BENCHMARK = { score: 70, label: "DeeCadence reference marker", version: "reference-2026" };
@@ -199,6 +223,10 @@
   var tourPreviousView = "today";
   var chosenMinutes = 25;
   var chosenBlockCount = 4;
+  var chosenRhythmMode = "steady";
+  var appHiddenAt = 0;
+  var deferredInstallPrompt = null;
+  var a2hsBannerTimer = 0;
   var selectedProgressDate = "";
   var progressRangeDays = 7;
   var progressRangeOffset = 0;
@@ -237,6 +265,7 @@
   var attentionTestModal = document.getElementById("attentionTestModal");
   var welcomeOverlay = document.getElementById("welcomeOverlay");
   var releaseOverlay = document.getElementById("releaseOverlay");
+  var a2hsBanner = document.getElementById("a2hsBanner");
   var tourOverlay = document.getElementById("tourOverlay");
   var revealOverlay = document.getElementById("revealOverlay");
   var timePickerOverlay = document.getElementById("timePickerOverlay");
@@ -326,7 +355,7 @@
   };
 
   var ONBOARDING_NOTES = [
-    "Start with what feels possible. You can adjust it later.",
+    "Nothing to get right. Your first block is just 5 minutes.",
     "Choose the closest fit. You can change it later.",
     "This is a starting suggestion, not a fixed schedule."
   ];
@@ -361,6 +390,18 @@
   };
 
   var HELP_TOURS = {
+    help: {
+      label: "Help & tips",
+      intro: "If something is unclear, open Help & tips from the ? button in the top bar.",
+      steps: [
+        {
+          target: ".topbar-help-btn",
+          coach: "Help & tips",
+          title: "Need a hand? Start here.",
+          body: "The ? button opens Help & tips whenever you need it. Choose a guide for the page you are on, or explore the basics at your own pace."
+        }
+      ]
+    },
     today: {
       label: "Today",
       intro: "Your focus range, rank, next block, and today's plan.",
@@ -574,7 +615,7 @@
           target: "#feedbackTypeGrid",
           coach: "Feedback",
           title: "Pick the kind of report",
-          body: "Bug, confusing, idea, or other. The type is added to the message so the developer can triage it quickly."
+           body: "Bug, confusing, idea, or other. Choose the closest fit so we can understand what happened and improve DeeCadence."
         },
         {
           target: "#feedbackMessageInput",
@@ -1266,8 +1307,16 @@
         releaseSeenId: "",
         updatesSeenAt: 0,
         updatesReadIds: {},
-        updatesUnreadIds: {},
-        reducedMotion: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+         updatesUnreadIds: {},
+         adaptiveRhythmEnabled: false,
+         adaptiveRhythmFeedbackAsked: false,
+        reducedMotion: true,
+        motionPreferenceTouched: false,
+        blockNotifications: true,
+        taskNotifications: true,
+        taskReminderLead: 10,
+        notificationPromptTouched: false,
+        a2hsPromptSeen: false
       },
       onboarding: defaultOnboarding(),
       accountProfile: defaultAccountProfile(),
@@ -1282,6 +1331,7 @@
       baselineTestId: "",
       baselineCompletedAt: "",
       feedbackOutbox: [],
+      notifiedTasks: {},
       dismissedContextTips: {},
       // Bumping this revision re-shows the tab notices once after a
       // notification-behaviour change (see loadState).
@@ -1341,6 +1391,7 @@
         baselineTestId: String(parsed.baselineTestId || ""),
         baselineCompletedAt: String(parsed.baselineCompletedAt || ""),
         feedbackOutbox: Array.isArray(parsed.feedbackOutbox) ? parsed.feedbackOutbox.slice(-50) : [],
+        notifiedTasks: parsed.notifiedTasks && typeof parsed.notifiedTasks === "object" && !Array.isArray(parsed.notifiedTasks) ? parsed.notifiedTasks : {},
         dismissedContextTips: parsed.dismissedContextTips && typeof parsed.dismissedContextTips === "object" ? parsed.dismissedContextTips : {},
         learning: parsed.learning && Array.isArray(parsed.learning.events)
           ? {
@@ -1369,6 +1420,18 @@
       if (!loaded.profile.goalBonus || typeof loaded.profile.goalBonus !== "object") loaded.profile.goalBonus = {};
       if (!loaded.settings.helpToursSeen || typeof loaded.settings.helpToursSeen !== "object") loaded.settings.helpToursSeen = {};
       loaded.settings.communityInviteSeen = Boolean(loaded.settings.communityInviteSeen);
+      loaded.settings.adaptiveRhythmEnabled = Boolean(loaded.settings.adaptiveRhythmEnabled);
+      loaded.settings.adaptiveRhythmFeedbackAsked = Boolean(loaded.settings.adaptiveRhythmFeedbackAsked);
+      // Calm/motion is opt-out: default everyone to the calm experience the
+      // first time, but honour an explicit choice once the user has made it.
+      loaded.settings.motionPreferenceTouched = Boolean(loaded.settings.motionPreferenceTouched);
+      if (!loaded.settings.motionPreferenceTouched) loaded.settings.reducedMotion = true;
+      loaded.settings.blockNotifications = Boolean(loaded.settings.blockNotifications);
+      loaded.settings.taskNotifications = Boolean(loaded.settings.taskNotifications);
+      var lead = parseInt(loaded.settings.taskReminderLead, 10);
+      loaded.settings.taskReminderLead = [0, 5, 10, 15, 30].indexOf(lead) > -1 ? lead : 10;
+      loaded.settings.notificationPromptTouched = Boolean(loaded.settings.notificationPromptTouched);
+      loaded.settings.a2hsPromptSeen = Boolean(loaded.settings.a2hsPromptSeen);
       loaded.settings.releaseSeenId = String(loaded.settings.releaseSeenId || "");
       if (!Number.isFinite(Number(loaded.settings.updatesSeenAt)) || Number(loaded.settings.updatesSeenAt) < 0) loaded.settings.updatesSeenAt = 0;
       loaded.settings.updatesReadIds = normalizeUpdatesReadIds(loaded.settings.updatesReadIds);
@@ -1609,6 +1672,47 @@
     });
   }
 
+  function adaptiveRhythmProfile() {
+    var events = state.learning && Array.isArray(state.learning.events) ? state.learning.events : [];
+    var completed = events.filter(function (event) {
+      return event && event.type === "block_complete" && event.d && Number(event.d.seconds) >= 60;
+    }).slice(-12).map(function (event) {
+      return Math.max(1, Number(event.d.seconds) || 0) / 60;
+    });
+    if (!completed.length) return { samples: 0, reliableMinutes: 0, confidence: 0 };
+    var sorted = completed.slice().sort(function (a, b) { return a - b; });
+    var middle = Math.floor(sorted.length / 2);
+    var median = sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+    return {
+      samples: completed.length,
+      reliableMinutes: Math.max(1, Math.round(median)),
+      confidence: Math.min(1, completed.length / 8)
+    };
+  }
+
+  function adaptiveBlockCount() {
+    var events = state.learning && Array.isArray(state.learning.events) ? state.learning.events : [];
+    return events.filter(function (event) {
+      return event && event.type === "block_complete" && event.d && event.d.rhythmMode === "adaptive";
+    }).length;
+  }
+
+  function splitAdaptiveBlocks(totalMinutes, blockCount) {
+    var totalSeconds = Math.max(1, Math.round(clampMinutes(totalMinutes, 25) * 60));
+    var count = clampBlockCount(blockCount, 4);
+    var profile = adaptiveRhythmProfile();
+    var weights;
+    if (count === 1) weights = [1];
+    else if (count === 2) weights = profile.reliableMinutes >= 18 ? [0.78, 1.22] : [0.62, 1.38];
+    else if (count === 3) weights = profile.reliableMinutes >= 18 ? [0.68, 0.94, 1.38] : [0.52, 0.86, 1.62];
+    else weights = profile.reliableMinutes >= 18 ? [0.62, 0.84, 1.08, 1.46] : [0.46, 0.74, 1.08, 1.72];
+    var weightTotal = weights.reduce(function (sum, value) { return sum + value; }, 0);
+    var blocks = weights.map(function (weight) { return Math.max(60, Math.round(totalSeconds * weight / weightTotal)); });
+    var correction = totalSeconds - blocks.reduce(function (sum, value) { return sum + value; }, 0);
+    blocks[blocks.length - 1] = Math.max(60, blocks[blocks.length - 1] + correction);
+    return { blocks: blocks, profile: profile };
+  }
+
   function beginSession(totalMinutes, linkedTaskId, blockCount, options) {
     if (state.session) {
       switchView("focus");
@@ -1621,13 +1725,17 @@
       return;
     }
     var minutes = clampMinutes(totalMinutes, 25);
-    var blocks = splitIntoBlocks(minutes, blockCount);
+    var rhythmMode = options && options.rhythmMode === "adaptive" ? "adaptive" : "steady";
+    var rhythmPlan = rhythmMode === "adaptive" ? splitAdaptiveBlocks(minutes, blockCount) : { blocks: splitIntoBlocks(minutes, blockCount), profile: adaptiveRhythmProfile() };
+    var blocks = rhythmPlan.blocks;
     var linkedTask = linkedTaskId ? getTask(linkedTaskId) : null;
     var restartContext = sessionRestartContext();
     state.session = {
       id: makeId("sess"),
       totalMinutes: minutes,
       blocks: blocks,
+      rhythmMode: rhythmMode,
+      rhythmConfidence: rhythmPlan.profile.confidence,
       blockIndex: 0,
       blockRemaining: blocks[0],
       blockEndsAt: Date.now() + (blocks[0] * 1000),
@@ -1656,6 +1764,8 @@
       startedAt: state.session.startedAt,
       minutes: minutes,
       blocks: blocks.length,
+      rhythmMode: rhythmMode,
+      rhythmConfidence: rhythmPlan.profile.confidence,
       taskId: linkedTaskId || "",
       taskTitle: linkedTask ? linkedTask.title : "",
       taskTime: linkedTask ? linkedTask.time || "" : "",
@@ -2114,6 +2224,8 @@
     recordLearningEvent("block_complete", {
       blockIndex: session.blockIndex,
       blocksPlanned: session.blocks.length,
+      rhythmMode: session.rhythmMode || "steady",
+      rhythmConfidence: session.rhythmConfidence || 0,
       seconds: blockSeconds,
       finalBlock: isFinalBlock,
       xpGained: xpGained,
@@ -2133,6 +2245,9 @@
     saveState();
     renderAll();
     showSystemReveal(session.lastReveal);
+    notifyBlockComplete(session, isFinalBlock);
+    maybeAskNotificationPermission();
+    maybeShowA2HSAfterBlock();
     startTicker();
   }
 
@@ -2572,6 +2687,7 @@
     var feedbackPanel = document.getElementById("blockFeedbackPanel");
     if (feedbackPanel) feedbackPanel.style.display = data.isManualDone ? "none" : "";
     resetBlockFeedbackControls(data);
+    setupRhythmFeedback(data);
 
     actions.innerHTML = data.isManualDone
       ? '<button class="btn btn-primary btn-block" id="revealCloseBtn">Close</button>'
@@ -2644,6 +2760,41 @@
       button.classList.toggle("active", button.getAttribute("data-block-feeling") === existing.feeling);
     });
     if (note) note.value = existing.note || "";
+  }
+
+  function setupRhythmFeedback(data) {
+    var panel = document.getElementById("rhythmFeedbackPanel");
+    var thanks = document.getElementById("rhythmFeedbackThanks");
+    var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-rhythm-feedback]"));
+    var session = state.session;
+    var qualifying = !data.isManualDone && session && session.rhythmMode === "adaptive" &&
+      !state.settings.adaptiveRhythmFeedbackAsked && adaptiveBlockCount() >= 3;
+    if (!panel || !qualifying) {
+      if (panel) panel.hidden = true;
+      return;
+    }
+    panel.hidden = false;
+    if (thanks) thanks.hidden = true;
+    buttons.forEach(function (button) {
+      button.classList.remove("active");
+      button.disabled = false;
+      button.onclick = function () {
+        if (state.settings.adaptiveRhythmFeedbackAsked) return;
+        var answer = button.getAttribute("data-rhythm-feedback") || "unsure";
+        recordUsageEvent("adaptive_rhythm_feedback", {
+          answer: answer,
+          adaptiveBlocks: adaptiveBlockCount(),
+          rhythmConfidence: (session && Number(session.rhythmConfidence)) || 0
+        });
+        state.settings.adaptiveRhythmFeedbackAsked = true;
+        saveState();
+        buttons.forEach(function (item) {
+          item.classList.toggle("active", item === button);
+          item.disabled = true;
+        });
+        if (thanks) thanks.hidden = false;
+      };
+    });
   }
 
   function captureBlockFeedback() {
@@ -3052,11 +3203,11 @@
   }
 
   function feedbackPhoneDigits() {
-    return visibleFeedbackPhone().replace(/[^\d]/g, "");
+    return (FEEDBACK_WHATSAPP || "+2348085318908").replace(/[^\d]/g, "");
   }
 
   function visibleFeedbackPhone() {
-    return FEEDBACK_WHATSAPP.trim() || "+2348085318908";
+    return FEEDBACK_WHATSAPP.trim() ? "WhatsApp chat" : "WhatsApp chat";
   }
 
   function visibleFeedbackEmail() {
@@ -3708,6 +3859,9 @@
     }
     if (kind === "next") {
       return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.2 2 4.8 13.1h5.9L10.8 22l8.4-11.1h-5.9L13.2 2Z"/></svg>';
+    }
+    if (kind === "goal") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>';
     }
     return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.8 14.2 9l6.2 2.2-6.2 2.2L12 19.6l-2.2-6.2L3.6 11.2 9.8 9 12 2.8Z"/></svg>';
   }
@@ -4870,10 +5024,18 @@
         }
       ],
       footer: '<div class="progress-insight-foot">' +
-        '<span>' + (strongest
-          ? '<b aria-hidden="true">&#9733;</b> ' + escapeHtml(strongestLabel) + ' &middot; ' + formatMinutesCompact(strongest.minutes)
-          : 'No active day yet') + '</span>' +
-        '<span>' + goalDays + '/' + elapsed.length + ' goal days</span>' +
+        '<span class="capacity-fact capacity-fact-window">' +
+          '<span class="capacity-fact-icon" aria-hidden="true">' + capacityFactIcon("streak") + '</span>' +
+          '<span class="capacity-fact-text"><span class="capacity-fact-kicker">Strongest day</span>' +
+            (strongest
+              ? '<b>' + escapeHtml(strongestLabel) + '</b><span class="capacity-fact-sep" aria-hidden="true">&middot;</span><b>' + formatMinutesCompact(strongest.minutes) + '</b>'
+              : '<b>No active day yet</b>') +
+          '</span>' +
+        '</span>' +
+        '<span class="capacity-fact capacity-fact-streak">' +
+          '<span class="capacity-fact-icon" aria-hidden="true">' + capacityFactIcon("goal") + '</span>' +
+          '<span class="capacity-fact-text"><span class="capacity-fact-kicker">Goal days</span><b>' + goalDays + '/' + elapsed.length + '</b></span>' +
+        '</span>' +
       '</div>'
     };
   }
@@ -5283,6 +5445,32 @@
     document.getElementById("motionSwitch").classList.toggle("on", state.settings.reducedMotion);
     document.getElementById("motionSwitch").setAttribute("aria-pressed", String(state.settings.reducedMotion));
     document.getElementById("dailyGoalSelect").value = String(state.profile.dailyGoalMinutes || 60);
+    var blockNotify = document.getElementById("blockNotifySwitch");
+    var taskNotify = document.getElementById("taskNotifySwitch");
+    if (blockNotify) {
+      blockNotify.classList.toggle("on", state.settings.blockNotifications);
+      blockNotify.setAttribute("aria-pressed", String(state.settings.blockNotifications));
+    }
+    if (taskNotify) {
+      taskNotify.classList.toggle("on", state.settings.taskNotifications);
+      taskNotify.setAttribute("aria-pressed", String(state.settings.taskNotifications));
+    }
+    var leadSelect = document.getElementById("taskLeadSelect");
+    if (leadSelect) leadSelect.value = String(state.settings.taskReminderLead);
+    var a2hsBtn = document.getElementById("a2hsSettingsBtn");
+    var a2hsDesc = document.getElementById("a2hsSettingsDesc");
+    if (isStandaloneMode()) {
+      if (a2hsBtn) { a2hsBtn.textContent = "Installed"; a2hsBtn.disabled = true; }
+      if (a2hsDesc) a2hsDesc.textContent = "DeeCadence is already on your home screen.";
+    }
+    var status = document.getElementById("notificationStatus");
+    if (status) {
+      var permission = notificationStatus();
+      if (permission === "granted") status.textContent = "Notifications are on. You'll get a nudge at the right moment.";
+      else if (permission === "denied") status.textContent = "Notifications are blocked in your browser. Allow them in your browser's site settings to use these.";
+      else if (permission === "unsupported") status.textContent = "This browser doesn't support notifications.";
+      else status.textContent = "Turn on a switch below and we'll ask for permission once.";
+    }
   }
 
   function applyTheme() {
@@ -5431,7 +5619,9 @@
       window.DeeCadenceNavigation.close(false);
       closedDrawer = true;
     }
+    var previousView = activeView;
     activeView = name;
+    if (previousView !== name) recordUsageEvent("view_open", { view: name, fromView: previousView || "" });
     try { document.body.setAttribute("data-active-view", name); } catch (e) {}
     Array.prototype.forEach.call(document.querySelectorAll(".view"), function (view) {
       var isActive = view.id === "view-" + name;
@@ -5510,7 +5700,12 @@
     if ((!force && !releaseNotesPending()) || !helpTourFor("release")) return false;
     if (welcomeOverlay && welcomeOverlay.classList.contains("open")) return false;
     if (tourOverlay && tourOverlay.classList.contains("open")) return false;
-    return startHelpTour("release", 0);
+    if (!releaseOverlay) return false;
+    releaseOverlay.classList.add("open");
+    releaseOverlay.setAttribute("aria-hidden", "false");
+    var later = document.getElementById("releaseLaterBtn");
+    if (later) later.focus({ preventScroll: true });
+    return true;
   }
 
   function closeReleaseNotes() {
@@ -5973,7 +6168,7 @@
     helpTourSuppressAuto = true;
     if (tourView === "release") document.body.classList.add("release-tour-active");
     var firstStep = tour.steps[tourIndex] || {};
-    var firstView = firstStep.view || tourView;
+    var firstView = firstStep.view || (tourView === "help" ? activeView : tourView);
     if (activeView !== firstView) switchView(firstView);
     renderTourStep();
     return true;
@@ -5989,7 +6184,9 @@
       window.clearTimeout(autoHelpTourTimer);
       autoHelpTourTimer = 0;
     }
-    if (!state.settings.welcomeComplete || tourActive || helpTourSuppressAuto) return;
+    // Help is available on demand from the ? button; do not interrupt users
+    // with a separate tour every time they open a new page.
+    return;
     // Every tab introduces itself once. After that, replay a tour from the
     // Settings library or use Today's contextual ? button.
     if (view === "focus" && document.querySelector('#view-focus .focus-stage[data-focus-status="running"]')) return;
@@ -6124,6 +6321,29 @@
     }
   }
 
+  function installTopHelpButtons() {
+    Array.prototype.forEach.call(document.querySelectorAll(".topbar"), function (topbar) {
+      if (topbar.querySelector(".topbar-help-btn")) return;
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "icon-btn topbar-help-btn";
+      button.setAttribute("aria-label", "Open Help & tips");
+      button.title = "Help & tips";
+      button.textContent = topbar.closest("#view-today") ? "? Tips" : "?";
+      button.onclick = function () {
+        if (topbar.closest("#view-today")) {
+          switchView("settings");
+          window.setTimeout(openHelpLibrary, 0);
+          return;
+        }
+        openHelpLibrary();
+      };
+      var actions = topbar.querySelector(".topbar-actions");
+      if (actions) actions.insertBefore(button, actions.firstChild);
+      else topbar.appendChild(button);
+    });
+  }
+
   function installHelpLibrary() {
     if (!helpLibraryModal) return;
     var openButton = document.getElementById("openHelpLibraryBtn");
@@ -6236,7 +6456,8 @@
       button.setAttribute("title", "Tips for this screen");
       button.innerHTML = '<span class="help-btn-mark" aria-hidden="true">?</span><span class="help-btn-bubble" aria-hidden="true">Tips</span>';
       button.onclick = function () {
-        startHelpTour(viewName, firstVisibleHelpStep(helpTourFor(viewName)));
+        switchView("settings");
+        window.setTimeout(openHelpLibrary, 0);
       };
       actions.insertBefore(button, actions.firstChild);
     });
@@ -7201,6 +7422,35 @@
     }
   }
 
+  /* Product-usage context. Deliberately behavioural only: no task titles,
+     notes, or identifiers beyond the account the event is already scoped to.
+     These events ride the same local-first pipeline as learning events and
+     only upload when the user is signed in on the active device. */
+  function usageContext() {
+    var now = new Date();
+    var hour = now.getHours();
+    var dayPart = hour < 5 ? "night" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 21 ? "evening" : "night";
+    var timezone = "";
+    try {
+      if (window.Intl && Intl.DateTimeFormat) timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    } catch (error) {
+      timezone = "";
+    }
+    var session = state.session;
+    return {
+      localHour: hour,
+      weekday: now.getDay(),
+      dayPart: dayPart,
+      timezone: timezone,
+      view: activeView,
+      sessionStatus: session ? session.status : "none"
+    };
+  }
+
+  function recordUsageEvent(type, extra) {
+    recordLearningEvent(type, Object.assign(usageContext(), extra || {}));
+  }
+
   function learningEmptyCounters(size) {
     var arr = [];
     for (var i = 0; i < size; i += 1) arr.push(0);
@@ -7768,6 +8018,23 @@
     }
   }
 
+  function syncRhythmButtons(mode) {
+    chosenRhythmMode = mode === "adaptive" ? "adaptive" : "steady";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-rhythm-mode]"), function (button) {
+      button.classList.toggle("active", button.getAttribute("data-rhythm-mode") === chosenRhythmMode);
+    });
+    var hint = document.getElementById("focusRhythmHint");
+    if (!hint) return;
+    if (chosenRhythmMode === "adaptive") {
+      var profile = adaptiveRhythmProfile();
+      hint.textContent = profile.samples >= 3
+        ? "Starts easier, then builds from your completed focus blocks. Based on " + profile.samples + " recent blocks."
+        : "Starts gently and learns from your first few completed blocks. Your steady rhythm stays available anytime.";
+    } else {
+      hint.textContent = "Equal focus blocks. Choose Adaptive after a few sessions so DeeCadence can shape your starts around your history.";
+    }
+  }
+
   function syncDurationButtons(minutes) {
     var matched = false;
     Array.prototype.forEach.call(document.querySelectorAll(".duration-opt"), function (button) {
@@ -7847,6 +8114,7 @@
       syncDurationButtons(minutes);
     }
     syncBlockCountButtons(suggestedBlockCount(task), task ? "Suggested from this task's remaining pieces. You can change it." : "Suggested from today's open plan. You can change it.");
+    syncRhythmButtons(state.settings.adaptiveRhythmEnabled ? "adaptive" : "steady");
     populateLinkTaskSelect(task ? task.id : "");
     document.getElementById("inputTaskTitle").value = "";
     populateTaskSuggestionSurfaces();
@@ -8118,7 +8386,15 @@
     document.getElementById("welcomeSaveBtn").onclick = nextWelcomeStep;
     document.getElementById("welcomeBackBtn").onclick = previousWelcomeStep;
     var releaseContinueBtn = document.getElementById("releaseContinueBtn");
-    if (releaseContinueBtn) releaseContinueBtn.onclick = closeReleaseNotes;
+    if (releaseContinueBtn) releaseContinueBtn.onclick = function () {
+      closeReleaseNotes(false);
+      openUpdates(releaseContinueBtn);
+    };
+    var releaseLaterBtn = document.getElementById("releaseLaterBtn");
+    if (releaseLaterBtn) releaseLaterBtn.onclick = function () {
+      closeReleaseNotes();
+      showToast("You can find this anytime in Community & updates (the bell in the top bar).");
+    };
     document.getElementById("welcomeCalibrateBtn").onclick = function () {
       completeWelcome("calibrate");
     };
@@ -8185,8 +8461,16 @@
       var selectedTaskId = resolveStartTaskId(clampMinutes(minutes, 25));
       if (!selectedTaskId) return;
       startModal.classList.remove("open");
-      beginSession(clampMinutes(minutes, 25), selectedTaskId, chosenBlockCount, { locked: Boolean(startDurationLocked && scheduleTask) });
+      beginSession(clampMinutes(minutes, 25), selectedTaskId, chosenBlockCount, { locked: Boolean(startDurationLocked && scheduleTask), rhythmMode: chosenRhythmMode });
     };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-rhythm-mode]"), function (button) {
+      button.onclick = function () {
+        var mode = button.getAttribute("data-rhythm-mode") === "adaptive" ? "adaptive" : "steady";
+        syncRhythmButtons(mode);
+        state.settings.adaptiveRhythmEnabled = mode === "adaptive";
+        saveState();
+      };
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-start-source]"), function (button) {
       button.onclick = function () {
         syncStartTaskSource(button.getAttribute("data-start-source"));
@@ -8461,9 +8745,32 @@
     });
     document.getElementById("motionSwitch").onclick = function () {
       state.settings.reducedMotion = !state.settings.reducedMotion;
+      state.settings.motionPreferenceTouched = true;
       saveState();
       renderSettings();
       applyTheme();
+    };
+    var blockNotifySwitch = document.getElementById("blockNotifySwitch");
+    if (blockNotifySwitch) blockNotifySwitch.onclick = function () {
+      state.settings.blockNotifications = !state.settings.blockNotifications;
+      saveState();
+      renderSettings();
+      if (state.settings.blockNotifications) requestNotificationPermission();
+    };
+    var taskNotifySwitch = document.getElementById("taskNotifySwitch");
+    if (taskNotifySwitch) taskNotifySwitch.onclick = function () {
+      state.settings.taskNotifications = !state.settings.taskNotifications;
+      saveState();
+      renderSettings();
+      if (state.settings.taskNotifications) requestNotificationPermission();
+    };
+    var taskLeadSelect = document.getElementById("taskLeadSelect");
+    if (taskLeadSelect) taskLeadSelect.onchange = function () {
+      var lead = parseInt(this.value, 10);
+      state.settings.taskReminderLead = [0, 5, 10, 15, 30].indexOf(lead) > -1 ? lead : 10;
+      state.notifiedTasks = {};
+      saveState();
+      renderSettings();
     };
     document.getElementById("dailyGoalSelect").onchange = function () {
       state.profile.dailyGoalMinutes = Math.max(15, parseInt(this.value, 10) || 60);
@@ -8561,9 +8868,17 @@
   }
 
   function handleVisibilityChange() {
-    if (document.visibilityState === "visible") {
+    if (document.visibilityState === "hidden") {
+      appHiddenAt = Date.now();
+      recordUsageEvent("app_background", { awaySeconds: 0 });
+    } else if (document.visibilityState === "visible") {
+      recordUsageEvent("app_foreground", {
+        awaySeconds: appHiddenAt ? Math.max(0, Math.round((Date.now() - appHiddenAt) / 1000)) : 0
+      });
+      appHiddenAt = 0;
       loadUpdatesFeed(false);
       checkServiceWorkerUpdate(false);
+      checkTaskReminders();
     }
     if (document.visibilityState === "visible" && !state.session) {
       var refreshed = refreshRecurringTasksForToday(false);
@@ -8670,6 +8985,9 @@
     smartTaskRecommendations: smartTaskRecommendations,
     learningProfile: learningProfile,
     recordLearningEvent: recordLearningEvent,
+    recordUsageEvent: recordUsageEvent,
+    usageContext: usageContext,
+    adaptiveBlockCount: adaptiveBlockCount,
     currentLevel: currentLevel,
     currentRank: currentRank,
     ranks: RANKS,
@@ -8785,29 +9103,227 @@
   } catch (wireError) {
     console.error("wireEvents error:", wireError);
   }
-  if (typeof Notification !== "undefined" && Notification.permission === "default") {
-    Notification.requestPermission().catch(function () {});
+  /* Add to Home Screen. Chromium browsers expose beforeinstallprompt; iOS
+     Safari does not, so we show manual steps there. Never shown once installed. */
+  function isStandaloneMode() {
+    try {
+      return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+        navigator.standalone === true ||
+        (window.matchMedia && window.matchMedia("(display-mode: window-controls-overlay)").matches);
+    } catch (error) {
+      return false;
+    }
   }
-  var remindedTaskIds = new Set();
+
+  function isIOSDevice() {
+    var ua = navigator.userAgent || "";
+    var ios = /iPad|iPhone|iPod/.test(ua) || (ua.indexOf("Macintosh") > -1 && navigator.maxTouchPoints > 1);
+    return Boolean(ios) && !window.msStream;
+  }
+
+  function a2hsCanPrompt() {
+    return !isStandaloneMode() && (deferredInstallPrompt !== null || isIOSDevice());
+  }
+
+  function showA2HSBanner() {
+    if (!a2hsBanner || !a2hsCanPrompt()) return false;
+    if (state.settings.a2hsPromptSeen) return false;
+    if (document.querySelector(".modal-overlay.open, .reveal-overlay.open, .welcome-overlay.open, .sync-conflict-overlay.open, .rank-upgrade-overlay.open, .tour-overlay.open, .release-overlay.open")) {
+      clearTimeout(a2hsBannerTimer);
+      a2hsBannerTimer = window.setTimeout(showA2HSBanner, 1500);
+      return false;
+    }
+    state.settings.a2hsPromptSeen = true;
+    saveState();
+    var title = document.getElementById("a2hsTitle");
+    var text = document.getElementById("a2hsText");
+    var install = document.getElementById("a2hsInstallBtn");
+    if (isIOSDevice() && !deferredInstallPrompt) {
+      if (title) title.textContent = "Add DeeCadence to your Home Screen";
+      if (text) text.textContent = "Tap Share, then “Add to Home Screen” for quicker access.";
+      if (install) install.textContent = "Got it";
+    } else {
+      if (title) title.textContent = "Keep DeeCadence close";
+      if (text) text.textContent = "Add it to your home screen for quicker access.";
+      if (install) install.textContent = "Add to Home Screen";
+    }
+    a2hsBanner.hidden = false;
+    recordUsageEvent("a2hs_prompt", { platform: isIOSDevice() ? "ios" : "chromium", action: "shown" });
+    return true;
+  }
+
+  function hideA2HSBanner() {
+    clearTimeout(a2hsBannerTimer);
+    if (a2hsBanner) a2hsBanner.hidden = true;
+  }
+
+  function installA2HS() {
+    if (isIOSDevice() && !deferredInstallPrompt) {
+      recordUsageEvent("a2hs_prompt", { platform: "ios", action: "instructions" });
+      hideA2HSBanner();
+      showToast("Tap the Share button, then “Add to Home Screen”.");
+      return;
+    }
+    if (!deferredInstallPrompt) { hideA2HSBanner(); return; }
+    var prompt = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    try {
+      prompt.prompt();
+      if (prompt.userChoice && typeof prompt.userChoice.then === "function") {
+        prompt.userChoice.then(function (choice) {
+          recordUsageEvent("a2hs_prompt", { platform: "chromium", action: choice && choice.outcome === "accepted" ? "accepted" : "dismissed" });
+        });
+      }
+    } catch (error) {
+      // Ignore platforms that reject the programmatic prompt.
+    }
+    hideA2HSBanner();
+  }
+
+  function initA2HS() {
+    if (isStandaloneMode()) return;
+    window.addEventListener("beforeinstallprompt", function (event) {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      showA2HSBanner();
+    });
+    window.addEventListener("appinstalled", function () {
+      deferredInstallPrompt = null;
+      state.settings.a2hsPromptSeen = true;
+      saveState();
+      hideA2HSBanner();
+      recordUsageEvent("a2hs_prompt", { platform: isIOSDevice() ? "ios" : "chromium", action: "installed" });
+    });
+    var install = document.getElementById("a2hsInstallBtn");
+    var dismiss = document.getElementById("a2hsDismissBtn");
+    var settingsBtn = document.getElementById("a2hsSettingsBtn");
+    if (install) install.onclick = installA2HS;
+    if (dismiss) dismiss.onclick = function () {
+      recordUsageEvent("a2hs_prompt", { platform: isIOSDevice() ? "ios" : "chromium", action: "dismissed" });
+      hideA2HSBanner();
+    };
+    if (settingsBtn) settingsBtn.onclick = function () {
+      if (isStandaloneMode()) {
+        showToast("DeeCadence is already on your home screen.");
+        return;
+      }
+      if (isIOSDevice() && !deferredInstallPrompt) {
+        showToast("Tap the Share button, then “Add to Home Screen”.");
+        return;
+      }
+      if (deferredInstallPrompt) installA2HS();
+      else showToast("Your browser isn't offering installation here. Try Chrome or Edge on Android/Desktop.");
+    };
+    // iOS never fires beforeinstallprompt, so offer the manual path once after
+    // the first completed block (a natural, non-intrusive moment).
+  }
+
+  function maybeShowA2HSAfterBlock() {
+    if (isStandaloneMode() || state.settings.a2hsPromptSeen) return;
+    if (isIOSDevice() && !deferredInstallPrompt) showA2HSBanner();
+  }
+
+  function notificationsAvailable() {
+    return typeof Notification !== "undefined";
+  }
+
+  function notificationStatus() {
+    if (!notificationsAvailable()) return "unsupported";
+    return Notification.permission;
+  }
+
+  // Permission is requested at a natural moment (after a completed block, or
+  // when the user enables a notification setting), never on startup.
+  function requestNotificationPermission() {
+    if (!notificationsAvailable() || Notification.permission !== "default") return Promise.resolve(Notification.permission);
+    try {
+      return Promise.resolve(Notification.requestPermission()).then(function (result) {
+        state.settings.notificationPromptTouched = true;
+        saveState();
+        renderSettings();
+        if (result === "granted") checkTaskReminders();
+        return result;
+      }).catch(function () { return "default"; });
+    } catch (error) {
+      return Promise.resolve("default");
+    }
+  }
+
+  function maybeAskNotificationPermission() {
+    if (!notificationsAvailable() || Notification.permission !== "default") return;
+    if (state.settings.notificationPromptTouched) return;
+    if (!state.settings.blockNotifications && !state.settings.taskNotifications) return;
+    state.settings.notificationPromptTouched = true;
+    saveState();
+    requestNotificationPermission();
+  }
+
+  function fireNotification(title, options, tag) {
+    if (!notificationsAvailable() || Notification.permission !== "granted") return null;
+    try {
+      var settings = Object.assign({ icon: "./icons/deecadence.svg", tag: tag || "" }, options || {});
+      var note = new Notification(title, settings);
+      if (note && typeof note.addEventListener === "function") {
+        note.addEventListener("click", function () {
+          window.focus();
+          try { note.close(); } catch (error) {}
+        });
+      }
+      return note;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function notifyBlockComplete(session, isFinalBlock) {
+    if (!state.settings.blockNotifications) return;
+    var number = (session.blockIndex != null ? session.blockIndex : 0) + 1;
+    var total = Array.isArray(session.blocks) ? session.blocks.length : 1;
+    var title = isFinalBlock ? "Session complete" : "Block " + number + " of " + total + " done";
+    var body = isFinalBlock
+      ? "Nice work. Your focus session is complete."
+      : "Take a short recovery, then start the next block when you're ready.";
+    fireNotification("DeeCadence: " + title, { body: body }, "block-" + (session.id || "sess") + "-" + number);
+  }
+
   function checkTaskReminders() {
-    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    if (!state.settings.taskNotifications) return;
+    if (!notificationsAvailable() || Notification.permission !== "granted") return;
     var now = new Date();
     var nowMin = now.getHours() * 60 + now.getMinutes();
     var today = todayStr();
+    var lead = Number(state.settings.taskReminderLead) || 0;
+    // Keep the ledger to recent days so it cannot grow without bound.
+    var cutoff = addDaysKey(today, -2);
+    Object.keys(state.notifiedTasks).forEach(function (key) {
+      if (String(state.notifiedTasks[key]) < cutoff) delete state.notifiedTasks[key];
+    });
+    var changed = false;
+    function markNotified(key) {
+      if (state.notifiedTasks[key]) return false;
+      state.notifiedTasks[key] = today;
+      changed = true;
+      return true;
+    }
     state.tasks.forEach(function (task) {
-      if (!task.time || task.status === "completed") return;
-      if (remindedTaskIds.has(task.id)) return;
-      var taskMin = timeToMin(task.time);
-      var diff = taskMin - nowMin;
-      if (diff >= 0 && diff <= 5) {
-        remindedTaskIds.add(task.id);
-        new Notification("DeeCadence: " + task.title, {
-          body: task.time + " · " + task.estMinutes + " min · " + task.priority + " priority",
-          icon: "./icons/deecadence.svg",
-          tag: "task-" + task.id
-        });
+      if (!task.time || task.status === "completed" || task.date !== today) return;
+      var diff = timeToMin(task.time) - nowMin;
+      var leadKey = task.id + "-lead-" + today;
+      var startKey = task.id + "-start-" + today;
+      // "Starting soon" at the configured lead time.
+      if (lead > 0 && diff > 0 && diff <= lead && markNotified(leadKey)) {
+        fireNotification("Starting soon: " + task.title, {
+          body: task.time + " · " + task.estMinutes + " min · " + task.priority + " priority"
+        }, "task-" + leadKey);
+      }
+      // "Time to start" at the scheduled time.
+      if (diff <= 0 && diff > -15 && markNotified(startKey)) {
+        fireNotification("Time for: " + task.title, {
+          body: task.estMinutes + " min focused block · " + task.priority + " priority"
+        }, "task-" + startKey);
       }
     });
+    if (changed) saveState();
   }
   setInterval(checkTaskReminders, 30000);
   checkTaskReminders();
@@ -8831,7 +9347,10 @@
     loadUpdatesFeed(true);
     checkServiceWorkerUpdate(true);
   });
-  window.addEventListener("pagehide", persistStateForExit);
+  window.addEventListener("pagehide", function () {
+    recordUsageEvent("app_exit", { awaySeconds: appHiddenAt ? Math.max(0, Math.round((Date.now() - appHiddenAt) / 1000)) : 0 });
+    persistStateForExit();
+  });
   window.addEventListener("beforeunload", function (event) {
     persistStateForExit();
   });
@@ -8844,9 +9363,15 @@
     });
   }
   try {
+    initA2HS();
+  } catch (a2hsError) {
+    console.error("initA2HS error:", a2hsError);
+  }
+  try {
     installNavigationDrawer();
     refreshRecurringTasksForToday(true);
     renderAll();
+    recordUsageEvent("app_open", { launch: true });
     switchView("today");
     loadUpdatesFeed(true);
     if (state.settings.sound) primeSounds();

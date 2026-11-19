@@ -325,6 +325,35 @@
     }
   }
 
+  function redirectPreviewOrigin() {
+    var previewHost = "dee-cadence-pwa-bbm8-dcmax1111s-projects.vercel.app";
+    var stableOrigin = "https://dee-cadence-pwa-bbm8.vercel.app";
+    if (location.hostname !== previewHost) return false;
+    try {
+      var target = stableOrigin + (location.pathname === "/index.html" ? "/" : location.pathname) + location.search + location.hash;
+      window.location.replace(target);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function redirectAfterAuthError() {
+    var target = redirectTarget || "https://dee-cadence-pwa-bbm8.vercel.app/";
+    try {
+      // Keep the local copy current before leaving a preview or stale callback URL.
+      var local = readLocalState();
+      if (local && typeof local === "object") localStorage.setItem(storageKey, JSON.stringify(local));
+      if (new URL(target).origin === location.origin && location.pathname === new URL(target).pathname) {
+        history.replaceState(null, "", new URL(target).pathname + new URL(target).search);
+        return;
+      }
+      window.location.replace(target);
+    } catch (_) {
+      try { window.location.replace("https://dee-cadence-pwa-bbm8.vercel.app/"); } catch (__) {}
+    }
+  }
+
   function rememberPendingSignIn(address) {
     try {
       localStorage.setItem(pendingKey, JSON.stringify({
@@ -982,6 +1011,12 @@
 
   function openConflictReview() {
     if (!conflict) return;
+    var debug = window.__DEECADENCE_DEBUG__;
+    if (debug && debug.getTourState && debug.endTour) {
+      try {
+        if (debug.getTourState().active) debug.endTour(false);
+      } catch (_) {}
+    }
     conflictDismissed = false;
     var wasHidden = !conflictBox || conflictBox.hidden;
     renderConflictComparison(conflict);
@@ -1705,10 +1740,11 @@
       bindAuthListener();
       var redirectTo = redirectTarget || (location.origin + location.pathname);
       try { new URL(redirectTo); } catch (_) { redirectTo = location.origin + location.pathname; }
-      var result = await client.auth.signInWithOtp({
-        email: address,
-        options: { emailRedirectTo: redirectTo }
-      });
+       var result = await withTimeout(client.auth.signInWithOtp({
+         email: address,
+         options: { emailRedirectTo: redirectTo }
+       }), 15000);
+       if (result && result.timedOut) throw new Error("Sign-in request timed out");
       if (result.error) throw result.error;
       rememberPendingSignIn(address);
       beginSignInCooldown(60, address);
@@ -1806,7 +1842,8 @@
           adoptAuthUser(null, "INITIAL_SESSION");
           var callbackError = authCallbackError();
           if (callbackError) {
-            message("That sign-in link could not be completed. Request a new link; your work is still saved on this device.", "error");
+            message("That sign-in link expired or was already used. Your local work is saved; returning to DeeCadence.", "error");
+            window.setTimeout(redirectAfterAuthError, 350);
           } else if (hasPendingSignIn()) {
             message(pendingSignInMessage(), "info");
           } else {
@@ -2000,7 +2037,9 @@
     uploadLearningEvents(false);
   }, 60000);
 
-  restoreSignInCooldown();
-  render();
-  start();
+  if (!redirectPreviewOrigin()) {
+    restoreSignInCooldown();
+    render();
+    start();
+  }
 }());

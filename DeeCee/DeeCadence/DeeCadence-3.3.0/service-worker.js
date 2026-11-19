@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "deecadence-v3-3-69";
+﻿const CACHE_NAME = "deecadence-v3-3-71";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -12,6 +12,9 @@ const APP_SHELL = [
   "./icons/icon-512.png",
   "./images/deecadence-home-dark.jpg",
   "./images/deecadence-home-light.jpg",
+  "./images/focus-core-start.png",
+  "./images/focus-core-ring.png",
+  "./images/focus-core.svg",
   "./sounds/block-complete.wav",
   "./sounds/session-complete.wav",
   "./sounds/brown-noise.wav",

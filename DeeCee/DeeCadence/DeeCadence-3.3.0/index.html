@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="deecadence-feedback-endpoint" content="">
 <meta name="deecadence-feedback-email" content="dominiqueglobal24@gmail.com">
-<meta name="deecadence-feedback-whatsapp" content="+2348085318908">
+<meta name="deecadence-feedback-whatsapp" content="https://wa.me/2348085318908">
 <meta name="deecadence-community-whatsapp" content="https://chat.whatsapp.com/CT5oF6fTspG6mGsgm5cM2c?s=cl&amp;p=a&amp;iam=2">
 <meta name="deecadence-updates-feed" content="./updates.json">
 <!-- Feedback stays on WhatsApp/email until the Supabase feedback table and
@@ -22,7 +22,7 @@
 <!-- Optional: set this to the stable production URL so sign-in links always
      return there, even if the request came from a preview deployment. Leave
      empty for localhost testing. The URL must also be allowlisted in Supabase. -->
-<meta name="deecadence-sync-redirect-url" content="">
+ <meta name="deecadence-sync-redirect-url" content="https://dee-cadence-pwa-bbm8.vercel.app/">
 <meta name="deecadence-feedback-table" content="feedbacks">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/deecadence.svg" type="image/svg+xml">
@@ -176,7 +176,7 @@
 
   <nav class="sidenav" id="sidenav" aria-label="Primary">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 512 512" focusable="false"><defs><linearGradient id="brandMarkGradient" x1="72" y1="56" x2="432" y2="456" gradientUnits="userSpaceOnUse"><stop stop-color="#79f2d0"/><stop offset="1" stop-color="#4a7bff"/></linearGradient></defs><rect width="512" height="512" rx="132" fill="#020706"/><circle cx="256" cy="256" r="180" fill="none" stroke="url(#brandMarkGradient)" stroke-width="26" stroke-dasharray="820 310" stroke-linecap="round"/><path d="M177 144h82c89 0 142 42 142 112s-53 112-142 112h-82V144Zm78 166c50 0 78-18 78-54s-28-54-78-54h-12v108h12Z" fill="#f7fffb"/></svg></div>
+      <div class="brand-mark" aria-hidden="true"><img src="icons/deecadence.svg" alt=""></div>
       <div class="brand-name">DeeCadence</div>
       <button class="nav-close" id="navCloseBtn" type="button" aria-label="Close navigation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -477,7 +477,7 @@
             <div class="feedback-head">
               <div>
                 <div class="attention-kicker">Direct product feedback</div>
-                <h3 id="feedbackTitle">Tell the developer what happened.</h3>
+               <h3 id="feedbackTitle">Tell us what happened.</h3>
               </div>
             </div>
             <p class="modal-sub">Specific reports help most. Your name helps follow-up; task names stay private.</p>
@@ -515,7 +515,7 @@
               <div class="feedback-destination-mark" id="feedbackDestinationMark" aria-hidden="true">WA</div>
               <div>
                 <strong id="feedbackDestinationLabel">To: DeeCadence on WhatsApp</strong>
-                <span id="feedbackDestinationValue">+2348085318908</span>
+                <span id="feedbackDestinationValue">WhatsApp chat</span>
               </div>
             </div>
             <div class="field">
@@ -560,7 +560,7 @@
           <button class="switch" id="brownNoiseSwitch" aria-pressed="false" role="switch" aria-label="Toggle ambient sound"></button>
         </div>
         <div class="setting-row">
-          <div><div class="setting-label">Reduce motion &amp; glow</div><div class="setting-desc">Turns off pulsing glows, shimmer, scanlines, and the glow on charts, orbs and logos.</div></div>
+          <div><div class="setting-label">Reduce motion &amp; glow</div><div class="setting-desc">On by default for a calm interface. Switch off if you want the pulsing glows, shimmer, and animated orbs back.</div></div>
           <button class="switch" id="motionSwitch" aria-pressed="false" role="switch" aria-label="Toggle reduced motion"></button>
         </div>
         <div class="setting-row">
@@ -572,6 +572,35 @@
             <option value="90">90 minutes</option>
             <option value="120">120 minutes</option>
           </select>
+        </div>
+      </div>
+      <div class="card" data-help="settings-notifications" id="notificationSettingsCard">
+        <div class="setting-label">Notifications</div>
+        <div class="setting-desc">Gentle nudges so you know when to come back. Ask happens after your first block, not on launch.</div>
+        <div class="setting-row">
+          <div><div class="setting-label">Block complete</div><div class="setting-desc">A nudge when a focus block ends so you can start the next one.</div></div>
+          <button class="switch" id="blockNotifySwitch" aria-pressed="false" role="switch" aria-label="Toggle block complete notifications"></button>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Scheduled tasks</div><div class="setting-desc">Calendar-style reminders for tasks with a time in your plan.</div></div>
+          <button class="switch" id="taskNotifySwitch" aria-pressed="false" role="switch" aria-label="Toggle scheduled task notifications"></button>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Remind me before</div><div class="setting-desc">How early to remind you about a scheduled task.</div></div>
+          <select id="taskLeadSelect" style="background:var(--surface-2); border:1px solid var(--border-strong); border-radius:10px; padding:9px 10px; color:var(--text); min-height:40px;">
+            <option value="0">At the start time</option>
+            <option value="5">5 minutes before</option>
+            <option value="10">10 minutes before</option>
+            <option value="15">15 minutes before</option>
+            <option value="30">30 minutes before</option>
+          </select>
+        </div>
+        <div class="setting-desc" id="notificationStatus" style="margin-top:2px;">Notifications are off until you allow them in your browser.</div>
+      </div>
+      <div class="card" data-help="settings-install">
+        <div class="setting-row">
+          <div><div class="setting-label">Add to Home Screen</div><div class="setting-desc" id="a2hsSettingsDesc">Install DeeCadence for quicker access and fuller-screen focus.</div></div>
+          <button class="btn btn-secondary" id="a2hsSettingsBtn" type="button">Add</button>
         </div>
       </div>
       <div class="card sync-card" id="syncCard">
@@ -677,7 +706,7 @@
 <div class="welcome-overlay" id="welcomeOverlay" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-hidden="true">
   <section class="welcome-card onboarding-card">
     <div class="onboarding-topline">
-      <div class="welcome-orb" aria-hidden="true"><span>D</span></div>
+      <div class="welcome-orb" aria-hidden="true"><img src="icons/deecadence.svg" alt=""></div>
       <div>
         <div class="attention-kicker">Welcome to DeeCadence</div>
         <div class="onboarding-step-label" id="welcomeStepLabel">Step 1 of 3</div>
@@ -691,17 +720,14 @@
 
     <div class="onboarding-slides">
       <article class="onboarding-slide onboarding-intro active" data-onboarding-panel="0">
-        <div class="onboarding-rank-demo setup-rank-card" aria-hidden="true">
-          <div class="rank-orbit">E</div>
-          <div>
-            <strong>Rank grows with you</strong>
-            <span>Level 1 · E-Rank</span>
+        <div class="onboarding-cadence-hero" aria-hidden="true">
+          <div class="focus-core-visual">
+            <img class="focus-core-art" src="images/focus-core.svg" alt="">
           </div>
+          <div class="cadence-caption"><strong>FOCUS</strong><span>PLAN</span><strong>GROW</strong></div>
         </div>
-        <h2 id="welcomeTitle">Start where you are.</h2>
-        <div class="onboarding-intro-sub">Rank grows from there.</div>
-        <p>Your attention gets pulled in many directions. DeeCadence brings it back with short focus blocks, tasks in your schedule, and a Rank that grows as you show up. Share the climb — it's more fun together.</p>
-        <div class="onboarding-intro-footnote">Three quick questions next. No account needed.</div>
+        <h2 id="welcomeTitle">Make a big task easier to start.</h2>
+        <div class="onboarding-intro-sub">Three quick questions, then a 5-minute block.</div>
       </article>
 
       <article class="onboarding-slide" data-onboarding-panel="1">
@@ -788,43 +814,46 @@
       <div class="release-badge" aria-hidden="true"><span>NEW</span></div>
       <div>
         <div class="attention-kicker">What's new · November 2026</div>
-        <h2 id="releaseTitle">A clearer week. Calmer focus.</h2>
+        <h2 id="releaseTitle">A calmer focus, right on time.</h2>
       </div>
     </header>
     <p class="release-intro" id="releaseIntro">A quick look at what changed in this update. It only appears once.</p>
     <div class="release-list">
       <article class="release-item">
-        <span class="release-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 18h2"/></svg></span>
-        <div class="release-copy">
-          <strong>Week reads like an agenda</strong>
-          <p>Week view now leads with dates and time-stamped blocks, so a busy week grows downward instead of stretching into empty panels.</p>
-        </div>
-      </article>
-      <article class="release-item">
-        <span class="release-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></span>
-        <div class="release-copy">
-          <strong>Day, Week, and Pending do different jobs</strong>
-          <p>Day keeps today in focus, Week groups the next seven days by date, and Pending gathers every task still open.</p>
-        </div>
-      </article>
-      <article class="release-item">
-        <span class="release-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg></span>
-        <div class="release-copy">
-          <strong>Focus evidence you can feel</strong>
-          <p>Your sustainable focus card now shows your best window, last completed stretch, and next realistic target as glowing chips.</p>
-        </div>
-      </article>
-      <article class="release-item">
         <span class="release-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>
         <div class="release-copy">
-          <strong>Updates that respect your attention</strong>
-          <p>Unread notes stay on top, Auto-arrange only counts real moves, and partial sessions now appear in History → Partial.</p>
+          <strong>A nudge at the right moment</strong>
+          <p>DeeCadence now tells you when a focus block ends, and reminds you before tasks with a time in your plan. Permission is asked after your first block, never on launch. Set the lead time in Settings → Notifications.</p>
+        </div>
+      </article>
+      <article class="release-item">
+        <span class="release-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg></span>
+        <div class="release-copy">
+          <strong>Keep DeeCadence close</strong>
+          <p>Add it to your home screen for quicker access. On Android and desktop, look for the install banner; on iPhone, tap Share → Add to Home Screen. It is also in Settings.</p>
+        </div>
+      </article>
+      <article class="release-item">
+        <span class="release-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 5 13h6l-1 9 8-12h-6l1-8z"/></svg></span>
+        <div class="release-copy">
+          <strong>A calmer interface, by default</strong>
+          <p>Motion, glow and shimmer now start off for a quieter focus. If you miss the pulsing orbs, switch them back on in Settings. The first screen and Today's rank ring were tidied up on small screens too.</p>
+        </div>
+      </article>
+      <article class="release-item">
+        <span class="release-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+        <div class="release-copy">
+          <strong>Find your own focus rhythm</strong>
+          <p>Choose Adaptive in session setup and DeeCadence shapes unequal blocks around your history — an easier start, then longer focus with recovery between. Tell us whether it feels better.</p>
         </div>
       </article>
     </div>
     <div class="release-foot">
-      <button class="btn btn-primary btn-block" id="releaseContinueBtn" type="button">Start exploring</button>
-      <span class="release-once">One-time note for this update.</span>
+       <div class="release-actions">
+         <button class="btn btn-ghost" id="releaseLaterBtn" type="button">Maybe later</button>
+         <button class="btn btn-primary" id="releaseContinueBtn" type="button">See updates now</button>
+       </div>
+       <span class="release-once">You can always find these notes in Community &amp; updates.</span>
     </div>
   </section>
 </div>
@@ -868,6 +897,14 @@
         <button type="button" data-start-source="input">Input</button>
       </div>
       <div class="setting-desc" id="startTaskSourceHint" style="margin-top:2px;">Pick a task already on your schedule.</div>
+    </div>
+    <div class="field rhythm-choice-field">
+      <label>Focus rhythm</label>
+      <div class="seg" id="focusRhythmSeg" role="group" aria-label="Focus rhythm">
+        <button type="button" data-rhythm-mode="steady" class="active">Steady</button>
+        <button type="button" data-rhythm-mode="adaptive">Adaptive</button>
+      </div>
+      <div class="setting-desc" id="focusRhythmHint" style="margin-top:2px;">Equal focus blocks. Choose Adaptive after a few sessions so DeeCadence can shape your starts around your history.</div>
     </div>
     <div class="field" id="scheduleTaskField">
       <label for="linkTaskSelect">Scheduled task</label>
@@ -1202,6 +1239,16 @@
           </div>
           <input id="blockFeedbackNote" type="text" maxlength="120" placeholder='Optional note, e.g. "Tired", "Sleepy", "Flow was strong"'>
         </div>
+        <div class="block-feedback rhythm-feedback" id="rhythmFeedbackPanel" hidden>
+          <div class="block-feedback-label" id="rhythmFeedbackLabel">Did this adaptive rhythm help?</div>
+          <div class="block-feedback-options" role="group" aria-labelledby="rhythmFeedbackLabel">
+            <button type="button" data-rhythm-feedback="better">Better</button>
+            <button type="button" data-rhythm-feedback="same">About the same</button>
+            <button type="button" data-rhythm-feedback="worse">Worse</button>
+            <button type="button" data-rhythm-feedback="unsure">Not sure yet</button>
+          </div>
+          <div class="rhythm-feedback-thanks" id="rhythmFeedbackThanks" hidden>Thanks — that helps us shape future rhythms.</div>
+        </div>
       </div>
     </div>
     <div class="reveal-actions" id="revealActions"></div>
@@ -1219,6 +1266,19 @@
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Add to Home Screen -->
+<div class="a2hs-banner" id="a2hsBanner" role="status" aria-live="polite" hidden>
+  <div class="a2hs-icon" aria-hidden="true"><img src="icons/deecadence.svg" alt=""></div>
+  <div class="a2hs-copy">
+    <strong id="a2hsTitle">Keep DeeCadence close</strong>
+    <span id="a2hsText">Add it to your home screen for quicker access.</span>
+  </div>
+  <div class="a2hs-actions">
+    <button class="btn btn-primary" id="a2hsInstallBtn" type="button">Add to Home Screen</button>
+    <button class="btn btn-ghost a2hs-dismiss" id="a2hsDismissBtn" type="button" aria-label="Not now">Not now</button>
+  </div>
+</div>
 
 <!-- Attention baseline -->
 <div class="modal-overlay attention-test-overlay" id="attentionTestModal" role="dialog" aria-modal="true" aria-labelledby="attentionTestTitle">
@@ -1238,8 +1298,8 @@
     <div class="help-library-head">
       <div>
         <div class="attention-kicker">Help &amp; tips</div>
-        <h3 id="helpLibraryTitle">Replay a guided tour.</h3>
-        <p class="modal-sub">Choose a tab. Each tour points to the real controls, one element at a time.</p>
+       <h3 id="helpLibraryTitle">Replay a guided tour.</h3>
+       <p class="modal-sub">Choose a tab. Each tour points to the real controls, one element at a time.</p>
       </div>
       <button class="icon-btn" id="helpLibraryCloseBtn" type="button" aria-label="Close help library">&#10005;</button>
     </div>
@@ -1337,7 +1397,7 @@
   <div class="tour-spotlight" id="tourSpotlight" aria-hidden="true"></div>
   <section class="tour-card" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourBody">
     <div class="tour-coach" aria-hidden="true">
-      <div class="coach-orb"><span>D</span></div>
+      <div class="coach-orb"><img src="icons/deecadence.svg" alt=""></div>
       <div class="coach-status" id="tourCoachStatus">Quick tour</div>
     </div>
     <div class="tour-step-count" id="tourCount">Step 1 of 1</div>
