@@ -17,7 +17,6 @@ progress.md
 PAYMENTS_SETUP.md
 *.pdf
 *.png
-Old files to use instead/
 !icons/*.png
 index_*.html
 *.txt

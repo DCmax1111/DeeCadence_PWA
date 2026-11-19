@@ -18335,3 +18335,30 @@ body.tour-open .tour-highlight {
   }
   #view-today > .rank-console .orb-wrap > svg:not(.orb-energy-ring) circle { r: 46; }
 }
+
+/* The header and status in the Notifications card sit directly in the card,
+   not inside a .setting-row, so they miss its 18px horizontal padding and hug
+   the card edge. Give them the same indent and vertical rhythm as the rows. */
+#notificationSettingsCard > .setting-label {
+  padding: 17px 18px 0;
+}
+#notificationSettingsCard > .setting-label + .setting-desc {
+  padding: 0 18px 17px;
+  max-width: none;
+}
+#notificationSettingsCard > #notificationStatus {
+  padding: 15px 18px 17px;
+  max-width: none;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Very narrow screens: the sustainable-focus headline keeps a nowrap and a
+   minimum font size that overflow the card. Let it wrap and shrink gracefully. */
+@media (max-width: 360px) {
+  #view-today .capacity-reading > strong {
+    font-size: clamp(1.2rem, 6vw, 1.6rem) !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+}
